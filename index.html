@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>PsychoLauncher v2.0</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- EKRAN LOGOWANIA -->
+    <div id="login-screen" class="full-screen-center">
+        <div class="login-card">
+            <div class="logo-area">
+                <span class="material-icons large-icon">psychology</span>
+                <h1>PsychoLauncher</h1>
+            </div>
+            <input type="email" id="email" placeholder="E-mail badacza">
+            <input type="password" id="password" placeholder="Hasło">
+            <button id="btn-login" class="btn primary full-width">Zaloguj się</button>
+            <button id="btn-register" class="btn secondary full-width">Załóż konto</button>
+            <div class="divider">lub</div>
+            <button id="btn-guest" class="btn outline full-width">Tryb Offline (Gość)</button>
+            <p id="error-msg" class="error-text"></p>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard-screen" class="app-layout hidden">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="material-icons">psychology</span>
+                <span>PsychoLauncher</span>
+            </div>
+            <nav>
+                <button id="nav-library" class="nav-item active">
+                    <span class="material-icons">library_books</span> Biblioteka Testów
+                </button>
+                <button id="nav-history" class="nav-item">
+                    <span class="material-icons">history</span> Historia Wyników
+                </button>
+                <!-- NOWY PRZYCISK -->
+                <button id="nav-updates" class="nav-item">
+                    <span class="material-icons">system_update</span> Aktualizacje
+                </button>
+            </nav>
+            <div class="user-profile">
+                <div class="avatar-circle"><span class="material-icons">person</span></div>
+                <div class="user-details">
+                    <span id="user-email-display">user@example.com</span>
+                    <span id="user-status-display" class="status-badge">...</span>
+                </div>
+                <button id="btn-logout" class="icon-btn" title="Wyloguj"><span class="material-icons">logout</span></button>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <!-- WIDOK 1: Biblioteka (Grid) -->
+            <div id="tests-grid" class="grid-container"></div>
+
+            <!-- WIDOK 2: Historia (Tabela) -->
+            <div id="history-view" class="hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3>Ostatnie Badania</h3>
+                    <button id="btn-export-csv" class="btn secondary small">
+                        <span class="material-icons">download</span> Eksportuj CSV
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table id="history-table">
+                        <thead><tr><th>Data</th><th>Test</th><th>ID Badanego</th><th>Wynik</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- WIDOK 3: Aktualizacje (Tabela) -->
+            <div id="updates-view" class="hidden">
+                <h3>Stan Zainstalowanych Testów</h3>
+                <div class="table-container">
+                    <table id="updates-table">
+                        <thead>
+                            <tr>
+                                <th>Nazwa Testu</th>
+                                <th>Wersja Lokalna</th>
+                                <th>Wersja w Chmurze</th>
+                                <th>Status</th>
+                                <th>Akcja</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL WYNIKÓW -->
+    <div id="results-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Badanie Zakończone</h3>
+                <button id="btn-close-modal" class="close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="score-display">
+                    <span class="label">Wynik:</span>
+                    <span class="value" id="modal-score">---</span>
+                </div>
+                <div class="json-preview"><pre id="modal-json-preview">{...}</pre></div>
+                <div class="status-info" id="modal-upload-info"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-discard" class="btn danger">Odrzuć</button>
+                <button id="btn-save-disk" class="btn secondary">Zapisz na dysku</button>
+                <button id="btn-upload-cloud" class="btn primary" disabled>Wyślij do Chmury</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+</body>
+</html>
