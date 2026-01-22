@@ -1,10 +1,10 @@
-// main.js - Wersja Finalna (ZIP Support)
+// main.js - Wersja z Inteligentnym Wyszukiwaniem Plików
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const crypto = require('crypto');
-const AdmZip = require('adm-zip'); // Biblioteka do rozpakowywania
+const AdmZip = require('adm-zip');
 
 let mainWindow;
 
@@ -23,6 +23,31 @@ function createWindow() {
   mainWindow.loadFile('index.html');
 }
 
+// --- FUNKCJA POMOCNICZA: Szukanie index.html w podfolderach ---
+function findStartFile(folderPath) {
+    if (!fs.existsSync(folderPath)) return null;
+
+    // 1. Sprawdź czy index.html jest bezpośrednio w folderze
+    const directPath = path.join(folderPath, 'index.html');
+    if (fs.existsSync(directPath)) return directPath;
+
+    // 2. Jeśli nie, sprawdź podfoldery (1 poziom głębokości - typowe dla GitHub)
+    try {
+        const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                const subPath = path.join(folderPath, entry.name, 'index.html');
+                if (fs.existsSync(subPath)) return subPath;
+            }
+        }
+    } catch (e) {
+        console.error("Błąd przeszukiwania folderu:", e);
+    }
+
+    return null; // Nie znaleziono
+}
+
+
 // ==========================================================
 // 1. OBSŁUGA POBIERANIA (ZIP) I URUCHAMIANIA
 // ==========================================================
@@ -35,19 +60,19 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
     const testsDir = path.join(userDataPath, 'tests_library');
     const testFolder = path.join(testsDir, testId);
     
-    // Pliki wewnątrz folderu testu
-    const zipPath = path.join(testFolder, 'package.zip');   // Tymczasowy plik ZIP
-    const metaPath = path.join(testFolder, 'meta.json');    // Plik wersji
-    const entryFile = path.join(testFolder, 'index.html');  // Plik startowy testu
+    const zipPath = path.join(testFolder, 'package.zip');
+    const metaPath = path.join(testFolder, 'meta.json');
+
+    // Próbujemy znaleźć plik startowy (może być głębiej)
+    let entryFile = findStartFile(testFolder);
 
     // --- KROK 1: SPRAWDZANIE CACHE ---
     let needsDownload = true;
 
-    // Sprawdzamy czy folder istnieje, czy jest plik startowy i czy wersja się zgadza
-    if (fs.existsSync(testFolder) && fs.existsSync(entryFile) && fs.existsSync(metaPath)) {
+    // Warunek: Folder jest, meta jest, I PLIK STARTOWY JEST ZNALEZIONY
+    if (fs.existsSync(testFolder) && fs.existsSync(metaPath) && entryFile) {
         try {
             const localMeta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-            // Jeśli lokalna wersja jest >= wersji z chmury, nie pobieramy
             if (Number(localMeta.version) >= Number(version)) {
                 needsDownload = false;
             }
@@ -59,17 +84,15 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
     // --- KROK 2: DECYZJA - URUCHOM Z DYSKU ---
     if (!needsDownload) {
         if (onlyDownload) {
-            sender.send('test-status', `Test (v${version}) jest już pobrany i gotowy.`);
+            sender.send('test-status', `Test (v${version}) jest gotowy.`);
         } else {
-            sender.send('test-status', `Uruchamianie z pamięci podręcznej (v${version})...`);
+            sender.send('test-status', `Uruchamianie z cache (v${version})...`);
             openTestWindow(entryFile);
         }
-        return; // Kończymy, nie pobieramy
+        return;
     }
 
-    // --- KROK 3: POBIERANIE (SCENARIUSZ UPDATE) ---
-    
-    // Upewnij się, że folder istnieje
+    // --- KROK 3: POBIERANIE ---
     if (!fs.existsSync(testFolder)) {
         fs.mkdirSync(testFolder, { recursive: true });
     }
@@ -79,10 +102,9 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
     const file = fs.createWriteStream(zipPath);
     
     https.get(url, (response) => {
-        // Obsługa błędów HTTP (np. 404)
         if (response.statusCode !== 200 && response.statusCode !== 302) {
             sender.send('test-status', `Błąd serwera: ${response.statusCode}`);
-            fs.unlink(zipPath, () => {}); // Usuń pusty plik
+            fs.unlink(zipPath, () => {}); 
             return;
         }
 
@@ -96,19 +118,27 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
             
             try {
                 const zip = new AdmZip(zipPath);
-                zip.extractAllTo(testFolder, true); // true = nadpisz istniejące pliki
-                
-                // Usuwamy plik ZIP po rozpakowaniu, żeby nie zajmował miejsca
-                fs.unlinkSync(zipPath);
+                zip.extractAllTo(testFolder, true); // Nadpisz
+                fs.unlinkSync(zipPath); // Usuń ZIP
 
-                // Aktualizujemy plik meta.json nową wersją
-                const metaData = { 
-                    version: Number(version), 
-                    lastUpdated: new Date().toISOString() 
-                };
+                // Aktualizacja meta
+                const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
                 fs.writeFileSync(metaPath, JSON.stringify(metaData));
 
-                // Sukces!
+                // --- SZUKAMY PLIKU PONOWNIE PO ROZPAKOWANIU ---
+                entryFile = findStartFile(testFolder);
+
+                if (!entryFile) {
+                    // SYTUACJA AWARYJNA: Nie znaleziono index.html
+                    console.error("BŁĄD: Brak index.html w folderze:", testFolder);
+                    console.log("Zawartość folderu:", fs.readdirSync(testFolder)); // Log dla Ciebie
+                    
+                    sender.send('test-status', 'BŁĄD KRYTYCZNY: Nie znaleziono pliku startowego (index.html)!');
+                    sender.send('test-status', 'Sprawdź strukturę pliku ZIP.');
+                    return; 
+                }
+
+                // Sukces
                 if (onlyDownload) {
                     sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
                 } else {
@@ -119,18 +149,17 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
             } catch (err) {
                 console.error("Błąd ZIP:", err);
                 sender.send('test-status', 'Błąd rozpakowywania archiwum!');
-                // Opcjonalnie: usuń uszkodzony folder
             }
         });
     }).on('error', (err) => {
-        fs.unlink(zipPath, () => {}); // Sprzątanie
+        fs.unlink(zipPath, () => {});
         sender.send('test-status', `Błąd sieci: ${err.message}`);
     });
 });
 
 
 // ==========================================================
-// 2. SKANOWANIE LOKALNEJ BIBLIOTEKI (Dla zakładki Aktualizacje)
+// 2. SKANOWANIE LOKALNEJ BIBLIOTEKI
 // ==========================================================
 
 ipcMain.handle('get-local-versions', async (event) => {
@@ -138,15 +167,13 @@ ipcMain.handle('get-local-versions', async (event) => {
     const testsDir = path.join(userDataPath, 'tests_library');
     const localVersions = {};
 
-    if (!fs.existsSync(testsDir)) return {}; // Brak folderu = brak testów
+    if (!fs.existsSync(testsDir)) return {};
 
     try {
-        // Pobierz listę folderów (każdy folder to ID testu)
         const testFolders = fs.readdirSync(testsDir, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
             .map(dirent => dirent.name);
 
-        // Sprawdź meta.json w każdym folderze
         testFolders.forEach(testId => {
             const metaPath = path.join(testsDir, testId, 'meta.json');
             if (fs.existsSync(metaPath)) {
@@ -155,21 +182,21 @@ ipcMain.handle('get-local-versions', async (event) => {
                     const meta = JSON.parse(metaContent);
                     localVersions[testId] = meta.version;
                 } catch (e) {
-                    localVersions[testId] = 0; // Plik uszkodzony
+                    localVersions[testId] = 0;
                 }
             } else {
-                localVersions[testId] = 0; // Brak wersji
+                localVersions[testId] = 0;
             }
         });
     } catch (error) {
         console.error("Błąd skanowania:", error);
     }
-    return localVersions; // Zwraca np. { "test_reakcji": 2, "test_pamieci": 5 }
+    return localVersions;
 });
 
 
 // ==========================================================
-// 3. USUWANIE TESTÓW Z DYSKU
+// 3. USUWANIE TESTÓW
 // ==========================================================
 
 ipcMain.handle('delete-test', async (event, testId) => {
@@ -178,7 +205,6 @@ ipcMain.handle('delete-test', async (event, testId) => {
 
     try {
         if (fs.existsSync(testFolder)) {
-            // Usuwa folder rekurencyjnie (wymaga Node 14.14+)
             fs.rmSync(testFolder, { recursive: true, force: true });
             return { success: true };
         } else {
@@ -201,28 +227,21 @@ function openTestWindow(htmlPath) {
         height: 768,
         parent: mainWindow,
         title: "Badanie w toku...",
-        // Tryb Kiosk (Pełny ekran, brak możliwości wyjścia) - Opcjonalne
-        // kiosk: true, 
-        // autoHideMenuBar: true,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            // Specjalny most dla okna testowego
             preload: path.join(__dirname, 'preload_test.js')
         }
     });
 
     testWindow.loadFile(htmlPath);
-    // testWindow.webContents.openDevTools(); // Odkomentuj do debugowania testu
+    // testWindow.webContents.openDevTools(); // Odkomentuj w razie problemów z testem
 }
 
-// Odbieranie wyników z okna testowego
 ipcMain.on('test-finished', (event, results) => {
-    // Zamknij okno testu
     const testWin = BrowserWindow.fromWebContents(event.sender);
     if (testWin) testWin.close();
 
-    // Przekaż wyniki do głównego Dashboardu
     if (mainWindow) {
         mainWindow.webContents.send('test-results-forwarded', results);
         if (mainWindow.isMinimized()) mainWindow.restore();
@@ -230,7 +249,6 @@ ipcMain.on('test-finished', (event, results) => {
     }
 });
 
-// Awaryjne zamknięcie testu
 ipcMain.on('test-close', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) win.close();
@@ -238,19 +256,17 @@ ipcMain.on('test-close', (event) => {
 
 
 // ==========================================================
-// 5. ZAPIS LOKALNY Z PODPISEM CYFROWYM (HMAC)
+// 5. ZAPIS LOKALNY
 // ==========================================================
 
 ipcMain.on('save-local-result', (event, dataToSave) => {
     const dialog = require('electron').dialog;
-    const SECRET_KEY = "Inzynierka_Secret_Key_2026"; // Klucz do podpisu
+    const SECRET_KEY = "Inzynierka_Secret_Key_2026";
     
-    // Generowanie podpisu
     const hmac = crypto.createHmac('sha256', SECRET_KEY);
     hmac.update(JSON.stringify(dataToSave.wyniki));
     const signature = hmac.digest('hex');
 
-    // Struktura pliku wyjściowego
     const finalFileContent = {
         meta: { 
             app: "PsychoLauncher", 
@@ -260,7 +276,6 @@ ipcMain.on('save-local-result', (event, dataToSave) => {
         data: dataToSave
     };
 
-    // Okno dialogowe "Zapisz jako..."
     dialog.showSaveDialog(mainWindow, {
         title: 'Zapisz wynik badania',
         defaultPath: `Wynik_${dataToSave.testId}_${Date.now()}.json`,
@@ -268,17 +283,12 @@ ipcMain.on('save-local-result', (event, dataToSave) => {
     }).then(result => {
         if (!result.canceled) {
             fs.writeFileSync(result.filePath, JSON.stringify(finalFileContent, null, 2));
-            event.sender.send('test-status', 'Wynik zapisany pomyślnie na dysku.');
+            event.sender.send('test-status', 'Wynik zapisany pomyślnie.');
         }
     }).catch(err => {
         console.error(err);
     });
 });
-
-
-// ==========================================================
-// START APLIKACJI
-// ==========================================================
 
 app.whenReady().then(createWindow);
 
