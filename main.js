@@ -1,4 +1,4 @@
-// main.js - Wersja z Inteligentnym Wyszukiwaniem Plików
+// main.js - Wersja Finalna (Fullscreen + Icons Support)
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -27,11 +27,11 @@ function createWindow() {
 function findStartFile(folderPath) {
     if (!fs.existsSync(folderPath)) return null;
 
-    // 1. Sprawdź czy index.html jest bezpośrednio w folderze
+    // 1. Sprawdź bezpośrednio
     const directPath = path.join(folderPath, 'index.html');
     if (fs.existsSync(directPath)) return directPath;
 
-    // 2. Jeśli nie, sprawdź podfoldery (1 poziom głębokości - typowe dla GitHub)
+    // 2. Sprawdź podfoldery
     try {
         const entries = fs.readdirSync(folderPath, { withFileTypes: true });
         for (const entry of entries) {
@@ -43,10 +43,8 @@ function findStartFile(folderPath) {
     } catch (e) {
         console.error("Błąd przeszukiwania folderu:", e);
     }
-
-    return null; // Nie znaleziono
+    return null;
 }
-
 
 // ==========================================================
 // 1. OBSŁUGA POBIERANIA (ZIP) I URUCHAMIANIA
@@ -62,14 +60,13 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
     
     const zipPath = path.join(testFolder, 'package.zip');
     const metaPath = path.join(testFolder, 'meta.json');
-
-    // Próbujemy znaleźć plik startowy (może być głębiej)
+    
+    // Szukamy pliku startowego (może być głębiej)
     let entryFile = findStartFile(testFolder);
 
     // --- KROK 1: SPRAWDZANIE CACHE ---
     let needsDownload = true;
 
-    // Warunek: Folder jest, meta jest, I PLIK STARTOWY JEST ZNALEZIONY
     if (fs.existsSync(testFolder) && fs.existsSync(metaPath) && entryFile) {
         try {
             const localMeta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
@@ -125,20 +122,14 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
                 const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
                 fs.writeFileSync(metaPath, JSON.stringify(metaData));
 
-                // --- SZUKAMY PLIKU PONOWNIE PO ROZPAKOWANIU ---
+                // Szukamy pliku ponownie po rozpakowaniu
                 entryFile = findStartFile(testFolder);
 
                 if (!entryFile) {
-                    // SYTUACJA AWARYJNA: Nie znaleziono index.html
-                    console.error("BŁĄD: Brak index.html w folderze:", testFolder);
-                    console.log("Zawartość folderu:", fs.readdirSync(testFolder)); // Log dla Ciebie
-                    
-                    sender.send('test-status', 'BŁĄD KRYTYCZNY: Nie znaleziono pliku startowego (index.html)!');
-                    sender.send('test-status', 'Sprawdź strukturę pliku ZIP.');
+                    sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
                     return; 
                 }
 
-                // Sukces
                 if (onlyDownload) {
                     sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
                 } else {
@@ -218,7 +209,7 @@ ipcMain.handle('delete-test', async (event, testId) => {
 
 
 // ==========================================================
-// 4. OKNO TESTOWE I KOMUNIKACJA
+// 4. OKNO TESTOWE (PEŁNY EKRAN)
 // ==========================================================
 
 function openTestWindow(htmlPath) {
@@ -227,6 +218,11 @@ function openTestWindow(htmlPath) {
         height: 768,
         parent: mainWindow,
         title: "Badanie w toku...",
+        
+        // --- PEŁNY EKRAN ---
+        fullscreen: true,       // Odpala na cały ekran
+        autoHideMenuBar: true,  // Ukrywa menu
+        
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -235,7 +231,13 @@ function openTestWindow(htmlPath) {
     });
 
     testWindow.loadFile(htmlPath);
-    // testWindow.webContents.openDevTools(); // Odkomentuj w razie problemów z testem
+    
+    // Obsługa ESC (opcjonalna - pozwala wyjść z FullScreen)
+    testWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.key === 'Escape' && input.type === 'keyDown') {
+            testWindow.setFullScreen(false);
+        }
+    });
 }
 
 ipcMain.on('test-finished', (event, results) => {
@@ -256,7 +258,7 @@ ipcMain.on('test-close', (event) => {
 
 
 // ==========================================================
-// 5. ZAPIS LOKALNY
+// 5. ZAPIS LOKALNY Z HMAC
 // ==========================================================
 
 ipcMain.on('save-local-result', (event, dataToSave) => {

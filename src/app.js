@@ -1,6 +1,5 @@
 // src/app.js
 
-// 1. IMPORTY FIREBASE
 import { auth, db } from './firebaseConfig.js';
 import { 
     signInWithEmailAndPassword, 
@@ -14,14 +13,13 @@ import {
 // --- ZMIENNE GLOBALNE ---
 let currentResultPackage = null;
 
-// UI Elements - Ekrany
+// UI Elements
 const loginScreen = document.getElementById('login-screen');
 const dashboardScreen = document.getElementById('dashboard-screen');
 const emailInput = document.getElementById('email');
 const passInput = document.getElementById('password');
 const errorMsg = document.getElementById('error-msg');
 
-// UI Elements - Nawigacja
 const navLibrary = document.getElementById('nav-library');
 const navHistory = document.getElementById('nav-history');
 const navUpdates = document.getElementById('nav-updates');
@@ -30,11 +28,9 @@ const viewLibrary = document.getElementById('tests-grid');
 const viewHistory = document.getElementById('history-view');
 const viewUpdates = document.getElementById('updates-view');
 
-// UI Elements - Tabele
 const historyTableBody = document.querySelector('#history-table tbody');
 const updatesTableBody = document.querySelector('#updates-table tbody');
 
-// UI Elements - Modal
 const modalOverlay = document.getElementById('results-modal');
 const btnCloseModal = document.getElementById('btn-close-modal');
 const btnDiscard = document.getElementById('btn-discard');
@@ -44,10 +40,9 @@ const modalUploadInfo = document.getElementById('modal-upload-info');
 
 
 // =========================================================
-// CZĘŚĆ 1: UWIERZYTELNIANIE I PROFIL
+// CZĘŚĆ 1: UWIERZYTELNIANIE
 // =========================================================
 
-// Logowanie
 document.getElementById('btn-login').addEventListener('click', async () => {
     try {
         errorMsg.innerText = "Logowanie...";
@@ -55,14 +50,11 @@ document.getElementById('btn-login').addEventListener('click', async () => {
     } catch (error) { errorMsg.innerText = getFriendlyError(error.code); }
 });
 
-// Rejestracja
 document.getElementById('btn-register').addEventListener('click', async () => {
     if(passInput.value.length < 6) { errorMsg.innerText = "Hasło min. 6 znaków."; return; }
     try {
         errorMsg.innerText = "Tworzenie konta...";
         const userCred = await createUserWithEmailAndPassword(auth, emailInput.value, passInput.value);
-        
-        // Zapisz status PENDING
         await setDoc(doc(db, "users", userCred.user.uid), {
             email: userCred.user.email, status: "PENDING", createdAt: new Date().toISOString()
         });
@@ -70,11 +62,9 @@ document.getElementById('btn-register').addEventListener('click', async () => {
     } catch (error) { errorMsg.innerText = getFriendlyError(error.code); }
 });
 
-// Tryb Gościa / Wylogowanie
 document.getElementById('btn-guest').addEventListener('click', () => setupDashboardView(null, "GUEST"));
 document.getElementById('btn-logout').addEventListener('click', () => { signOut(auth); location.reload(); });
 
-// Globalny Listener Auth
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -97,7 +87,7 @@ function setupDashboardView(email, status) {
     else if (status === 'PENDING') statusDisp.style.color = '#ff9800';
     else statusDisp.style.color = '#aaa';
 
-    loadTestsList(); // Domyślny widok
+    loadTestsList();
 }
 
 
@@ -110,7 +100,6 @@ navHistory.addEventListener('click', () => { switchView('history'); loadHistoryD
 navUpdates.addEventListener('click', () => { switchView('updates'); loadUpdatesData(); });
 
 function switchView(viewName) {
-    // Ukryj wszystko
     viewLibrary.classList.add('hidden');
     viewHistory.classList.add('hidden');
     viewUpdates.classList.add('hidden');
@@ -130,41 +119,77 @@ function switchView(viewName) {
 
 
 // =========================================================
-// CZĘŚĆ 3: LOGIKA WIDOKÓW
+// CZĘŚĆ 3: LOGIKA DANYCH
 // =========================================================
 
-// --- A. BIBLIOTEKA (GRID) ---
+// --- A. BIBLIOTEKA (Z ikonami statusu) ---
 window.loadTestsList = async function() {
     viewLibrary.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
     try {
         const snap = await getDocs(collection(db, "tests"));
+        
+        let localVersions = {};
+        if (window.electronAPI) {
+            localVersions = await window.electronAPI.getLocalVersions();
+        }
+
         viewLibrary.innerHTML = '';
         
         if (snap.empty) { viewLibrary.innerHTML = '<p>Brak testów.</p>'; return; }
 
         snap.forEach(doc => {
             const t = doc.data();
+            const testId = doc.id;
+            
+            const localVer = localVersions[testId] ? Number(localVersions[testId]) : 0;
+            const remoteVer = Number(t.version);
+
+            // Logika ikon
+            let iconBadge = '';
+            let btnText = 'Uruchom';
+            let btnClass = 'primary';
+
+            if (localVer === 0) {
+                // Nie pobrano
+                iconBadge = `<span class="material-icons" style="color:#888; font-size:24px;" title="Nie pobrano">cloud_download</span>`;
+                btnText = 'Pobierz';
+            } else if (localVer < remoteVer) {
+                // Aktualizacja
+                iconBadge = `<span class="material-icons" style="color:#ff9800; font-size:24px;" title="Dostępna aktualizacja">system_update</span>`;
+                btnText = 'Aktualizuj';
+            } else {
+                // Zainstalowano
+                iconBadge = `<span class="material-icons" style="color:#4caf50; font-size:24px;" title="Zainstalowano">check_circle</span>`;
+            }
+
             const card = document.createElement('div');
             card.className = 'test-card';
-            // Przycisk Uruchom: onlyDownload = false (domyślnie)
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <span class="material-icons" style="font-size:40px; color:#444;">assignment</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="material-icons" style="font-size:40px; color:#444;">assignment</span>
+                        ${iconBadge} 
+                    </div>
                     <span class="meta" style="color:#666;">v${t.version}</span>
                 </div>
+                
                 <h4 style="margin-top:10px;">${t.name}</h4>
                 <p>${t.description}</p>
-                <button class="btn primary small" style="margin-top:auto;" onclick="startTestProcess('${t.downloadUrl}', '${doc.id}', ${t.version})">
-                    <span class="material-icons">play_arrow</span> Uruchom
+                
+                <button class="btn ${btnClass} small" style="margin-top:auto;" onclick="startTestProcess('${t.downloadUrl}', '${testId}', ${t.version})">
+                    <span class="material-icons">play_arrow</span> ${btnText}
                 </button>
             `;
             viewLibrary.appendChild(card);
         });
-    } catch (e) { console.error(e); viewLibrary.innerHTML = '<p>Błąd ładowania.</p>'; }
+    } catch (e) { 
+        console.error(e); 
+        viewLibrary.innerHTML = '<p>Błąd ładowania.</p>'; 
+    }
 };
 
 
-// --- B. HISTORIA (TABELA) ---
+// --- B. HISTORIA ---
 async function loadHistoryData() {
     historyTableBody.innerHTML = '<tr><td colspan="4">Ładowanie...</td></tr>';
     if (!auth.currentUser) { historyTableBody.innerHTML = '<tr><td colspan="4">Musisz być zalogowany.</td></tr>'; return; }
@@ -178,7 +203,7 @@ async function loadHistoryData() {
 
         snap.forEach(doc => {
             const r = doc.data();
-            const score = r.data.czas_reakcji ? `${r.data.czas_reakcji} ms` : (r.data.score || "Szczegóły w JSON");
+            const score = r.data.czas_reakcji ? `${r.data.czas_reakcji} ms` : (r.data.score || "JSON");
             historyTableBody.innerHTML += `<tr>
                 <td>${new Date(r.timestamp).toLocaleString()}</td>
                 <td>${r.test_id}</td>
@@ -201,19 +226,16 @@ document.getElementById('btn-export-csv').addEventListener('click', () => {
 });
 
 
-// --- C. AKTUALIZACJE (MENEDŻER PAKIETÓW) ---
+// --- C. MENEDŻER AKTUALIZACJI ---
 async function loadUpdatesData() {
-    updatesTableBody.innerHTML = '<tr><td colspan="5">Skanowanie dysku i chmury...</td></tr>';
+    updatesTableBody.innerHTML = '<tr><td colspan="5">Skanowanie...</td></tr>';
     try {
         const remoteSnap = await getDocs(collection(db, "tests"));
         let localVersions = {};
-        
-        // Pobierz wersje z Electrona
         if (window.electronAPI) localVersions = await window.electronAPI.getLocalVersions();
 
         updatesTableBody.innerHTML = '';
-        
-        if (remoteSnap.empty) { updatesTableBody.innerHTML = '<tr><td colspan="5">Brak testów w chmurze.</td></tr>'; return; }
+        if (remoteSnap.empty) { updatesTableBody.innerHTML = '<tr><td colspan="5">Brak testów.</td></tr>'; return; }
 
         remoteSnap.forEach(doc => {
             const r = doc.data();
@@ -225,17 +247,13 @@ async function loadUpdatesData() {
             let buttons = '';
 
             if (localVer === 0) {
-                // Nie zainstalowano
                 status = '<span style="color:#888">Nie zainstalowano</span>';
-                // Przycisk POBIERZ (Tylko pobiera)
                 buttons = `<button class="btn primary small" onclick="forceUpdate('${r.downloadUrl}', '${id}', ${remoteVer})">
                     <span class="material-icons" style="font-size:16px;">download</span> Pobierz
                 </button>`;
             } else {
-                // Zainstalowano
                 if (localVer < remoteVer) {
                     status = `<span style="color:#ff9800;font-weight:bold">Aktualizacja! (v${localVer} &#8594; v${remoteVer})</span>`;
-                    // Przycisk AKTUALIZUJ (Tylko pobiera)
                     buttons = `<button class="btn primary small" onclick="forceUpdate('${r.downloadUrl}', '${id}', ${remoteVer})">
                         <span class="material-icons" style="font-size:16px;">system_update_alt</span> Aktualizuj
                     </button>`;
@@ -243,19 +261,13 @@ async function loadUpdatesData() {
                     status = '<span style="color:#4caf50">Aktualne</span>';
                     buttons = `<button class="btn outline small" disabled>Aktualne</button>`;
                 }
-
-                // Dodaj przycisk USUŃ (Dla każdego zainstalowanego)
                 buttons += `<button class="btn danger small" style="margin-left:5px;" onclick="deleteLocalTest('${id}')">
                     <span class="material-icons" style="font-size:16px;">delete</span> Usuń
                 </button>`;
             }
 
             updatesTableBody.innerHTML += `<tr>
-                <td>${r.name}</td>
-                <td>${localVer || '-'}</td>
-                <td>v${remoteVer}</td>
-                <td>${status}</td>
-                <td>${buttons}</td>
+                <td>${r.name}</td><td>${localVer || '-'}</td><td>v${remoteVer}</td><td>${status}</td><td>${buttons}</td>
             </tr>`;
         });
     } catch (e) { updatesTableBody.innerHTML = `<tr><td colspan="5">Błąd: ${e.message}</td></tr>`; }
@@ -266,42 +278,36 @@ async function loadUpdatesData() {
 // CZĘŚĆ 4: KOMUNIKACJA Z ELECTRONEM
 // =========================================================
 
-// 1. Uruchom Test (Biblioteka) -> Pobierz jeśli trzeba, potem uruchom
 window.startTestProcess = (url, id, ver) => {
     if (window.electronAPI) {
-        // Parametr 4 (onlyDownload) = false -> Uruchom po pobraniu
+        // Run mode
         window.electronAPI.downloadAndRun(url, id, ver, false);
     } else alert("Brak Electrona");
 };
 
-// 2. Wymuś Aktualizację/Pobranie (Aktualizacje) -> TYLKO pobierz
 window.forceUpdate = (url, id, ver) => {
     if (window.electronAPI) {
-        // Parametr 4 (onlyDownload) = true -> Nie uruchamiaj
+        // Download only mode
         window.electronAPI.downloadAndRun(url, id, ver, true);
-        alert("Rozpoczęto pobieranie w tle...");
-        // Odśwież tabelę po chwili
+        alert("Pobieranie w tle...");
         setTimeout(loadUpdatesData, 2000);
     }
 };
 
-// 3. Usuń Test
 window.deleteLocalTest = async (testId) => {
-    if(!confirm("Czy na pewno chcesz usunąć ten test z dysku?")) return;
-    
+    if(!confirm("Usunąć ten test z dysku?")) return;
     if (window.electronAPI) {
-        try {
-            const res = await window.electronAPI.deleteTest(testId);
-            if(res.success) {
-                loadUpdatesData(); // Odśwież tabelę
-            } else {
-                alert("Błąd usuwania: " + res.error);
-            }
-        } catch(e) { console.error(e); }
+        const res = await window.electronAPI.deleteTest(testId);
+        if(res.success) {
+            loadUpdatesData(); 
+            // Jeśli byliśmy w bibliotece, to odświeżmy też bibliotekę
+            if(!viewLibrary.classList.contains('hidden')) loadTestsList();
+        } else {
+            alert("Błąd: " + res.error);
+        }
     }
 };
 
-// 4. Odbiór Wyników
 if (window.electronAPI) {
     window.electronAPI.onTestResults((raw) => {
         const u = auth.currentUser;
