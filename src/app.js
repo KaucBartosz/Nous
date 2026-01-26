@@ -12,6 +12,7 @@ import {
 
 // --- ZMIENNE GLOBALNE ---
 let currentResultPackage = null;
+let activeDemographics = null; // Tu trzymamy dane pacjenta z formularza
 
 // UI Elements
 const loginScreen = document.getElementById('login-screen');
@@ -23,10 +24,12 @@ const errorMsg = document.getElementById('error-msg');
 const navLibrary = document.getElementById('nav-library');
 const navHistory = document.getElementById('nav-history');
 const navUpdates = document.getElementById('nav-updates');
+const navDemographics = document.getElementById('nav-demographics'); // <---
 
 const viewLibrary = document.getElementById('tests-grid');
 const viewHistory = document.getElementById('history-view');
 const viewUpdates = document.getElementById('updates-view');
+const viewDemographics = document.getElementById('demographics-view'); // <---
 
 const historyTableBody = document.querySelector('#history-table tbody');
 const updatesTableBody = document.querySelector('#updates-table tbody');
@@ -38,11 +41,9 @@ const btnSaveDisk = document.getElementById('btn-save-disk');
 const btnUploadCloud = document.getElementById('btn-upload-cloud');
 const modalUploadInfo = document.getElementById('modal-upload-info');
 
-// Na początku pliku (przy definicjach elementów)
 const navAbout = document.getElementById('nav-about');
 const aboutModal = document.getElementById('about-modal');
 const btnCloseAbout = document.getElementById('btn-close-about');
-
 
 
 // =========================================================
@@ -104,25 +105,31 @@ function setupDashboardView(email, status) {
 navLibrary.addEventListener('click', () => switchView('library'));
 navHistory.addEventListener('click', () => { switchView('history'); loadHistoryData(); });
 navUpdates.addEventListener('click', () => { switchView('updates'); loadUpdatesData(); });
+navDemographics.addEventListener('click', () => switchView('demographics')); // <---
 
 function switchView(viewName) {
     viewLibrary.classList.add('hidden');
     viewHistory.classList.add('hidden');
     viewUpdates.classList.add('hidden');
+    viewDemographics.classList.add('hidden'); // <---
     
     navLibrary.classList.remove('active');
     navHistory.classList.remove('active');
     navUpdates.classList.remove('active');
+    navDemographics.classList.remove('active'); // <---
 
     if (viewName === 'library') {
         viewLibrary.classList.remove('hidden'); navLibrary.classList.add('active');
-        loadTestsList(); // Odświeżamy widok przy wejściu (ważne po aktualizacji!)
+        loadTestsList(); 
     } else if (viewName === 'history') {
         viewHistory.classList.remove('hidden'); navHistory.classList.add('active');
     } else if (viewName === 'updates') {
         viewUpdates.classList.remove('hidden'); navUpdates.classList.add('active');
+    } else if (viewName === 'demographics') {
+        viewDemographics.classList.remove('hidden'); navDemographics.classList.add('active');
     }
 }
+
 if (navAbout) {
     navAbout.addEventListener('click', () => {
         aboutModal.classList.remove('hidden');
@@ -135,11 +142,12 @@ if (btnCloseAbout) {
     });
 }
 
+
 // =========================================================
 // CZĘŚĆ 3: LOGIKA DANYCH
 // =========================================================
 
-// --- A. BIBLIOTEKA (Zmieniona logika przycisków) ---
+// --- A. BIBLIOTEKA ---
 window.loadTestsList = async function() {
     viewLibrary.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
     try {
@@ -161,30 +169,22 @@ window.loadTestsList = async function() {
             const localVer = localVersions[testId] ? Number(localVersions[testId]) : 0;
             const remoteVer = Number(t.version);
 
-            // ZMIANA LOGIKI TUTAJ
             let iconBadge = '';
             let btnText = 'Uruchom';
-            let btnClass = 'primary'; // niebieski
+            let btnClass = 'primary';
             
-            // Wersja, którą przekażemy do Electrona.
-            // Jeśli mamy zainstalowany test, przekazujemy wersję LOKALNĄ.
-            // Dzięki temu Electron pomyśli: "Aha, mam wersję 1, user chce wersję 1 -> URUCHAMIAM (bez pobierania)".
-            // Jeśli nie mamy testu, przekazujemy wersję ZDALNĄ -> Electron pobierze.
             let versionParam = localVer > 0 ? localVer : remoteVer;
 
             if (localVer === 0) {
-                // Nie pobrano -> Musi pobrać
                 iconBadge = `<span class="material-icons" style="color:#888; font-size:24px;" title="Nie pobrano">cloud_download</span>`;
                 btnText = 'Pobierz';
                 versionParam = remoteVer;
             } else if (localVer < remoteVer) {
-                // Jest stara wersja -> IKONA pomarańczowa, ale przycisk "Uruchom" (stare)
                 iconBadge = `<span class="material-icons" style="color:#ff9800; font-size:24px;" title="Dostępna aktualizacja w zakładce Aktualizacje">system_update</span>`;
-                btnText = 'Uruchom'; // Pozwalamy uruchomić starą wersję!
-                btnClass = 'outline'; // Styl wizualny (opcjonalnie, np. szary)
-                versionParam = localVer; // Wymuszamy uruchomienie lokalnej wersji
+                btnText = 'Uruchom'; 
+                btnClass = 'outline';
+                versionParam = localVer;
             } else {
-                // Zainstalowano i aktualne -> IKONA zielona
                 iconBadge = `<span class="material-icons" style="color:#4caf50; font-size:24px;" title="Zainstalowano">check_circle</span>`;
                 btnText = 'Uruchom';
                 versionParam = localVer;
@@ -232,10 +232,14 @@ async function loadHistoryData() {
         snap.forEach(doc => {
             const r = doc.data();
             const score = r.data.czas_reakcji ? `${r.data.czas_reakcji} ms` : (r.data.score || "JSON");
+            
+            // Jeśli mamy ID pacjenta w metryczce, wyświetl je
+            const patientId = r.data.subject_id || r.data.subjectId || "-";
+
             historyTableBody.innerHTML += `<tr>
                 <td>${new Date(r.timestamp).toLocaleString()}</td>
                 <td>${r.test_id}</td>
-                <td>${r.data.subject_id || "-"}</td>
+                <td>${patientId}</td>
                 <td><strong>${score}</strong></td>
             </tr>`;
         });
@@ -308,26 +312,18 @@ async function loadUpdatesData() {
 
 window.startTestProcess = (url, id, ver) => {
     if (window.electronAPI) {
-        // Run mode (onlyDownload = false)
-        // Jeśli to pierwsze pobranie, odśwież widok po chwili
         window.electronAPI.downloadAndRun(url, id, ver, false);
-        
-        // Sztuczka: Jeśli test nie istnieje (wersja = remoteVer i local=0), to po pobraniu warto odświeżyć ikonę
         setTimeout(() => loadTestsList(), 3000); 
     } else alert("Brak Electrona");
 };
 
-// Funkcja Aktualizacji (z zakładki Aktualizacje)
 window.forceUpdate = (url, id, ver) => {
     if (window.electronAPI) {
-        // Only Download Mode (true)
         window.electronAPI.downloadAndRun(url, id, ver, true);
         alert("Pobieranie w tle...");
-        
-        // ZMIANA: Odświeżamy i Aktualizacje i Bibliotekę po 2 sekundach
         setTimeout(() => {
             loadUpdatesData();
-            loadTestsList(); // <-- Żeby w bibliotece pojawił się checkmark
+            loadTestsList();
         }, 2000);
     }
 };
@@ -338,29 +334,84 @@ window.deleteLocalTest = async (testId) => {
         const res = await window.electronAPI.deleteTest(testId);
         if(res.success) {
             loadUpdatesData();
-            loadTestsList(); // Odśwież też bibliotekę (ikona zmieni się na chmurkę)
+            loadTestsList();
         } else {
             alert("Błąd: " + res.error);
         }
     }
 };
 
+// --- ODBIÓR WYNIKÓW I DOŁĄCZANIE METRYCZKI ---
 if (window.electronAPI) {
     window.electronAPI.onTestResults((raw) => {
         const u = auth.currentUser;
+        
+        // 1. Sprawdzamy, czy wypełniono metryczkę
+        let participantId = "GUEST";
+        let demoData = null;
+
+        if (activeDemographics) {
+            // Mamy dane z metryczki!
+            participantId = activeDemographics.participant_id;
+            demoData = activeDemographics;
+        } else if (raw.subjectId && raw.subjectId !== "participant") {
+            // Fallback: PsychoPy default
+            participantId = raw.subjectId;
+        }
+
+        // 2. Budujemy pełny pakiet
         currentResultPackage = {
             testId: raw.testId || "test",
             timestamp: new Date().toISOString(),
             researcher_uid: u ? u.uid : "GUEST",
-            wyniki: raw
+            
+            // Nowe pola:
+            subject_id: participantId, // To nadpisuje GUEST jeśli metryczka jest
+            demographics: demoData,    // Cały obiekt z formularza
+            
+            wyniki: raw // Oryginalne dane z testu
         };
+        
         openModal(currentResultPackage);
     });
 }
 
 
 // =========================================================
-// CZĘŚĆ 5: MODAL WYNIKÓW
+// CZĘŚĆ 5: OBSŁUGA METRYCZKI (ZAPIS)
+// =========================================================
+
+document.getElementById('btn-save-demo').addEventListener('click', () => {
+    const id = document.getElementById('demo-id').value.trim();
+    const age = document.getElementById('demo-age').value;
+    const gender = document.getElementById('demo-gender').value;
+    const edu = document.getElementById('demo-edu').value;
+    const notes = document.getElementById('demo-notes').value;
+
+    if (!id) {
+        alert("Proszę podać przynajmniej Identyfikator (Kod)!");
+        return;
+    }
+
+    activeDemographics = {
+        participant_id: id,
+        age: age || null,
+        gender: gender || null,
+        education: edu || null,
+        notes: notes || null,
+        filled_at: new Date().toISOString()
+    };
+
+    const statusSpan = document.getElementById('demo-status');
+    statusSpan.style.display = 'inline';
+    setTimeout(() => { statusSpan.style.display = 'none'; }, 3000);
+    
+    console.log("Zapisano metryczkę w pamięci:", activeDemographics);
+});
+
+
+// =========================================================
+// CZĘŚĆ 6: MODAL WYNIKÓW
 // =========================================================
 
 function openModal(data) {
@@ -399,6 +450,11 @@ btnUploadCloud.addEventListener('click', async () => {
         await addDoc(collection(db, "results"), {
             researcher_id: auth.currentUser.uid,
             test_id: currentResultPackage.testId,
+            
+            // Zapisujemy nowe pola też do bazy
+            subject_id: currentResultPackage.subject_id,
+            demographics: currentResultPackage.demographics,
+            
             data: currentResultPackage.wyniki,
             timestamp: currentResultPackage.timestamp
         });

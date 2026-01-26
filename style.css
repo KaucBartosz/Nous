@@ -291,6 +291,60 @@ th {
     text-transform: uppercase;
     font-size: 12px;
 }
+/* --- METRYCZKA (FORMULARZ) --- */
+.form-container {
+    background: var(--bg-card);
+    padding: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    max-width: 600px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #ccc;
+    font-size: 14px;
+}
+
+/* Style dla inputów, selectów i textarea */
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 12px;
+    background: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: white;
+    font-family: inherit;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+textarea {
+    resize: vertical;
+}
 
 tr:hover { background-color: rgba(255,255,255,0.03); }
 

@@ -52,9 +52,10 @@
                 <button id="nav-updates" class="nav-item">
                     <span class="material-icons">system_update</span> Aktualizacje
                 </button>
-
-                <!-- TU JEST POPRAWKA: Przycisk Info wewnątrz nawigacji -->
-                <div class="spacer" style="flex: 1;"></div> <!-- Wypycha "O programie" na dół -->
+                <button id="nav-demographics" class="nav-item">
+                    <span class="material-icons">assignment_ind</span> Metryczka
+                </button>
+                <div class="spacer" style="flex: 1;"></div> 
                 <button id="nav-about" class="nav-item">
                     <span class="material-icons">info</span> O programie
                 </button>
@@ -129,6 +130,76 @@
                             <!-- JS wstrzyknie tu wiersze -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+            <!-- WIDOK 4: Metryczka (Formularz) -->
+            <div id="demographics-view" class="hidden">
+                <h3>Dane Uczestnika Badania</h3>
+                <p style="color:#888; margin-bottom:20px;">Wypełnij te dane przed uruchomieniem testu. Zostaną one dołączone do wyniku.</p>
+
+                <div class="form-container">
+                    <div class="form-group">
+                        <label>Identyfikator / Kod:</label>
+                        <input type="text" id="demo-id" placeholder="np. PACJENT_001">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Wiek:</label>
+                            <input type="number" id="demo-age" placeholder="Lat">
+                        </div>
+                        <div class="form-group">
+                            <label>Płeć:</label>
+                            <select id="demo-gender">
+                                <option value="">-- Wybierz --</option>
+                                <option value="K">Kobieta</option>
+                                <option value="M">Mężczyzna</option>
+                                <option value="I">Inna</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                            <label>Kategoria Prawa Jazdy:</label>
+                            <select id="demo-DLcategory">
+                                <option value="">-- Wybierz --</option>
+                                <option value="Brak">Brak</option>
+                                <option value="AM">AM</option>
+                                <option value="A1">A1</option>
+                                <option value="A2">A2</option>
+                                <option value="A">A</option>
+                                <option value="B1">B1</option>
+                                <option value="B">B</option>
+                                <option value="B+E">B+E</option>
+                                <option value="C">C</option>
+                                <option value="C1">C1</option>
+                                <option value="C1+E">C1+E</option>
+                                <option value="C+E">C+E</option>
+                                <option value="D">D</option>
+                                <option value="D1">D1</option>
+                                <option value="D1+E">D1+E</option>
+                                <option value="D+E">D+E</option>
+                                <option value="T">T</option>
+                                <option value="Tramwaj">Tramwaj</option>
+                            </select>
+                        </div>
+                    <div class="form-group">
+                        <div class="form-group">
+                            <label>Staż jazdy:</label>
+                            <input type="number" id="demo-DLexperience" placeholder="W latach">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Dodatkowe uwagi (opcjonalne):</label>
+                        <textarea id="demo-notes" rows="4" placeholder="Np. Uczestnik zmęczony, w okularach..."></textarea>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <button id="btn-save-demo" class="btn primary">
+                            <span class="material-icons">save</span> Zapisz Dane Sesji
+                        </button>
+                        <span id="demo-status" style="margin-left:15px; color:#4caf50; display:none;">Zapisano!</span>
+                    </div>
                 </div>
             </div>
         </main>
