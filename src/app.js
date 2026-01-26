@@ -6,6 +6,7 @@ import { loadHistoryData, exportHistoryToCSV } from './modules/history.js';
 import { loadUpdatesData } from './modules/updates.js';
 import { loadSavedDemographics, saveDemographicsFromForm } from './modules/demographics.js';
 import { initResultsHandler } from './modules/results.js';
+import { initSyncService, setAutoSync, getAutoSyncState } from './modules/sync.js';
 
 // --- INITIALIZATION ---
 
@@ -43,5 +44,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. Subsystems
     loadSavedDemographics();
     initResultsHandler();
+
+    // 7. Offline Sync & Toggle
+    initSyncService();
+
+    // Initialize toggle state
+    if (elements.toggleSync) {
+        elements.toggleSync.checked = getAutoSyncState();
+        elements.toggleSync.addEventListener('change', (e) => {
+            setAutoSync(e.target.checked);
+        });
+    }
+
+    // Refresh history if sync updates something
+    window.addEventListener('sync-complete', () => {
+        // Only refresh if history view is active
+        if (elements.navHistory.classList.contains('active')) {
+            loadHistoryData();
+        }
+    });
 
 });

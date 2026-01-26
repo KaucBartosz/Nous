@@ -39,6 +39,9 @@ export const elements = {
     btnLogin: document.getElementById('btn-login'),
     btnRegister: document.getElementById('btn-register'),
     btnGuest: document.getElementById('btn-guest'),
+
+    // Sync Toggle
+    toggleSync: document.getElementById('toggle-sync'),
 };
 
 export function switchView(viewName, callbacks = {}) {
