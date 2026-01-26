@@ -13,8 +13,7 @@
     <div id="login-screen" class="full-screen-center">
         <div class="login-card">
             <div class="logo-area">
-                <!--<span class="material-icons large-icon">psychology</span>-->
-                <img src="logo.png" alt="Logo" style="width: 100px; height: 100px; margin-right: 10px;">
+                <img src="logo.png" alt="Logo" style="width: 100px; height: 100px; margin-bottom: 10px;">
                 <h1>Nous</h1>
             </div>
             
@@ -37,8 +36,7 @@
         <!-- Pasek Boczny -->
         <aside class="sidebar">
             <div class="brand">
-                <!-- <span class="material-icons">psychology</span> -->
-                <img src="logo.png" alt="Logo" style="width: 50px; height: 50px; margin-right: 10px;">
+                <img src="logo.png" alt="Logo" style="width: 40px; height: 40px; margin-right: 10px;">
                 <span>Nous</span>
             </div>
 
@@ -55,7 +53,9 @@
                 <button id="nav-demographics" class="nav-item">
                     <span class="material-icons">assignment_ind</span> Metryczka
                 </button>
+                
                 <div class="spacer" style="flex: 1;"></div> 
+                
                 <button id="nav-about" class="nav-item">
                     <span class="material-icons">info</span> O programie
                 </button>
@@ -91,10 +91,6 @@
                         <span class="material-icons">download</span> Eksportuj CSV
                     </button>
                 </div>
-                
-                <!-- Opcjonalny kontener na wykres (jeśli dodasz Chart.js) -->
-                <!-- <div class="chart-container" style="..."> <canvas id="historyChart"></canvas> </div> -->
-
                 <div class="table-container">
                     <table id="history-table">
                         <thead>
@@ -132,6 +128,7 @@
                     </table>
                 </div>
             </div>
+
             <!-- WIDOK 4: Metryczka (Formularz) -->
             <div id="demographics-view" class="hidden">
                 <h3>Dane Uczestnika Badania</h3>
@@ -158,40 +155,41 @@
                             </select>
                         </div>
                     </div>
+
                     <div class="form-group">
-                            <label>Kategoria Prawa Jazdy:</label>
-                            <select id="demo-DLcategory">
-                                <option value="">-- Wybierz --</option>
-                                <option value="Brak">Brak</option>
-                                <option value="AM">AM</option>
-                                <option value="A1">A1</option>
-                                <option value="A2">A2</option>
-                                <option value="A">A</option>
-                                <option value="B1">B1</option>
-                                <option value="B">B</option>
-                                <option value="B+E">B+E</option>
-                                <option value="C">C</option>
-                                <option value="C1">C1</option>
-                                <option value="C1+E">C1+E</option>
-                                <option value="C+E">C+E</option>
-                                <option value="D">D</option>
-                                <option value="D1">D1</option>
-                                <option value="D1+E">D1+E</option>
-                                <option value="D+E">D+E</option>
-                                <option value="T">T</option>
-                                <option value="Tramwaj">Tramwaj</option>
-                            </select>
-                        </div>
+                        <label>Kategoria Prawa Jazdy:</label>
+                        <select id="demo-DLcategory">
+                            <option value="">-- Wybierz --</option>
+                            <option value="Brak">Brak</option>
+                            <option value="AM">AM</option>
+                            <option value="A1">A1</option>
+                            <option value="A2">A2</option>
+                            <option value="A">A</option>
+                            <option value="B1">B1</option>
+                            <option value="B">B</option>
+                            <option value="B+E">B+E</option>
+                            <option value="C">C</option>
+                            <option value="C1">C1</option>
+                            <option value="C1+E">C1+E</option>
+                            <option value="C+E">C+E</option>
+                            <option value="D">D</option>
+                            <option value="D1">D1</option>
+                            <option value="D1+E">D1+E</option>
+                            <option value="D+E">D+E</option>
+                            <option value="T">T</option>
+                            <option value="Tramwaj">Tramwaj</option>
+                        </select>
+                    </div>
+
+                    <!-- POPRAWIONY FRAGMENT (Usunięto podwójny div form-group) -->
                     <div class="form-group">
-                        <div class="form-group">
-                            <label>Staż jazdy:</label>
-                            <input type="number" id="demo-DLexperience" placeholder="W latach">
-                        </div>
+                        <label>Staż jazdy (lata):</label>
+                        <input type="number" id="demo-DLexperience" placeholder="np. 5">
                     </div>
                     
                     <div class="form-group">
                         <label>Dodatkowe uwagi (opcjonalne):</label>
-                        <textarea id="demo-notes" rows="4" placeholder="Np. Uczestnik zmęczony, w okularach..."></textarea>
+                        <textarea id="demo-notes" rows="4" placeholder="Np. Uczestnik w okularach..."></textarea>
                     </div>
 
                     <div style="margin-top:20px;">
@@ -205,39 +203,27 @@
         </main>
     </div>
 
-    <!-- 3. OKNA MODALNE (UKRYTE) -->
+    <!-- 3. OKNA MODALNE -->
 
-    <!-- Modal: Wyniki Badania -->
+    <!-- Modal: Wyniki -->
     <div id="results-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Badanie Zakończone</h3>
                 <button id="btn-close-modal" class="close-x">&times;</button>
             </div>
-            
             <div class="modal-body">
                 <div class="score-display">
                     <span class="label">Wynik:</span>
                     <span class="value" id="modal-score">---</span>
                 </div>
-                
-                <div class="json-preview">
-                    <pre id="modal-json-preview">{...}</pre>
-                </div>
-
-                <div class="status-info" id="modal-upload-info">
-                    <!-- Ikona statusu -->
-                </div>
+                <div class="json-preview"><pre id="modal-json-preview">{...}</pre></div>
+                <div class="status-info" id="modal-upload-info"></div>
             </div>
-
             <div class="modal-footer">
                 <button id="btn-discard" class="btn danger">Odrzuć</button>
-                <button id="btn-save-disk" class="btn secondary">
-                    <span class="material-icons">save</span> Zapisz na dysku
-                </button>
-                <button id="btn-upload-cloud" class="btn primary" disabled>
-                    <span class="material-icons">cloud_upload</span> Wyślij do Chmury
-                </button>
+                <button id="btn-save-disk" class="btn secondary">Zapisz na dysku</button>
+                <button id="btn-upload-cloud" class="btn primary" disabled>Wyślij do Chmury</button>
             </div>
         </div>
     </div>
@@ -267,7 +253,6 @@
         </div>
     </div>
 
-    <!-- LOGIKA APLIKACJI -->
     <script type="module" src="./src/app.js"></script>
 </body>
 </html>

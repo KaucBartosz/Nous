@@ -342,32 +342,53 @@ window.deleteLocalTest = async (testId) => {
 };
 
 // --- ODBIÓR WYNIKÓW I DOŁĄCZANIE METRYCZKI ---
+// --- ODBIÓR WYNIKÓW I DOŁĄCZANIE METRYCZKI ---
 if (window.electronAPI) {
     window.electronAPI.onTestResults((raw) => {
+        console.log("Odebrano wyniki z testu. Przetwarzanie...");
+
         const u = auth.currentUser;
         
-        // 1. Sprawdzamy, czy wypełniono metryczkę
-        let participantId = "GUEST";
-        let demoData = null;
+        // 1. PANCERNE SPRAWDZANIE METRYCZKI
+        // Najpierw patrzymy do zmiennej w RAM
+        let currentDemo = activeDemographics;
 
-        if (activeDemographics) {
+        // Jeśli w RAM jest pusto, sprawdzamy "dysk" (localStorage) - TO JEST NOWA CZĘŚĆ
+        if (!currentDemo) {
+            const saved = localStorage.getItem('activeDemographics');
+            if (saved) {
+                try {
+                    currentDemo = JSON.parse(saved);
+                    console.log("Pobrano metryczkę z LocalStorage (fallback):", currentDemo);
+                } catch (e) {
+                    console.error("Błąd parsowania metryczki:", e);
+                }
+            }
+        }
+
+        // 2. Ustalanie ID pacjenta
+        let participantId = "GUEST";
+        
+        if (currentDemo && currentDemo.participant_id) {
             // Mamy dane z metryczki!
-            participantId = activeDemographics.participant_id;
-            demoData = activeDemographics;
+            participantId = currentDemo.participant_id;
         } else if (raw.subjectId && raw.subjectId !== "participant") {
             // Fallback: PsychoPy default
             participantId = raw.subjectId;
         }
 
-        // 2. Budujemy pełny pakiet
+        console.log("Finalne ID pacjenta:", participantId);
+        console.log("Dołączana metryczka:", currentDemo);
+
+        // 3. Budujemy pełny pakiet
         currentResultPackage = {
             testId: raw.testId || "test",
             timestamp: new Date().toISOString(),
             researcher_uid: u ? u.uid : "GUEST",
             
             // Nowe pola:
-            subject_id: participantId, // To nadpisuje GUEST jeśli metryczka jest
-            demographics: demoData,    // Cały obiekt z formularza
+            subject_id: participantId,
+            demographics: currentDemo,    // Tutaj wstawiamy znaleziony obiekt (lub null)
             
             wyniki: raw // Oryginalne dane z testu
         };
@@ -375,41 +396,76 @@ if (window.electronAPI) {
         openModal(currentResultPackage);
     });
 }
-
-
 // =========================================================
 // CZĘŚĆ 5: OBSŁUGA METRYCZKI (ZAPIS)
 // =========================================================
 
-document.getElementById('btn-save-demo').addEventListener('click', () => {
-    const id = document.getElementById('demo-id').value.trim();
-    const age = document.getElementById('demo-age').value;
-    const gender = document.getElementById('demo-gender').value;
-    const edu = document.getElementById('demo-edu').value;
-    const notes = document.getElementById('demo-notes').value;
-
-    if (!id) {
-        alert("Proszę podać przynajmniej Identyfikator (Kod)!");
-        return;
+// Funkcja ładowania przy starcie
+function loadSavedDemographics() {
+    const saved = localStorage.getItem('activeDemographics');
+    if (saved) {
+        try {
+            activeDemographics = JSON.parse(saved);
+            
+            // Wypełnij formularz jeśli elementy istnieją
+            if(document.getElementById('demo-id')) {
+                document.getElementById('demo-id').value = activeDemographics.participant_id || '';
+                document.getElementById('demo-age').value = activeDemographics.age || '';
+                document.getElementById('demo-gender').value = activeDemographics.gender || '';
+                // NOWE POLA:
+                document.getElementById('demo-DLcategory').value = activeDemographics.dl_category || '';
+                document.getElementById('demo-DLexperience').value = activeDemographics.dl_experience || '';
+                
+                document.getElementById('demo-notes').value = activeDemographics.notes || '';
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }
+}
 
-    activeDemographics = {
-        participant_id: id,
-        age: age || null,
-        gender: gender || null,
-        education: edu || null,
-        notes: notes || null,
-        filled_at: new Date().toISOString()
-    };
+// Wywołaj przy starcie
+loadSavedDemographics();
 
-    const statusSpan = document.getElementById('demo-status');
-    statusSpan.style.display = 'inline';
-    setTimeout(() => { statusSpan.style.display = 'none'; }, 3000);
-    
-    console.log("Zapisano metryczkę w pamięci:", activeDemographics);
-});
+// Przycisk Zapisz
+const btnSaveDemo = document.getElementById('btn-save-demo');
+if (btnSaveDemo) {
+    btnSaveDemo.addEventListener('click', () => {
+        const id = document.getElementById('demo-id').value.trim();
+        const age = document.getElementById('demo-age').value;
+        const gender = document.getElementById('demo-gender').value;
+        // NOWE POLA:
+        const dlCat = document.getElementById('demo-DLcategory').value;
+        const dlExp = document.getElementById('demo-DLexperience').value;
+        
+        const notes = document.getElementById('demo-notes').value;
 
+        if (!id) {
+            alert("Proszę podać przynajmniej Identyfikator (Kod)!");
+            return;
+        }
 
+        activeDemographics = {
+            participant_id: id,
+            age: age,
+            gender: gender,
+            dl_category: dlCat,    // Prawo jazdy
+            dl_experience: dlExp,  // Staż
+            notes: notes,
+            filled_at: new Date().toISOString()
+        };
+
+        // Zapis do pamięci
+        localStorage.setItem('activeDemographics', JSON.stringify(activeDemographics));
+
+        const statusSpan = document.getElementById('demo-status');
+        statusSpan.style.display = 'inline';
+        statusSpan.innerText = "Zapisano!";
+        setTimeout(() => { statusSpan.style.display = 'none'; }, 3000);
+        
+        console.log("Zapisano:", activeDemographics);
+    });
+}
 // =========================================================
 // CZĘŚĆ 6: MODAL WYNIKÓW
 // =========================================================
