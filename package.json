@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
-    "firebase": "^12.8.0"
+    "firebase": "^12.8.0",
+    "idb": "^8.0.3"
   },
   "build": {
     "appId": "com.student.nous",
