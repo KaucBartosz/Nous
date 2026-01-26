@@ -2,36 +2,46 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>PsychoLauncher v2.0</title>
+    <title>Nous v1.0</title>
+    <!-- Ikony Google -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- EKRAN LOGOWANIA -->
+    <!-- 1. EKRAN LOGOWANIA -->
     <div id="login-screen" class="full-screen-center">
         <div class="login-card">
             <div class="logo-area">
-                <span class="material-icons large-icon">psychology</span>
-                <h1>PsychoLauncher</h1>
+                <!--<span class="material-icons large-icon">psychology</span>-->
+                <img src="logo.png" alt="Logo" style="width: 100px; height: 100px; margin-right: 10px;">
+                <h1>Nous</h1>
             </div>
+            
             <input type="email" id="email" placeholder="E-mail badacza">
             <input type="password" id="password" placeholder="Hasło">
+            
             <button id="btn-login" class="btn primary full-width">Zaloguj się</button>
             <button id="btn-register" class="btn secondary full-width">Załóż konto</button>
+            
             <div class="divider">lub</div>
             <button id="btn-guest" class="btn outline full-width">Tryb Offline (Gość)</button>
+
             <p id="error-msg" class="error-text"></p>
         </div>
     </div>
 
-    <!-- DASHBOARD -->
+    <!-- 2. DASHBOARD (GŁÓWNY INTERFEJS) -->
     <div id="dashboard-screen" class="app-layout hidden">
+        
+        <!-- Pasek Boczny -->
         <aside class="sidebar">
             <div class="brand">
-                <span class="material-icons">psychology</span>
-                <span>PsychoLauncher</span>
+                <!-- <span class="material-icons">psychology</span> -->
+                <img src="logo.png" alt="Logo" style="width: 50px; height: 50px; margin-right: 10px;">
+                <span>Nous</span>
             </div>
+
             <nav>
                 <button id="nav-library" class="nav-item active">
                     <span class="material-icons">library_books</span> Biblioteka Testów
@@ -39,24 +49,38 @@
                 <button id="nav-history" class="nav-item">
                     <span class="material-icons">history</span> Historia Wyników
                 </button>
-                <!-- NOWY PRZYCISK -->
                 <button id="nav-updates" class="nav-item">
                     <span class="material-icons">system_update</span> Aktualizacje
                 </button>
+
+                <!-- TU JEST POPRAWKA: Przycisk Info wewnątrz nawigacji -->
+                <div class="spacer" style="flex: 1;"></div> <!-- Wypycha "O programie" na dół -->
+                <button id="nav-about" class="nav-item">
+                    <span class="material-icons">info</span> O programie
+                </button>
             </nav>
+
             <div class="user-profile">
-                <div class="avatar-circle"><span class="material-icons">person</span></div>
+                <div class="avatar-circle">
+                    <span class="material-icons">person</span>
+                </div>
                 <div class="user-details">
                     <span id="user-email-display">user@example.com</span>
                     <span id="user-status-display" class="status-badge">...</span>
                 </div>
-                <button id="btn-logout" class="icon-btn" title="Wyloguj"><span class="material-icons">logout</span></button>
+                <button id="btn-logout" class="icon-btn" title="Wyloguj">
+                    <span class="material-icons">logout</span>
+                </button>
             </div>
         </aside>
 
+        <!-- Główna Treść -->
         <main class="content-area">
+            
             <!-- WIDOK 1: Biblioteka (Grid) -->
-            <div id="tests-grid" class="grid-container"></div>
+            <div id="tests-grid" class="grid-container">
+                <!-- JS wstrzyknie tu kafelki -->
+            </div>
 
             <!-- WIDOK 2: Historia (Tabela) -->
             <div id="history-view" class="hidden">
@@ -66,10 +90,23 @@
                         <span class="material-icons">download</span> Eksportuj CSV
                     </button>
                 </div>
+                
+                <!-- Opcjonalny kontener na wykres (jeśli dodasz Chart.js) -->
+                <!-- <div class="chart-container" style="..."> <canvas id="historyChart"></canvas> </div> -->
+
                 <div class="table-container">
                     <table id="history-table">
-                        <thead><tr><th>Data</th><th>Test</th><th>ID Badanego</th><th>Wynik</th></tr></thead>
-                        <tbody></tbody>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Test</th>
+                                <th>ID Badanego</th>
+                                <th>Wynik</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS wstrzyknie tu wiersze -->
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -88,36 +125,78 @@
                                 <th>Akcja</th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody>
+                            <!-- JS wstrzyknie tu wiersze -->
+                        </tbody>
                     </table>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- MODAL WYNIKÓW -->
+    <!-- 3. OKNA MODALNE (UKRYTE) -->
+
+    <!-- Modal: Wyniki Badania -->
     <div id="results-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Badanie Zakończone</h3>
                 <button id="btn-close-modal" class="close-x">&times;</button>
             </div>
+            
             <div class="modal-body">
                 <div class="score-display">
                     <span class="label">Wynik:</span>
                     <span class="value" id="modal-score">---</span>
                 </div>
-                <div class="json-preview"><pre id="modal-json-preview">{...}</pre></div>
-                <div class="status-info" id="modal-upload-info"></div>
+                
+                <div class="json-preview">
+                    <pre id="modal-json-preview">{...}</pre>
+                </div>
+
+                <div class="status-info" id="modal-upload-info">
+                    <!-- Ikona statusu -->
+                </div>
             </div>
+
             <div class="modal-footer">
                 <button id="btn-discard" class="btn danger">Odrzuć</button>
-                <button id="btn-save-disk" class="btn secondary">Zapisz na dysku</button>
-                <button id="btn-upload-cloud" class="btn primary" disabled>Wyślij do Chmury</button>
+                <button id="btn-save-disk" class="btn secondary">
+                    <span class="material-icons">save</span> Zapisz na dysku
+                </button>
+                <button id="btn-upload-cloud" class="btn primary" disabled>
+                    <span class="material-icons">cloud_upload</span> Wyślij do Chmury
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Modal: O Programie -->
+    <div id="about-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="text-align: center; width: 400px;">
+            <div class="modal-header">
+                <h3>O platformie Nous</h3>
+                <button id="btn-close-about" class="close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <span class="material-icons" style="font-size: 64px; color: #3771c8; margin-bottom: 20px;">psychology</span>
+                <p><strong>Nous v1.0.0</strong></p>
+                <p>Platforma do dystrybucji i przeprowadzania testów psychometrycznych.</p>
+                <hr style="border: 0; border-top: 1px solid #444; margin: 20px 0;">
+                <p style="font-size: 12px; color: #888;">
+                    Praca Inżynierska<br>
+                    Autor: Bartosz Kauc<br>
+                    Uczelnia: Uniwersytet Kazimierza Wielkiego<br>
+                    Rok: 2026/2027
+                </p>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button class="btn primary" onclick="document.getElementById('about-modal').classList.add('hidden')">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIKA APLIKACJI -->
     <script type="module" src="./src/app.js"></script>
 </body>
 </html>

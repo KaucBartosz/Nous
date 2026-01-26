@@ -11,10 +11,37 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^40.0.0"
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
     "firebase": "^12.8.0"
+  },
+  "build": {
+    "appId": "com.student.nous",
+    "productName": "Nous",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!**/*.psd"
+    ]
   }
 }

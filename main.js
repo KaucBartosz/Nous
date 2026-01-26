@@ -12,7 +12,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    title: "PsychoLauncher",
+    title: "Nous",
+    icon: path.join(__dirname, 'icon.ico'), 
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -271,7 +272,7 @@ ipcMain.on('save-local-result', (event, dataToSave) => {
 
     const finalFileContent = {
         meta: { 
-            app: "PsychoLauncher", 
+            app: "Nous", 
             version: "2.0", 
             signature: signature 
         },

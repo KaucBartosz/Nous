@@ -38,6 +38,12 @@ const btnSaveDisk = document.getElementById('btn-save-disk');
 const btnUploadCloud = document.getElementById('btn-upload-cloud');
 const modalUploadInfo = document.getElementById('modal-upload-info');
 
+// Na początku pliku (przy definicjach elementów)
+const navAbout = document.getElementById('nav-about');
+const aboutModal = document.getElementById('about-modal');
+const btnCloseAbout = document.getElementById('btn-close-about');
+
+
 
 // =========================================================
 // CZĘŚĆ 1: UWIERZYTELNIANIE
@@ -110,19 +116,30 @@ function switchView(viewName) {
 
     if (viewName === 'library') {
         viewLibrary.classList.remove('hidden'); navLibrary.classList.add('active');
+        loadTestsList(); // Odświeżamy widok przy wejściu (ważne po aktualizacji!)
     } else if (viewName === 'history') {
         viewHistory.classList.remove('hidden'); navHistory.classList.add('active');
     } else if (viewName === 'updates') {
         viewUpdates.classList.remove('hidden'); navUpdates.classList.add('active');
     }
 }
+if (navAbout) {
+    navAbout.addEventListener('click', () => {
+        aboutModal.classList.remove('hidden');
+    });
+}
 
+if (btnCloseAbout) {
+    btnCloseAbout.addEventListener('click', () => {
+        aboutModal.classList.add('hidden');
+    });
+}
 
 // =========================================================
 // CZĘŚĆ 3: LOGIKA DANYCH
 // =========================================================
 
-// --- A. BIBLIOTEKA (Z ikonami statusu) ---
+// --- A. BIBLIOTEKA (Zmieniona logika przycisków) ---
 window.loadTestsList = async function() {
     viewLibrary.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
     try {
@@ -144,22 +161,33 @@ window.loadTestsList = async function() {
             const localVer = localVersions[testId] ? Number(localVersions[testId]) : 0;
             const remoteVer = Number(t.version);
 
-            // Logika ikon
+            // ZMIANA LOGIKI TUTAJ
             let iconBadge = '';
             let btnText = 'Uruchom';
-            let btnClass = 'primary';
+            let btnClass = 'primary'; // niebieski
+            
+            // Wersja, którą przekażemy do Electrona.
+            // Jeśli mamy zainstalowany test, przekazujemy wersję LOKALNĄ.
+            // Dzięki temu Electron pomyśli: "Aha, mam wersję 1, user chce wersję 1 -> URUCHAMIAM (bez pobierania)".
+            // Jeśli nie mamy testu, przekazujemy wersję ZDALNĄ -> Electron pobierze.
+            let versionParam = localVer > 0 ? localVer : remoteVer;
 
             if (localVer === 0) {
-                // Nie pobrano
+                // Nie pobrano -> Musi pobrać
                 iconBadge = `<span class="material-icons" style="color:#888; font-size:24px;" title="Nie pobrano">cloud_download</span>`;
                 btnText = 'Pobierz';
+                versionParam = remoteVer;
             } else if (localVer < remoteVer) {
-                // Aktualizacja
-                iconBadge = `<span class="material-icons" style="color:#ff9800; font-size:24px;" title="Dostępna aktualizacja">system_update</span>`;
-                btnText = 'Aktualizuj';
+                // Jest stara wersja -> IKONA pomarańczowa, ale przycisk "Uruchom" (stare)
+                iconBadge = `<span class="material-icons" style="color:#ff9800; font-size:24px;" title="Dostępna aktualizacja w zakładce Aktualizacje">system_update</span>`;
+                btnText = 'Uruchom'; // Pozwalamy uruchomić starą wersję!
+                btnClass = 'outline'; // Styl wizualny (opcjonalnie, np. szary)
+                versionParam = localVer; // Wymuszamy uruchomienie lokalnej wersji
             } else {
-                // Zainstalowano
+                // Zainstalowano i aktualne -> IKONA zielona
                 iconBadge = `<span class="material-icons" style="color:#4caf50; font-size:24px;" title="Zainstalowano">check_circle</span>`;
+                btnText = 'Uruchom';
+                versionParam = localVer;
             }
 
             const card = document.createElement('div');
@@ -176,7 +204,7 @@ window.loadTestsList = async function() {
                 <h4 style="margin-top:10px;">${t.name}</h4>
                 <p>${t.description}</p>
                 
-                <button class="btn ${btnClass} small" style="margin-top:auto;" onclick="startTestProcess('${t.downloadUrl}', '${testId}', ${t.version})">
+                <button class="btn ${btnClass} small" style="margin-top:auto;" onclick="startTestProcess('${t.downloadUrl}', '${testId}', ${versionParam})">
                     <span class="material-icons">play_arrow</span> ${btnText}
                 </button>
             `;
@@ -280,17 +308,27 @@ async function loadUpdatesData() {
 
 window.startTestProcess = (url, id, ver) => {
     if (window.electronAPI) {
-        // Run mode
+        // Run mode (onlyDownload = false)
+        // Jeśli to pierwsze pobranie, odśwież widok po chwili
         window.electronAPI.downloadAndRun(url, id, ver, false);
+        
+        // Sztuczka: Jeśli test nie istnieje (wersja = remoteVer i local=0), to po pobraniu warto odświeżyć ikonę
+        setTimeout(() => loadTestsList(), 3000); 
     } else alert("Brak Electrona");
 };
 
+// Funkcja Aktualizacji (z zakładki Aktualizacje)
 window.forceUpdate = (url, id, ver) => {
     if (window.electronAPI) {
-        // Download only mode
+        // Only Download Mode (true)
         window.electronAPI.downloadAndRun(url, id, ver, true);
         alert("Pobieranie w tle...");
-        setTimeout(loadUpdatesData, 2000);
+        
+        // ZMIANA: Odświeżamy i Aktualizacje i Bibliotekę po 2 sekundach
+        setTimeout(() => {
+            loadUpdatesData();
+            loadTestsList(); // <-- Żeby w bibliotece pojawił się checkmark
+        }, 2000);
     }
 };
 
@@ -299,9 +337,8 @@ window.deleteLocalTest = async (testId) => {
     if (window.electronAPI) {
         const res = await window.electronAPI.deleteTest(testId);
         if(res.success) {
-            loadUpdatesData(); 
-            // Jeśli byliśmy w bibliotece, to odświeżmy też bibliotekę
-            if(!viewLibrary.classList.contains('hidden')) loadTestsList();
+            loadUpdatesData();
+            loadTestsList(); // Odśwież też bibliotekę (ikona zmieni się na chmurkę)
         } else {
             alert("Błąd: " + res.error);
         }
