@@ -9,19 +9,19 @@ const AdmZip = require('adm-zip');
 let mainWindow;
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    title: "Nous",
-    icon: path.join(__dirname, 'icon.ico'), 
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    }
-  });
+    mainWindow = new BrowserWindow({
+        width: 1280,
+        height: 800,
+        title: "Nous",
+        icon: path.join(__dirname, 'icon.ico'),
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js')
+        }
+    });
 
-  mainWindow.loadFile('index.html');
+    mainWindow.loadFile('index.html');
 }
 
 // --- FUNKCJA POMOCNICZA: Szukanie index.html w podfolderach ---
@@ -53,15 +53,15 @@ function findStartFile(folderPath) {
 
 ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) => {
     const sender = event.sender;
-    
+
     // Definicje ścieżek
     const userDataPath = app.getPath('userData');
     const testsDir = path.join(userDataPath, 'tests_library');
     const testFolder = path.join(testsDir, testId);
-    
+
     const zipPath = path.join(testFolder, 'package.zip');
     const metaPath = path.join(testFolder, 'meta.json');
-    
+
     // Szukamy pliku startowego (może być głębiej)
     let entryFile = findStartFile(testFolder);
 
@@ -96,55 +96,78 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
     }
 
     sender.send('test-status', `Pobieranie paczki ZIP (v${version})...`);
-    
+
     const file = fs.createWriteStream(zipPath);
-    
+
     https.get(url, (response) => {
         if (response.statusCode !== 200 && response.statusCode !== 302) {
             sender.send('test-status', `Błąd serwera: ${response.statusCode}`);
-            fs.unlink(zipPath, () => {}); 
+            fs.unlink(zipPath, () => { });
             return;
         }
 
-        response.pipe(file);
+        const totalBytes = parseInt(response.headers['content-length'], 10);
+        let receivedBytes = 0;
+        let lastUpdate = 0;
 
-        file.on('finish', () => {
-            file.close();
-            
-            // --- KROK 4: ROZPAKOWYWANIE ---
-            sender.send('test-status', 'Rozpakowywanie plików...');
-            
-            try {
-                const zip = new AdmZip(zipPath);
-                zip.extractAllTo(testFolder, true); // Nadpisz
-                fs.unlinkSync(zipPath); // Usuń ZIP
+        response.on('data', (chunk) => {
+            receivedBytes += chunk.length;
+            file.write(chunk);
 
-                // Aktualizacja meta
-                const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
-                fs.writeFileSync(metaPath, JSON.stringify(metaData));
-
-                // Szukamy pliku ponownie po rozpakowaniu
-                entryFile = findStartFile(testFolder);
-
-                if (!entryFile) {
-                    sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
-                    return; 
+            if (totalBytes) {
+                const percent = Math.round((receivedBytes / totalBytes) * 100);
+                const now = Date.now();
+                // Throttle updates to every 100ms
+                if (now - lastUpdate > 100 || percent === 100) {
+                    sender.send('download-progress', { testId, percent });
+                    lastUpdate = now;
                 }
-
-                if (onlyDownload) {
-                    sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
-                } else {
-                    sender.send('test-status', 'Gotowe. Uruchamianie...');
-                    openTestWindow(entryFile);
-                }
-
-            } catch (err) {
-                console.error("Błąd ZIP:", err);
-                sender.send('test-status', 'Błąd rozpakowywania archiwum!');
             }
         });
+
+        response.on('end', () => {
+            file.end(); // Important!
+
+            // Wait for file stream to finish closing
+            file.on('finish', () => {
+                file.close();
+
+                // --- KROK 4: ROZPAKOWYWANIE ---
+                sender.send('test-status', 'Rozpakowywanie plików...');
+
+                try {
+                    const zip = new AdmZip(zipPath);
+                    zip.extractAllTo(testFolder, true); // Nadpisz
+                    fs.unlinkSync(zipPath); // Usuń ZIP
+
+                    // Aktualizacja meta
+                    const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
+                    fs.writeFileSync(metaPath, JSON.stringify(metaData));
+
+                    // Szukamy pliku ponownie po rozpakowaniu
+                    entryFile = findStartFile(testFolder);
+
+                    if (!entryFile) {
+                        sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
+                        return;
+                    }
+
+                    if (onlyDownload) {
+                        sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
+                    } else {
+                        sender.send('test-status', 'Gotowe. Uruchamianie...');
+                        openTestWindow(entryFile);
+                    }
+
+                } catch (err) {
+                    console.error("Błąd ZIP:", err);
+                    sender.send('test-status', 'Błąd rozpakowywania archiwum!');
+                }
+            });
+        });
+
     }).on('error', (err) => {
-        fs.unlink(zipPath, () => {});
+        fs.unlink(zipPath, () => { });
         sender.send('test-status', `Błąd sieci: ${err.message}`);
     });
 });
@@ -219,11 +242,11 @@ function openTestWindow(htmlPath) {
         height: 768,
         parent: mainWindow,
         title: "Badanie w toku...",
-        
+
         // --- PEŁNY EKRAN ---
         fullscreen: true,       // Odpala na cały ekran
         autoHideMenuBar: true,  // Ukrywa menu
-        
+
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -232,7 +255,7 @@ function openTestWindow(htmlPath) {
     });
 
     testWindow.loadFile(htmlPath);
-    
+
     // Obsługa ESC (opcjonalna - pozwala wyjść z FullScreen)
     testWindow.webContents.on('before-input-event', (event, input) => {
         if (input.key === 'Escape' && input.type === 'keyDown') {
@@ -265,16 +288,16 @@ ipcMain.on('test-close', (event) => {
 ipcMain.on('save-local-result', (event, dataToSave) => {
     const dialog = require('electron').dialog;
     const SECRET_KEY = "Inzynierka_Secret_Key_2026";
-    
+
     const hmac = crypto.createHmac('sha256', SECRET_KEY);
     hmac.update(JSON.stringify(dataToSave.wyniki));
     const signature = hmac.digest('hex');
 
     const finalFileContent = {
-        meta: { 
-            app: "Nous", 
-            version: "2.0", 
-            signature: signature 
+        meta: {
+            app: "Nous",
+            version: "2.0",
+            signature: signature
         },
         data: dataToSave
     };

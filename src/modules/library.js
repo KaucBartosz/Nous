@@ -76,10 +76,35 @@ export async function loadTestsList() {
     }
 }
 
+// Listener for progress
+if (window.electronAPI) {
+    window.electronAPI.onDownloadProgress(({ testId, percent }) => {
+        const btn = document.getElementById(`start-test-${testId}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `
+                <span class="material-icons spin">sync</span> ${percent}%
+                <div style="width:100%; height:4px; background:#333; margin-top:5px; border-radius:2px;">
+                    <div style="width:${percent}%; height:100%; background:#4caf50; border-radius:2px;"></div>
+                </div>
+            `;
+            // If near 100%, we might want to refresh soon
+            if (percent >= 100) {
+                setTimeout(() => loadTestsList(), 1500);
+            }
+        }
+    });
+}
+
 export function startTestProcess(url, id, ver) {
     if (window.electronAPI) {
+        // Change button state immediately
+        const btn = document.getElementById(`start-test-${id}`);
+        if (btn) {
+            btn.innerHTML = '<span class="material-icons spin">sync</span> Inicjowanie...';
+            btn.disabled = true;
+        }
+
         window.electronAPI.downloadAndRun(url, id, ver, false);
-        // Refresh list after delay to show potential changes
-        setTimeout(() => loadTestsList(), 3000);
     } else alert("Brak Electrona");
 }

@@ -59,14 +59,36 @@ export async function loadUpdatesData() {
     }
 }
 
+// Listener for progress
+if (window.electronAPI) {
+    window.electronAPI.onDownloadProgress(({ testId, percent }) => {
+        const btn = document.getElementById(`force-update-${testId}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `
+                <span class="material-icons spin" style="font-size:16px;">sync</span> ${percent}%
+            `;
+            // If near 100%
+            if (percent >= 100) {
+                setTimeout(() => {
+                    loadUpdatesData();
+                    loadTestsList();
+                }, 1500);
+            }
+        }
+    });
+}
+
 export function forceUpdate(url, id, ver) {
     if (window.electronAPI) {
+        // Change button state
+        const btn = document.getElementById(`force-update-${id}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-icons spin" style="font-size:16px;">sync</span> ...';
+        }
+
         window.electronAPI.downloadAndRun(url, id, ver, true);
-        alert("Pobieranie w tle...");
-        setTimeout(() => {
-            loadUpdatesData();
-            loadTestsList();
-        }, 2000);
     }
 }
 
