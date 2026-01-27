@@ -11,15 +11,22 @@ export const elements = {
     navHistory: document.getElementById('nav-history'),
     navUpdates: document.getElementById('nav-updates'),
     navDemographics: document.getElementById('nav-demographics'),
+    navDemoCreator: document.getElementById('nav-demo-creator'),
     navAbout: document.getElementById('nav-about'),
 
     viewLibrary: document.getElementById('tests-grid'),
     viewHistory: document.getElementById('history-view'),
     viewUpdates: document.getElementById('updates-view'),
     viewDemographics: document.getElementById('demographics-view'),
+    viewDemoCreator: document.getElementById('demo-creator-view'),
 
     historyTableBody: document.querySelector('#history-table tbody'),
     updatesTableBody: document.querySelector('#updates-table tbody'),
+
+    // Demo Form
+    demoTemplateSelect: document.getElementById('demo-template-select'),
+    dynamicDemoForm: document.getElementById('dynamic-demo-form'),
+    btnSaveDemo: document.getElementById('btn-save-demo'),
 
     modalOverlay: document.getElementById('results-modal'),
     btnCloseModal: document.getElementById('btn-close-modal'),
@@ -44,20 +51,22 @@ export const elements = {
 };
 
 export function switchView(viewName, callbacks = {}) {
-    const { viewLibrary, viewHistory, viewUpdates, viewDemographics } = elements;
-    const { navLibrary, navHistory, navUpdates, navDemographics } = elements;
+    const { viewLibrary, viewHistory, viewUpdates, viewDemographics, viewDemoCreator } = elements;
+    const { navLibrary, navHistory, navUpdates, navDemographics, navDemoCreator } = elements;
 
     // Hide all
     viewLibrary.classList.add('hidden');
     viewHistory.classList.add('hidden');
     viewUpdates.classList.add('hidden');
     viewDemographics.classList.add('hidden');
+    viewDemoCreator.classList.add('hidden');
 
     // Deactivate navs
     navLibrary.classList.remove('active');
     navHistory.classList.remove('active');
     navUpdates.classList.remove('active');
     navDemographics.classList.remove('active');
+    navDemoCreator.classList.remove('active');
 
     if (viewName === 'library') {
         viewLibrary.classList.remove('hidden');
@@ -74,6 +83,11 @@ export function switchView(viewName, callbacks = {}) {
     } else if (viewName === 'demographics') {
         viewDemographics.classList.remove('hidden');
         navDemographics.classList.add('active');
+        if (callbacks.onDemographics) callbacks.onDemographics();
+    } else if (viewName === 'creator') {
+        viewDemoCreator.classList.remove('hidden');
+        navDemoCreator.classList.add('active');
+        if (callbacks.onCreator) callbacks.onCreator();
     }
 }
 
