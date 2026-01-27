@@ -106,26 +106,23 @@ function downloadSingleResultAsCSV(result) {
     const resData = result.wyniki || result.data || {};
     flattenObject(resData, flat, 'Wynik');
 
-    // Create CSV content (Vertical Key-Value or Horizontal?)
-    // User requested "Single result CSV", usually horizontal is better for many, but single file?
-    // Let's do a simple Key,Value list for single file, or one row with headers?
-    // One row is standard for CSV.
+    // Create Vertical CSV (Table view)
+    // Column 1: Parametr
+    // Column 2: Wartość
 
-    const bom = "\uFEFF"; // UTF-8 BOM for Excel
-    const keys = Object.keys(flat);
-    const header = keys.join(';');
-    // Escape values that contain semicolons or newlines
-    const values = keys.map(k => {
-        let val = String(flat[k]);
-        if (val.includes(';') || val.includes('\n')) {
-            val = `"${val.replace(/"/g, '""')}"`;
+    const bom = "\uFEFF";
+    let csvContent = bom + "Parametr;Wartość\r\n";
+
+    for (const [key, value] of Object.entries(flat)) {
+        let valStr = String(value);
+        // Escape semicolons and newlines in text
+        if (valStr.includes(';') || valStr.includes('\n')) {
+            valStr = `"${valStr.replace(/"/g, '""')}"`;
         }
-        return val;
-    }).join(';');
+        csvContent += `${key};${valStr}\r\n`;
+    }
 
-    const csvContent = bom + header + "\r\n" + values;
     const filename = `wynik_${result.testId}_${new Date(result.timestamp).getTime()}.csv`;
-
     downloadFile(filename, csvContent, 'text/csv;charset=utf-8;');
 }
 
