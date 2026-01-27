@@ -2,7 +2,7 @@
 import { openDB } from '../lib/idb.js';
 
 const DB_NAME = 'NousDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export async function initDB() {
     return openDB(DB_NAME, DB_VERSION, {
@@ -11,6 +11,9 @@ export async function initDB() {
                 const store = db.createObjectStore('results', { keyPath: 'id' });
                 store.createIndex('timestamp', 'timestamp');
                 store.createIndex('syncStatus', 'syncStatus');
+            }
+            if (!db.objectStoreNames.contains('demographicsTemplates')) {
+                db.createObjectStore('demographicsTemplates', { keyPath: 'id' });
             }
         },
     });
@@ -56,4 +59,28 @@ export async function markAsSynced(localId, firestoreId) {
 export async function deleteResult(id) {
     const db = await initDB();
     await db.delete('results', id);
+}
+
+// --- TEMPLATES (Metryczki) ---
+
+export async function saveTemplate(template) {
+    const db = await initDB();
+    const id = template.id || crypto.randomUUID();
+    await db.put('demographicsTemplates', { ...template, id });
+    return id;
+}
+
+export async function getAllTemplates() {
+    const db = await initDB();
+    return db.getAll('demographicsTemplates');
+}
+
+export async function getTemplate(id) {
+    const db = await initDB();
+    return db.get('demographicsTemplates', id);
+}
+
+export async function deleteTemplate(id) {
+    const db = await initDB();
+    await db.delete('demographicsTemplates', id);
 }
