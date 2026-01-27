@@ -4,7 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "admin": "electron admin_main.js"
   },
   "keywords": [],
   "author": "",
@@ -42,7 +43,9 @@
     "files": [
       "**/*",
       "!dist/*",
-      "!**/*.psd"
+      "!**/*.psd",
+      "!admin.html",
+      "!admin_main.js"
     ]
   }
 }
