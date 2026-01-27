@@ -25,10 +25,12 @@ export async function loadHistoryData() {
             return;
         }
 
-        myResults.forEach(r => {
-            const score = r.data.czas_reakcji ? `${r.data.czas_reakcji} ms` : (r.data.score || "JSON");
+        let rowsHTML = '';
+        myResults.forEach((r, index) => {
+            const resultData = r.wyniki || r.data || {};
+            const score = resultData.czas_reakcji ? `${resultData.czas_reakcji} ms` : (resultData.score || "JSON");
 
-            const patientId = r.subject_id || r.data.subjectId || "-";
+            const patientId = r.subject_id || resultData.subjectId || "-";
 
             // Sync Status Icon
             let syncIcon = '';
@@ -40,17 +42,49 @@ export async function loadHistoryData() {
                 syncIcon = `<span class="material-icons" style="color:red; font-size:18px;" title="Błąd">error</span>`;
             }
 
-            elements.historyTableBody.innerHTML += `<tr>
+            rowsHTML += `<tr>
                 <td>${new Date(r.timestamp).toLocaleString()}</td>
                 <td>${r.testId}</td>
                 <td>${patientId}</td>
                 <td><strong>${score}</strong></td>
                 <td style="text-align:center;">${syncIcon}</td>
+                <td style="text-align:center;">
+                    <button class="btn-download-result icon-btn" data-index="${index}" title="Pobierz JSON">
+                        <span class="material-icons" style="font-size:18px;">download</span>
+                    </button>
+                </td>
             </tr>`;
         });
+
+        elements.historyTableBody.innerHTML = rowsHTML;
+
+        // Attach event listeners
+        document.querySelectorAll('.btn-download-result').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = e.currentTarget.dataset.index;
+                const result = myResults[index];
+                downloadSingleResult(result);
+            });
+        });
+
     } catch (e) {
-        elements.historyTableBody.innerHTML = `<tr><td colspan="5">Błąd: ${e.message}</td></tr>`;
+        elements.historyTableBody.innerHTML = `<tr><td colspan="6">Błąd: ${e.message}</td></tr>`;
     }
+}
+
+function downloadSingleResult(result) {
+    const filename = `wynik_${result.testId}_${new Date(result.timestamp).getTime()}.json`;
+    const jsonStr = JSON.stringify(result, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 export function exportHistoryToCSV() {

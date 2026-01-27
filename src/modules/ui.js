@@ -24,7 +24,6 @@ export const elements = {
     modalOverlay: document.getElementById('results-modal'),
     btnCloseModal: document.getElementById('btn-close-modal'),
     btnDiscard: document.getElementById('btn-discard'),
-    btnSaveDisk: document.getElementById('btn-save-disk'),
     btnUploadCloud: document.getElementById('btn-upload-cloud'),
     modalUploadInfo: document.getElementById('modal-upload-info'),
 

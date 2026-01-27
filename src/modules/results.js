@@ -18,9 +18,7 @@ export function initResultsHandler() {
     elements.btnCloseModal.addEventListener('click', () => elements.modalOverlay.classList.add('hidden'));
     elements.btnDiscard.addEventListener('click', () => { if (confirm("Odrzucić?")) elements.modalOverlay.classList.add('hidden'); });
 
-    elements.btnSaveDisk.addEventListener('click', () => {
-        if (currentResultPackage) window.electronAPI.saveResultToDisk(currentResultPackage);
-    });
+
 
     // Zmiana: Button teraz służy do "Zapisu w systemie" (Local -> Cloud)
     elements.btnUploadCloud.addEventListener('click', saveResultToSystem);
