@@ -99,11 +99,24 @@
 
             <!-- WIDOK 2: Historia (Tabela) -->
             <div id="history-view" class="hidden">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <h3>Ostatnie Badania</h3>
                     <button id="btn-export-csv" class="btn secondary small">
-                        <span class="material-icons">download</span> Eksportuj CSV
+                        <span class="material-icons">download</span> Pobierz historię wyników w CSV
                     </button>
+                </div>
+
+                <div class="download-format-selector"
+                    style="margin-bottom: 15px; background: #2d2d2d; padding: 10px; border-radius: 4px; display: inline-flex; gap: 15px; align-items: center;">
+                    <span style="font-size: 13px; color: #aaa;">Format pobierania pojedynczego wyniku:</span>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="dl-format" value="json" checked>
+                        <span style="font-size: 13px;">JSON (Pełny)</span>
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="dl-format" value="csv">
+                        <span style="font-size: 13px;">CSV (Tabela)</span>
+                    </label>
                 </div>
                 <div class="table-container">
                     <table id="history-table">

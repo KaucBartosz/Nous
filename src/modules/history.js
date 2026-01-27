@@ -73,11 +73,75 @@ export async function loadHistoryData() {
 }
 
 function downloadSingleResult(result) {
-    const filename = `wynik_${result.testId}_${new Date(result.timestamp).getTime()}.json`;
-    const jsonStr = JSON.stringify(result, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const format = document.querySelector('input[name="dl-format"]:checked').value;
 
+    if (format === 'csv') {
+        downloadSingleResultAsCSV(result);
+    } else {
+        const filename = `wynik_${result.testId}_${new Date(result.timestamp).getTime()}.json`;
+        const jsonStr = JSON.stringify(result, null, 2);
+        downloadFile(filename, jsonStr, 'application/json');
+    }
+}
+
+function downloadSingleResultAsCSV(result) {
+    // Flatten logic
+    const flat = {};
+
+    // Core fields
+    flat['Data'] = new Date(result.timestamp).toLocaleString();
+    flat['Test ID'] = result.testId;
+    flat['ID Badanego'] = result.subject_id || "-";
+    flat['Badacz UID'] = result.researcher_uid;
+
+    // Demographics data (if any)
+    const demo = result.demographics || {};
+    if (demo.data) {
+        Object.keys(demo.data).forEach(k => {
+            flat[`Metryczka - ${k}`] = demo.data[k];
+        });
+    }
+
+    // Result data (wyniki or data)
+    const resData = result.wyniki || result.data || {};
+    flattenObject(resData, flat, 'Wynik');
+
+    // Create CSV content (Vertical Key-Value or Horizontal?)
+    // User requested "Single result CSV", usually horizontal is better for many, but single file?
+    // Let's do a simple Key,Value list for single file, or one row with headers?
+    // One row is standard for CSV.
+
+    const bom = "\uFEFF"; // UTF-8 BOM for Excel
+    const keys = Object.keys(flat);
+    const header = keys.join(';');
+    // Escape values that contain semicolons or newlines
+    const values = keys.map(k => {
+        let val = String(flat[k]);
+        if (val.includes(';') || val.includes('\n')) {
+            val = `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+    }).join(';');
+
+    const csvContent = bom + header + "\r\n" + values;
+    const filename = `wynik_${result.testId}_${new Date(result.timestamp).getTime()}.csv`;
+
+    downloadFile(filename, csvContent, 'text/csv;charset=utf-8;');
+}
+
+function flattenObject(obj, target, prefix) {
+    for (const key in obj) {
+        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+            flattenObject(obj[key], target, `${prefix} - ${key}`);
+        } else {
+            target[`${prefix} - ${key}`] = Array.isArray(obj[key]) ? JSON.stringify(obj[key]) : obj[key];
+        }
+    }
+}
+
+function downloadFile(filename, content, type) {
+    const blob = new Blob([content], { type: type });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
