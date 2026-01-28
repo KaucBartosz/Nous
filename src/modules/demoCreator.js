@@ -21,7 +21,9 @@ export function initDemoCreator() {
 
 function addFieldUI(initialData = null) {
     const container = document.getElementById('creator-fields-container');
-    const fieldId = Date.now() + Math.random(); // ensure uniqueness
+    // Create a safe ID string for DOM elements
+    const rawId = Date.now() + Math.random();
+    const fieldId = rawId.toString().replace('.', '-');
 
     const fieldDiv = document.createElement('div');
     fieldDiv.className = 'form-row';
@@ -29,22 +31,30 @@ function addFieldUI(initialData = null) {
     fieldDiv.style.marginBottom = '15px';
     fieldDiv.style.borderBottom = '1px solid #333';
     fieldDiv.style.paddingBottom = '10px';
+    fieldDiv.dataset.id = rawId; // Keep original ID for data if needed, or just use new one. 
+    // Actually, dataset.id is not used for retrieval in saveCurrentTemplate (it iterates rows), 
+    // but just to be safe let's keep it or use the safe one. Use safe one for consistency.
     fieldDiv.dataset.id = fieldId;
 
     const labelVal = initialData ? initialData.label : '';
     const typeVal = initialData ? initialData.type : 'text';
     const optionsVal = initialData ? (initialData.options || '') : '';
 
+    // IDs for inputs
+    const labelId = `field-label-${fieldId}`;
+    const typeId = `field-type-${fieldId}`;
+    const optionsId = `field-options-${fieldId}`;
+
     fieldDiv.innerHTML = `
         <div style="flex:3; display:flex; flex-direction:column; gap:10px; margin-right:10px;">
             <div style="display:flex; gap:10px;">
                 <div class="form-group" style="flex:2;">
-                    <label>Etykieta Pola</label>
-                    <input type="text" class="field-label" placeholder="np. Wiek" value="${labelVal}">
+                    <label for="${labelId}">Etykieta Pola</label>
+                    <input type="text" id="${labelId}" class="field-label" placeholder="np. Wiek" value="${labelVal}">
                 </div>
                 <div class="form-group" style="flex:1;">
-                    <label>Typ</label>
-                    <select class="field-type">
+                    <label for="${typeId}">Typ</label>
+                    <select id="${typeId}" class="field-type">
                         <option value="text" ${typeVal === 'text' ? 'selected' : ''}>Tekst (String)</option>
                         <option value="number" ${typeVal === 'number' ? 'selected' : ''}>Liczba (Int)</option>
                         <option value="float" ${typeVal === 'float' ? 'selected' : ''}>Liczba (Float)</option>
@@ -56,8 +66,8 @@ function addFieldUI(initialData = null) {
             </div>
             
             <div class="field-options-container" style="display: ${typeVal === 'select' ? 'block' : 'none'};">
-                <label>Opcje (oddzielone przecinkami)</label>
-                <input type="text" class="field-options" placeholder="np. Kobieta, Mężczyzna, Inna" value="${optionsVal}">
+                <label for="${optionsId}">Opcje (oddzielone przecinkami)</label>
+                <input type="text" id="${optionsId}" class="field-options" placeholder="np. Kobieta, Mężczyzna, Inna" value="${optionsVal}">
             </div>
         </div>
 
@@ -83,6 +93,14 @@ function addFieldUI(initialData = null) {
     });
 
     container.appendChild(fieldDiv);
+
+    // Auto-focus if it's a new field (not loading from template)
+    if (!initialData) {
+        const labelInput = fieldDiv.querySelector('.field-label');
+        if (labelInput) {
+            labelInput.focus();
+        }
+    }
 }
 
 async function saveCurrentTemplate() {
