@@ -475,6 +475,40 @@ textarea {
     resize: vertical;
 }
 
+/* --- KREATOR FIELDS STYLING --- */
+.field-creator-container {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-right: 10px;
+}
+
+.field-creator-row {
+    display: flex;
+    gap: 10px;
+}
+
+.field-creator-label-group {
+    flex: 2;
+}
+
+.field-creator-type-group {
+    flex: 1;
+}
+
+.field-options-container {
+    display: none;
+}
+
+.field-options-container.visible {
+    display: block;
+}
+
+.field-remove-btn {
+    margin-top: 28px;
+}
+
 tr:hover {
     background-color: rgba(255, 255, 255, 0.03);
 }

@@ -1,6 +1,6 @@
 // src/modules/sync.js
 import { db } from '../firebaseConfig.js';
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { getPendingResults, markAsSynced } from './database.js';
 import { getCurrentUser } from './auth.js';
 

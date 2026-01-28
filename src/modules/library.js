@@ -1,6 +1,6 @@
 // src/modules/library.js
 import { db } from '../firebaseConfig.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { elements } from './ui.js';
 
 export async function loadTestsList() {
@@ -24,49 +24,100 @@ export async function loadTestsList() {
             const localVer = localVersions[testId] ? Number(localVersions[testId]) : 0;
             const remoteVer = Number(t.version);
 
-            let iconBadge = '';
+            let iconName = '';
+            let iconColor = '';
+            let iconTitle = '';
             let btnText = 'Uruchom';
             let btnClass = 'primary';
 
             let versionParam = localVer > 0 ? localVer : remoteVer;
 
             if (localVer === 0) {
-                iconBadge = `<span class="material-icons" style="color:#888; font-size:24px;" title="Nie pobrano">cloud_download</span>`;
+                iconName = 'cloud_download';
+                iconColor = '#888';
+                iconTitle = 'Nie pobrano';
                 btnText = 'Pobierz';
                 versionParam = remoteVer;
             } else if (localVer < remoteVer) {
-                iconBadge = `<span class="material-icons" style="color:#ff9800; font-size:24px;" title="Dostępna aktualizacja w zakładce Aktualizacje">system_update</span>`;
+                iconName = 'system_update';
+                iconColor = '#ff9800';
+                iconTitle = 'Dostępna aktualizacja w zakładce Aktualizacje';
                 btnText = 'Uruchom';
                 btnClass = 'outline';
                 versionParam = localVer;
             } else {
-                iconBadge = `<span class="material-icons" style="color:#4caf50; font-size:24px;" title="Zainstalowano">check_circle</span>`;
+                iconName = 'check_circle';
+                iconColor = '#4caf50';
+                iconTitle = 'Zainstalowano';
                 btnText = 'Uruchom';
                 versionParam = localVer;
             }
 
+            // Create card structure safely
             const card = document.createElement('div');
             card.className = 'test-card';
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span class="material-icons" style="font-size:40px; color:#444;">assignment</span>
-                        ${iconBadge} 
-                    </div>
-                    <span class="meta" style="color:#666;">v${t.version}</span>
-                </div>
-                
-                <h4 style="margin-top:10px;">${t.name}</h4>
-                <p>${t.description}</p>
-                
-                <button class="btn ${btnClass} small" style="margin-top:auto;" id="start-test-${testId}">
-                    <span class="material-icons">play_arrow</span> ${btnText}
-                </button>
-            `;
+
+            // Top section with icons
+            const topDiv = document.createElement('div');
+            topDiv.style.cssText = 'display:flex; justify-content:space-between; align-items:start;';
+
+            const iconsDiv = document.createElement('div');
+            iconsDiv.style.cssText = 'display:flex; align-items:center; gap:10px;';
+
+            const assignmentIcon = document.createElement('span');
+            assignmentIcon.className = 'material-icons';
+            assignmentIcon.style.cssText = 'font-size:40px; color:#444;';
+            assignmentIcon.textContent = 'assignment';
+
+            const statusIcon = document.createElement('span');
+            statusIcon.className = 'material-icons';
+            statusIcon.style.cssText = `color:${iconColor}; font-size:24px;`;
+            statusIcon.title = iconTitle;
+            statusIcon.textContent = iconName;
+
+            iconsDiv.appendChild(assignmentIcon);
+            iconsDiv.appendChild(statusIcon);
+
+            const versionSpan = document.createElement('span');
+            versionSpan.className = 'meta';
+            versionSpan.style.color = '#666';
+            versionSpan.textContent = `v${t.version}`;
+
+            topDiv.appendChild(iconsDiv);
+            topDiv.appendChild(versionSpan);
+
+            // Title
+            const title = document.createElement('h4');
+            title.style.marginTop = '10px';
+            title.textContent = t.name || 'Bez nazwy'; // Safe fallback
+
+            // Description
+            const description = document.createElement('p');
+            description.textContent = t.description || 'Brak opisu';
+
+            // Button
+            const button = document.createElement('button');
+            button.className = `btn ${btnClass} small`;
+            button.style.marginTop = 'auto';
+            button.id = `start-test-${testId}`;
+
+            const playIcon = document.createElement('span');
+            playIcon.className = 'material-icons';
+            playIcon.textContent = 'play_arrow';
+
+            button.appendChild(playIcon);
+            button.appendChild(document.createTextNode(` ${btnText}`));
+
+            // Assemble card
+            card.appendChild(topDiv);
+            card.appendChild(title);
+            card.appendChild(description);
+            card.appendChild(button);
+
             elements.viewLibrary.appendChild(card);
 
             // Bind click event
-            document.getElementById(`start-test-${testId}`).addEventListener('click', () => {
+            button.addEventListener('click', () => {
                 startTestProcess(t.downloadUrl, testId, versionParam);
             });
         });

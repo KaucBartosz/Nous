@@ -50,44 +50,55 @@ export const elements = {
     toggleSync: document.getElementById('toggle-sync'),
 };
 
+// View configuration map
+const VIEW_CONFIG = {
+    library: {
+        view: 'viewLibrary',
+        nav: 'navLibrary',
+        callback: 'onLibrary'
+    },
+    history: {
+        view: 'viewHistory',
+        nav: 'navHistory',
+        callback: 'onHistory'
+    },
+    updates: {
+        view: 'viewUpdates',
+        nav: 'navUpdates',
+        callback: 'onUpdates'
+    },
+    demographics: {
+        view: 'viewDemographics',
+        nav: 'navDemographics',
+        callback: 'onDemographics'
+    },
+    creator: {
+        view: 'viewDemoCreator',
+        nav: 'navDemoCreator',
+        callback: 'onCreator'
+    }
+};
+
 export function switchView(viewName, callbacks = {}) {
-    const { viewLibrary, viewHistory, viewUpdates, viewDemographics, viewDemoCreator } = elements;
-    const { navLibrary, navHistory, navUpdates, navDemographics, navDemoCreator } = elements;
+    // Hide all views and deactivate all nav items
+    Object.values(VIEW_CONFIG).forEach(config => {
+        elements[config.view]?.classList.add('hidden');
+        elements[config.nav]?.classList.remove('active');
+    });
 
-    // Hide all
-    viewLibrary.classList.add('hidden');
-    viewHistory.classList.add('hidden');
-    viewUpdates.classList.add('hidden');
-    viewDemographics.classList.add('hidden');
-    viewDemoCreator.classList.add('hidden');
+    // Show selected view and activate nav
+    const config = VIEW_CONFIG[viewName];
+    if (config) {
+        elements[config.view]?.classList.remove('hidden');
+        elements[config.nav]?.classList.add('active');
 
-    // Deactivate navs
-    navLibrary.classList.remove('active');
-    navHistory.classList.remove('active');
-    navUpdates.classList.remove('active');
-    navDemographics.classList.remove('active');
-    navDemoCreator.classList.remove('active');
-
-    if (viewName === 'library') {
-        viewLibrary.classList.remove('hidden');
-        navLibrary.classList.add('active');
-        if (callbacks.onLibrary) callbacks.onLibrary();
-    } else if (viewName === 'history') {
-        viewHistory.classList.remove('hidden');
-        navHistory.classList.add('active');
-        if (callbacks.onHistory) callbacks.onHistory();
-    } else if (viewName === 'updates') {
-        viewUpdates.classList.remove('hidden');
-        navUpdates.classList.add('active');
-        if (callbacks.onUpdates) callbacks.onUpdates();
-    } else if (viewName === 'demographics') {
-        viewDemographics.classList.remove('hidden');
-        navDemographics.classList.add('active');
-        if (callbacks.onDemographics) callbacks.onDemographics();
-    } else if (viewName === 'creator') {
-        viewDemoCreator.classList.remove('hidden');
-        navDemoCreator.classList.add('active');
-        if (callbacks.onCreator) callbacks.onCreator();
+        // Execute callback if provided
+        const callbackFn = callbacks[config.callback];
+        if (callbackFn) {
+            callbackFn();
+        }
+    } else {
+        console.warn(`Unknown view: ${viewName}`);
     }
 }
 
@@ -95,8 +106,8 @@ export function updateAuthUI(userEmail, userStatus) {
     elements.loginScreen.classList.add('hidden');
     elements.dashboardScreen.classList.remove('hidden');
 
-    elements.userEmailDisplay.innerText = userEmail || "Gość";
-    elements.userStatusDisplay.innerText = userStatus;
+    elements.userEmailDisplay.textContent = userEmail || "Gość";
+    elements.userStatusDisplay.textContent = userStatus;
 
     if (userStatus === 'APPROVED') elements.userStatusDisplay.style.color = '#4caf50';
     else if (userStatus === 'PENDING') elements.userStatusDisplay.style.color = '#ff9800';
@@ -109,5 +120,5 @@ export function showLoginScreen() {
 }
 
 export function showError(message) {
-    elements.errorMsg.innerText = message;
+    elements.errorMsg.textContent = message;
 }

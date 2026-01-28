@@ -36,11 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Feature Buttons
     document.getElementById('btn-export-csv').addEventListener('click', exportHistoryToCSV);
-    // Note: btn-save-demo listener is now attached in initDemographics if handled there, 
-    // but we can keep it here OR there. demographics.js init does it. 
-    // Let's rely on initDemographics to keep app.js cleaner, OR double check demographics.js implementation.
-    // demographics.js implementation: "if (elements.btnSaveDemo) elements.btnSaveDemo.addEventListener..."
-    // So we don't need it here.
 
     // 5. About Modal
     if (elements.navAbout) elements.navAbout.addEventListener('click', () => elements.aboutModal.classList.remove('hidden'));

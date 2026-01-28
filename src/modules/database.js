@@ -20,67 +20,113 @@ export async function initDB() {
 }
 
 export async function saveResult(resultData) {
-    const db = await initDB();
-    const id = resultData.id || crypto.randomUUID();
+    try {
+        const db = await initDB();
+        const id = resultData.id || crypto.randomUUID();
 
-    await db.put('results', {
-        ...resultData,
-        id: id,
-        syncStatus: 'PENDING', // Default status
-        createdAt: new Date().toISOString()
-    });
-    return id;
+        await db.put('results', {
+            ...resultData,
+            id: id,
+            syncStatus: 'PENDING',
+            createdAt: new Date().toISOString()
+        });
+        return id;
+    } catch (error) {
+        console.error('Error saving result:', error);
+        throw new Error(`Nie udało się zapisać wyniku: ${error.message}`);
+    }
 }
 
 export async function getAllResults() {
-    const db = await initDB();
-    return db.getAllFromIndex('results', 'timestamp');
+    try {
+        const db = await initDB();
+        return db.getAllFromIndex('results', 'timestamp');
+    } catch (error) {
+        console.error('Error getting all results:', error);
+        throw new Error(`Nie udało się pobrać wyników: ${error.message}`);
+    }
 }
 
 export async function getPendingResults() {
-    const db = await initDB();
-    return db.getAllFromIndex('results', 'syncStatus', 'PENDING');
+    try {
+        const db = await initDB();
+        return db.getAllFromIndex('results', 'syncStatus', 'PENDING');
+    } catch (error) {
+        console.error('Error getting pending results:', error);
+        throw new Error(`Nie udało się pobrać oczekujących wyników: ${error.message}`);
+    }
 }
 
 export async function markAsSynced(localId, firestoreId) {
-    const db = await initDB();
-    const tx = db.transaction('results', 'readwrite');
-    const store = tx.objectStore('results');
+    try {
+        const db = await initDB();
+        const tx = db.transaction('results', 'readwrite');
+        const store = tx.objectStore('results');
 
-    const record = await store.get(localId);
-    if (record) {
-        record.syncStatus = 'SYNCED';
-        record.firestoreId = firestoreId;
-        await store.put(record);
+        const record = await store.get(localId);
+        if (record) {
+            record.syncStatus = 'SYNCED';
+            record.firestoreId = firestoreId;
+            await store.put(record);
+        }
+        await tx.done;
+    } catch (error) {
+        console.error('Error marking as synced:', error);
+        throw new Error(`Nie udało się oznaczyć jako zsynchronizowane: ${error.message}`);
     }
-    await tx.done;
 }
 
 export async function deleteResult(id) {
-    const db = await initDB();
-    await db.delete('results', id);
+    try {
+        const db = await initDB();
+        await db.delete('results', id);
+    } catch (error) {
+        console.error('Error deleting result:', error);
+        throw new Error(`Nie udało się usunąć wyniku: ${error.message}`);
+    }
 }
 
 // --- TEMPLATES (Metryczki) ---
 
 export async function saveTemplate(template) {
-    const db = await initDB();
-    const id = template.id || crypto.randomUUID();
-    await db.put('demographicsTemplates', { ...template, id });
-    return id;
+    try {
+        const db = await initDB();
+        const id = template.id || crypto.randomUUID();
+        await db.put('demographicsTemplates', { ...template, id });
+        return id;
+    } catch (error) {
+        console.error('Error saving template:', error);
+        throw new Error(`Nie udało się zapisać szablonu: ${error.message}`);
+    }
 }
 
 export async function getAllTemplates() {
-    const db = await initDB();
-    return db.getAll('demographicsTemplates');
+    try {
+        const db = await initDB();
+        return db.getAll('demographicsTemplates');
+    } catch (error) {
+        console.error('Error getting all templates:', error);
+        // Return empty array instead of throwing to prevent UI crash
+        return [];
+    }
 }
 
 export async function getTemplate(id) {
-    const db = await initDB();
-    return db.get('demographicsTemplates', id);
+    try {
+        const db = await initDB();
+        return db.get('demographicsTemplates', id);
+    } catch (error) {
+        console.error('Error getting template:', error);
+        throw new Error(`Nie udało się pobrać szablonu: ${error.message}`);
+    }
 }
 
 export async function deleteTemplate(id) {
-    const db = await initDB();
-    await db.delete('demographicsTemplates', id);
+    try {
+        const db = await initDB();
+        await db.delete('demographicsTemplates', id);
+    } catch (error) {
+        console.error('Error deleting template:', error);
+        throw new Error(`Nie udało się usunąć szablonu: ${error.message}`);
+    }
 }

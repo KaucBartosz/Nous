@@ -149,12 +149,35 @@ function downloadFile(filename, content, type) {
 }
 
 export function exportHistoryToCSV() {
-    let csv = "";
+    const bom = "\uFEFF"; // UTF-8 BOM for Excel compatibility
+    let csv = bom;
+
     document.querySelectorAll('#history-table tr').forEach(row => {
-        csv += Array.from(row.querySelectorAll('th, td')).map(c => c.innerText).join(",") + "\r\n";
+        const cells = Array.from(row.querySelectorAll('th, td'));
+        const rowData = cells.map(cell => {
+            // Remove icon content, only get actual text
+            const clone = cell.cloneNode(true);
+            // Remove all Material Icons spans
+            clone.querySelectorAll('.material-icons').forEach(icon => icon.remove());
+            // Remove button elements
+            clone.querySelectorAll('button').forEach(btn => btn.remove());
+
+            let text = clone.textContent.trim();
+
+            // Escape commas and quotes for CSV
+            if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+                text = `"${text.replace(/"/g, '""')}"`;
+            }
+
+            return text;
+        });
+
+        csv += rowData.join(',') + "\r\n";
     });
+
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     link.download = "historia_wynikow.csv";
     link.click();
+    URL.revokeObjectURL(link.href); // Clean up
 }

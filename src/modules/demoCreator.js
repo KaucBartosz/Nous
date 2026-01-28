@@ -19,21 +19,28 @@ export function initDemoCreator() {
     refreshTemplatesList();
 }
 
+/**
+ * Helper function to escape HTML to prevent XSS attacks
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function addFieldUI(initialData = null) {
     const container = document.getElementById('creator-fields-container');
+
     // Create a safe ID string for DOM elements
     const rawId = Date.now() + Math.random();
     const fieldId = rawId.toString().replace('.', '-');
 
     const fieldDiv = document.createElement('div');
     fieldDiv.className = 'form-row';
-    fieldDiv.style.alignItems = 'flex-start'; // Changed to flex-start for multi-line inputs
+    fieldDiv.style.alignItems = 'flex-start';
     fieldDiv.style.marginBottom = '15px';
     fieldDiv.style.borderBottom = '1px solid #333';
     fieldDiv.style.paddingBottom = '10px';
-    fieldDiv.dataset.id = rawId; // Keep original ID for data if needed, or just use new one. 
-    // Actually, dataset.id is not used for retrieval in saveCurrentTemplate (it iterates rows), 
-    // but just to be safe let's keep it or use the safe one. Use safe one for consistency.
     fieldDiv.dataset.id = fieldId;
 
     const labelVal = initialData ? initialData.label : '';
@@ -45,49 +52,62 @@ function addFieldUI(initialData = null) {
     const typeId = `field-type-${fieldId}`;
     const optionsId = `field-options-${fieldId}`;
 
+    // Create structure with CSS classes instead of inline styles
+    // Using textContent/value instead of innerHTML for user data prevents XSS
     fieldDiv.innerHTML = `
-        <div style="flex:3; display:flex; flex-direction:column; gap:10px; margin-right:10px;">
-            <div style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:2;">
+        <div class="field-creator-container">
+            <div class="field-creator-row">
+                <div class="form-group field-creator-label-group">
                     <label for="${labelId}">Etykieta Pola</label>
-                    <input type="text" id="${labelId}" class="field-label" placeholder="np. Wiek" value="${labelVal}">
+                    <input type="text" id="${labelId}" class="field-label" placeholder="np. Wiek">
                 </div>
-                <div class="form-group" style="flex:1;">
+                <div class="form-group field-creator-type-group">
                     <label for="${typeId}">Typ</label>
                     <select id="${typeId}" class="field-type">
-                        <option value="text" ${typeVal === 'text' ? 'selected' : ''}>Tekst (String)</option>
-                        <option value="number" ${typeVal === 'number' ? 'selected' : ''}>Liczba (Int)</option>
-                        <option value="float" ${typeVal === 'float' ? 'selected' : ''}>Liczba (Float)</option>
-                        <option value="select" ${typeVal === 'select' ? 'selected' : ''}>Lista (Select)</option>
-                        <option value="checkbox" ${typeVal === 'checkbox' ? 'selected' : ''}>Przełącznik (Tak/Nie)</option>
-                        <option value="date" ${typeVal === 'date' ? 'selected' : ''}>Data</option>
+                        <option value="text">Tekst (String)</option>
+                        <option value="number">Liczba (Int)</option>
+                        <option value="float">Liczba (Float)</option>
+                        <option value="select">Lista (Select)</option>
+                        <option value="checkbox">Przełącznik (Tak/Nie)</option>
+                        <option value="date">Data</option>
                     </select>
                 </div>
             </div>
             
-            <div class="field-options-container" style="display: ${typeVal === 'select' ? 'block' : 'none'};">
+            <div class="field-options-container">
                 <label for="${optionsId}">Opcje (oddzielone przecinkami)</label>
-                <input type="text" id="${optionsId}" class="field-options" placeholder="np. Kobieta, Mężczyzna, Inna" value="${optionsVal}">
+                <input type="text" id="${optionsId}" class="field-options" placeholder="np. Kobieta, Mężczyzna, Inna">
             </div>
         </div>
 
-        <button class="btn danger small btn-remove-field" style="margin-top: 28px;">
+        <button class="btn danger small btn-remove-field field-remove-btn">
             <span class="material-icons">delete</span>
         </button>
     `;
 
-    // Toggle Options Visibility
+    // Now safely set values using .value (not vulnerable to XSS)
+    const labelInput = fieldDiv.querySelector('.field-label');
     const typeSelect = fieldDiv.querySelector('.field-type');
+    const optionsInput = fieldDiv.querySelector('.field-options');
     const optionsContainer = fieldDiv.querySelector('.field-options-container');
 
-    typeSelect.addEventListener('change', (e) => {
-        if (e.target.value === 'select') {
-            optionsContainer.style.display = 'block';
-        } else {
-            optionsContainer.style.display = 'none';
-        }
-    });
+    if (labelVal) labelInput.value = labelVal;
+    if (typeVal) typeSelect.value = typeVal;
+    if (optionsVal) optionsInput.value = optionsVal;
 
+    // Toggle Options Visibility based on type
+    const updateOptionsVisibility = () => {
+        if (typeSelect.value === 'select') {
+            optionsContainer.classList.add('visible');
+        } else {
+            optionsContainer.classList.remove('visible');
+        }
+    };
+
+    updateOptionsVisibility(); // Initial state
+    typeSelect.addEventListener('change', updateOptionsVisibility);
+
+    // Remove field button
     fieldDiv.querySelector('.btn-remove-field').addEventListener('click', () => {
         fieldDiv.remove();
     });
@@ -95,11 +115,11 @@ function addFieldUI(initialData = null) {
     container.appendChild(fieldDiv);
 
     // Auto-focus if it's a new field (not loading from template)
+    // Use requestAnimationFrame for better reliability
     if (!initialData) {
-        const labelInput = fieldDiv.querySelector('.field-label');
-        if (labelInput) {
+        requestAnimationFrame(() => {
             labelInput.focus();
-        }
+        });
     }
 }
 
@@ -123,7 +143,7 @@ async function saveCurrentTemplate() {
         if (label) {
             const fieldObj = { label, type };
             if (type === 'select') {
-                fieldObj.options = optionsInput.value.trim(); // Save raw string or array? String is easier for editing.
+                fieldObj.options = optionsInput.value.trim();
             }
             fields.push(fieldObj);
         }
@@ -153,7 +173,7 @@ async function saveCurrentTemplate() {
         // Success UI
         const status = document.getElementById('creator-status');
         status.style.display = 'block';
-        status.innerText = editingTemplateId ? "Zaktualizowano szablon!" : "Zapisano szablon!";
+        status.textContent = editingTemplateId ? "Zaktualizowano szablon!" : "Zapisano szablon!";
         setTimeout(() => status.style.display = 'none', 3000);
 
         // Reset form

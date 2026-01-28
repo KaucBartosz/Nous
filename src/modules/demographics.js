@@ -12,7 +12,7 @@ export async function initDemographics() {
         elements.demoTemplateSelect.value = savedTemplateId;
         await renderDynamicForm(savedTemplateId);
     } else {
-        await renderDynamicForm(null); // Render default empty or nothing
+        await renderDynamicForm(null);
     }
 
     elements.demoTemplateSelect.addEventListener('change', async (e) => {
@@ -24,11 +24,8 @@ export async function initDemographics() {
     // Populate data if exists
     loadSavedDemographics();
 
-    // Bind Save Button (It was bound in HTML onclick maybe? No, let's bind it here if not already)
-    // Actually ui.js might not bind it. Let's bind it safely.
+    // Bind Save Button
     if (elements.btnSaveDemo) {
-        // Remove old listeners? Hard to do without reference. 
-        // We assume initDemographics is called once.
         elements.btnSaveDemo.addEventListener('click', saveDemographicsFromForm);
     }
 }
@@ -39,7 +36,7 @@ export async function refreshTemplatesDropdown() {
     templates.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t.id;
-        opt.innerText = t.name;
+        opt.textContent = t.name;
         elements.demoTemplateSelect.appendChild(opt);
     });
 }
@@ -64,18 +61,22 @@ async function renderDynamicForm(templateId) {
         const div = document.createElement('div');
         div.className = 'form-group';
 
-        // Special info for checkbox?
+        // Create unique ID for each input
+        const inputId = `demo-field-${templateId}-${index}`;
 
         const label = document.createElement('label');
-        label.innerText = field.label;
+        label.textContent = field.label;
+        label.setAttribute('for', inputId);
 
         let input;
 
         if (field.type === 'select') {
             input = document.createElement('select');
+            input.id = inputId;
+
             const defaultOpt = document.createElement('option');
             defaultOpt.value = "";
-            defaultOpt.innerText = "-- Wybierz --";
+            defaultOpt.textContent = "-- Wybierz --";
             input.appendChild(defaultOpt);
 
             if (field.options) {
@@ -83,19 +84,19 @@ async function renderDynamicForm(templateId) {
                 opts.forEach(optVal => {
                     const opt = document.createElement('option');
                     opt.value = optVal;
-                    opt.innerText = optVal;
+                    opt.textContent = optVal;
                     input.appendChild(opt);
                 });
             }
         } else if (field.type === 'checkbox') {
             // Checkbox logic: wrap in a label for better UI
-            // Actually, let's make a wrapper row
             div.style.flexDirection = 'row';
             div.style.alignItems = 'center';
             div.innerHTML = ''; // Reset standard label
 
             input = document.createElement('input');
             input.type = 'checkbox';
+            input.id = inputId;
             input.style.width = 'auto';
             input.style.marginRight = '10px';
 
@@ -105,17 +106,21 @@ async function renderDynamicForm(templateId) {
         } else if (field.type === 'date') {
             input = document.createElement('input');
             input.type = 'date';
+            input.id = inputId;
         } else if (field.type === 'text') {
             input = document.createElement('input');
             input.type = 'text';
+            input.id = inputId;
         } else if (field.type === 'number') {
             input = document.createElement('input');
             input.type = 'number';
             input.step = '1';
+            input.id = inputId;
         } else if (field.type === 'float') {
             input = document.createElement('input');
             input.type = 'number';
             input.step = '0.01';
+            input.id = inputId;
         }
 
         input.dataset.label = field.label;
@@ -221,7 +226,7 @@ export function saveDemographicsFromForm() {
     const statusSpan = document.getElementById('demo-status');
     if (statusSpan) {
         statusSpan.style.display = 'inline';
-        statusSpan.innerText = "Zapisano!";
+        statusSpan.textContent = "Zapisano!";
         setTimeout(() => { statusSpan.style.display = 'none'; }, 3000);
     }
 }

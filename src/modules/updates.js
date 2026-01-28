@@ -1,6 +1,6 @@
 // src/modules/updates.js
 import { db } from '../firebaseConfig.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
 
@@ -20,39 +20,109 @@ export async function loadUpdatesData() {
             const remoteVer = Number(r.version);
             const localVer = localVersions[id] ? Number(localVersions[id]) : 0;
 
-            let status = '';
-            let buttons = '';
+            // Create row safely
+            const row = document.createElement('tr');
+
+            // Column 1: Test Name (SAFE - use textContent)
+            const nameCell = document.createElement('td');
+            nameCell.textContent = r.name || 'Brak nazwy';
+            row.appendChild(nameCell);
+
+            // Column 2: Local Version
+            const localVerCell = document.createElement('td');
+            localVerCell.textContent = localVer || '-';
+            row.appendChild(localVerCell);
+
+            // Column 3: Remote Version
+            const remoteVerCell = document.createElement('td');
+            remoteVerCell.textContent = `v${remoteVer}`;
+            row.appendChild(remoteVerCell);
+
+            // Column 4: Status
+            const statusCell = document.createElement('td');
+            if (localVer === 0) {
+                const statusSpan = document.createElement('span');
+                statusSpan.style.color = '#888';
+                statusSpan.textContent = 'Nie zainstalowano';
+                statusCell.appendChild(statusSpan);
+            } else if (localVer < remoteVer) {
+                const statusSpan = document.createElement('span');
+                statusSpan.style.cssText = 'color:#ff9800;font-weight:bold';
+                statusSpan.textContent = `Aktualizacja! (v${localVer} → v${remoteVer})`;
+                statusCell.appendChild(statusSpan);
+            } else {
+                const statusSpan = document.createElement('span');
+                statusSpan.style.color = '#4caf50';
+                statusSpan.textContent = 'Aktualne';
+                statusCell.appendChild(statusSpan);
+            }
+            row.appendChild(statusCell);
+
+            // Column 5: Action Buttons
+            const actionsCell = document.createElement('td');
 
             if (localVer === 0) {
-                status = '<span style="color:#888">Nie zainstalowano</span>';
-                buttons = `<button class="btn primary small" id="force-update-${id}">
-                    <span class="material-icons" style="font-size:16px;">download</span> Pobierz
-                </button>`;
+                // Download button
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'btn primary small';
+                downloadBtn.id = `force-update-${id}`;
+
+                const downloadIcon = document.createElement('span');
+                downloadIcon.className = 'material-icons';
+                downloadIcon.style.fontSize = '16px';
+                downloadIcon.textContent = 'download';
+
+                downloadBtn.appendChild(downloadIcon);
+                downloadBtn.appendChild(document.createTextNode(' Pobierz'));
+                downloadBtn.addEventListener('click', () => forceUpdate(r.downloadUrl, id, remoteVer));
+
+                actionsCell.appendChild(downloadBtn);
             } else {
                 if (localVer < remoteVer) {
-                    status = `<span style="color:#ff9800;font-weight:bold">Aktualizacja! (v${localVer} &#8594; v${remoteVer})</span>`;
-                    buttons = `<button class="btn primary small" id="force-update-${id}">
-                        <span class="material-icons" style="font-size:16px;">system_update_alt</span> Aktualizuj
-                    </button>`;
+                    // Update button
+                    const updateBtn = document.createElement('button');
+                    updateBtn.className = 'btn primary small';
+                    updateBtn.id = `force-update-${id}`;
+
+                    const updateIcon = document.createElement('span');
+                    updateIcon.className = 'material-icons';
+                    updateIcon.style.fontSize = '16px';
+                    updateIcon.textContent = 'system_update_alt';
+
+                    updateBtn.appendChild(updateIcon);
+                    updateBtn.appendChild(document.createTextNode(' Aktualizuj'));
+                    updateBtn.addEventListener('click', () => forceUpdate(r.downloadUrl, id, remoteVer));
+
+                    actionsCell.appendChild(updateBtn);
                 } else {
-                    status = '<span style="color:#4caf50">Aktualne</span>';
-                    buttons = `<button class="btn outline small" disabled>Aktualne</button>`;
+                    // Current button (disabled)
+                    const currentBtn = document.createElement('button');
+                    currentBtn.className = 'btn outline small';
+                    currentBtn.disabled = true;
+                    currentBtn.textContent = 'Aktualne';
+                    actionsCell.appendChild(currentBtn);
                 }
-                buttons += `<button class="btn danger small" style="margin-left:5px;" id="delete-test-${id}">
-                    <span class="material-icons" style="font-size:16px;">delete</span> Usuń
-                </button>`;
+
+                // Delete button (always show if installed)
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn danger small';
+                deleteBtn.style.marginLeft = '5px';
+                deleteBtn.id = `delete-test-${id}`;
+
+                const deleteIcon = document.createElement('span');
+                deleteIcon.className = 'material-icons';
+                deleteIcon.style.fontSize = '16px';
+                deleteIcon.textContent = 'delete';
+
+                deleteBtn.appendChild(deleteIcon);
+                deleteBtn.appendChild(document.createTextNode(' Usuń'));
+                deleteBtn.addEventListener('click', () => deleteLocalTest(id));
+
+                actionsCell.appendChild(deleteBtn);
             }
 
-            const row = document.createElement('tr');
-            row.innerHTML = `<td>${r.name}</td><td>${localVer || '-'}</td><td>v${remoteVer}</td><td>${status}</td><td>${buttons}</td>`;
+            row.appendChild(actionsCell);
             elements.updatesTableBody.appendChild(row);
-
-            // Bind events
-            const updateBtn = document.getElementById(`force-update-${id}`);
-            if (updateBtn) updateBtn.addEventListener('click', () => forceUpdate(r.downloadUrl, id, remoteVer));
-
-            const delBtn = document.getElementById(`delete-test-${id}`);
-            if (delBtn) delBtn.addEventListener('click', () => deleteLocalTest(id));
         });
     } catch (e) {
         elements.updatesTableBody.innerHTML = `<tr><td colspan="5">Błąd: ${e.message}</td></tr>`;
@@ -93,7 +163,6 @@ export function forceUpdate(url, id, ver) {
 }
 
 export async function deleteLocalTest(testId) {
-    if (!confirm("Usunąć ten test z dysku?")) return;
     if (window.electronAPI) {
         const res = await window.electronAPI.deleteTest(testId);
         if (res.success) {

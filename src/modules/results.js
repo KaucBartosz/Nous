@@ -16,7 +16,7 @@ export function initResultsHandler() {
     }
 
     elements.btnCloseModal.addEventListener('click', () => elements.modalOverlay.classList.add('hidden'));
-    elements.btnDiscard.addEventListener('click', () => { if (confirm("Odrzucić?")) elements.modalOverlay.classList.add('hidden'); });
+    elements.btnDiscard.addEventListener('click', () => elements.modalOverlay.classList.add('hidden'));
 
 
 
@@ -53,8 +53,8 @@ function handleTestResults(raw) {
 
 function openModal(data) {
     const s = data.wyniki.czas_reakcji ? `${data.wyniki.czas_reakcji} ms` : (data.wyniki.score || "Koniec");
-    document.getElementById('modal-score').innerText = s;
-    document.getElementById('modal-json-preview').innerText = JSON.stringify(data.wyniki, null, 2);
+    document.getElementById('modal-score').textContent = s;
+    document.getElementById('modal-json-preview').textContent = JSON.stringify(data.wyniki, null, 2);
 
     updateSaveButtonState();
     elements.modalOverlay.classList.remove('hidden');
@@ -64,19 +64,19 @@ function updateSaveButtonState() {
     // Teraz zawsze pozwalamy zapisać (chyba że guest?)
     // Guest też może zapisać lokalnie, ale nie wyśle do chmury.
     elements.btnUploadCloud.disabled = false;
-    elements.btnUploadCloud.innerText = "Zapisz i Zamknij";
+    elements.btnUploadCloud.textContent = "Zapisz i Zamknij";
     elements.modalUploadInfo.innerHTML = '';
 }
 
 async function saveResultToSystem() {
     if (!currentResultPackage) return;
     try {
-        elements.btnUploadCloud.innerText = "Zapisywanie...";
+        elements.btnUploadCloud.textContent = "Zapisywanie...";
 
         // 1. Zapis do IndexedDB
         await saveResult(currentResultPackage);
 
-        elements.btnUploadCloud.innerText = "Zapisano!";
+        elements.btnUploadCloud.textContent = "Zapisano!";
         elements.modalOverlay.classList.add('hidden');
 
         // 2. Próba synchronizacji (fire & forget)
@@ -84,6 +84,6 @@ async function saveResultToSystem() {
 
     } catch (e) {
         alert("Błąd zapisu bazy: " + e.message);
-        elements.btnUploadCloud.innerText = "Błąd";
+        elements.btnUploadCloud.textContent = "Błąd";
     }
 }
