@@ -93,8 +93,14 @@
         <main class="content-area">
 
             <!-- WIDOK 1: Biblioteka (Grid) -->
-            <div id="tests-grid" class="grid-container">
-                <!-- JS wstrzyknie tu kafelki -->
+            <div id="library-view">
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="library-search" placeholder="Szukaj testu..."
+                        style="width: 100%; max-width: 400px; padding: 10px; background: #252526; border: 1px solid #444; color: white; border-radius: 4px;">
+                </div>
+                <div id="tests-grid" class="grid-container">
+                    <!-- JS wstrzyknie tu kafelki -->
+                </div>
             </div>
 
             <!-- WIDOK 2: Historia (Tabela) -->
@@ -139,7 +145,11 @@
 
             <!-- WIDOK 3: Aktualizacje (Tabela) -->
             <div id="updates-view" class="hidden">
-                <h3>Stan Zainstalowanych Testów</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">Stan Zainstalowanych Testów</h3>
+                    <input type="text" id="updates-search" placeholder="Szukaj..."
+                        style="width: 250px; padding: 8px; background: #252526; border: 1px solid #444; color: white; border-radius: 4px;">
+                </div>
                 <div class="table-container">
                     <table id="updates-table">
                         <thead>
@@ -181,6 +191,9 @@
                     <div style="margin-top:20px;">
                         <button id="btn-save-demo" class="btn primary">
                             <span class="material-icons">save</span> Zapisz Dane Sesji
+                        </button>
+                        <button id="btn-clear-demo" class="btn secondary" style="margin-left: 10px;">
+                            <span class="material-icons">clear</span> Wyczyść
                         </button>
                         <span id="demo-status" style="margin-left:15px; color:#4caf50; display:none;">Zapisano!</span>
                     </div>
@@ -285,6 +298,24 @@
             <div class="modal-footer" style="justify-content: center;">
                 <button class="btn primary"
                     onclick="document.getElementById('about-modal').classList.add('hidden')">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Custom Dialog (Alert/Confirm) -->
+    <div id="custom-dialog-modal" class="modal-overlay hidden" style="z-index: 2000;">
+        <div class="modal-content" style="width: 400px; text-align: center;">
+            <div class="modal-header">
+                <h3 id="custom-dialog-title">Komunikat</h3>
+                <button id="btn-close-custom-dialog" class="close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="custom-dialog-icon" style="margin-bottom: 15px;"></div>
+                <p id="custom-dialog-message" style="font-size: 15px; color: #e0e0e0; margin: 0;">Treść komunikatu...
+                </p>
+            </div>
+            <div class="modal-footer" id="custom-dialog-footer" style="justify-content: center; gap: 15px;">
+                <!-- Buttons injected via JS -->
             </div>
         </div>
     </div>

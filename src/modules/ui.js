@@ -14,7 +14,8 @@ export const elements = {
     navDemoCreator: document.getElementById('nav-demo-creator'),
     navAbout: document.getElementById('nav-about'),
 
-    viewLibrary: document.getElementById('tests-grid'),
+    viewLibrary: document.getElementById('library-view'),
+    testsGrid: document.getElementById('tests-grid'),
     viewHistory: document.getElementById('history-view'),
     viewUpdates: document.getElementById('updates-view'),
     viewDemographics: document.getElementById('demographics-view'),

@@ -1,5 +1,6 @@
 import { getAllTemplates, getTemplate } from './database.js';
 import { elements } from './ui.js';
+import { Dialog } from './dialog.js';
 
 let activeDemographics = null;
 let currentTemplateId = null;
@@ -27,6 +28,12 @@ export async function initDemographics() {
     // Bind Save Button
     if (elements.btnSaveDemo) {
         elements.btnSaveDemo.addEventListener('click', saveDemographicsFromForm);
+    }
+
+    // Bind Clear Button
+    const btnClear = document.getElementById('btn-clear-demo');
+    if (btnClear) {
+        btnClear.addEventListener('click', clearDemographics);
     }
 }
 
@@ -167,9 +174,9 @@ export function loadSavedDemographics() {
     }
 }
 
-export function saveDemographicsFromForm() {
+export async function saveDemographicsFromForm() {
     if (!currentTemplateId) {
-        alert("Wybierz szablon przed zapisaniem!");
+        await Dialog.alert("Wybierz szablon przed zapisaniem!", 'warning');
         return;
     }
 
@@ -202,8 +209,14 @@ export function saveDemographicsFromForm() {
     const hasTextFields = Array.from(inputs).some(i => i.dataset.type !== 'checkbox');
 
     if (hasTextFields && isEmpty) {
-        alert("Wypełnij przynajmniej jedno pole!");
+        await Dialog.alert("Wypełnij przynajmniej jedno pole!", 'warning');
         return;
+    }
+
+    // Check for overwrite if data exists for this template
+    if (activeDemographics && activeDemographics.templateId === currentTemplateId) {
+        const confirmOverwrite = await Dialog.confirm("Masz już zapisane dane dla tego szablonu. Czy chcesz je nadpisać?");
+        if (!confirmOverwrite) return;
     }
 
     activeDemographics = {
@@ -241,4 +254,24 @@ export function getActiveDemographics() {
         }
     }
     return activeDemographics;
+}
+
+export async function clearDemographics() {
+    if (!activeDemographics) {
+        await Dialog.alert("Brak zapisanych danych do usunięcia.", 'info');
+        // Still clear the form visually just in case
+        await renderDynamicForm(currentTemplateId);
+        return;
+    }
+
+    const confirmed = await Dialog.confirm("Czy na pewno chcesz usunąć zapisane dane uczestnika?");
+    if (confirmed) {
+        activeDemographics = null;
+        localStorage.removeItem('activeDemographics');
+
+        // Reload form to clear values
+        await renderDynamicForm(currentTemplateId);
+
+        await Dialog.alert("Dane zostały wyczyszczone.", 'info');
+    }
 }

@@ -580,6 +580,16 @@ input:checked+.slider:before {
     border-radius: 34px;
 }
 
-.slider.round:before {
-    border-radius: 50%;
+
+/* --- CUSTOM DIALOG --- */
+#custom-dialog-modal .modal-content {
+    background: #252526;
+    border: 1px solid #444;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+}
+
+#custom-dialog-title {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
 }

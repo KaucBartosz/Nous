@@ -4,6 +4,7 @@ import { elements } from './ui.js';
 import { getActiveDemographics } from './demographics.js';
 import { saveResult } from './database.js';
 import { syncNow } from './sync.js';
+import { Dialog } from './dialog.js';
 
 let currentResultPackage = null;
 
@@ -83,7 +84,7 @@ async function saveResultToSystem() {
         syncNow();
 
     } catch (e) {
-        alert("Błąd zapisu bazy: " + e.message);
+        await Dialog.alert("Błąd zapisu bazy: " + e.message, 'error');
         elements.btnUploadCloud.textContent = "Błąd";
     }
 }

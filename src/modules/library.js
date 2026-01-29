@@ -2,10 +2,25 @@
 import { db } from '../firebaseConfig.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { elements } from './ui.js';
+import { Dialog } from './dialog.js';
 
-export async function loadTestsList() {
-    elements.viewLibrary.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
+let cachedTests = [];
+let isSearchBound = false;
+
+export async function loadTestsList(filterText = '') {
+    // Bind search input only once
+    if (!isSearchBound) {
+        const searchInput = document.getElementById('library-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => loadTestsList(e.target.value));
+            isSearchBound = true;
+        }
+    }
+
+    elements.testsGrid.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
     try {
+        // Fetch only if not cached or force refresh needed (omitted for simplicity, fetch always for now to safe)
+        // Actually, better to fetch every time to get updates, but sorting happens on client.
         const snap = await getDocs(collection(db, "tests"));
 
         let localVersions = {};
@@ -13,16 +28,46 @@ export async function loadTestsList() {
             localVersions = await window.electronAPI.getLocalVersions();
         }
 
-        elements.viewLibrary.innerHTML = '';
+        elements.testsGrid.innerHTML = '';
 
-        if (snap.empty) { elements.viewLibrary.innerHTML = '<p>Brak testów.</p>'; return; }
+        if (snap.empty) { elements.testsGrid.innerHTML = '<p>Brak testów.</p>'; return; }
 
+        let tests = [];
         snap.forEach(doc => {
             const t = doc.data();
-            const testId = doc.id;
+            t.id = doc.id; // Store ID
+            t.localVer = localVersions[t.id] ? Number(localVersions[t.id]) : 0;
+            t.remoteVer = Number(t.version);
+            tests.push(t);
+        });
 
-            const localVer = localVersions[testId] ? Number(localVersions[testId]) : 0;
-            const remoteVer = Number(t.version);
+        // 1. Filter
+        if (filterText) {
+            const lower = filterText.toLowerCase();
+            tests = tests.filter(t => (t.name || '').toLowerCase().includes(lower));
+        }
+
+        // 2. Sort: Installed (localVer > 0) first, then Alphabetical
+        tests.sort((a, b) => {
+            const aInstalled = a.localVer > 0;
+            const bInstalled = b.localVer > 0;
+
+            if (aInstalled && !bInstalled) return -1;
+            if (!aInstalled && bInstalled) return 1;
+
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+        if (tests.length === 0) {
+            elements.testsGrid.innerHTML = '<p>Brak wyników wyszukiwania.</p>';
+            return;
+        }
+
+        // Render
+        tests.forEach(t => {
+            const localVer = t.localVer;
+            const remoteVer = t.remoteVer;
+            const testId = t.id;
 
             let iconName = '';
             let iconColor = '';
@@ -114,7 +159,7 @@ export async function loadTestsList() {
             card.appendChild(description);
             card.appendChild(button);
 
-            elements.viewLibrary.appendChild(card);
+            elements.testsGrid.appendChild(card);
 
             // Bind click event
             button.addEventListener('click', () => {
@@ -123,7 +168,7 @@ export async function loadTestsList() {
         });
     } catch (e) {
         console.error(e);
-        elements.viewLibrary.innerHTML = '<p>Błąd ładowania.</p>';
+        elements.testsGrid.innerHTML = '<p>Błąd ładowania.</p>';
     }
 }
 
@@ -147,7 +192,7 @@ if (window.electronAPI) {
     });
 }
 
-export function startTestProcess(url, id, ver) {
+export async function startTestProcess(url, id, ver) {
     if (window.electronAPI) {
         // Change button state immediately
         const btn = document.getElementById(`start-test-${id}`);
@@ -157,5 +202,5 @@ export function startTestProcess(url, id, ver) {
         }
 
         window.electronAPI.downloadAndRun(url, id, ver, false);
-    } else alert("Brak Electrona");
+    } else await Dialog.alert("Brak Electrona", 'error');
 }

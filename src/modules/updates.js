@@ -3,8 +3,19 @@ import { db } from '../firebaseConfig.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
+import { Dialog } from './dialog.js';
 
-export async function loadUpdatesData() {
+let isSearchBound = false;
+
+export async function loadUpdatesData(filterText = '') {
+    if (!isSearchBound) {
+        const searchInput = document.getElementById('updates-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => loadUpdatesData(e.target.value));
+            isSearchBound = true;
+        }
+    }
+
     elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Skanowanie...</td></tr>';
     try {
         const remoteSnap = await getDocs(collection(db, "tests"));
@@ -14,11 +25,53 @@ export async function loadUpdatesData() {
         elements.updatesTableBody.innerHTML = '';
         if (remoteSnap.empty) { elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak testów.</td></tr>'; return; }
 
+        let tests = [];
         remoteSnap.forEach(doc => {
             const r = doc.data();
-            const id = doc.id;
-            const remoteVer = Number(r.version);
-            const localVer = localVersions[id] ? Number(localVersions[id]) : 0;
+            r.id = doc.id;
+            r.localVer = localVersions[r.id] ? Number(localVersions[r.id]) : 0;
+            r.remoteVer = Number(r.version);
+            tests.push(r);
+        });
+
+        // 1. Filter
+        if (filterText) {
+            const lower = filterText.toLowerCase();
+            tests = tests.filter(t => (t.name || '').toLowerCase().includes(lower));
+        }
+
+        // 2. Sort: Installed/Update needed first. 
+        // Logic: 
+        // Priority 1: Update needed (local < remote && local > 0)
+        // Priority 2: Installed (local > 0)
+        // Priority 3: Not installed
+        // Then Alphabetical
+        tests.sort((a, b) => {
+            const aUpdate = a.localVer > 0 && a.localVer < a.remoteVer;
+            const bUpdate = b.localVer > 0 && b.localVer < b.remoteVer;
+
+            if (aUpdate && !bUpdate) return -1;
+            if (!aUpdate && bUpdate) return 1;
+
+            const aInstalled = a.localVer > 0;
+            const bInstalled = b.localVer > 0;
+
+            if (aInstalled && !bInstalled) return -1;
+            if (!aInstalled && bInstalled) return 1;
+
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+
+        if (tests.length === 0) {
+            elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak wyników wyszukiwania.</td></tr>';
+            return;
+        }
+
+        tests.forEach(r => {
+            const id = r.id;
+            const remoteVer = r.remoteVer;
+            const localVer = r.localVer;
 
             // Create row safely
             const row = document.createElement('tr');
@@ -164,12 +217,15 @@ export function forceUpdate(url, id, ver) {
 
 export async function deleteLocalTest(testId) {
     if (window.electronAPI) {
+        const confirmed = await Dialog.confirm("Czy na pewno chcesz usunąć ten test?");
+        if (!confirmed) return;
+
         const res = await window.electronAPI.deleteTest(testId);
         if (res.success) {
             loadUpdatesData();
             loadTestsList();
         } else {
-            alert("Błąd: " + res.error);
+            await Dialog.alert("Błąd: " + res.error, 'error');
         }
     }
 }

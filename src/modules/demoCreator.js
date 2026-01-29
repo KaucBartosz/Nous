@@ -1,6 +1,7 @@
 import { saveTemplate, getAllTemplates, deleteTemplate, getTemplate } from './database.js';
 import { elements } from './ui.js';
 import { refreshTemplatesDropdown } from './demographics.js';
+import { Dialog } from './dialog.js';
 
 let editingTemplateId = null;
 
@@ -108,8 +109,10 @@ function addFieldUI(initialData = null) {
     typeSelect.addEventListener('change', updateOptionsVisibility);
 
     // Remove field button
-    fieldDiv.querySelector('.btn-remove-field').addEventListener('click', () => {
-        fieldDiv.remove();
+    fieldDiv.querySelector('.btn-remove-field').addEventListener('click', async () => {
+        if (await Dialog.confirm("Usunąć to pole?")) {
+            fieldDiv.remove();
+        }
     });
 
     container.appendChild(fieldDiv);
@@ -128,7 +131,7 @@ async function saveCurrentTemplate() {
     const name = nameInput.value.trim();
 
     if (!name) {
-        alert("Podaj nazwę szablonu!");
+        await Dialog.alert("Podaj nazwę szablonu!", 'warning');
         return;
     }
 
@@ -150,7 +153,7 @@ async function saveCurrentTemplate() {
     });
 
     if (fields.length === 0) {
-        alert("Dodaj przynajmniej jedno pole!");
+        await Dialog.alert("Dodaj przynajmniej jedno pole!", 'warning');
         return;
     }
 
@@ -181,7 +184,7 @@ async function saveCurrentTemplate() {
         refreshTemplatesList();
 
     } catch (e) {
-        alert("Błąd zapisu: " + e.message);
+        await Dialog.alert("Błąd zapisu: " + e.message, 'error');
     }
 }
 
@@ -259,7 +262,8 @@ export async function refreshTemplatesList() {
             });
 
             card.querySelector('.btn-delete-template').addEventListener('click', async () => {
-                if (confirm(`Usunąć szablon "${t.name}"?`)) {
+                const confirmed = await Dialog.confirm(`Usunąć szablon "${t.name}"?`);
+                if (confirmed) {
                     await deleteTemplate(t.id);
                     await refreshTemplatesDropdown(); // Sync dropdown
 
