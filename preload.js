@@ -15,5 +15,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteTest: (testId) => ipcRenderer.invoke('delete-test', testId),
 
     // 3. NOWA FUNKACJA PROGRESS
-    onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, data) => callback(data))
+    onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, data) => callback(data)),
+
+    // 4. SZYFROWANIE
+    getEncryptionKey: () => ipcRenderer.invoke('get-encryption-key')
 });

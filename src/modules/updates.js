@@ -178,7 +178,14 @@ export async function loadUpdatesData(filterText = '') {
             elements.updatesTableBody.appendChild(row);
         });
     } catch (e) {
-        elements.updatesTableBody.innerHTML = `<tr><td colspan="5">Błąd: ${e.message}</td></tr>`;
+        // Safe error rendering
+        elements.updatesTableBody.innerHTML = '';
+        const errorRow = document.createElement('tr');
+        const errorCell = document.createElement('td');
+        errorCell.colSpan = 5;
+        errorCell.textContent = `Błąd: ${e.message}`;
+        errorRow.appendChild(errorCell);
+        elements.updatesTableBody.appendChild(errorRow);
     }
 }
 

@@ -248,7 +248,7 @@ export async function refreshTemplatesList() {
 
             card.innerHTML = `
                 <div>
-                    <h4>${t.name}</h4>
+                    <h4>${escapeHtml(t.name)}</h4>
                     <p>${t.fields.length} pól</p>
                 </div>
                 <div style="margin-top:10px; display:flex; gap:10px;">

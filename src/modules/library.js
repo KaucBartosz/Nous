@@ -47,8 +47,19 @@ export async function loadTestsList(filterText = '') {
             tests = tests.filter(t => (t.name || '').toLowerCase().includes(lower));
         }
 
-        // 2. Sort: Installed (localVer > 0) first, then Alphabetical
+        // 2. Sort: Installed/Update needed first. 
+        // Logic: 
+        // Priority 1: Update needed (local < remote && local > 0)
+        // Priority 2: Installed (local > 0)
+        // Priority 3: Not installed
+        // Then Alphabetical
         tests.sort((a, b) => {
+            const aUpdate = a.localVer > 0 && a.localVer < a.remoteVer;
+            const bUpdate = b.localVer > 0 && b.localVer < b.remoteVer;
+
+            if (aUpdate && !bUpdate) return -1;
+            if (!aUpdate && bUpdate) return 1;
+
             const aInstalled = a.localVer > 0;
             const bInstalled = b.localVer > 0;
 

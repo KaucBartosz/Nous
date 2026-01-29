@@ -54,6 +54,21 @@ function findStartFile(folderPath) {
 ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) => {
     const sender = event.sender;
 
+    // --- SECURITY CHECK: DOMAIN ALLOWLIST ---
+    try {
+        const parsedUrl = new URL(url);
+        const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'www.github.com', 'www.raw.githubusercontent.com'];
+        if (!allowedDomains.includes(parsedUrl.hostname)) {
+            console.error(`Blocked download from unauthorized domain: ${parsedUrl.hostname}`);
+            sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Niedozwolona domena pobierania!');
+            return;
+        }
+    } catch (e) {
+        console.error(`Invalid URL blocked: ${url}`);
+        sender.send('test-status', 'BŁĄD: Nieprawidłowy adres URL!');
+        return;
+    }
+
     // Definicje ścieżek
     const userDataPath = app.getPath('userData');
     const testsDir = path.join(userDataPath, 'tests_library');
@@ -235,6 +250,42 @@ ipcMain.handle('delete-test', async (event, testId) => {
 // ==========================================================
 // 4. OKNO TESTOWE (PEŁNY EKRAN)
 // ==========================================================
+
+// --- SZYFROWANIE (Key Management) ---
+const { safeStorage } = require('electron');
+
+// Ścieżka do pliku z kluczem
+const keyFilePath = path.join(app.getPath('userData'), 'master_key.enc');
+
+function getOrGenerateMasterKey() {
+    try {
+        if (!safeStorage.isEncryptionAvailable()) {
+            throw new Error("safeStorage is not available on this system!");
+        }
+
+        if (fs.existsSync(keyFilePath)) {
+            // 1. Load existing
+            const encryptedKey = fs.readFileSync(keyFilePath);
+            const decryptedKey = safeStorage.decryptString(encryptedKey);
+            console.log("Master Key loaded successfully.");
+            return decryptedKey; // Hex string expected
+        } else {
+            // 2. Generate new
+            const newKey = crypto.randomBytes(32).toString('hex'); // 32 bytes = 256 bits
+            const encryptedKey = safeStorage.encryptString(newKey);
+            fs.writeFileSync(keyFilePath, encryptedKey);
+            console.log("New Master Key generated and secured.");
+            return newKey;
+        }
+    } catch (e) {
+        console.error("Encryption Key Error:", e);
+        return null;
+    }
+}
+
+ipcMain.handle('get-encryption-key', async () => {
+    return getOrGenerateMasterKey();
+});
 
 function openTestWindow(htmlPath) {
     const testWindow = new BrowserWindow({
