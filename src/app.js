@@ -65,4 +65,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 8. Global Status/Error Handling
+    if (window.electronAPI) {
+        window.electronAPI.onStatusUpdate((message) => {
+            console.log("[Electron Status]:", message);
+
+            // Simple heuristic to detect errors
+            if (message.startsWith("BŁĄD") || message.includes("Error")) {
+                import('./modules/dialog.js').then(({ Dialog }) => {
+                    Dialog.alert(message, 'error');
+                });
+            } else {
+                // For non-error messages, we might just log them or show a toast if we had one.
+                // Currently, many messages are handled by the button state updates in library.js (download progress/state).
+                // However, some global messages might be useful to see.
+            }
+        });
+    }
+
 });
