@@ -1,6 +1,6 @@
 // src/modules/sync.js
 import { db } from '../firebaseConfig.js';
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { getPendingResults, markAsSynced } from './database.js';
 import { getCurrentUser } from './auth.js';
 
@@ -60,7 +60,7 @@ export async function syncNow() {
     for (const record of pending) {
         try {
             const docRef = await addDoc(collection(db, "results"), {
-                researcher_id: record.researcher_uid, // Use stored uid
+                researcher_uid: record.researcher_uid, // Ujednolicone nazewnictwo
                 test_id: record.testId,
                 subject_id: record.subject_id,
                 demographics: record.demographics,

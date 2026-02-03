@@ -54,9 +54,17 @@ function findStartFile(folderPath) {
 ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) => {
     const sender = event.sender;
 
-    // --- SECURITY CHECK: DOMAIN ALLOWLIST ---
+    // --- SECURITY CHECK: DOMAIN & PROTOCOL ALLOWLIST ---
     try {
         const parsedUrl = new URL(url);
+
+        // Walidacja protokołu - tylko HTTPS
+        if (parsedUrl.protocol !== 'https:') {
+            console.error(`Blocked download: non-HTTPS protocol: ${parsedUrl.protocol}`);
+            sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Tylko HTTPS jest dozwolony!');
+            return;
+        }
+
         const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'www.github.com', 'www.raw.githubusercontent.com'];
         if (!allowedDomains.includes(parsedUrl.hostname)) {
             console.error(`Blocked download from unauthorized domain: ${parsedUrl.hostname}`);
@@ -114,77 +122,99 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
 
     const file = fs.createWriteStream(zipPath);
 
-    https.get(url, (response) => {
-        if (response.statusCode !== 200 && response.statusCode !== 302) {
-            sender.send('test-status', `Błąd serwera: ${response.statusCode}`);
+    // Funkcja do obsługi przekierowań
+    const downloadWithRedirect = (downloadUrl, maxRedirects = 5) => {
+        if (maxRedirects <= 0) {
+            sender.send('test-status', 'BŁĄD: Zbyt wiele przekierowań!');
             fs.unlink(zipPath, () => { });
             return;
         }
 
-        const totalBytes = parseInt(response.headers['content-length'], 10);
-        let receivedBytes = 0;
-        let lastUpdate = 0;
-
-        response.on('data', (chunk) => {
-            receivedBytes += chunk.length;
-            file.write(chunk);
-
-            if (totalBytes) {
-                const percent = Math.round((receivedBytes / totalBytes) * 100);
-                const now = Date.now();
-                // Throttle updates to every 100ms
-                if (now - lastUpdate > 100 || percent === 100) {
-                    sender.send('download-progress', { testId, percent });
-                    lastUpdate = now;
+        https.get(downloadUrl, (response) => {
+            // Obsługa przekierowań (301, 302, 303, 307, 308)
+            if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+                const redirectUrl = response.headers.location;
+                if (redirectUrl) {
+                    console.log(`Przekierowanie: ${response.statusCode} -> ${redirectUrl}`);
+                    downloadWithRedirect(redirectUrl, maxRedirects - 1);
+                    return;
                 }
             }
-        });
 
-        response.on('end', () => {
-            file.end(); // Important!
+            if (response.statusCode !== 200) {
+                sender.send('test-status', `Błąd serwera: ${response.statusCode}`);
+                fs.unlink(zipPath, () => { });
+                return;
+            }
 
-            // Wait for file stream to finish closing
-            file.on('finish', () => {
-                file.close();
+            const totalBytes = parseInt(response.headers['content-length'], 10);
+            let receivedBytes = 0;
+            let lastUpdate = 0;
 
-                // --- KROK 4: ROZPAKOWYWANIE ---
-                sender.send('test-status', 'Rozpakowywanie plików...');
+            response.on('data', (chunk) => {
+                receivedBytes += chunk.length;
+                file.write(chunk);
 
-                try {
-                    const zip = new AdmZip(zipPath);
-                    zip.extractAllTo(testFolder, true); // Nadpisz
-                    fs.unlinkSync(zipPath); // Usuń ZIP
-
-                    // Aktualizacja meta
-                    const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
-                    fs.writeFileSync(metaPath, JSON.stringify(metaData));
-
-                    // Szukamy pliku ponownie po rozpakowaniu
-                    entryFile = findStartFile(testFolder);
-
-                    if (!entryFile) {
-                        sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
-                        return;
+                if (totalBytes) {
+                    const percent = Math.round((receivedBytes / totalBytes) * 100);
+                    const now = Date.now();
+                    // Throttle updates to every 100ms
+                    if (now - lastUpdate > 100 || percent === 100) {
+                        sender.send('download-progress', { testId, percent });
+                        lastUpdate = now;
                     }
-
-                    if (onlyDownload) {
-                        sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
-                    } else {
-                        sender.send('test-status', 'Gotowe. Uruchamianie...');
-                        openTestWindow(entryFile);
-                    }
-
-                } catch (err) {
-                    console.error("Błąd ZIP:", err);
-                    sender.send('test-status', 'Błąd rozpakowywania archiwum!');
                 }
             });
-        });
 
-    }).on('error', (err) => {
-        fs.unlink(zipPath, () => { });
-        sender.send('test-status', `Błąd sieci: ${err.message}`);
-    });
+            response.on('end', () => {
+                file.end(); // Important!
+
+                // Wait for file stream to finish closing
+                file.on('finish', () => {
+                    file.close();
+
+                    // --- KROK 4: ROZPAKOWYWANIE ---
+                    sender.send('test-status', 'Rozpakowywanie plików...');
+
+                    try {
+                        const zip = new AdmZip(zipPath);
+                        zip.extractAllTo(testFolder, true); // Nadpisz
+                        fs.unlinkSync(zipPath); // Usuń ZIP
+
+                        // Aktualizacja meta
+                        const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
+                        fs.writeFileSync(metaPath, JSON.stringify(metaData));
+
+                        // Szukamy pliku ponownie po rozpakowaniu
+                        entryFile = findStartFile(testFolder);
+
+                        if (!entryFile) {
+                            sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
+                            return;
+                        }
+
+                        if (onlyDownload) {
+                            sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
+                        } else {
+                            sender.send('test-status', 'Gotowe. Uruchamianie...');
+                            openTestWindow(entryFile);
+                        }
+
+                    } catch (err) {
+                        console.error("Błąd ZIP:", err);
+                        sender.send('test-status', 'Błąd rozpakowywania archiwum!');
+                    }
+                });
+            });
+
+        }).on('error', (err) => {
+            fs.unlink(zipPath, () => { });
+            sender.send('test-status', `Błąd sieci: ${err.message}`);
+        });
+    };
+
+    // Rozpocznij pobieranie z obsługą przekierowań
+    downloadWithRedirect(url);
 });
 
 
@@ -338,9 +368,16 @@ ipcMain.on('test-close', (event) => {
 
 ipcMain.on('save-local-result', (event, dataToSave) => {
     const dialog = require('electron').dialog;
-    const SECRET_KEY = "Inzynierka_Secret_Key_2026";
 
-    const hmac = crypto.createHmac('sha256', SECRET_KEY);
+    // Użyj Master Key z safeStorage zamiast hardcodowanego klucza
+    const masterKey = getOrGenerateMasterKey();
+    if (!masterKey) {
+        console.error('Could not get master key for HMAC!');
+        event.sender.send('test-status', 'BŁĄD: Nie można wygenerować klucza podpisu!');
+        return;
+    }
+
+    const hmac = crypto.createHmac('sha256', masterKey);
     hmac.update(JSON.stringify(dataToSave.wyniki));
     const signature = hmac.digest('hex');
 

@@ -1,6 +1,6 @@
 // src/modules/library.js
 import { db } from '../firebaseConfig.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { elements } from './ui.js';
 import { Dialog } from './dialog.js';
 

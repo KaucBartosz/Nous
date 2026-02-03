@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 2. NOWA FUNKCJA USUWANIA
     deleteTest: (testId) => ipcRenderer.invoke('delete-test', testId),
 
-    // 3. NOWA FUNKACJA PROGRESS
+    // 3. NOWA FUNKCJA PROGRESS
     onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, data) => callback(data)),
 
     // 4. SZYFROWANIE

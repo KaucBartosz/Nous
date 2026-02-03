@@ -8,11 +8,62 @@ import { Dialog } from './dialog.js';
 
 let currentResultPackage = null;
 
+// --- VALIDATION HELPERS ---
+
+/**
+ * Sanityzacja tekstu - usuwa potencjalnie niebezpieczne znaki
+ */
+function sanitizeText(input) {
+    if (typeof input !== 'string') return input;
+    return input
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
+/**
+ * Walidacja struktury danych wyników testu
+ */
+function validateTestResults(raw) {
+    if (!raw || typeof raw !== 'object') {
+        throw new Error('Wyniki testu muszą być obiektem');
+    }
+
+    // Wymagane pola
+    const requiredFields = ['testId'];
+    for (const field of requiredFields) {
+        if (!(field in raw)) {
+            console.warn(`Brak wymaganego pola: ${field}, używam domyślnej wartości`);
+        }
+    }
+
+    // Walidacja typów
+    if (raw.testId && typeof raw.testId !== 'string') {
+        throw new Error('testId musi być tekstem');
+    }
+
+    // Sanityzacja pól tekstowych
+    const sanitized = { ...raw };
+    if (sanitized.testId) sanitized.testId = sanitizeText(sanitized.testId);
+    if (sanitized.subjectId) sanitized.subjectId = sanitizeText(sanitized.subjectId);
+
+    return sanitized;
+}
+
 export function initResultsHandler() {
     if (window.electronAPI) {
         window.electronAPI.onTestResults((raw) => {
             console.log("Odebrano wyniki z testu. Przetwarzanie...");
-            handleTestResults(raw);
+            try {
+                const validatedData = validateTestResults(raw);
+                handleTestResults(validatedData);
+            } catch (e) {
+                console.error("Błąd walidacji wyników:", e);
+                import('./dialog.js').then(({ Dialog }) => {
+                    Dialog.alert(`Błąd walidacji wyników testu: ${e.message}`, 'error');
+                });
+            }
         });
     }
 
