@@ -1,12 +1,13 @@
 {
   "name": "bbtp",
   "version": "1.0.0",
-  "description": "",
+  "description": "BBTP Launcher application",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "admin": "electron admin_main.js",
-    "dist": "electron-builder --win --x64"
+    "dist": "electron-builder --win --x64",
+    "dist:linux": "electron-builder --linux --x64"
   },
   "keywords": [],
   "author": "",
@@ -47,6 +48,14 @@
       "!**/*.psd",
       "!admin.html",
       "!admin_main.js"
-    ]
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "logo.png"
+    }
   }
 }

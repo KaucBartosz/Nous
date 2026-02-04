@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loadTestsList();
     });
     elements.btnLogout.addEventListener('click', logout);
+    elements.btnTogglePassword.addEventListener('click', () => {
+        const type = elements.passInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        elements.passInput.setAttribute('type', type);
+        elements.btnTogglePassword.querySelector('.material-icons').textContent = type === 'password' ? 'visibility' : 'visibility_off';
+    });
 
     // 4. Feature Buttons
     document.getElementById('btn-export-csv').addEventListener('click', exportHistoryToCSV);
@@ -40,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. About Modal
     if (elements.navAbout) elements.navAbout.addEventListener('click', () => elements.aboutModal.classList.remove('hidden'));
     if (elements.btnCloseAbout) elements.btnCloseAbout.addEventListener('click', () => elements.aboutModal.classList.add('hidden'));
+    if (elements.btnAboutCloseFooter) elements.btnAboutCloseFooter.addEventListener('click', () => elements.aboutModal.classList.add('hidden'));
 
     // 6. Subsystems
     initDemographics();

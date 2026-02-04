@@ -32,7 +32,7 @@ export async function login(email, password) {
         showError("Logowanie...");
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        showError(error.code);
+        showError("Nieprawidłowy e-mail lub hasło");
     }
 }
 
@@ -67,7 +67,7 @@ export async function register(email, password) {
         });
         showError("Konto utworzone!");
     } catch (error) {
-        showError(error.code);
+        showError("Nieprawidłowy e-mail lub hasło");
     }
 }
 

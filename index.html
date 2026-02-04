@@ -22,7 +22,12 @@
             </div>
 
             <input type="email" id="email" placeholder="E-mail badacza">
-            <input type="password" id="password" placeholder="Hasło">
+            <div class="password-container">
+                <input type="password" id="password" placeholder="Hasło">
+                <button id="btn-toggle-password" class="toggle-password">
+                    <span class="material-icons">visibility</span>
+                </button>
+            </div>
 
             <button id="btn-login" class="btn primary full-width">Zaloguj się</button>
             <button id="btn-register" class="btn secondary full-width">Załóż konto</button>
@@ -40,7 +45,7 @@
         <!-- Pasek Boczny -->
         <aside class="sidebar">
             <div class="brand">
-                <img src="logo.png" alt="Logo" style="width: 40px; height: 40px; margin-right: 10px;">
+                <img src="logo.png" alt="Logo" style="width: 60px; height: 60px; margin-right: 15px;">
                 <span>Nous</span>
             </div>
 
@@ -77,9 +82,10 @@
                     <span id="user-status-display" class="status-badge">...</span>
                 </div>
                 <!-- Sync Toggle -->
-                <div style="display:flex; flex-direction:column; align-items:center; margin-left:5px;">
+                <div id="sync-toggle-container"
+                    style="display:flex; flex-direction:column; align-items:center; margin-left:5px;">
                     <label class="switch" title="Auto-Sync">
-                        <input type="checkbox" id="toggle-sync" checked>
+                        <input type="checkbox" id="toggle-sync">
                         <span class="slider round"></span>
                     </label>
                     <span style="font-size:8px; color:#666;">SYNC</span>
@@ -298,8 +304,7 @@
                 </p>
             </div>
             <div class="modal-footer" style="justify-content: center;">
-                <button class="btn primary"
-                    onclick="document.getElementById('about-modal').classList.add('hidden')">Zamknij</button>
+                <button id="btn-about-close-footer" class="btn primary">Zamknij</button>
             </div>
         </div>
     </div>

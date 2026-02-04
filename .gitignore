@@ -1,3 +1,5 @@
 node_modules/
 dist/
 build_app.sh
+WindowsVer.zip
+build_linux_on_win.ps1

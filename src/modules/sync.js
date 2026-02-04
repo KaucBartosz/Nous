@@ -4,7 +4,7 @@ import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.8.0/fi
 import { getPendingResults, markAsSynced } from './database.js';
 import { getCurrentUser } from './auth.js';
 
-let isAutoSyncEnabled = localStorage.getItem('autoSync') !== 'false'; // Default true
+let isAutoSyncEnabled = localStorage.getItem('autoSync') === 'true'; // Default false
 
 export function initSyncService() {
     window.addEventListener('online', () => {

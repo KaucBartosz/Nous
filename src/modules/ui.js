@@ -37,6 +37,7 @@ export const elements = {
 
     aboutModal: document.getElementById('about-modal'),
     btnCloseAbout: document.getElementById('btn-close-about'),
+    btnAboutCloseFooter: document.getElementById('btn-about-close-footer'),
 
     userEmailDisplay: document.getElementById('user-email-display'),
     userStatusDisplay: document.getElementById('user-status-display'),
@@ -46,9 +47,11 @@ export const elements = {
     btnLogin: document.getElementById('btn-login'),
     btnRegister: document.getElementById('btn-register'),
     btnGuest: document.getElementById('btn-guest'),
+    btnTogglePassword: document.getElementById('btn-toggle-password'),
 
     // Sync Toggle
     toggleSync: document.getElementById('toggle-sync'),
+    syncToggleContainer: document.getElementById('sync-toggle-container'),
 };
 
 // View configuration map
@@ -113,6 +116,13 @@ export function updateAuthUI(userEmail, userStatus) {
     if (userStatus === 'APPROVED') elements.userStatusDisplay.style.color = '#4caf50';
     else if (userStatus === 'PENDING') elements.userStatusDisplay.style.color = '#ff9800';
     else elements.userStatusDisplay.style.color = '#aaa';
+
+    // Hide sync if Guest
+    if (userStatus === 'GUEST') {
+        elements.syncToggleContainer?.classList.add('hidden');
+    } else {
+        elements.syncToggleContainer?.classList.remove('hidden');
+    }
 }
 
 export function showLoginScreen() {
