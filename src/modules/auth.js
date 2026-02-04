@@ -7,7 +7,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { updateAuthUI, showLoginScreen, showError } from './ui.js';
-import { getRecaptchaToken, isRecaptchaEnabled, loadRecaptcha } from './recaptcha.js';
 
 export function initAuth(onLoginSuccess) {
     auth.onAuthStateChanged(async (user) => {
@@ -21,10 +20,7 @@ export function initAuth(onLoginSuccess) {
         }
     });
 
-    // Preload reCAPTCHA jeśli skonfigurowana
-    if (isRecaptchaEnabled()) {
-        loadRecaptcha().catch(e => console.warn('reCAPTCHA preload failed:', e));
-    }
+
 }
 
 export async function login(email, password) {
@@ -43,20 +39,7 @@ export async function register(email, password) {
     }
 
     try {
-        // reCAPTCHA verification (jeśli włączona)
-        if (isRecaptchaEnabled()) {
-            showError("Weryfikacja reCAPTCHA...");
-            const recaptchaToken = await getRecaptchaToken('register');
 
-            if (!recaptchaToken) {
-                showError("Błąd weryfikacji reCAPTCHA. Spróbuj ponownie.");
-                return;
-            }
-
-            // Token jest generowany - w pełnej implementacji należy
-            // zweryfikować go przez Cloud Function przed rejestracją
-            console.log('reCAPTCHA token:', recaptchaToken.substring(0, 20) + '...');
-        }
 
         showError("Tworzenie konta...");
         const userCred = await createUserWithEmailAndPassword(auth, email, password);

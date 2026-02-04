@@ -9,7 +9,7 @@
 // 4. Wklej SITE_KEY poniżej
 // 5. SECRET_KEY użyj w Cloud Functions do weryfikacji
 
-const RECAPTCHA_SITE_KEY = ''; // Wpisz swój Site Key tutaj
+const RECAPTCHA_SITE_KEY = '6LcGbmAsAAAAANONNS0csIA_MB5ePSLplsbuob6R'; // Wpisz swój Site Key tutaj
 const RECAPTCHA_ENABLED = RECAPTCHA_SITE_KEY.length > 0;
 
 let isRecaptchaLoaded = false;
