@@ -7,6 +7,7 @@ const DB_NAME = 'NousDB';
 const DB_VERSION = 2;
 
 let isCryptoReady = false;
+let cryptoWarningShown = false; // Zapobiega wielokrotnemu pokazywaniu ostrzeżenia
 
 let dbPromise = null;
 
@@ -20,9 +21,31 @@ export async function initDB() {
                 isCryptoReady = true;
             } else {
                 console.error("Failed to get encryption key!");
+                // Pokaż ostrzeżenie użytkownikowi (tylko raz)
+                if (!cryptoWarningShown) {
+                    cryptoWarningShown = true;
+                    // Używamy setTimeout aby nie blokować inicjalizacji
+                    setTimeout(() => {
+                        Dialog.alert(
+                            "Błąd inicjalizacji szyfrowania. Dane lokalne mogą nie być szyfrowane. " +
+                            "Przyczyną może być brak dostępu do systemu przechowywania kluczy (DPAPI/Keychain).",
+                            'warning'
+                        );
+                    }, 1000);
+                }
             }
         } catch (e) {
             console.error("Crypto Init Failed:", e);
+            // Pokaż ostrzeżenie użytkownikowi (tylko raz)
+            if (!cryptoWarningShown) {
+                cryptoWarningShown = true;
+                setTimeout(() => {
+                    Dialog.alert(
+                        `Błąd szyfrowania: ${e.message}. Dane lokalne będą przechowywane niezaszyfrowane.`,
+                        'error'
+                    );
+                }, 1000);
+            }
         }
     }
 
@@ -32,7 +55,7 @@ export async function initDB() {
                 if (!db.objectStoreNames.contains('results')) {
                     const store = db.createObjectStore('results', { keyPath: 'id' });
                     store.createIndex('timestamp', 'timestamp');
-                    store.createIndex('syncStatus', 'syncStatus');
+                    store.createIndex('sync_status', 'sync_status');
                 }
                 if (!db.objectStoreNames.contains('demographicsTemplates')) {
                     db.createObjectStore('demographicsTemplates', { keyPath: 'id' });
@@ -50,7 +73,12 @@ export async function saveResult(resultData) {
         const id = resultData.id || crypto.randomUUID();
         const timestamp = new Date().toISOString();
 
-        let payloadToSave = { ...resultData, id, syncStatus: 'PENDING', createdAt: timestamp };
+        let payloadToSave = {
+            ...resultData,
+            id,
+            sync_status: 'PENDING',
+            created_at: timestamp
+        };
 
         // --- ENCRYPTION ---
         if (isCryptoReady) {
@@ -59,15 +87,15 @@ export async function saveResult(resultData) {
 
             payloadToSave = {
                 id: id,
-                timestamp: timestamp,       // INDEXED
-                syncStatus: 'PENDING',      // INDEXED
-                createdAt: timestamp,
-                isEncrypted: true,
-                encryptedPayload: payload,
+                timestamp: timestamp,           // INDEXED
+                sync_status: 'PENDING',         // INDEXED
+                created_at: timestamp,
+                is_encrypted: true,
+                encrypted_payload: payload,
                 iv: iv,
-                // We keep minimal metadata unencrypted if needed, but here indices are enough
-                testId: resultData.testId,  // Optional: keep testId visible for listing?
-                subject_id: resultData.subject_id // Optional: keep subject visible?
+                // Keep minimal metadata unencrypted for listing
+                test_id: resultData.test_id || resultData.testId,
+                subject_id: resultData.subject_id
             };
         }
 
@@ -80,16 +108,16 @@ export async function saveResult(resultData) {
 }
 
 async function processRecordOutput(record) {
-    if (record.isEncrypted && isCryptoReady) {
+    if (record.is_encrypted && isCryptoReady) {
         try {
-            const decrypted = await decryptData(record.encryptedPayload, record.iv);
-            // Merge back with metadata (id, syncStatus etc)
+            const decrypted = await decryptData(record.encrypted_payload, record.iv);
+            // Merge back with metadata (id, sync_status etc)
             return {
                 ...decrypted,
                 id: record.id,
-                syncStatus: record.syncStatus,
+                sync_status: record.sync_status,
                 timestamp: record.timestamp,
-                firestoreId: record.firestoreId
+                firestore_id: record.firestore_id
             };
         } catch (e) {
             console.error("Decryption error for record:", record.id, e);
@@ -99,7 +127,36 @@ async function processRecordOutput(record) {
             };
         }
     }
-    return record; // Return raw if not encrypted (legacy support)
+
+    // Legacy support - handle old records with camelCase fields
+    if (record.isEncrypted && isCryptoReady) {
+        try {
+            const decrypted = await decryptData(record.encryptedPayload, record.iv);
+            return {
+                ...decrypted,
+                id: record.id,
+                sync_status: record.syncStatus || record.sync_status,
+                timestamp: record.timestamp,
+                firestore_id: record.firestoreId || record.firestore_id
+            };
+        } catch (e) {
+            console.error("Decryption error for legacy record:", record.id, e);
+            return {
+                ...record,
+                error: "Decryption Failed"
+            };
+        }
+    }
+
+    // Normalize legacy camelCase to snake_case
+    return {
+        ...record,
+        sync_status: record.sync_status || record.syncStatus,
+        firestore_id: record.firestore_id || record.firestoreId,
+        test_id: record.test_id || record.testId,
+        subject_id: record.subject_id || record.subjectId,
+        researcher_uid: record.researcher_uid
+    };
 }
 
 export async function getAllResults() {
@@ -115,29 +172,45 @@ export async function getAllResults() {
     }
 }
 
-export async function getPendingResults() {
+export async function getPendingResults(userId) {
     try {
         const db = await initDB();
-        const records = await db.getAllFromIndex('results', 'syncStatus', 'PENDING');
+        // Try new index name first, fallback to old
+        let records;
+        try {
+            records = await db.getAllFromIndex('results', 'sync_status', 'PENDING');
+        } catch {
+            // Fallback for legacy index name
+            records = await db.getAllFromIndex('results', 'syncStatus', 'PENDING');
+        }
 
-        // Decrypt all
-        return await Promise.all(records.map(processRecordOutput));
+        const decodedRecords = await Promise.all(records.map(processRecordOutput));
+
+        // Filter by user if userId is provided
+        if (userId) {
+            return decodedRecords.filter(r => r.researcher_uid === userId);
+        }
+
+        return decodedRecords;
     } catch (error) {
         console.error('Error getting pending results:', error);
         throw new Error(`Nie udało się pobrać oczekujących wyników: ${error.message}`);
     }
 }
 
-export async function markAsSynced(localId, firestoreId) {
+export async function markAsSynced(local_id, firestore_id) {
     try {
         const db = await initDB();
         const tx = db.transaction('results', 'readwrite');
         const store = tx.objectStore('results');
 
-        const record = await store.get(localId);
+        const record = await store.get(local_id);
         if (record) {
+            record.sync_status = 'SYNCED';
+            record.firestore_id = firestore_id;
+            // Also set legacy fields for backward compatibility
             record.syncStatus = 'SYNCED';
-            record.firestoreId = firestoreId;
+            record.firestoreId = firestore_id;
             await store.put(record);
         }
         await tx.done;
@@ -157,9 +230,8 @@ export async function deleteResult(id) {
     }
 }
 
-// --- TEMPLATES (Metryczki - NOT ENCRYPTED intentionally for now, or should be?) ---
-// User asked for "encryption of data". Templates are config, not really sensitive result data.
-// Leaving plain for performance and ease of use in UI.
+// --- TEMPLATES (Metryczki - NOT ENCRYPTED intentionally) ---
+// Templates are config, not sensitive result data.
 
 export async function saveTemplate(template) {
     try {

@@ -1,58 +1,79 @@
 // src/modules/ui.js
 
-export const elements = {
-    loginScreen: document.getElementById('login-screen'),
-    dashboardScreen: document.getElementById('dashboard-screen'),
-    emailInput: document.getElementById('email'),
-    passInput: document.getElementById('password'),
-    errorMsg: document.getElementById('error-msg'),
+// Lazy-loaded elements cache
+let _elements = null;
 
-    navLibrary: document.getElementById('nav-library'),
-    navHistory: document.getElementById('nav-history'),
-    navUpdates: document.getElementById('nav-updates'),
-    navDemographics: document.getElementById('nav-demographics'),
-    navDemoCreator: document.getElementById('nav-demo-creator'),
-    navAbout: document.getElementById('nav-about'),
+/**
+ * Pobiera elementy DOM (leniwe ładowanie).
+ * Gwarantuje że elementy są pobierane dopiero po załadowaniu DOM.
+ */
+function getElementsLazy() {
+    if (_elements) return _elements;
 
-    viewLibrary: document.getElementById('library-view'),
-    testsGrid: document.getElementById('tests-grid'),
-    viewHistory: document.getElementById('history-view'),
-    viewUpdates: document.getElementById('updates-view'),
-    viewDemographics: document.getElementById('demographics-view'),
-    viewDemoCreator: document.getElementById('demo-creator-view'),
+    _elements = {
+        loginScreen: document.getElementById('login-screen'),
+        dashboardScreen: document.getElementById('dashboard-screen'),
+        emailInput: document.getElementById('email'),
+        passInput: document.getElementById('password'),
+        errorMsg: document.getElementById('error-msg'),
 
-    historyTableBody: document.querySelector('#history-table tbody'),
-    updatesTableBody: document.querySelector('#updates-table tbody'),
+        navLibrary: document.getElementById('nav-library'),
+        navHistory: document.getElementById('nav-history'),
+        navUpdates: document.getElementById('nav-updates'),
+        navDemographics: document.getElementById('nav-demographics'),
+        navDemoCreator: document.getElementById('nav-demo-creator'),
+        navAbout: document.getElementById('nav-about'),
 
-    // Demo Form
-    demoTemplateSelect: document.getElementById('demo-template-select'),
-    dynamicDemoForm: document.getElementById('dynamic-demo-form'),
-    btnSaveDemo: document.getElementById('btn-save-demo'),
+        viewLibrary: document.getElementById('library-view'),
+        testsGrid: document.getElementById('tests-grid'),
+        viewHistory: document.getElementById('history-view'),
+        viewUpdates: document.getElementById('updates-view'),
+        viewDemographics: document.getElementById('demographics-view'),
+        viewDemoCreator: document.getElementById('demo-creator-view'),
 
-    modalOverlay: document.getElementById('results-modal'),
-    btnCloseModal: document.getElementById('btn-close-modal'),
-    btnDiscard: document.getElementById('btn-discard'),
-    btnUploadCloud: document.getElementById('btn-upload-cloud'),
-    modalUploadInfo: document.getElementById('modal-upload-info'),
+        historyTableBody: document.querySelector('#history-table tbody'),
+        updatesTableBody: document.querySelector('#updates-table tbody'),
 
-    aboutModal: document.getElementById('about-modal'),
-    btnCloseAbout: document.getElementById('btn-close-about'),
-    btnAboutCloseFooter: document.getElementById('btn-about-close-footer'),
+        // Demo Form
+        demoTemplateSelect: document.getElementById('demo-template-select'),
+        dynamicDemoForm: document.getElementById('dynamic-demo-form'),
+        btnSaveDemo: document.getElementById('btn-save-demo'),
 
-    userEmailDisplay: document.getElementById('user-email-display'),
-    userStatusDisplay: document.getElementById('user-status-display'),
-    btnLogout: document.getElementById('btn-logout'),
+        modalOverlay: document.getElementById('results-modal'),
+        btnCloseModal: document.getElementById('btn-close-modal'),
+        btnDiscard: document.getElementById('btn-discard'),
+        btnUploadCloud: document.getElementById('btn-upload-cloud'),
+        modalUploadInfo: document.getElementById('modal-upload-info'),
 
-    // Auth buttons
-    btnLogin: document.getElementById('btn-login'),
-    btnRegister: document.getElementById('btn-register'),
-    btnGuest: document.getElementById('btn-guest'),
-    btnTogglePassword: document.getElementById('btn-toggle-password'),
+        aboutModal: document.getElementById('about-modal'),
+        btnCloseAbout: document.getElementById('btn-close-about'),
+        btnAboutCloseFooter: document.getElementById('btn-about-close-footer'),
 
-    // Sync Toggle
-    toggleSync: document.getElementById('toggle-sync'),
-    syncToggleContainer: document.getElementById('sync-toggle-container'),
-};
+        userEmailDisplay: document.getElementById('user-email-display'),
+        userStatusDisplay: document.getElementById('user-status-display'),
+        btnLogout: document.getElementById('btn-logout'),
+
+        // Auth buttons
+        btnLogin: document.getElementById('btn-login'),
+        btnRegister: document.getElementById('btn-register'),
+        btnGuest: document.getElementById('btn-guest'),
+        btnTogglePassword: document.getElementById('btn-toggle-password'),
+
+        // Sync Toggle
+        toggleSync: document.getElementById('toggle-sync'),
+        syncToggleContainer: document.getElementById('sync-toggle-container'),
+    };
+
+    return _elements;
+}
+
+// Proxy dla zachowania kompatybilności wstecznej
+// Pozwala używać elements.XXX zamiast getElementsLazy().XXX
+export const elements = new Proxy({}, {
+    get(target, prop) {
+        return getElementsLazy()[prop];
+    }
+});
 
 // View configuration map
 const VIEW_CONFIG = {

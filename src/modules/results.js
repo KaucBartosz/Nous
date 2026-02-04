@@ -92,7 +92,7 @@ function handleTestResults(raw) {
 
     // 3. Build Package
     currentResultPackage = {
-        testId: raw.testId || "test",
+        test_id: raw.testId || "test",
         timestamp: new Date().toISOString(),
         researcher_uid: user ? user.uid : "GUEST",
         subject_id: participantId,

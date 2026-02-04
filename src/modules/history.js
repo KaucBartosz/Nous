@@ -7,7 +7,7 @@ export async function loadHistoryData() {
     elements.historyTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
     const user = getCurrentUser();
 
-    // Allow GUEST access too? For now, yes, but they only see their own local data
+    // Allow GUEST access too - they only see their own local data
     const uid = user ? user.uid : "GUEST";
 
     try {
@@ -29,7 +29,7 @@ export async function loadHistoryData() {
         myResults.forEach((r, index) => {
             const resultData = r.wyniki || r.data || {};
             const score = resultData.czas_reakcji ? `${resultData.czas_reakcji} ms` : (resultData.score || "JSON");
-            const patientId = r.subject_id || resultData.subjectId || "-";
+            const patient_id = r.subject_id || resultData.subject_id || resultData.subjectId || "-";
 
             const row = document.createElement('tr');
 
@@ -40,12 +40,12 @@ export async function loadHistoryData() {
 
             // 2. Test ID
             const tdTestId = document.createElement('td');
-            tdTestId.textContent = r.testId;
+            tdTestId.textContent = r.test_id || r.testId;
             row.appendChild(tdTestId);
 
             // 3. Patient ID
             const tdPatient = document.createElement('td');
-            tdPatient.textContent = patientId;
+            tdPatient.textContent = patient_id;
             row.appendChild(tdPatient);
 
             // 4. Score
@@ -62,18 +62,24 @@ export async function loadHistoryData() {
             icon.className = 'material-icons';
             icon.style.fontSize = '18px';
 
-            if (r.syncStatus === 'SYNCED') {
+            const sync_status = r.sync_status || r.syncStatus;
+
+            if (r.researcher_uid === 'GUEST') {
+                icon.textContent = 'dns';
+                icon.style.color = '#888';
+                icon.title = 'Lokalne (Tryb Gościa)';
+            } else if (sync_status === 'SYNCED') {
                 icon.textContent = 'cloud_done';
                 icon.style.color = '#4caf50';
                 icon.title = 'Zsynchronizowano';
-            } else if (r.syncStatus === 'PENDING') {
+            } else if (sync_status === 'PENDING') {
                 icon.textContent = 'cloud_off';
                 icon.style.color = '#aaa';
                 icon.title = 'Czeka na wysyłkę';
             } else {
                 icon.textContent = 'error';
                 icon.style.color = 'red';
-                icon.title = 'Błąd';
+                icon.title = `Status nieznany: ${sync_status}`;
             }
             tdSync.appendChild(icon);
             row.appendChild(tdSync);
@@ -115,7 +121,8 @@ function downloadSingleResult(result) {
     if (format === 'csv') {
         downloadSingleResultAsCSV(result);
     } else {
-        const filename = `wynik_${result.testId}_${new Date(result.timestamp).getTime()}.json`;
+        const test_id = result.test_id || result.testId;
+        const filename = `wynik_${test_id}_${new Date(result.timestamp).getTime()}.json`;
         const jsonStr = JSON.stringify(result, null, 2);
         downloadFile(filename, jsonStr, 'application/json');
     }
@@ -127,7 +134,7 @@ function downloadSingleResultAsCSV(result) {
 
     // Core fields
     flat['Data'] = new Date(result.timestamp).toLocaleString();
-    flat['Test ID'] = result.testId;
+    flat['Test ID'] = result.test_id || result.testId;
     flat['ID Badanego'] = result.subject_id || "-";
     flat['Badacz UID'] = result.researcher_uid;
 
@@ -159,7 +166,8 @@ function downloadSingleResultAsCSV(result) {
         csvContent += `${key};${valStr}\r\n`;
     }
 
-    const filename = `wynik_${result.testId}_${new Date(result.timestamp).getTime()}.csv`;
+    const test_id = result.test_id || result.testId;
+    const filename = `wynik_${test_id}_${new Date(result.timestamp).getTime()}.csv`;
     downloadFile(filename, csvContent, 'text/csv;charset=utf-8;');
 }
 
@@ -182,7 +190,9 @@ function downloadFile(filename, content, type) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    // Opóźnione zwolnienie URL aby przeglądarka zdążyła pobrać plik
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function exportHistoryToCSV() {
@@ -212,9 +222,13 @@ export function exportHistoryToCSV() {
         csv += rowData.join(',') + "\r\n";
     });
 
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    link.href = url;
     link.download = "historia_wynikow.csv";
     link.click();
-    URL.revokeObjectURL(link.href); // Clean up
+
+    // Opóźnione zwolnienie URL
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -168,7 +168,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
                     const now = Date.now();
                     // Throttle updates to every 100ms
                     if (now - lastUpdate > 100 || percent === 100) {
-                        sender.send('download-progress', { testId, percent });
+                        sender.send('download-progress', { test_id: testId, percent });
                         lastUpdate = now;
                     }
                 }
@@ -210,7 +210,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
                         entryFile = findStartFile(testFolder);
 
                         // --- NEW EVENT FOR UI REFRESH ---
-                        sender.send('test-installed', { testId, version: Number(version) });
+                        sender.send('test-installed', { test_id: testId, version: Number(version) });
 
                         if (!entryFile) {
                             sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');

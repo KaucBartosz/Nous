@@ -3,9 +3,11 @@ import { db } from '../firebaseConfig.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { elements } from './ui.js';
 import { Dialog } from './dialog.js';
+import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache } from './utils.js';
 
 let cachedTests = [];
 let isSearchBound = false;
+let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
 let currentViewMode = 'grid'; // 'grid', 'list', 'table', 'compact'
 
 // View mode button references
@@ -15,6 +17,48 @@ const viewButtons = {
     table: null,
     compact: null
 };
+
+/**
+ * Inicjalizuje listenery Electron API (wywołaj raz).
+ */
+export function initLibraryListeners() {
+    if (listenersRegistered || !window.electronAPI) return;
+
+    window.electronAPI.onDownloadProgress(({ test_id, percent }) => {
+        const btn = document.getElementById(`start-test-${test_id}`);
+        if (btn) {
+            const progressText = btn.querySelector('.progress-text');
+            const progressBar = btn.querySelector('.progress-bar');
+
+            if (progressText && progressBar) {
+                progressText.textContent = `${percent}%`;
+                progressBar.style.width = `${percent}%`;
+            } else {
+                // Fallback / Initial structure
+                btn.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:5px; z-index:1; position:relative;">
+                         <span class="material-icons spin">sync</span> 
+                         <span class="progress-text">${percent}%</span>
+                    </div>
+                    <div style="position:absolute; bottom:0; left:0; width:100%; height:4px; background:rgba(0,0,0,0.3);">
+                        <div class="progress-bar" style="width:${percent}%; height:100%; background:#4caf50;"></div>
+                    </div>
+                `;
+                btn.style.position = 'relative';
+                btn.style.overflow = 'hidden';
+                btn.disabled = true;
+            }
+        }
+    });
+
+    window.electronAPI.onTestInstalled((data) => {
+        console.log("Test installed, refreshing library:", data);
+        invalidateLocalVersionsCache(); // Unieważnij cache
+        loadTestsList(undefined, true); // Force refresh
+    });
+
+    listenersRegistered = true;
+}
 
 export function initViewSwitcher() {
     viewButtons.grid = document.getElementById('view-grid');
@@ -46,17 +90,23 @@ export function initViewSwitcher() {
         }
     });
 
-    // Bind search input event (only once)
+    // Bind search input event with DEBOUNCE (only once)
     if (!isSearchBound) {
         const searchInput = document.getElementById('library-search');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const filterText = e.target.value;
+            const debouncedSearch = debounce((filterText) => {
                 renderTests(cachedTests, filterText);
+            }, 200);
+
+            searchInput.addEventListener('input', (e) => {
+                debouncedSearch(e.target.value);
             });
             isSearchBound = true;
         }
     }
+
+    // Init Electron listeners
+    initLibraryListeners();
 }
 
 function updateViewButtonStates() {
@@ -83,8 +133,8 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
             snap.forEach(doc => {
                 const t = doc.data();
                 t.id = doc.id;
-                t.localVer = 0; // Will be updated below
-                t.remoteVer = Number(t.version);
+                t.local_ver = 0; // Will be updated below
+                t.remote_ver = Number(t.version);
                 cachedTests.push(t);
             });
         } catch (e) {
@@ -94,22 +144,20 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
         }
     }
 
-    // 2. Always update local versions (fast fs check) to ensure buttons are correct
-    if (window.electronAPI) {
-        const localVersions = await window.electronAPI.getLocalVersions();
-        cachedTests.forEach(t => {
-            t.localVer = localVersions[t.id] ? Number(localVersions[t.id]) : 0;
-        });
-    }
+    // 2. Always update local versions (using cached getter)
+    const localVersions = await getLocalVersionsCached();
+    cachedTests.forEach(t => {
+        t.local_ver = localVersions[t.id] ? Number(localVersions[t.id]) : 0;
+    });
 
     renderTests(cachedTests, filterText);
 }
 
 function getTestStatus(t) {
-    const localVer = t.localVer;
-    const remoteVer = t.remoteVer;
+    const local_ver = t.local_ver;
+    const remote_ver = t.remote_ver;
 
-    if (localVer === 0) {
+    if (local_ver === 0) {
         return {
             iconName: 'cloud_download',
             iconColor: '#888',
@@ -117,9 +165,9 @@ function getTestStatus(t) {
             btnText: 'Pobierz',
             btnClass: 'primary',
             statusText: 'Nie pobrano',
-            versionParam: remoteVer
+            versionParam: remote_ver
         };
-    } else if (localVer < remoteVer) {
+    } else if (local_ver < remote_ver) {
         return {
             iconName: 'system_update',
             iconColor: '#ff9800',
@@ -127,7 +175,7 @@ function getTestStatus(t) {
             btnText: 'Uruchom',
             btnClass: 'outline',
             statusText: 'Aktualizacja dostępna',
-            versionParam: localVer
+            versionParam: local_ver
         };
     } else {
         return {
@@ -137,27 +185,9 @@ function getTestStatus(t) {
             btnText: 'Uruchom',
             btnClass: 'primary',
             statusText: 'Zainstalowano',
-            versionParam: localVer
+            versionParam: local_ver
         };
     }
-}
-
-function sortTests(tests) {
-    return tests.sort((a, b) => {
-        const aUpdate = a.localVer > 0 && a.localVer < a.remoteVer;
-        const bUpdate = b.localVer > 0 && b.localVer < b.remoteVer;
-
-        if (aUpdate && !bUpdate) return -1;
-        if (!aUpdate && bUpdate) return 1;
-
-        const aInstalled = a.localVer > 0;
-        const bInstalled = b.localVer > 0;
-
-        if (aInstalled && !bInstalled) return -1;
-        if (!aInstalled && bInstalled) return 1;
-
-        return (a.name || '').localeCompare(b.name || '');
-    });
 }
 
 function renderTests(testsSource, filterText) {
@@ -176,8 +206,8 @@ function renderTests(testsSource, filterText) {
         return;
     }
 
-    // 2. Sort
-    tests = sortTests(tests);
+    // 2. Sort (using shared utility)
+    tests = sortByInstallStatus(tests);
 
     // 3. Render based on current view mode
     switch (currentViewMode) {
@@ -202,7 +232,7 @@ function renderGridView(tests) {
 
     tests.forEach(t => {
         const status = getTestStatus(t);
-        const testId = t.id;
+        const test_id = t.id;
 
         // Create card structure safely
         const card = document.createElement('div');
@@ -250,7 +280,7 @@ function renderGridView(tests) {
         const button = document.createElement('button');
         button.className = `btn ${status.btnClass} small`;
         button.style.marginTop = 'auto';
-        button.id = `start-test-${testId}`;
+        button.id = `start-test-${test_id}`;
 
         const playIcon = document.createElement('span');
         playIcon.className = 'material-icons';
@@ -269,7 +299,7 @@ function renderGridView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.downloadUrl, testId, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
         });
     });
 }
@@ -279,7 +309,7 @@ function renderListView(tests) {
 
     tests.forEach(t => {
         const status = getTestStatus(t);
-        const testId = t.id;
+        const test_id = t.id;
 
         const item = document.createElement('div');
         item.className = 'test-list-item';
@@ -335,7 +365,7 @@ function renderListView(tests) {
 
         const button = document.createElement('button');
         button.className = `btn ${status.btnClass} small`;
-        button.id = `start-test-${testId}`;
+        button.id = `start-test-${test_id}`;
 
         const playIcon = document.createElement('span');
         playIcon.className = 'material-icons';
@@ -356,7 +386,7 @@ function renderListView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.downloadUrl, testId, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
         });
     });
 }
@@ -385,7 +415,7 @@ function renderTableView(tests) {
 
     tests.forEach(t => {
         const status = getTestStatus(t);
-        const testId = t.id;
+        const test_id = t.id;
 
         const row = document.createElement('tr');
 
@@ -430,7 +460,7 @@ function renderTableView(tests) {
         const actionCell = document.createElement('td');
         const button = document.createElement('button');
         button.className = `btn ${status.btnClass} small`;
-        button.id = `start-test-${testId}`;
+        button.id = `start-test-${test_id}`;
 
         const playIcon = document.createElement('span');
         playIcon.className = 'material-icons';
@@ -451,7 +481,7 @@ function renderTableView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.downloadUrl, testId, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
         });
     });
 
@@ -464,7 +494,7 @@ function renderCompactView(tests) {
 
     tests.forEach(t => {
         const status = getTestStatus(t);
-        const testId = t.id;
+        const test_id = t.id;
 
         const card = document.createElement('div');
         card.className = 'test-card-compact';
@@ -495,7 +525,7 @@ function renderCompactView(tests) {
 
         const button = document.createElement('button');
         button.className = `btn ${status.btnClass} compact`;
-        button.id = `start-test-${testId}`;
+        button.id = `start-test-${test_id}`;
 
         const playIcon = document.createElement('span');
         playIcon.className = 'material-icons';
@@ -516,46 +546,8 @@ function renderCompactView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.downloadUrl, testId, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
         });
-    });
-}
-
-// Listener for progress
-// Listener for progress
-if (window.electronAPI) {
-    window.electronAPI.onDownloadProgress(({ testId, percent }) => {
-        const btn = document.getElementById(`start-test-${testId}`);
-        if (btn) {
-            const progressText = btn.querySelector('.progress-text');
-            const progressBar = btn.querySelector('.progress-bar');
-
-            if (progressText && progressBar) {
-                progressText.textContent = `${percent}%`;
-                progressBar.style.width = `${percent}%`;
-            } else {
-                // Fallback / Initial structure
-                btn.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:5px; z-index:1; position:relative;">
-                         <span class="material-icons spin">sync</span> 
-                         <span class="progress-text">${percent}%</span>
-                    </div>
-                    <div style="position:absolute; bottom:0; left:0; width:100%; height:4px; background:rgba(0,0,0,0.3);">
-                        <div class="progress-bar" style="width:${percent}%; height:100%; background:#4caf50;"></div>
-                    </div>
-                `;
-                btn.style.position = 'relative';
-                btn.style.overflow = 'hidden';
-                btn.disabled = true;
-            }
-        }
-    });
-
-    // --- OPTIMIZED REFRESH ---
-    // Listen for completion event instead of timeout
-    window.electronAPI.onTestInstalled((data) => {
-        console.log("Test installed, refreshing library:", data);
-        loadTestsList(undefined, true); // Force refresh
     });
 }
 

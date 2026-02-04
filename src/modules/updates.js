@@ -4,33 +4,78 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/f
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
 import { Dialog } from './dialog.js';
+import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache } from './utils.js';
 
 let isSearchBound = false;
+let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
+
+/**
+ * Inicjalizuje listenery Electron API dla updates (wywołaj raz).
+ */
+export function initUpdatesListeners() {
+    if (listenersRegistered || !window.electronAPI) return;
+
+    window.electronAPI.onDownloadProgress(({ test_id, percent }) => {
+        const btn = document.getElementById(`force-update-${test_id}`);
+        if (btn) {
+            const progressText = btn.querySelector('.progress-text');
+
+            if (progressText) {
+                progressText.textContent = `${percent}%`;
+            } else {
+                btn.innerHTML = `
+                    <span class="material-icons spin" style="font-size:16px;">sync</span> 
+                    <span class="progress-text">${percent}%</span>
+                `;
+                btn.disabled = true;
+            }
+        }
+    });
+
+    window.electronAPI.onTestInstalled((data) => {
+        console.log("Test installed (update), refreshing...", data);
+        invalidateLocalVersionsCache(); // Unieważnij cache
+        loadUpdatesData();
+        loadTestsList(undefined, true);
+    });
+
+    listenersRegistered = true;
+}
 
 export async function loadUpdatesData(filterText = '') {
+    // Bind search input with DEBOUNCE (only once)
     if (!isSearchBound) {
         const searchInput = document.getElementById('updates-search');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => loadUpdatesData(e.target.value));
+            const debouncedSearch = debounce((value) => {
+                loadUpdatesData(value);
+            }, 200);
+
+            searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
             isSearchBound = true;
         }
     }
 
+    // Init listeners on first load
+    initUpdatesListeners();
+
     elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Skanowanie...</td></tr>';
     try {
         const remoteSnap = await getDocs(collection(db, "tests"));
-        let localVersions = {};
-        if (window.electronAPI) localVersions = await window.electronAPI.getLocalVersions();
+        const localVersions = await getLocalVersionsCached();
 
         elements.updatesTableBody.innerHTML = '';
-        if (remoteSnap.empty) { elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak testów.</td></tr>'; return; }
+        if (remoteSnap.empty) {
+            elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak testów.</td></tr>';
+            return;
+        }
 
         let tests = [];
         remoteSnap.forEach(doc => {
             const r = doc.data();
             r.id = doc.id;
-            r.localVer = localVersions[r.id] ? Number(localVersions[r.id]) : 0;
-            r.remoteVer = Number(r.version);
+            r.local_ver = localVersions[r.id] ? Number(localVersions[r.id]) : 0;
+            r.remote_ver = Number(r.version);
             tests.push(r);
         });
 
@@ -40,28 +85,8 @@ export async function loadUpdatesData(filterText = '') {
             tests = tests.filter(t => (t.name || '').toLowerCase().includes(lower));
         }
 
-        // 2. Sort: Installed/Update needed first. 
-        // Logic: 
-        // Priority 1: Update needed (local < remote && local > 0)
-        // Priority 2: Installed (local > 0)
-        // Priority 3: Not installed
-        // Then Alphabetical
-        tests.sort((a, b) => {
-            const aUpdate = a.localVer > 0 && a.localVer < a.remoteVer;
-            const bUpdate = b.localVer > 0 && b.localVer < b.remoteVer;
-
-            if (aUpdate && !bUpdate) return -1;
-            if (!aUpdate && bUpdate) return 1;
-
-            const aInstalled = a.localVer > 0;
-            const bInstalled = b.localVer > 0;
-
-            if (aInstalled && !bInstalled) return -1;
-            if (!aInstalled && bInstalled) return 1;
-
-            return (a.name || '').localeCompare(b.name || '');
-        });
-
+        // 2. Sort (using shared utility)
+        tests = sortByInstallStatus(tests);
 
         if (tests.length === 0) {
             elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak wyników wyszukiwania.</td></tr>';
@@ -70,8 +95,8 @@ export async function loadUpdatesData(filterText = '') {
 
         tests.forEach(r => {
             const id = r.id;
-            const remoteVer = r.remoteVer;
-            const localVer = r.localVer;
+            const remote_ver = r.remote_ver;
+            const local_ver = r.local_ver;
 
             // Create row safely
             const row = document.createElement('tr');
@@ -83,25 +108,25 @@ export async function loadUpdatesData(filterText = '') {
 
             // Column 2: Local Version
             const localVerCell = document.createElement('td');
-            localVerCell.textContent = localVer || '-';
+            localVerCell.textContent = local_ver || '-';
             row.appendChild(localVerCell);
 
             // Column 3: Remote Version
             const remoteVerCell = document.createElement('td');
-            remoteVerCell.textContent = `v${remoteVer}`;
+            remoteVerCell.textContent = `v${remote_ver}`;
             row.appendChild(remoteVerCell);
 
             // Column 4: Status
             const statusCell = document.createElement('td');
-            if (localVer === 0) {
+            if (local_ver === 0) {
                 const statusSpan = document.createElement('span');
                 statusSpan.style.color = '#888';
                 statusSpan.textContent = 'Nie zainstalowano';
                 statusCell.appendChild(statusSpan);
-            } else if (localVer < remoteVer) {
+            } else if (local_ver < remote_ver) {
                 const statusSpan = document.createElement('span');
                 statusSpan.style.cssText = 'color:#ff9800;font-weight:bold';
-                statusSpan.textContent = `Aktualizacja! (v${localVer} → v${remoteVer})`;
+                statusSpan.textContent = `Aktualizacja! (v${local_ver} → v${remote_ver})`;
                 statusCell.appendChild(statusSpan);
             } else {
                 const statusSpan = document.createElement('span');
@@ -114,7 +139,7 @@ export async function loadUpdatesData(filterText = '') {
             // Column 5: Action Buttons
             const actionsCell = document.createElement('td');
 
-            if (localVer === 0) {
+            if (local_ver === 0) {
                 // Download button
                 const downloadBtn = document.createElement('button');
                 downloadBtn.className = 'btn primary small';
@@ -127,11 +152,11 @@ export async function loadUpdatesData(filterText = '') {
 
                 downloadBtn.appendChild(downloadIcon);
                 downloadBtn.appendChild(document.createTextNode(' Pobierz'));
-                downloadBtn.addEventListener('click', () => forceUpdate(r.downloadUrl, id, remoteVer));
+                downloadBtn.addEventListener('click', () => forceUpdate(r.download_url || r.downloadUrl, id, remote_ver));
 
                 actionsCell.appendChild(downloadBtn);
             } else {
-                if (localVer < remoteVer) {
+                if (local_ver < remote_ver) {
                     // Update button
                     const updateBtn = document.createElement('button');
                     updateBtn.className = 'btn primary small';
@@ -144,7 +169,7 @@ export async function loadUpdatesData(filterText = '') {
 
                     updateBtn.appendChild(updateIcon);
                     updateBtn.appendChild(document.createTextNode(' Aktualizuj'));
-                    updateBtn.addEventListener('click', () => forceUpdate(r.downloadUrl, id, remoteVer));
+                    updateBtn.addEventListener('click', () => forceUpdate(r.download_url || r.downloadUrl, id, remote_ver));
 
                     actionsCell.appendChild(updateBtn);
                 } else {
@@ -189,36 +214,6 @@ export async function loadUpdatesData(filterText = '') {
     }
 }
 
-// Listener for progress
-// Listener for progress
-if (window.electronAPI) {
-    window.electronAPI.onDownloadProgress(({ testId, percent }) => {
-        const btn = document.getElementById(`force-update-${testId}`);
-        if (btn) {
-            const progressText = btn.querySelector('.progress-text');
-            // Note: forceUpdate button might be small, so we adapt layout slightly or keep it consistent
-            // The original used: <span class="material-icons spin" style="font-size:16px;">sync</span> ${percent}%
-
-            if (progressText) {
-                progressText.textContent = `${percent}%`;
-            } else {
-                btn.innerHTML = `
-                    <span class="material-icons spin" style="font-size:16px;">sync</span> 
-                    <span class="progress-text">${percent}%</span>
-                `;
-                btn.disabled = true;
-            }
-        }
-    });
-
-    // --- OPTIMIZED REFRESH ---
-    window.electronAPI.onTestInstalled((data) => {
-        console.log("Test installed (update), refreshing...", data);
-        loadUpdatesData();
-        loadTestsList(undefined, true);
-    });
-}
-
 export function forceUpdate(url, id, ver) {
     if (window.electronAPI) {
         // Change button state
@@ -235,13 +230,14 @@ export function forceUpdate(url, id, ver) {
     }
 }
 
-export async function deleteLocalTest(testId) {
+export async function deleteLocalTest(test_id) {
     if (window.electronAPI) {
         const confirmed = await Dialog.confirm("Czy na pewno chcesz usunąć ten test?");
         if (!confirmed) return;
 
-        const res = await window.electronAPI.deleteTest(testId);
+        const res = await window.electronAPI.deleteTest(test_id);
         if (res.success) {
+            invalidateLocalVersionsCache(); // Unieważnij cache po usunięciu
             loadUpdatesData();
             loadTestsList();
         } else {
