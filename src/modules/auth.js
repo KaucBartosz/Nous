@@ -67,7 +67,11 @@ export async function register(email, password) {
         });
         showError("Konto utworzone!");
     } catch (error) {
-        showError("Nieprawidłowy e-mail lub hasło");
+        if (error.code === 'auth/email-already-in-use') {
+            showError("Na dany email założono już konto.");
+        } else {
+            showError("Nieprawidłowy e-mail lub hasło");
+        }
     }
 }
 
