@@ -6,7 +6,10 @@
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com; script-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.gstatic.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://github.com https://raw.githubusercontent.com https://www.google.com; frame-src https://www.google.com;">
     <title>Nous v1.0</title>
-    <!-- Ikony Google -->
+    <!-- Czcionki Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -102,9 +105,24 @@
 
             <!-- WIDOK 1: Biblioteka (Grid) -->
             <div id="library-view">
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="library-search" placeholder="Szukaj testu..."
-                        style="width: 100%; max-width: 400px; padding: 10px; background: #252526; border: 1px solid #444; color: white; border-radius: 4px;">
+                <div class="library-toolbar">
+                    <input type="text" id="library-search" placeholder="Szukaj testu..." class="library-search-input">
+
+                    <div class="view-switcher">
+                        <span class="view-switcher-label">Widok:</span>
+                        <button id="view-grid" class="view-btn active" title="Siatka kart">
+                            <span class="material-icons">grid_view</span>
+                        </button>
+                        <button id="view-list" class="view-btn" title="Lista">
+                            <span class="material-icons">view_list</span>
+                        </button>
+                        <button id="view-table" class="view-btn" title="Tabela">
+                            <span class="material-icons">table_rows</span>
+                        </button>
+                        <button id="view-compact" class="view-btn" title="Kompaktowe karty">
+                            <span class="material-icons">view_comfy</span>
+                        </button>
+                    </div>
                 </div>
                 <div id="tests-grid" class="grid-container">
                     <!-- JS wstrzyknie tu kafelki -->

@@ -54,6 +54,14 @@ function findStartFile(folderPath) {
 ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) => {
     const sender = event.sender;
 
+    // --- SECURITY CHECK: TEST ID VALIDATION ---
+    // Prevent Path Traversal (e.g. "../../../Windows")
+    if (!/^[a-zA-Z0-9_-]+$/.test(testId)) {
+        console.error(`Blocked invalid testId: ${testId}`);
+        sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Nieprawidłowe ID testu!');
+        return;
+    }
+
     // --- SECURITY CHECK: DOMAIN & PROTOCOL ALLOWLIST ---
     try {
         const parsedUrl = new URL(url);
@@ -178,6 +186,19 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
 
                     try {
                         const zip = new AdmZip(zipPath);
+
+                        // --- SECURITY CHECK: ZIP SLIP VULNERABILITY ---
+                        const zipEntries = zip.getEntries();
+                        for (const entry of zipEntries) {
+                            const entryName = entry.entryName;
+                            const targetPath = path.join(testFolder, entryName);
+
+                            // Check if extracted path is still within the target folder
+                            if (!targetPath.startsWith(testFolder)) {
+                                throw new Error(`Malicious ZIP detected! File "${entryName}" attempts to traverse out of target directory.`);
+                            }
+                        }
+
                         zip.extractAllTo(testFolder, true); // Nadpisz
                         fs.unlinkSync(zipPath); // Usuń ZIP
 
@@ -187,6 +208,9 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
 
                         // Szukamy pliku ponownie po rozpakowaniu
                         entryFile = findStartFile(testFolder);
+
+                        // --- NEW EVENT FOR UI REFRESH ---
+                        sender.send('test-installed', { testId, version: Number(version) });
 
                         if (!entryFile) {
                             sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
@@ -260,6 +284,12 @@ ipcMain.handle('get-local-versions', async (event) => {
 // ==========================================================
 
 ipcMain.handle('delete-test', async (event, testId) => {
+    // --- SECURITY CHECK: TEST ID VALIDATION ---
+    if (!/^[a-zA-Z0-9_-]+$/.test(testId)) {
+        console.error(`Blocked delete attempt for invalid testId: ${testId}`);
+        return { success: false, error: "Nieprawidłowe ID testu" };
+    }
+
     const userDataPath = app.getPath('userData');
     const testFolder = path.join(userDataPath, 'tests_library', testId);
 
@@ -396,8 +426,13 @@ ipcMain.on('save-local-result', (event, dataToSave) => {
         filters: [{ name: 'JSON', extensions: ['json'] }]
     }).then(result => {
         if (!result.canceled) {
-            fs.writeFileSync(result.filePath, JSON.stringify(finalFileContent, null, 2));
-            event.sender.send('test-status', 'Wynik zapisany pomyślnie.');
+            try {
+                fs.writeFileSync(result.filePath, JSON.stringify(finalFileContent, null, 2));
+                event.sender.send('test-status', 'Wynik zapisany pomyślnie.');
+            } catch (writeErr) {
+                console.error("Save error:", writeErr);
+                event.sender.send('test-status', 'BŁĄD: Nie udało się zapisać pliku!');
+            }
         }
     }).catch(err => {
         console.error(err);

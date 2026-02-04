@@ -132,4 +132,12 @@ export function showLoginScreen() {
 
 export function showError(message) {
     elements.errorMsg.textContent = message;
+
+    // Shake animation for login card on error
+    const card = elements.loginScreen.querySelector('.login-card');
+    if (card && message && !message.includes("Logowanie") && !message.includes("Weryfikacja") && !message.includes("Tworzenie")) {
+        card.classList.remove('shake');
+        void card.offsetWidth; // force reflow
+        card.classList.add('shake');
+    }
 }

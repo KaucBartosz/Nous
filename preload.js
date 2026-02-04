@@ -18,5 +18,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, data) => callback(data)),
 
     // 4. SZYFROWANIE
-    getEncryptionKey: () => ipcRenderer.invoke('get-encryption-key')
+    getEncryptionKey: () => ipcRenderer.invoke('get-encryption-key'),
+
+    // 5. ZDARZENIA INSTALACJI
+    onTestInstalled: (callback) => ipcRenderer.on('test-installed', (event, data) => callback(data))
 });

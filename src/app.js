@@ -1,7 +1,7 @@
 // src/app.js
 import { elements, switchView } from './modules/ui.js';
 import { initAuth, login, register, logout, loginGuest } from './modules/auth.js';
-import { loadTestsList } from './modules/library.js';
+import { loadTestsList, initViewSwitcher } from './modules/library.js';
 import { loadHistoryData, exportHistoryToCSV } from './modules/history.js';
 import { loadUpdatesData } from './modules/updates.js';
 import { initDemographics, saveDemographicsFromForm } from './modules/demographics.js';
@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuth(() => {
         loadTestsList();
     });
+
+    // 1.5. Initialize library view switcher
+    initViewSwitcher();
 
     // 2. Navigation
     elements.navLibrary.addEventListener('click', () => switchView('library', { onLibrary: loadTestsList }));

@@ -4,7 +4,7 @@ import { getCurrentUser } from './auth.js';
 import { elements } from './ui.js';
 
 export async function loadHistoryData() {
-    elements.historyTableBody.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
+    elements.historyTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
     const user = getCurrentUser();
 
     // Allow GUEST access too? For now, yes, but they only see their own local data
@@ -21,54 +21,91 @@ export async function loadHistoryData() {
         elements.historyTableBody.innerHTML = '';
 
         if (myResults.length === 0) {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="5">Brak wyników.</td></tr>';
+            elements.historyTableBody.innerHTML = '<tr><td colspan="6">Brak wyników.</td></tr>';
             return;
         }
 
-        let rowsHTML = '';
+        // --- SAFE DOM CREATION (No innerHTML) ---
         myResults.forEach((r, index) => {
             const resultData = r.wyniki || r.data || {};
             const score = resultData.czas_reakcji ? `${resultData.czas_reakcji} ms` : (resultData.score || "JSON");
-
             const patientId = r.subject_id || resultData.subjectId || "-";
 
-            // Sync Status Icon
-            let syncIcon = '';
+            const row = document.createElement('tr');
+
+            // 1. Date
+            const tdDate = document.createElement('td');
+            tdDate.textContent = new Date(r.timestamp).toLocaleString();
+            row.appendChild(tdDate);
+
+            // 2. Test ID
+            const tdTestId = document.createElement('td');
+            tdTestId.textContent = r.testId;
+            row.appendChild(tdTestId);
+
+            // 3. Patient ID
+            const tdPatient = document.createElement('td');
+            tdPatient.textContent = patientId;
+            row.appendChild(tdPatient);
+
+            // 4. Score
+            const tdScore = document.createElement('td');
+            const strongScore = document.createElement('strong');
+            strongScore.textContent = score;
+            tdScore.appendChild(strongScore);
+            row.appendChild(tdScore);
+
+            // 5. Sync Status
+            const tdSync = document.createElement('td');
+            tdSync.style.textAlign = 'center';
+            const icon = document.createElement('span');
+            icon.className = 'material-icons';
+            icon.style.fontSize = '18px';
+
             if (r.syncStatus === 'SYNCED') {
-                syncIcon = `<span class="material-icons" style="color:#4caf50; font-size:18px;" title="Zsynchronizowano">cloud_done</span>`;
+                icon.textContent = 'cloud_done';
+                icon.style.color = '#4caf50';
+                icon.title = 'Zsynchronizowano';
             } else if (r.syncStatus === 'PENDING') {
-                syncIcon = `<span class="material-icons" style="color:#aaa; font-size:18px;" title="Czeka na wysyłkę">cloud_off</span>`;
+                icon.textContent = 'cloud_off';
+                icon.style.color = '#aaa';
+                icon.title = 'Czeka na wysyłkę';
             } else {
-                syncIcon = `<span class="material-icons" style="color:red; font-size:18px;" title="Błąd">error</span>`;
+                icon.textContent = 'error';
+                icon.style.color = 'red';
+                icon.title = 'Błąd';
             }
+            tdSync.appendChild(icon);
+            row.appendChild(tdSync);
 
-            rowsHTML += `<tr>
-                <td>${new Date(r.timestamp).toLocaleString()}</td>
-                <td>${r.testId}</td>
-                <td>${patientId}</td>
-                <td><strong>${score}</strong></td>
-                <td style="text-align:center;">${syncIcon}</td>
-                <td style="text-align:center;">
-                    <button class="btn-download-result icon-btn" data-index="${index}" title="Pobierz JSON">
-                        <span class="material-icons" style="font-size:18px;">download</span>
-                    </button>
-                </td>
-            </tr>`;
-        });
+            // 6. Action (Download)
+            const tdAction = document.createElement('td');
+            tdAction.style.textAlign = 'center';
 
-        elements.historyTableBody.innerHTML = rowsHTML;
+            const btn = document.createElement('button');
+            btn.className = 'btn-download-result icon-btn';
+            btn.title = 'Pobierz JSON';
 
-        // Attach event listeners
-        document.querySelectorAll('.btn-download-result').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = e.currentTarget.dataset.index;
-                const result = myResults[index];
-                downloadSingleResult(result);
+            const btnIcon = document.createElement('span');
+            btnIcon.className = 'material-icons';
+            btnIcon.style.fontSize = '18px';
+            btnIcon.textContent = 'download';
+
+            btn.appendChild(btnIcon);
+
+            // Bind click directly
+            btn.addEventListener('click', () => {
+                downloadSingleResult(r);
             });
+
+            tdAction.appendChild(btn);
+            row.appendChild(tdAction);
+
+            elements.historyTableBody.appendChild(row);
         });
 
     } catch (e) {
-        elements.historyTableBody.innerHTML = `<tr><td colspan="6">Błąd: ${e.message}</td></tr>`;
+        elements.historyTableBody.textContent = `Błąd: ${e.message}`;
     }
 }
 

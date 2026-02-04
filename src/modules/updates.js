@@ -190,22 +190,32 @@ export async function loadUpdatesData(filterText = '') {
 }
 
 // Listener for progress
+// Listener for progress
 if (window.electronAPI) {
     window.electronAPI.onDownloadProgress(({ testId, percent }) => {
         const btn = document.getElementById(`force-update-${testId}`);
         if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `
-                <span class="material-icons spin" style="font-size:16px;">sync</span> ${percent}%
-            `;
-            // If near 100%
-            if (percent >= 100) {
-                setTimeout(() => {
-                    loadUpdatesData();
-                    loadTestsList();
-                }, 1500);
+            const progressText = btn.querySelector('.progress-text');
+            // Note: forceUpdate button might be small, so we adapt layout slightly or keep it consistent
+            // The original used: <span class="material-icons spin" style="font-size:16px;">sync</span> ${percent}%
+
+            if (progressText) {
+                progressText.textContent = `${percent}%`;
+            } else {
+                btn.innerHTML = `
+                    <span class="material-icons spin" style="font-size:16px;">sync</span> 
+                    <span class="progress-text">${percent}%</span>
+                `;
+                btn.disabled = true;
             }
         }
+    });
+
+    // --- OPTIMIZED REFRESH ---
+    window.electronAPI.onTestInstalled((data) => {
+        console.log("Test installed (update), refreshing...", data);
+        loadUpdatesData();
+        loadTestsList(undefined, true);
     });
 }
 
@@ -215,7 +225,10 @@ export function forceUpdate(url, id, ver) {
         const btn = document.getElementById(`force-update-${id}`);
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span class="material-icons spin" style="font-size:16px;">sync</span> ...';
+            btn.innerHTML = `
+                <span class="material-icons spin" style="font-size:16px;">sync</span> 
+                <span class="progress-text">...</span>
+            `;
         }
 
         window.electronAPI.downloadAndRun(url, id, ver, true);

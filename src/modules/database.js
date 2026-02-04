@@ -8,6 +8,8 @@ const DB_VERSION = 2;
 
 let isCryptoReady = false;
 
+let dbPromise = null;
+
 export async function initDB() {
     // --- CRYPTO INIT (Lazy) ---
     if (!isCryptoReady && window.electronAPI) {
@@ -24,18 +26,22 @@ export async function initDB() {
         }
     }
 
-    return openDB(DB_NAME, DB_VERSION, {
-        upgrade(db) {
-            if (!db.objectStoreNames.contains('results')) {
-                const store = db.createObjectStore('results', { keyPath: 'id' });
-                store.createIndex('timestamp', 'timestamp');
-                store.createIndex('syncStatus', 'syncStatus');
-            }
-            if (!db.objectStoreNames.contains('demographicsTemplates')) {
-                db.createObjectStore('demographicsTemplates', { keyPath: 'id' });
-            }
-        },
-    });
+    if (!dbPromise) {
+        dbPromise = openDB(DB_NAME, DB_VERSION, {
+            upgrade(db) {
+                if (!db.objectStoreNames.contains('results')) {
+                    const store = db.createObjectStore('results', { keyPath: 'id' });
+                    store.createIndex('timestamp', 'timestamp');
+                    store.createIndex('syncStatus', 'syncStatus');
+                }
+                if (!db.objectStoreNames.contains('demographicsTemplates')) {
+                    db.createObjectStore('demographicsTemplates', { keyPath: 'id' });
+                }
+            },
+        });
+    }
+
+    return dbPromise;
 }
 
 export async function saveResult(resultData) {
