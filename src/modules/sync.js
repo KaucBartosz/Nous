@@ -81,19 +81,8 @@ export async function syncNow() {
 
     for (const record of pending) {
         try {
-            const docRef = await addDoc(collection(db, "results"), {
-                researcher_uid: record.researcher_uid,
-                test_id: record.test_id || record.testId,
-                subject_id: record.subject_id,
-                demographics: record.demographics,
-                data: record.wyniki,
-                timestamp: record.timestamp,
-                synced_at: new Date().toISOString()
-            });
-
-            await markAsSynced(record.id, docRef.id);
+            await syncSingleResultInternal(record); // Użyj wspólnej funkcji wewn.
             synced_count++;
-            console.log(`Synced record ${record.id} -> ${docRef.id}`);
 
             // Aktualizuj progress
             updateSyncUI(true, pending.length - synced_count);
@@ -120,9 +109,56 @@ export async function syncNow() {
 }
 
 /**
+ * Wewnętrzna funkcja wysyłająca pojedyńczy rekord (bez obsługi UI globalnego sync).
+ * Wyrzuca błąd w przypadku niepowodzenia.
+ */
+async function syncSingleResultInternal(record) {
+    const docRef = await addDoc(collection(db, "results"), {
+        researcher_uid: record.researcher_uid,
+        test_id: record.test_id || record.testId,
+        subject_id: record.subject_id,
+        demographics: record.demographics,
+        data: record.wyniki || record.data,
+        timestamp: record.timestamp,
+        synced_at: new Date().toISOString()
+    });
+
+    await markAsSynced(record.id, docRef.id);
+    console.log(`Synced record ${record.id} -> ${docRef.id}`);
+}
+
+/**
+ * Manualna synchronizacja pojedynczego wyniku (wywoływana z UI).
+ */
+export async function syncSingleResult(record) {
+    if (!navigator.onLine) {
+        throw new Error("Brak połączenia z internetem.");
+    }
+
+    const user = getCurrentUser();
+    if (!user) {
+        throw new Error("Użytkownik nie jest zalogowany.");
+    }
+
+    if (record.researcher_uid !== user.uid) {
+        throw new Error("Nie możesz wysłać wyniku należącego do innego użytkownika.");
+    }
+
+    try {
+        await syncSingleResultInternal(record);
+        window.dispatchEvent(new Event('sync-complete'));
+        return { success: true };
+    } catch (e) {
+        console.error(`Failed to manually sync record ${record.id}:`, e);
+        if (e.code === 'permission-denied') {
+            throw new Error("Brak uprawnień (Permission Denied). Sprawdź status Approved.");
+        }
+        throw e;
+    }
+}
+
+/**
  * Aktualizuje UI podczas synchronizacji (animacja toggle).
- * @param {boolean} syncing - Czy synchronizacja jest w toku
- * @param {number} remaining - Liczba pozostałych rekordów
  */
 function updateSyncUI(syncing, remaining) {
     const toggleContainer = document.getElementById('sync-toggle-container');

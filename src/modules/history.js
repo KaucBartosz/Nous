@@ -2,6 +2,8 @@
 import { getAllResults } from './database.js';
 import { getCurrentUser } from './auth.js';
 import { elements } from './ui.js';
+import { syncSingleResult } from './sync.js';
+import { Dialog } from './dialog.js';
 
 export async function loadHistoryData() {
     elements.historyTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
@@ -73,9 +75,41 @@ export async function loadHistoryData() {
                 icon.style.color = '#4caf50';
                 icon.title = 'Zsynchronizowano';
             } else if (sync_status === 'PENDING') {
-                icon.textContent = 'cloud_off';
-                icon.style.color = '#aaa';
-                icon.title = 'Czeka na wysyłkę';
+                // Check permissions dynamically from UI state
+                const statusEl = document.getElementById('user-status-display');
+                const userStatus = statusEl ? statusEl.textContent : '';
+                const canUpload = (userStatus === 'APPROVED' || userStatus === 'ADMIN');
+
+                if (canUpload) {
+                    icon.textContent = 'cloud_upload';
+                    icon.style.color = '#ff9800';
+                    icon.style.cursor = 'pointer';
+                    icon.title = 'Kliknij, aby wysłać do chmury';
+
+                    icon.onclick = async (e) => {
+                        e.stopPropagation();
+                        // Loading state
+                        icon.textContent = 'sync';
+                        icon.classList.add('spin');
+                        icon.style.color = '#2196f3';
+                        icon.onclick = null; // Disable double click
+
+                        try {
+                            await syncSingleResult(r);
+                            // Success -> Reload handled by event sync-complete
+                        } catch (err) {
+                            icon.classList.remove('spin');
+                            icon.textContent = 'error';
+                            icon.style.color = 'red';
+                            await Dialog.alert("Błąd wysyłania: " + err.message, 'error');
+                            loadHistoryData(); // Restore state
+                        }
+                    };
+                } else {
+                    icon.textContent = 'cloud_off';
+                    icon.style.color = '#aaa';
+                    icon.title = 'Czeka na wysyłkę (Wymagany status APPROVED)';
+                }
             } else {
                 icon.textContent = 'error';
                 icon.style.color = 'red';
