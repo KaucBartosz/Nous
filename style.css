@@ -88,16 +88,19 @@ input:focus {
 .password-container {
     position: relative;
     width: 100%;
+    margin-bottom: 12px;
 }
 
 .password-container input {
     padding-right: 45px;
+    margin-bottom: 0;
 }
 
 .toggle-password {
     position: absolute;
     right: 10px;
-    top: 15px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     color: #888;
@@ -973,7 +976,9 @@ input:checked+.slider:before {
 .btn.primary:hover::after {
     left: 120%;
     transition: all 0.6s ease;
-}/* --- SYNC ANIMATIONS --- */
+}
+
+/* --- SYNC ANIMATIONS --- */
 .sync-toggled .slider {
     animation: sync-pulse 0.3s ease-out;
 }

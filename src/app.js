@@ -41,6 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.passInput.setAttribute('type', type);
         elements.btnTogglePassword.querySelector('.material-icons').textContent = type === 'password' ? 'visibility' : 'visibility_off';
     });
+    const handleEnterLogin = (e) => {
+        if (e.key === 'Enter') {
+            login(elements.emailInput.value, elements.passInput.value);
+        }
+    };
+    elements.emailInput.addEventListener('keydown', handleEnterLogin);
+    elements.passInput.addEventListener('keydown', handleEnterLogin);
 
     // 4. Feature Buttons
     document.getElementById('btn-export-csv').addEventListener('click', exportHistoryToCSV);
