@@ -98,8 +98,16 @@ function addFieldUI(initialData = null) {
 
     // Toggle Options Visibility based on type
     const updateOptionsVisibility = () => {
-        if (typeSelect.value === 'select') {
+        // Show options for 'select' OR 'checkbox' (for radio group mode)
+        if (typeSelect.value === 'select' || typeSelect.value === 'checkbox') {
             optionsContainer.classList.add('visible');
+
+            // Helpful placeholder change
+            if (typeSelect.value === 'checkbox') {
+                optionsInput.placeholder = "Opcje dla przełącznika (np. Opcja A, Opcja B)";
+            } else {
+                optionsInput.placeholder = "np. Kobieta, Mężczyzna, Inna";
+            }
         } else {
             optionsContainer.classList.remove('visible');
         }
