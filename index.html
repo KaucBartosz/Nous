@@ -71,6 +71,9 @@
 
                 <div class="spacer" style="flex: 1;"></div>
 
+                <button id="nav-settings" class="nav-item">
+                    <span class="material-icons">settings</span> Ustawienia
+                </button>
                 <button id="nav-about" class="nav-item">
                     <span class="material-icons">info</span> O programie
                 </button>
@@ -271,6 +274,184 @@
                 </div>
             </div>
 
+            <!-- WIDOK 6: Ustawienia -->
+            <div id="settings-view" class="hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <div>
+                        <h3>Ustawienia Wyglądu</h3>
+                        <p style="color:#888; margin: 0;">Dostosuj wygląd aplikacji do własnych preferencji.</p>
+                    </div>
+                </div>
+
+                <div class="form-container" style="max-width: 800px;">
+
+                    <!-- Sekcja Motywu -->
+                    <div class="settings-section">
+                        <h4>Motyw Główny</h4>
+                        <div class="form-group">
+                            <div class="theme-switcher">
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="dark" checked>
+                                    <span class="theme-label">
+                                        <span class="material-icons">dark_mode</span>
+                                        Ciemny
+                                    </span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="light">
+                                    <span class="theme-label">
+                                        <span class="material-icons">light_mode</span>
+                                        Jasny
+                                    </span>
+                                </label>
+                            </div>
+                            <p style="font-size: 12px; color: #888; margin-top: 10px;">
+                                <span class="material-icons"
+                                    style="font-size: 12px; vertical-align: text-top;">info</span>
+                                Zmiana motywu przywróci domyślne kolory dla wybranego trybu.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+
+                        <!-- Kolumna Lewa -->
+                        <div>
+                            <!-- Elementy Interaktywne -->
+                            <div class="settings-section">
+                                <h4>Elementy Interaktywne</h4>
+                                <div class="form-group">
+                                    <label>Kolor Główny (Przyciski):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="primary-color-picker">
+                                        <input type="text" id="primary-color-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Hover (Najazd myszką):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="primary-hover-picker">
+                                        <input type="text" id="primary-hover-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ikony -->
+                            <div class="settings-section">
+                                <h4>Ikony</h4>
+                                <div class="form-group">
+                                    <label>Kolor Ikon:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="icon-color-picker">
+                                        <input type="text" id="icon-color-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Aktywnej Ikony:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="icon-active-picker">
+                                        <input type="text" id="icon-active-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kolumna Prawa -->
+                        <div>
+                            <!-- Tekst -->
+                            <div class="settings-section">
+                                <h4>Tekst</h4>
+                                <div class="form-group">
+                                    <label>Główny Kolor Tekstu:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="text-main-picker">
+                                        <input type="text" id="text-main-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Drugorzędny Kolor Tekstu (Muted):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="text-muted-picker">
+                                        <input type="text" id="text-muted-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tło i Obramowania -->
+                            <div class="settings-section">
+                                <h4>Tło i Ramki</h4>
+                                <div class="form-group">
+                                    <label>Tło Aplikacji:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="bg-dark-picker">
+                                        <input type="text" id="bg-dark-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tło Paska Bocznego (Sidebar):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="bg-sidebar-picker">
+                                        <input type="text" id="bg-sidebar-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Obramowań:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="border-color-picker">
+                                        <input type="text" id="border-color-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #444; margin: 20px 0;">
+
+                    <!-- Podgląd -->
+                    <div class="settings-section">
+                        <h4>Podgląd Elementów</h4>
+                        <div class="settings-preview">
+                            <div
+                                style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-bottom: 20px;">
+                                <button class="btn primary">Przycisk Główny</button>
+                                <button class="btn secondary">Drugorzędny</button>
+                                <button class="btn outline">Obrys</button>
+                            </div>
+                            <div style="display: flex; gap: 30px; justify-content: center; align-items: center;">
+                                <div style="text-align: center;">
+                                    <span class="material-icons"
+                                        style="font-size: 32px; color: var(--icon-color);">home</span>
+                                    <p style="font-size: 12px; color: var(--text-muted);">Ikona Zwykła</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <span class="material-icons"
+                                        style="font-size: 32px; color: var(--icon-active);">star</span>
+                                    <p style="font-size: 12px; color: var(--text-main);">Ikona Aktywna</p>
+                                </div>
+                            </div>
+                            <p style="margin-top: 15px; color: var(--text-main);">Przykładowy tekst główny.</p>
+                            <p style="color: var(--text-muted); font-size: 14px;">Przykładowy tekst drugorzędny
+                                (opisowy, mniej ważny).</p>
+                        </div>
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #444; margin: 30px 0;">
+
+                    <!-- Akcje -->
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <button id="btn-reset-settings" class="btn secondary">
+                            <span class="material-icons">refresh</span> Przywróć Domyślne dla Motywu
+                        </button>
+                        <button id="btn-save-settings" class="btn primary">
+                            <span class="material-icons">save</span> Zapisz Ustawienia
+                        </button>
+                    </div>
+
+                    <span id="settings-status"
+                        style="display:block; margin-top:10px; color:#4caf50; text-align:center; display:none;">Ustawienia
+                        zapisane!</span>
+                </div>
+            </div>
 
         </main>
     </div>
@@ -296,7 +477,8 @@
             </div>
             <div class="modal-footer">
                 <button id="btn-discard" class="btn danger">Odrzuć</button>
-                <button id="btn-upload-cloud" class="btn primary" disabled>Wyślij do Chmury</button>
+                <button id="btn-upload-cloud" class="btn primary" disabled>Wyślij do
+                    Chmury</button>
             </div>
         </div>
     </div>
@@ -336,7 +518,8 @@
             </div>
             <div class="modal-body">
                 <div id="custom-dialog-icon" style="margin-bottom: 15px;"></div>
-                <p id="custom-dialog-message" style="font-size: 15px; color: #e0e0e0; margin: 0;">Treść komunikatu...
+                <p id="custom-dialog-message" style="font-size: 15px; color: #e0e0e0; margin: 0;">Treść
+                    komunikatu...
                 </p>
             </div>
             <div class="modal-footer" id="custom-dialog-footer" style="justify-content: center; gap: 15px;">

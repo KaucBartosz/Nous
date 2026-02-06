@@ -8,10 +8,14 @@ import { initDemographics, saveDemographicsFromForm } from './modules/demographi
 import { initDemoCreator, refreshTemplatesList } from './modules/demoCreator.js';
 import { initResultsHandler } from './modules/results.js';
 import { initSyncService, setAutoSync, getAutoSyncState } from './modules/sync.js';
+import { initSettings } from './modules/settings.js';
 
 // --- INITIALIZATION ---
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // 0. Initialize Settings (must be first to apply saved theme/colors)
+    initSettings();
 
     // 1. Auth Setup
     initAuth(() => {
@@ -27,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.navUpdates.addEventListener('click', () => switchView('updates', { onUpdates: loadUpdatesData }));
     elements.navDemographics.addEventListener('click', () => switchView('demographics'));
     elements.navDemoCreator.addEventListener('click', () => switchView('creator', { onCreator: refreshTemplatesList }));
+    elements.navSettings.addEventListener('click', () => switchView('settings'));
 
     // 3. Auth Buttons
     elements.btnLogin.addEventListener('click', () => login(elements.emailInput.value, elements.passInput.value));
