@@ -5,6 +5,7 @@ import { getActiveDemographics } from './demographics.js';
 import { saveResult } from './database.js';
 import { syncNow } from './sync.js';
 import { Dialog } from './dialog.js';
+import { loadTestsList } from './library.js';
 
 let currentResultPackage = null;
 
@@ -67,8 +68,14 @@ export function initResultsHandler() {
         });
     }
 
-    elements.btnCloseModal.addEventListener('click', () => elements.modalOverlay.classList.add('hidden'));
-    elements.btnDiscard.addEventListener('click', () => elements.modalOverlay.classList.add('hidden'));
+    elements.btnCloseModal.addEventListener('click', () => {
+        elements.modalOverlay.classList.add('hidden');
+        loadTestsList();
+    });
+    elements.btnDiscard.addEventListener('click', () => {
+        elements.modalOverlay.classList.add('hidden');
+        loadTestsList();
+    });
 
 
 
@@ -130,6 +137,7 @@ async function saveResultToSystem() {
 
         elements.btnUploadCloud.textContent = "Zapisano!";
         elements.modalOverlay.classList.add('hidden');
+        loadTestsList();
 
         // 2. Próba synchronizacji (fire & forget)
         syncNow();

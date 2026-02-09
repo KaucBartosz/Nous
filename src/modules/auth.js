@@ -7,6 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { updateAuthUI, showLoginScreen, showError } from './ui.js';
+import { enforceSyncPolicy } from './sync.js';
 
 export function initAuth(onLoginSuccess) {
     auth.onAuthStateChanged(async (user) => {
@@ -14,6 +15,7 @@ export function initAuth(onLoginSuccess) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const status = userDoc.exists() ? userDoc.data().status : "ERROR";
             updateAuthUI(user.email, status);
+            enforceSyncPolicy(status);
             if (onLoginSuccess) onLoginSuccess();
         } else {
             showLoginScreen();
@@ -69,4 +71,9 @@ export function loginGuest() {
 
 export function getCurrentUser() {
     return auth.currentUser;
+}
+
+export function getUserStatus() {
+    const statusEl = document.getElementById('user-status-display');
+    return statusEl ? statusEl.textContent.replace(/[()]/g, '') : "UNKNOWN";
 }

@@ -1,8 +1,10 @@
 // src/modules/sync.js
+
 import { db } from '../firebaseConfig.js';
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { getPendingResults, markAsSynced } from './database.js';
-import { getCurrentUser } from './auth.js';
+import { getCurrentUser, getUserStatus } from './auth.js';
+import { Dialog } from './dialog.js';
 
 let isAutoSyncEnabled = localStorage.getItem('autoSync') === 'true'; // Default false
 let isSyncing = false; // Flaga statusu synchronizacji
@@ -13,13 +15,38 @@ export function initSyncService() {
         syncNow();
     });
 
+    // Check status check moved to enforceSyncPolicy called by auth
     // Initial sync attempt
     if (navigator.onLine) {
         setTimeout(syncNow, 5000);
     }
 }
 
+export function enforceSyncPolicy(status) {
+    if (isAutoSyncEnabled && status !== 'APPROVED') {
+        console.log("AutoSync disabled due to non-approved status:", status);
+        isAutoSyncEnabled = false;
+        localStorage.setItem('autoSync', 'false');
+        const toggleSync = document.getElementById('toggle-sync');
+        if (toggleSync) toggleSync.checked = false;
+    }
+}
+
 export function setAutoSync(enabled) {
+    if (enabled) {
+        const userStatus = getUserStatus();
+        if (userStatus !== 'APPROVED') {
+            const toggleSync = document.getElementById('toggle-sync');
+            if (toggleSync) toggleSync.checked = false;
+
+            Dialog.alert(
+                "Tryb Sync jest dostępny tylko dla zatwierdzonych użytkowników. Aby nim zostać skontaktuj się z Administratorem (Bartosz Kauc)",
+                'error'
+            );
+            return;
+        }
+    }
+
     isAutoSyncEnabled = enabled;
     localStorage.setItem('autoSync', enabled);
 

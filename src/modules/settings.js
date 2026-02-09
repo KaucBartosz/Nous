@@ -1,6 +1,7 @@
 // src/modules/settings.js
 
 const SETTINGS_KEY = 'nous-app-settings';
+const CUSTOM_CACHE_KEY = 'nous-app-settings-custom-cache';
 
 // Default settings for DARK theme
 const DEFAULT_DARK_SETTINGS = {
@@ -11,6 +12,7 @@ const DEFAULT_DARK_SETTINGS = {
     // Text Colors
     textMain: '#f0f0f0',
     textMuted: '#94a3b8',
+    buttonText: '#ffffff',
     // Icons
     iconColor: '#94a3b8',
     iconActive: '#4f8cf2',
@@ -31,6 +33,7 @@ const DEFAULT_LIGHT_SETTINGS = {
     // Text Colors
     textMain: '#1a1a1a',
     textMuted: '#666666',
+    buttonText: '#ffffff',
     // Icons
     iconColor: '#666666',
     iconActive: '#4f8cf2',
@@ -44,12 +47,15 @@ const DEFAULT_LIGHT_SETTINGS = {
 
 // Current settings (in memory)
 let currentSettings = { ...DEFAULT_DARK_SETTINGS };
+let cachedCustomSettings = null;
 
 /**
  * Get default settings for a theme
  */
 function getDefaultsForTheme(theme) {
-    return theme === 'light' ? { ...DEFAULT_LIGHT_SETTINGS } : { ...DEFAULT_DARK_SETTINGS };
+    if (theme === 'light') return { ...DEFAULT_LIGHT_SETTINGS };
+    if (theme === 'custom') return { ...DEFAULT_DARK_SETTINGS, theme: 'custom' };
+    return { ...DEFAULT_DARK_SETTINGS };
 }
 
 /**
@@ -62,6 +68,14 @@ export function loadSettings() {
             const parsed = JSON.parse(stored);
             const defaults = getDefaultsForTheme(parsed.theme || 'dark');
             currentSettings = { ...defaults, ...parsed };
+        }
+
+        // Load cached custom settings
+        const cached = localStorage.getItem(CUSTOM_CACHE_KEY);
+        if (cached) {
+            cachedCustomSettings = JSON.parse(cached);
+        } else if (currentSettings.theme === 'custom') {
+            cachedCustomSettings = { ...currentSettings };
         }
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -102,6 +116,7 @@ export function applySettings(settings = currentSettings) {
 
     root.style.setProperty('--text-main', settings.textMain);
     root.style.setProperty('--text-muted', settings.textMuted);
+    root.style.setProperty('--text-button', settings.buttonText || '#ffffff');
 
     root.style.setProperty('--icon-color', settings.iconColor);
     root.style.setProperty('--icon-active', settings.iconActive);
@@ -142,6 +157,48 @@ function adjustColor(color, amount) {
  */
 export function getSettings() {
     return { ...currentSettings };
+}
+
+/**
+ * Reset to default settings for current theme
+ */
+/**
+ * Save custom cache
+ */
+function saveCustomCache(settings) {
+    try {
+        cachedCustomSettings = { ...settings };
+        localStorage.setItem(CUSTOM_CACHE_KEY, JSON.stringify(cachedCustomSettings));
+    } catch (error) {
+        console.error('Error saving custom cache:', error);
+    }
+}
+
+/**
+ * Switch to a specific theme with caching logic for Custom theme
+ */
+export function switchToTheme(theme) {
+    // If we are currently in Custom mode, save the state before switching away
+    if (currentSettings.theme === 'custom') {
+        saveCustomCache(currentSettings);
+    }
+
+    let newSettings;
+    if (theme === 'custom') {
+        // Try to restore cached custom settings
+        if (cachedCustomSettings) {
+            newSettings = { ...cachedCustomSettings, theme: 'custom' };
+        } else {
+            newSettings = getDefaultsForTheme('custom');
+        }
+    } else {
+        newSettings = getDefaultsForTheme(theme);
+    }
+
+    currentSettings = newSettings;
+    applySettings(currentSettings);
+    saveSettings(currentSettings);
+    return currentSettings;
 }
 
 /**
@@ -188,6 +245,8 @@ export function initSettings() {
         textMainValue: document.getElementById('text-main-value'),
         textMutedPicker: document.getElementById('text-muted-picker'),
         textMutedValue: document.getElementById('text-muted-value'),
+        buttonTextPicker: document.getElementById('button-text-picker'),
+        buttonTextValue: document.getElementById('button-text-value'),
 
         // Icons
         iconColorPicker: document.getElementById('icon-color-picker'),
@@ -229,6 +288,10 @@ export function initSettings() {
             elements.textMutedPicker.value = settings.textMuted;
             elements.textMutedValue.value = settings.textMuted;
         }
+        if (elements.buttonTextPicker) {
+            elements.buttonTextPicker.value = settings.buttonText || '#ffffff';
+            elements.buttonTextValue.value = settings.buttonText || '#ffffff';
+        }
         if (elements.iconColorPicker) {
             elements.iconColorPicker.value = settings.iconColor;
             elements.iconColorValue.value = settings.iconColor;
@@ -266,6 +329,14 @@ export function initSettings() {
             const color = e.target.value;
             valueDisplay.value = color;
             currentSettings[settingKey] = color;
+
+            // Automatically switch to Custom theme
+            if (currentSettings.theme !== 'custom') {
+                currentSettings.theme = 'custom';
+                const customRadio = document.querySelector('input[name="theme"][value="custom"]');
+                if (customRadio) customRadio.checked = true;
+            }
+
             applySettings(currentSettings);
         });
     }
@@ -274,6 +345,7 @@ export function initSettings() {
     setupColorPicker(elements.primaryHoverPicker, elements.primaryHoverValue, 'primaryHover');
     setupColorPicker(elements.textMainPicker, elements.textMainValue, 'textMain');
     setupColorPicker(elements.textMutedPicker, elements.textMutedValue, 'textMuted');
+    setupColorPicker(elements.buttonTextPicker, elements.buttonTextValue, 'buttonText');
     setupColorPicker(elements.iconColorPicker, elements.iconColorValue, 'iconColor');
     setupColorPicker(elements.iconActivePicker, elements.iconActiveValue, 'iconActive');
     setupColorPicker(elements.bgDarkPicker, elements.bgDarkValue, 'bgDark');
@@ -284,10 +356,11 @@ export function initSettings() {
     elements.themeRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             const newTheme = e.target.value;
-            const defaults = resetToDefaultsForTheme(newTheme);
-            updateFormValues(defaults);
+            const settings = switchToTheme(newTheme);
+            updateFormValues(settings);
         });
     });
+
 
     // Save button
     if (elements.btnSave) {
