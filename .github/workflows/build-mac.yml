@@ -2,31 +2,45 @@ name: Build macOS App
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
+  # Opcjonalnie: Uruchom ręcznie z zakładki Actions
+  workflow_dispatch:
 
 jobs:
   build-mac:
     runs-on: macos-latest
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
+      # 1. Pobranie kodu
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Konfiguracja Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
+      # 3. Instalacja zależności
       - name: Install dependencies
         run: npm install
 
-      # Tutaj wywołujemy nowy skrypt z package.json
+      # 4. Budowanie aplikacji (z dodanym tokenem, aby naprawić błąd)
       - name: Build macOS app
         run: npm run dist:mac
+        env:
+          # To naprawia błąd "GitHub Personal Access Token is not set"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 5. Przesłanie pliku .dmg jako artefakt
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nous-mac-setup
+          name: nous-mac-installer
           path: dist/*.dmg
+          if-no-files-found: error
