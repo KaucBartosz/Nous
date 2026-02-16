@@ -3,15 +3,19 @@
   "version": "1.0.0",
   "description": "BBTP Launcher application",
   "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KaucBartosz/BBTP-Launcher.git"
+  },
   "scripts": {
     "start": "electron .",
     "admin": "electron admin_main.js",
-    "dist": "electron-builder --win --x64",
-    "dist:linux": "electron-builder --linux --x64",
-    "dist:mac": "electron-builder --mac"
+    "dist": "electron-builder --win --x64 -p always",
+    "dist:linux": "electron-builder --linux --x64 -p always",
+    "dist:mac": "electron-builder --mac -p always"
   },
   "keywords": [],
-  "author": "",
+  "author": "KaucBartosz",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
@@ -20,35 +24,48 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
+    "electron-updater": "^6.1.7",
     "firebase": "^12.8.0",
     "idb": "^8.0.3"
   },
   "build": {
     "appId": "com.student.nous",
     "productName": "Nous",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KaucBartosz",
+        "repo": "BBTP-Launcher"
+      }
+    ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
-      "icon": "icon.ico"
+      "icon": "icon.ico",
+      "publish": [
+        "github"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "installerIcon": "icon.ico",
-      "uninstallerIcon": "icon.ico"
+      "uninstallerIcon": "icon.ico",
+      "deleteAppDataOnUninstall": true
     },
     "mac": {
-      "target": "dmg",
-      "icon": "icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.utilities",
+      "icon": "icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false
     },
     "dmg": {
-      "icon": "icon.icns",
       "contents": [
         {
           "x": 130,
@@ -62,6 +79,14 @@
         }
       ]
     },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "logo.png"
+    },
     "directories": {
       "output": "dist"
     },
@@ -70,15 +95,8 @@
       "!dist/*",
       "!**/*.psd",
       "!admin.html",
-      "!admin_main.js"
-    ],
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Utility",
-      "icon": "logo.png"
-    }
+      "!admin_main.js",
+      "!.github/*"
+    ]
   }
 }
