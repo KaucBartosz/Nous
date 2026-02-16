@@ -35,7 +35,7 @@
       {
         "provider": "github",
         "owner": "KaucBartosz",
-        "repo": "BBTP-Launcher"
+        "repo": "BBTP-Release"
       }
     ],
     "win": {

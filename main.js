@@ -5,6 +5,14 @@ const fs = require('fs');
 const https = require('https');
 const crypto = require('crypto');
 const AdmZip = require('adm-zip');
+const { autoUpdater } = require('electron-updater');
+
+// WYMUSZENIE PUBLICZNEGO REPOZYTORIUM JAKO ŹRÓDŁA AKTUALIZACJI
+autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'KaucBartosz',
+    repo: 'BBTP-Release'
+});
 
 let mainWindow;
 
@@ -25,6 +33,11 @@ function createWindow() {
     });
 
     mainWindow.loadFile('index.html');
+
+    // Sprawdzanie aktualizacji (tylko w wersji zbudowanej, nie w dev)
+    if (!process.env.WEBPACK_DEV_SERVER_URL && app.isPackaged) {
+        autoUpdater.checkForUpdatesAndNotify();
+    }
 }
 
 // --- FUNKCJA POMOCNICZA: Szukanie index.html w podfolderach ---
