@@ -35,17 +35,15 @@
       {
         "provider": "github",
         "owner": "KaucBartosz",
-        "repo": "BBTP-Release"
+        "repo": "BBTP-Release",
+        "releaseType": "release"
       }
     ],
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "icon.ico",
-      "publish": [
-        "github"
-      ]
+      "icon": "icon.ico"
     },
     "nsis": {
       "oneClick": false,
