@@ -8,6 +8,9 @@ const AdmZip = require('adm-zip');
 
 let mainWindow;
 
+// Rate limiting: Track active downloads to prevent concurrent downloads of the same test
+const activeDownloads = new Set();
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
@@ -54,11 +57,20 @@ function findStartFile(folderPath) {
 ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) => {
     const sender = event.sender;
 
+    // --- SECURITY CHECK: RATE LIMITING ---
+    // Prevent concurrent downloads of the same test
+    if (activeDownloads.has(testId)) {
+        console.log(`Download already in progress for testId: ${testId}`);
+        sender.send('test-status', 'Pobieranie już w toku!');
+        return;
+    }
+
     // --- SECURITY CHECK: TEST ID VALIDATION ---
     // Prevent Path Traversal (e.g. "../../../Windows")
     if (!/^[a-zA-Z0-9_-]+$/.test(testId)) {
         console.error(`Blocked invalid testId: ${testId}`);
         sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Nieprawidłowe ID testu!');
+        activeDownloads.delete(testId); // Clean up
         return;
     }
 
@@ -70,6 +82,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
         if (parsedUrl.protocol !== 'https:') {
             console.error(`Blocked download: non-HTTPS protocol: ${parsedUrl.protocol}`);
             sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Tylko HTTPS jest dozwolony!');
+            activeDownloads.delete(testId);
             return;
         }
 
@@ -77,13 +90,18 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
         if (!allowedDomains.includes(parsedUrl.hostname)) {
             console.error(`Blocked download from unauthorized domain: ${parsedUrl.hostname}`);
             sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Niedozwolona domena pobierania!');
+            activeDownloads.delete(testId);
             return;
         }
     } catch (e) {
         console.error(`Invalid URL blocked: ${url}`);
         sender.send('test-status', 'BŁĄD: Nieprawidłowy adres URL!');
+        activeDownloads.delete(testId);
         return;
     }
+
+    // Mark download as active
+    activeDownloads.add(testId);
 
     // Definicje ścieżek
     const userDataPath = app.getPath('userData');
@@ -118,6 +136,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
             sender.send('test-status', `Uruchamianie z cache (v${version})...`);
             openTestWindow(entryFile);
         }
+        activeDownloads.delete(testId); // Clean up
         return;
     }
 
@@ -135,6 +154,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
         if (maxRedirects <= 0) {
             sender.send('test-status', 'BŁĄD: Zbyt wiele przekierowań!');
             fs.unlink(zipPath, () => { });
+            activeDownloads.delete(testId);
             return;
         }
 
@@ -152,6 +172,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
             if (response.statusCode !== 200) {
                 sender.send('test-status', `Błąd serwera: ${response.statusCode}`);
                 fs.unlink(zipPath, () => { });
+                activeDownloads.delete(testId);
                 return;
             }
 
@@ -178,7 +199,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
                 file.end(); // Important!
 
                 // Wait for file stream to finish closing
-                file.on('finish', () => {
+                file.on('finish', async () => {
                     file.close();
 
                     // --- KROK 4: ROZPAKOWYWANIE ---
@@ -200,11 +221,13 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
                         }
 
                         zip.extractAllTo(testFolder, true); // Nadpisz
-                        fs.unlinkSync(zipPath); // Usuń ZIP
+
+                        // Use async file operations (non-blocking)
+                        await fs.promises.unlink(zipPath); // Usuń ZIP
 
                         // Aktualizacja meta
                         const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
-                        fs.writeFileSync(metaPath, JSON.stringify(metaData));
+                        await fs.promises.writeFile(metaPath, JSON.stringify(metaData));
 
                         // Szukamy pliku ponownie po rozpakowaniu
                         entryFile = findStartFile(testFolder);
@@ -214,6 +237,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
 
                         if (!entryFile) {
                             sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
+                            activeDownloads.delete(testId);
                             return;
                         }
 
@@ -224,9 +248,13 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
                             openTestWindow(entryFile);
                         }
 
+                        // Success - cleanup
+                        activeDownloads.delete(testId);
+
                     } catch (err) {
                         console.error("Błąd ZIP:", err);
                         sender.send('test-status', 'Błąd rozpakowywania archiwum!');
+                        activeDownloads.delete(testId);
                     }
                 });
             });
@@ -234,6 +262,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
         }).on('error', (err) => {
             fs.unlink(zipPath, () => { });
             sender.send('test-status', `Błąd sieci: ${err.message}`);
+            activeDownloads.delete(testId);
         });
     };
 

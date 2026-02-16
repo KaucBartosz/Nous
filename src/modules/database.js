@@ -67,15 +67,30 @@ export async function initDB() {
     return dbPromise;
 }
 
-export async function saveResult(resultData) {
+/**
+ * Saves a test result to IndexedDB with encryption
+ * @param {Object} resultData - The result data to save
+ * @param {string} currentUserId - The current user's ID for verification
+ * @returns {Promise<string>} The generated or existing ID
+ */
+export async function saveResult(resultData, currentUserId) {
     try {
         const db = await initDB();
+
+        // Generate ID if not provided (prevent race conditions)
         const id = resultData.id || crypto.randomUUID();
-        const timestamp = new Date().toISOString();
+        const timestamp = resultData.timestamp || new Date().toISOString();
+
+        // Verify researcher_uid matches current user
+        if (resultData.researcher_uid && resultData.researcher_uid !== currentUserId) {
+            throw new Error('researcher_uid mismatch: cannot save result for another user');
+        }
 
         let payloadToSave = {
             ...resultData,
             id,
+            researcher_uid: currentUserId, // Ensure correct user
+            timestamp,
             sync_status: 'PENDING',
             created_at: timestamp
         };
@@ -107,6 +122,12 @@ export async function saveResult(resultData) {
     }
 }
 
+/**
+ * Processes a database record, decrypting if necessary
+ * @param {Object} record - Raw database record
+ * @returns {Promise<Object>} Decrypted and normalized record
+ * @throws {Error} If decryption fails
+ */
 async function processRecordOutput(record) {
     if (record.is_encrypted && isCryptoReady) {
         try {
@@ -121,10 +142,8 @@ async function processRecordOutput(record) {
             };
         } catch (e) {
             console.error("Decryption error for record:", record.id, e);
-            return {
-                ...record,
-                error: "Decryption Failed"
-            };
+            // Throw error to prevent displaying corrupted data
+            throw new Error(`Failed to decrypt record ${record.id}: ${e.message}`);
         }
     }
 
@@ -141,10 +160,7 @@ async function processRecordOutput(record) {
             };
         } catch (e) {
             console.error("Decryption error for legacy record:", record.id, e);
-            return {
-                ...record,
-                error: "Decryption Failed"
-            };
+            throw new Error(`Failed to decrypt legacy record ${record.id}: ${e.message}`);
         }
     }
 

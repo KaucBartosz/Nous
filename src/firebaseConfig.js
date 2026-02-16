@@ -27,8 +27,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Inicjalizacja App Check
-// Używamy zmiennej globalnej lub lokalnej dla debugowania (localhost wymaga trybu debug lub dodania localhost do dozwolonych domen w konsoli)
-window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+// Włącz debug mode tylko w środowisku deweloperskim
+// W produkcji: window.location.hostname !== 'localhost' oraz brak electron dev mode
+const isProduction = !window.location.hostname.includes('localhost') && !window.electronAPI;
+if (!isProduction) {
+  window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  console.log('App Check Debug Mode: ENABLED (Development)');
+} else {
+  console.log('App Check Debug Mode: DISABLED (Production)');
+}
 
 const appCheck = initializeAppCheck(app, {
   provider: new ReCaptchaV3Provider('6LcGbmAsAAAAANONNS0csIA_MB5ePSLplsbuob6R'),

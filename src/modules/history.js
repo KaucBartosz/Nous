@@ -145,7 +145,13 @@ export async function loadHistoryData() {
         });
 
     } catch (e) {
-        elements.historyTableBody.textContent = `Błąd: ${e.message}`;
+        console.error('Error loading history:', e);
+        // Check if it's a decryption error
+        if (e.message && e.message.includes('decrypt')) {
+            elements.historyTableBody.innerHTML = '<tr><td colspan="6" style="color: #f44336;">Błąd odczytu danych: Problem z deszyfrowaniem. Sprawdź klucz szyfrowania.</td></tr>';
+        } else {
+            elements.historyTableBody.innerHTML = `<tr><td colspan="6" style="color: #f44336;">Błąd: ${e.message}</td></tr>`;
+        }
     }
 }
 
@@ -225,8 +231,8 @@ function downloadFile(filename, content, type) {
     a.click();
     document.body.removeChild(a);
 
-    // Opóźnione zwolnienie URL aby przeglądarka zdążyła pobrać plik
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    // Revoke URL immediately after click - browser already started download
+    setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 export function exportHistoryToCSV() {
@@ -263,6 +269,6 @@ export function exportHistoryToCSV() {
     link.download = "historia_wynikow.csv";
     link.click();
 
-    // Opóźnione zwolnienie URL
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    // Revoke URL immediately after click
+    setTimeout(() => URL.revokeObjectURL(url), 100);
 }

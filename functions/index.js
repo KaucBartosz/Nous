@@ -1,53 +1,32 @@
-const functions = require('firebase-functions');
-const axios = require('axios');
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * const {onCall} = require("firebase-functions/v2/https");
+ * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
 
-// Konfiguracja: firebase functions:config:set recaptcha.secret="TWÓJ_SECRET_KEY"
+const {setGlobalOptions} = require("firebase-functions");
+// const {onRequest} = require("firebase-functions/https");
+// const logger = require("firebase-functions/logger");
 
-exports.verifyRecaptcha = functions.https.onCall(async (data, context) => {
-    const { token, expectedAction } = data;
-    const secretKey = functions.config().recaptcha.secret;
+// For cost control, you can set the maximum number of containers that can be
+// running at the same time. This helps mitigate the impact of unexpected
+// traffic spikes by instead downgrading performance. This limit is a
+// per-function limit. You can override the limit for each function using the
+// `maxInstances` option in the function's options, e.g.
+// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
+// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
+// functions should each use functions.runWith({ maxInstances: 10 }) instead.
+// In the v1 API, each function can only serve one request per container, so
+// this will be the maximum concurrent request count.
+setGlobalOptions({maxInstances: 10});
 
-    if (!token) {
-        throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a "token".');
-    }
+// Create and deploy your first functions
+// https://firebase.google.com/docs/functions/get-started
 
-    if (!secretKey) {
-        // Fallback for development/testing if config not set, BUT SHOULD BE SET
-        console.error("Recaptcha Secret Key is NOT set in functions config!");
-        throw new functions.https.HttpsError('failed-precondition', 'Server misconfiguration: missing recaptcha secret.');
-    }
-
-    try {
-        const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
-
-        const response = await axios.post(verificationUrl);
-        const result = response.data;
-
-        console.log("Recaptcha verification result:", result);
-
-        if (!result.success) {
-            throw new functions.https.HttpsError('permission-denied', `Recaptcha verification failed: ${result['error-codes']}`);
-        }
-
-        if (result.score < 0.5) {
-            throw new functions.https.HttpsError('permission-denied', `Recaptcha low score: ${result.score}`);
-        }
-
-        if (expectedAction && result.action !== expectedAction) {
-            throw new functions.https.HttpsError('permission-denied', `Recaptcha execution action mismatch: ${result.action}`);
-        }
-
-        return {
-            success: true,
-            score: result.score
-        };
-
-    } catch (error) {
-        console.error("Recaptcha error:", error);
-        // Re-throw if it's already an HttpsError
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
-        }
-        throw new functions.https.HttpsError('internal', 'Recaptcha verification internal error', error.message);
-    }
-});
+// exports.helloWorld = onRequest((request, response) => {
+//   logger.info("Hello logs!", {structuredData: true});
+//   response.send("Hello from Firebase!");
+// });

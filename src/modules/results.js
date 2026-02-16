@@ -132,8 +132,12 @@ async function saveResultToSystem() {
     try {
         elements.btnUploadCloud.textContent = "Zapisywanie...";
 
+        // Get current user ID for verification
+        const user = getCurrentUser();
+        const currentUserId = user ? user.uid : 'GUEST';
+
         // 1. Zapis do IndexedDB
-        await saveResult(currentResultPackage);
+        await saveResult(currentResultPackage, currentUserId);
 
         elements.btnUploadCloud.textContent = "Zapisano!";
         elements.modalOverlay.classList.add('hidden');

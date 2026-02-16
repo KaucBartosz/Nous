@@ -33,6 +33,9 @@ export function enforceSyncPolicy(status) {
 }
 
 export function setAutoSync(enabled) {
+    // Zapamiętaj poprzedni stan przed zmianą
+    const previousState = isAutoSyncEnabled;
+
     if (enabled) {
         const userStatus = getUserStatus();
         if (userStatus !== 'APPROVED') {
@@ -57,7 +60,10 @@ export function setAutoSync(enabled) {
         setTimeout(() => toggleContainer.classList.remove('sync-toggled'), 300);
     }
 
-    if (enabled && navigator.onLine) {
+    // Wywołaj synchronizację TYLKO gdy sync był wyłączony i został włączony
+    // (przełącznik zmienił stan z false na true)
+    if (enabled && !previousState && navigator.onLine) {
+        console.log("Sync został włączony - sprawdzam oczekujące wyniki...");
         syncNow();
     }
 }

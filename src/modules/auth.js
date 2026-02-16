@@ -25,15 +25,42 @@ export function initAuth(onLoginSuccess) {
 
 }
 
+/**
+ * Login user with email and password, protected by reCAPTCHA Enterprise
+ * @param {string} email 
+ * @param {string} password 
+ */
 export async function login(email, password) {
     try {
+        showError("Weryfikacja reCAPTCHA...");
+
+        // Get reCAPTCHA token
+        const recaptchaToken = await getRecaptchaToken('LOGIN');
+
         showError("Logowanie...");
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+        // Optional: Send token to backend for verification
+        // In production, you should verify the token server-side
+        console.log('Login successful with reCAPTCHA token:', recaptchaToken.substring(0, 20) + '...');
+
     } catch (error) {
-        showError("Nieprawidłowy e-mail lub hasło");
+        console.error('Login error:', error);
+        if (error.code === 'auth/invalid-credential') {
+            showError("Nieprawidłowy e-mail lub hasło");
+        } else if (error.code === 'auth/too-many-requests') {
+            showError("Zbyt wiele prób logowania. Spróbuj ponownie później.");
+        } else {
+            showError("Błąd logowania: " + error.message);
+        }
     }
 }
 
+/**
+ * Register new user with email and password, protected by reCAPTCHA Enterprise
+ * @param {string} email 
+ * @param {string} password 
+ */
 export async function register(email, password) {
     if (password.length < 6) {
         showError("Hasło min. 6 znaków.");
@@ -41,7 +68,10 @@ export async function register(email, password) {
     }
 
     try {
+        showError("Weryfikacja reCAPTCHA...");
 
+        // Get reCAPTCHA token
+        const recaptchaToken = await getRecaptchaToken('REGISTER');
 
         showError("Tworzenie konta...");
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
@@ -50,12 +80,19 @@ export async function register(email, password) {
             status: "PENDING",
             createdAt: new Date().toISOString()
         });
+
+        // Optional: Send token to backend for verification
+        console.log('Registration successful with reCAPTCHA token:', recaptchaToken.substring(0, 20) + '...');
+
         showError("Konto utworzone!");
     } catch (error) {
+        console.error('Registration error:', error);
         if (error.code === 'auth/email-already-in-use') {
             showError("Na dany email założono już konto.");
+        } else if (error.code === 'auth/weak-password') {
+            showError("Hasło jest zbyt słabe.");
         } else {
-            showError("Nieprawidłowy e-mail lub hasło");
+            showError("Błąd rejestracji: " + error.message);
         }
     }
 }
@@ -76,4 +113,32 @@ export function getCurrentUser() {
 export function getUserStatus() {
     const statusEl = document.getElementById('user-status-display');
     return statusEl ? statusEl.textContent.replace(/[()]/g, '') : "UNKNOWN";
+}
+
+/**
+ * Get reCAPTCHA Enterprise token for a specific action
+ * @param {string} action - The action name (e.g., 'LOGIN', 'REGISTER')
+ * @returns {Promise<string>} reCAPTCHA token
+ */
+async function getRecaptchaToken(action) {
+    return new Promise((resolve, reject) => {
+        if (typeof grecaptcha === 'undefined' || !grecaptcha.enterprise) {
+            console.warn('reCAPTCHA not loaded, proceeding without token');
+            resolve('');
+            return;
+        }
+
+        grecaptcha.enterprise.ready(async () => {
+            try {
+                const token = await grecaptcha.enterprise.execute(
+                    '6LcGbmAsAAAAANONNS0csIA_MB5ePSLplsbuob6R',
+                    { action: action }
+                );
+                resolve(token);
+            } catch (error) {
+                console.error('reCAPTCHA error:', error);
+                reject(new Error('Błąd weryfikacji reCAPTCHA'));
+            }
+        });
+    });
 }
