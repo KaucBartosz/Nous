@@ -21,5 +21,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getEncryptionKey: () => ipcRenderer.invoke('get-encryption-key'),
 
     // 5. ZDARZENIA INSTALACJI
-    onTestInstalled: (callback) => ipcRenderer.on('test-installed', (event, data) => callback(data))
+    onTestInstalled: (callback) => ipcRenderer.on('test-installed', (event, data) => callback(data)),
+
+    // 6. AKTUALIZACJE APLIKACJI
+    checkAppUpdate: () => ipcRenderer.send('check-app-update'),
+    downloadAppUpdate: () => ipcRenderer.send('download-app-update'),
+    installAppUpdate: () => ipcRenderer.send('install-app-update'),
+    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+    onAppUpdateChecking: (callback) => ipcRenderer.on('app-update-checking', (event) => callback()),
+    onAppUpdateAvailable: (callback) => ipcRenderer.on('app-update-available', (event, info) => callback(info)),
+    onAppUpdateNotAvailable: (callback) => ipcRenderer.on('app-update-not-available', (event, info) => callback(info)),
+    onAppUpdateError: (callback) => ipcRenderer.on('app-update-error', (event, message) => callback(message)),
+    onAppDownloadProgress: (callback) => ipcRenderer.on('app-download-progress', (event, progressObj) => callback(progressObj)),
+    onAppUpdateDownloaded: (callback) => ipcRenderer.on('app-update-downloaded', (event, info) => callback(info))
 });

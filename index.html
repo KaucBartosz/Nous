@@ -174,6 +174,55 @@
 
             <!-- WIDOK 3: Aktualizacje (Tabela) -->
             <div id="updates-view" class="hidden">
+
+                <!-- 3a. Sekcja Aktualizacji Programu -->
+                <div class="app-update-container"
+                    style="background: #252526; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #444;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                                <span class="material-icons">cloud_sync</span>
+                                Aktualizacja Programu Nous
+                            </h3>
+                            <p style="color: #aaa; margin: 5px 0 15px 0;">
+                                Obecna wersja: <span id="app-current-version"
+                                    style="color: white; font-weight: bold;">v...</span>
+                            </p>
+                            <div id="app-update-status" style="font-size: 14px; margin-bottom: 15px;">
+                                Sprawdzanie aktualizacji...
+                            </div>
+
+                            <!-- Pasek postępu pobierania aktualizacji -->
+                            <div id="app-update-progress-container" class="hidden"
+                                style="width: 300px; margin-bottom: 10px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: #ccc;">
+                                    <span>Pobieranie...</span>
+                                    <span id="app-update-percent">0%</span>
+                                </div>
+                                <div class="progress-bar-bg" style="height: 6px; background: #444; border-radius: 3px;">
+                                    <div id="app-update-bar"
+                                        style="width: 0%; height: 100%; background: var(--primary-color); border-radius: 3px; transition: width 0.2s;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="app-update-actions">
+                            <!-- Przyciski pojawią się dynamicznie -->
+                            <button id="btn-check-app-update" class="btn secondary small">
+                                <span class="material-icons">refresh</span> Sprawdź ponownie
+                            </button>
+                            <button id="btn-download-app-update" class="btn primary hidden">
+                                <span class="material-icons">download</span> Pobierz Aktualizację
+                            </button>
+                            <button id="btn-install-app-update" class="btn primary hidden">
+                                <span class="material-icons">system_update_alt</span> Zainstaluj i Restartuj
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 style="margin:0;">Stan Zainstalowanych Testów</h3>
                     <input type="text" id="updates-search" placeholder="Szukaj..."

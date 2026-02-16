@@ -13,6 +13,14 @@ autoUpdater.setFeedURL({
     owner: 'KaucBartosz',
     repo: 'BBTP-Release'
 });
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+
+// Logowanie updater
+autoUpdater.logger = require("electron-log");
+autoUpdater.logger.transports.file.level = "info";
+
+
 
 let mainWindow;
 
@@ -33,11 +41,6 @@ function createWindow() {
     });
 
     mainWindow.loadFile('index.html');
-
-    // Sprawdzanie aktualizacji (tylko w wersji zbudowanej, nie w dev)
-    if (!process.env.WEBPACK_DEV_SERVER_URL && app.isPackaged) {
-        autoUpdater.checkForUpdatesAndNotify();
-    }
 }
 
 // --- FUNKCJA POMOCNICZA: Szukanie index.html w podfolderach ---
@@ -489,4 +492,59 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// ==========================================================
+// 6. OBSŁUGA AKTUALIZACJI APLIKACJI (IPC)
+// ==========================================================
+
+// Sprawdź aktualizacje
+ipcMain.on('check-app-update', () => {
+    if (!app.isPackaged) {
+        mainWindow.webContents.send('app-update-not-available', { version: app.getVersion() });
+        return;
+    }
+    autoUpdater.checkForUpdates();
+});
+
+// Pobierz aktualizację
+ipcMain.on('download-app-update', () => {
+    autoUpdater.downloadUpdate();
+});
+
+// Zainstaluj i zrestartuj
+ipcMain.on('install-app-update', () => {
+    autoUpdater.quitAndInstall();
+});
+
+// Zwróć obecną wersję
+ipcMain.handle('get-app-version', () => {
+    return app.getVersion();
+});
+
+
+// --- ZDARZENIA AUTO-UPDATERA ---
+
+autoUpdater.on('checking-for-update', () => {
+    if (mainWindow) mainWindow.webContents.send('app-update-checking');
+});
+
+autoUpdater.on('update-available', (info) => {
+    if (mainWindow) mainWindow.webContents.send('app-update-available', info);
+});
+
+autoUpdater.on('update-not-available', (info) => {
+    if (mainWindow) mainWindow.webContents.send('app-update-not-available', info);
+});
+
+autoUpdater.on('error', (err) => {
+    if (mainWindow) mainWindow.webContents.send('app-update-error', err.message);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+    if (mainWindow) mainWindow.webContents.send('app-download-progress', progressObj);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+    if (mainWindow) mainWindow.webContents.send('app-update-downloaded', info);
 });

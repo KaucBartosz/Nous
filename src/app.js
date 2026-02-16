@@ -9,6 +9,7 @@ import { initDemoCreator, refreshTemplatesList } from './modules/demoCreator.js'
 import { initResultsHandler } from './modules/results.js';
 import { initSyncService, setAutoSync, getAutoSyncState } from './modules/sync.js';
 import { initSettings } from './modules/settings.js';
+import { initAppUpdater } from './modules/appUpdater.js';
 
 // --- INITIALIZATION ---
 
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDemographics();
     initDemoCreator();
     initResultsHandler();
+    initAppUpdater();
 
     // 7. Offline Sync & Toggle
     initSyncService();
