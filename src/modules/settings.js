@@ -12,6 +12,9 @@ const DEFAULT_DARK_SETTINGS = {
     // Text Colors
     textMain: '#f0f0f0',
     textMuted: '#94a3b8',
+    textInactiveTab: '#94a3b8',
+    textTestDescription: '#94a3b8',
+    textTestName: '#f0f0f0',
     buttonText: '#ffffff',
     // Icons
     iconColor: '#94a3b8',
@@ -33,6 +36,9 @@ const DEFAULT_LIGHT_SETTINGS = {
     // Text Colors
     textMain: '#1a1a1a',
     textMuted: '#666666',
+    textInactiveTab: '#666666',
+    textTestDescription: '#666666',
+    textTestName: '#1a1a1a',
     buttonText: '#ffffff',
     // Icons
     iconColor: '#666666',
@@ -116,6 +122,9 @@ export function applySettings(settings = currentSettings) {
 
     root.style.setProperty('--text-main', settings.textMain);
     root.style.setProperty('--text-muted', settings.textMuted);
+    root.style.setProperty('--text-inactive-tab', settings.textInactiveTab || settings.textMuted);
+    root.style.setProperty('--text-test-description', settings.textTestDescription || settings.textMuted);
+    root.style.setProperty('--text-test-name', settings.textTestName || settings.textMain);
     root.style.setProperty('--text-button', settings.buttonText || '#ffffff');
 
     root.style.setProperty('--icon-color', settings.iconColor);
@@ -245,6 +254,12 @@ export function initSettings() {
         textMainValue: document.getElementById('text-main-value'),
         textMutedPicker: document.getElementById('text-muted-picker'),
         textMutedValue: document.getElementById('text-muted-value'),
+        textInactiveTabPicker: document.getElementById('text-inactive-tab-picker'),
+        textInactiveTabValue: document.getElementById('text-inactive-tab-value'),
+        textTestDescriptionPicker: document.getElementById('text-test-description-picker'),
+        textTestDescriptionValue: document.getElementById('text-test-description-value'),
+        textTestNamePicker: document.getElementById('text-test-name-picker'),
+        textTestNameValue: document.getElementById('text-test-name-value'),
         buttonTextPicker: document.getElementById('button-text-picker'),
         buttonTextValue: document.getElementById('button-text-value'),
 
@@ -287,6 +302,21 @@ export function initSettings() {
         if (elements.textMutedPicker) {
             elements.textMutedPicker.value = settings.textMuted;
             elements.textMutedValue.value = settings.textMuted;
+        }
+        if (elements.textInactiveTabPicker) {
+            const val = settings.textInactiveTab || settings.textMuted;
+            elements.textInactiveTabPicker.value = val;
+            elements.textInactiveTabValue.value = val;
+        }
+        if (elements.textTestDescriptionPicker) {
+            const val = settings.textTestDescription || settings.textMuted;
+            elements.textTestDescriptionPicker.value = val;
+            elements.textTestDescriptionValue.value = val;
+        }
+        if (elements.textTestNamePicker) {
+            const val = settings.textTestName || settings.textMain;
+            elements.textTestNamePicker.value = val;
+            elements.textTestNameValue.value = val;
         }
         if (elements.buttonTextPicker) {
             elements.buttonTextPicker.value = settings.buttonText || '#ffffff';
@@ -345,6 +375,9 @@ export function initSettings() {
     setupColorPicker(elements.primaryHoverPicker, elements.primaryHoverValue, 'primaryHover');
     setupColorPicker(elements.textMainPicker, elements.textMainValue, 'textMain');
     setupColorPicker(elements.textMutedPicker, elements.textMutedValue, 'textMuted');
+    setupColorPicker(elements.textInactiveTabPicker, elements.textInactiveTabValue, 'textInactiveTab');
+    setupColorPicker(elements.textTestDescriptionPicker, elements.textTestDescriptionValue, 'textTestDescription');
+    setupColorPicker(elements.textTestNamePicker, elements.textTestNameValue, 'textTestName');
     setupColorPicker(elements.buttonTextPicker, elements.buttonTextValue, 'buttonText');
     setupColorPicker(elements.iconColorPicker, elements.iconColorValue, 'iconColor');
     setupColorPicker(elements.iconActivePicker, elements.iconActiveValue, 'iconActive');

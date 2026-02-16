@@ -81,7 +81,8 @@
     "linux": {
       "target": [
         "AppImage",
-        "deb"
+        "deb",
+        "rpm"
       ],
       "category": "Utility",
       "icon": "logo.png"

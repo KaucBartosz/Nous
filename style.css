@@ -7,6 +7,9 @@
     --primary-glow: rgba(79, 140, 242, 0.4);
     --text-main: #f0f0f0;
     --text-muted: #94a3b8;
+    --text-inactive-tab: #94a3b8;
+    --text-test-description: #94a3b8;
+    --text-test-name: #f0f0f0;
     --text-button: #ffffff;
     --border: rgba(255, 255, 255, 0.1);
     --success: #10b981;
@@ -28,6 +31,9 @@
     --primary-glow: rgba(79, 140, 242, 0.3);
     --text-main: #1a1a1a;
     --text-muted: #666666;
+    --text-inactive-tab: #666666;
+    --text-test-description: #666666;
+    --text-test-name: #1a1a1a;
     --text-button: #ffffff;
     --border: rgba(0, 0, 0, 0.1);
     --success: #10b981;
@@ -326,7 +332,7 @@ input:focus {
     width: 100%;
     background: transparent;
     border: none;
-    color: var(--text-muted);
+    color: var(--text-inactive-tab);
     text-align: left;
     padding: 12px;
     border-radius: 6px;
@@ -448,12 +454,12 @@ header {
 .test-card h4 {
     margin: 0 0 10px;
     font-size: 18px;
-    color: var(--text-main);
+    color: var(--text-test-name);
 }
 
 .test-card p {
     font-size: 13px;
-    color: var(--text-muted);
+    color: var(--text-test-description);
     flex: 1;
     margin: 0;
 }
