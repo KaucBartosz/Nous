@@ -7,7 +7,8 @@
     "start": "electron .",
     "admin": "electron admin_main.js",
     "dist": "electron-builder --win --x64",
-    "dist:linux": "electron-builder --linux --x64"
+    "dist:linux": "electron-builder --linux --x64",
+    "dist:mac": "electron-builder --mac"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +39,28 @@
       "createDesktopShortcut": true,
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.icns",
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "icon": "icon.icns",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "directories": {
       "output": "dist"
