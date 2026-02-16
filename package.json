@@ -53,7 +53,8 @@
       "createDesktopShortcut": true,
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico",
-      "deleteAppDataOnUninstall": true
+      "deleteAppDataOnUninstall": true,
+      "differentialPackage": true
     },
     "mac": {
       "target": [
