@@ -15,7 +15,7 @@
     "dist:mac": "electron-builder --mac"
   },
   "keywords": [],
-  "author": "KaucBartosz",
+  "author": "KaucBartosz <112867979+KaucBartosz@users.noreply.github.com>",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
