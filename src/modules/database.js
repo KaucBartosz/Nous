@@ -4,7 +4,7 @@ import { initCrypto, encryptData, decryptData } from './cryptoService.js';
 import { Dialog } from './dialog.js';
 
 const DB_NAME = 'NousDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let isCryptoReady = false;
 let cryptoWarningShown = false; // Zapobiega wielokrotnemu pokazywaniu ostrzeżenia
@@ -51,12 +51,23 @@ export async function initDB() {
 
     if (!dbPromise) {
         dbPromise = openDB(DB_NAME, DB_VERSION, {
-            upgrade(db) {
+            upgrade(db, oldVersion, newVersion, transaction) {
+                // 1. RESULTS STORE
+                let resultsStore;
                 if (!db.objectStoreNames.contains('results')) {
-                    const store = db.createObjectStore('results', { keyPath: 'id' });
-                    store.createIndex('timestamp', 'timestamp');
-                    store.createIndex('sync_status', 'sync_status');
+                    resultsStore = db.createObjectStore('results', { keyPath: 'id' });
+                } else {
+                    resultsStore = transaction.objectStore('results');
                 }
+
+                if (!resultsStore.indexNames.contains('timestamp')) {
+                    resultsStore.createIndex('timestamp', 'timestamp');
+                }
+                if (!resultsStore.indexNames.contains('sync_status')) {
+                    resultsStore.createIndex('sync_status', 'sync_status');
+                }
+
+                // 2. TEMPLATES STORE
                 if (!db.objectStoreNames.contains('demographicsTemplates')) {
                     db.createObjectStore('demographicsTemplates', { keyPath: 'id' });
                 }
