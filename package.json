@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
+    "electron-log": "^5.4.3",
     "electron-updater": "^6.1.7",
     "firebase": "^12.8.0",
     "idb": "^8.0.3"
