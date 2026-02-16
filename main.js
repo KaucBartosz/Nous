@@ -16,6 +16,7 @@ autoUpdater.setFeedURL({
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 
+
 // Logowanie updater
 autoUpdater.logger = require("electron-log");
 autoUpdater.logger.transports.file.level = "info";
