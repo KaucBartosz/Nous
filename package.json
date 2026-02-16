@@ -1,5 +1,5 @@
 {
-  "name": "bbtp",
+  "name": "nous",
   "version": "1.0.0",
   "description": "BBTP Launcher application",
   "main": "main.js",
@@ -32,6 +32,7 @@
   "build": {
     "appId": "com.student.nous",
     "productName": "Nous",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": [
       {
         "provider": "github",
