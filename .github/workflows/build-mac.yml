@@ -1,0 +1,32 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Tutaj wywołujemy nowy skrypt z package.json
+      - name: Build macOS app
+        run: npm run dist:mac
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nous-mac-setup
+          path: dist/*.dmg
