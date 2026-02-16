@@ -83,9 +83,55 @@ export function initAppUpdater() {
         show(btnDownload);
         hide(btnInstall);
 
-        // Auto-show updates tab notification if we were implementing notifications
+        // Show Toast Notification
+        showUpdateToast(info.version);
+
         console.log("Update available:", info);
     });
+
+    // --- Helper: Create and Show Toast ---
+    function showUpdateToast(newVersion) {
+        // Prevent duplicates
+        if (document.getElementById('update-toast')) return;
+
+        const toast = document.createElement('div');
+        toast.id = 'update-toast';
+        toast.className = 'toast-notification';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <div class="toast-header">
+                    <h4 class="toast-title">Dostępna Aktualizacja</h4>
+                    <button class="toast-close">&times;</button>
+                </div>
+                <p class="toast-message">Dostępna jest nowa wersja programu Nous (v${newVersion}).</p>
+                <div class="toast-actions">
+                    <button class="toast-btn" id="btn-toast-dismiss">Później</button>
+                    <button class="toast-btn primary" id="btn-toast-update">Idź do Aktualizacji</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => toast.classList.add('show'), 100);
+
+        // Handlers
+        const close = () => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400); // Wait for transition
+        };
+
+        toast.querySelector('.toast-close').addEventListener('click', close);
+        toast.querySelector('#btn-toast-dismiss').addEventListener('click', close);
+
+        toast.querySelector('#btn-toast-update').addEventListener('click', () => {
+            close();
+            // Switch to Updates Tab
+            const updatesBtn = document.getElementById('nav-updates');
+            if (updatesBtn) updatesBtn.click();
+        });
+    }
 
     api.onAppUpdateNotAvailable((info) => {
         // info may contain current version or update info
