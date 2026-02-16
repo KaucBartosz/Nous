@@ -10,9 +10,9 @@
   "scripts": {
     "start": "electron .",
     "admin": "electron admin_main.js",
-    "dist": "electron-builder --win --x64 -p always",
-    "dist:linux": "electron-builder --linux --x64 -p always",
-    "dist:mac": "electron-builder --mac -p always"
+    "dist": "electron-builder --win --x64",
+    "dist:linux": "electron-builder --linux --x64",
+    "dist:mac": "electron-builder --mac"
   },
   "keywords": [],
   "author": "KaucBartosz",
