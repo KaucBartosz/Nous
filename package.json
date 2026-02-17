@@ -1,0 +1,102 @@
+{
+  "name": "nous",
+  "version": "1.0.3",
+  "description": "BBTP Launcher application",
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KaucBartosz/Nous-Code.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "admin": "electron admin_main.js",
+    "dist": "electron-builder --win --x64",
+    "dist:linux": "electron-builder --linux --x64 -c.linux.target=zip",
+    "dist:linux:ci": "electron-builder --linux --x64 -c.linux.target=AppImage",
+    "dist:mac": "electron-builder --mac"
+  },
+  "keywords": [],
+  "author": "KaucBartosz <112867979+KaucBartosz@users.noreply.github.com>",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.1.7",
+    "firebase": "^12.8.0",
+    "idb": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.student.nous",
+    "productName": "Nous",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KaucBartosz",
+        "repo": "Nous-Code",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "deleteAppDataOnUninstall": true,
+      "differentialPackage": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "icon": "logo.png"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!**/*.psd",
+      "!admin.html",
+      "!admin_main.js",
+      "!.github/*"
+    ]
+  }
+}

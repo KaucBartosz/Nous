@@ -1,0 +1,46 @@
+name: Build Linux App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Opcjonalne: Instalacja bibliotek systemowych, jeśli build się wywali
+      # Zazwyczaj ubuntu-latest ma wszystko, co potrzebne dla podstawowego Electrona
+      # - name: Install Linux libraries
+      #   run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libopenjp2-7 libarchive-dev
+
+      # Budowanie dla Linuxa (korzysta z Twojego skryptu "dist:linux")
+      - name: Build Linux app
+        run: npm run dist:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Przesłanie plików .AppImage i .deb
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nous-linux-installer
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: error

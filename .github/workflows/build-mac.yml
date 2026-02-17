@@ -1,0 +1,52 @@
+name: Build macOS App
+
+on:
+  # Opcjonalnie: Uruchom ręcznie z zakładki Actions
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # 1. Pobranie kodu
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Konfiguracja Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 3. Instalacja zależności
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Budowanie aplikacji (z dodanym tokenem, aby naprawić błąd)
+      - name: Build macOS app
+        run: npm run dist:mac -- --x64 --arm64
+        env:
+          # To naprawia błąd "GitHub Personal Access Token is not set"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 5. Przesłanie plików instalacyjnych (osobno dla x64 i arm64)
+      - name: Upload macOS Installer (Intel x86_64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nous-mac-installer-Intel-x86_64
+          path: dist/*-x86_64.dmg
+          if-no-files-found: warn
+          
+
+      - name: Upload macOS Installer (Apple Silicon arm64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nous-mac-installer-Apple-Silicon-arm64
+          path: dist/*-arm64.dmg
+          if-no-files-found: warn
