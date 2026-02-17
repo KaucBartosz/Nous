@@ -37,10 +37,17 @@ jobs:
           # To naprawia błąd "GitHub Personal Access Token is not set"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5. Przesłanie pliku .dmg jako artefakt
-      - name: Upload Artifacts
+      # 5. Przesłanie plików instalacyjnych (osobno dla x64 i arm64)
+      - name: Upload macOS Installer (Intel x86_64)
         uses: actions/upload-artifact@v4
         with:
-          name: nous-mac-installer
-          path: dist/*.dmg
-          if-no-files-found: error
+          name: nous-mac-installer-Intel-x86_64
+          path: dist/*-x86_64.dmg
+          if-no-files-found: warn
+
+      - name: Upload macOS Installer (Apple Silicon arm64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nous-mac-installer-arm64
+          path: dist/*-arm64.dmg
+          if-no-files-found: warn
