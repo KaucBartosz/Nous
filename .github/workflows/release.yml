@@ -6,12 +6,27 @@ on:
       - main
       - master
 
-permissions:
-  contents: write
-
+# Warunek uruchomienia: Commit musi zawierać frazę "[Release]" lub "[Publish]"
 jobs:
-  # ZADANIE 1: Podbij wersję i stwórz Tag
+  check-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event.head_commit.message }}" =~ "\[Release\]" ]] || [[ "${{ github.event.head_commit.message }}" =~ "\[Publish\]" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "Znaleziono tag [Release] lub [Publish]. Rozpoczynam budowanie..."
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "Brak tagu [Release] lub [Publish]. Pomijam budowanie."
+          fi
+
+  # ZADANIE 1: Podbij wersję i stwórz Tag (tylko jeśli check-commit == true)
   bump-version:
+    needs: check-commit
+    if: needs.check-commit.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     outputs:
       new_tag: ${{ steps.tag_version.outputs.new_tag }}
@@ -29,6 +44,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch # Domyślnie podbija o 0.0.1
           tag_prefix: ""      # Wersja bez "v" na początku w package.json (opcjonalne)
+          # Konfiguracja Semantic Versioning:
+          # feat -> minor
+          # fix -> patch
+          # perf -> patch
+          custom_release_rules: "feat:minor:Features,fix:patch:Bug Fixes,perf:patch:Performance,chore:patch:Chores"
 
       # Tworzy pusty Release na GitHubie, do którego zaraz wrzucimy pliki
       - name: Create Release
