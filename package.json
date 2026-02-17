@@ -5,7 +5,7 @@
   "main": "main.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KaucBartosz/Nous-Code.git"
+    "url": "git+https://github.com/KaucBartosz/Nous.git"
   },
   "scripts": {
     "start": "electron .",
@@ -38,7 +38,7 @@
       {
         "provider": "github",
         "owner": "KaucBartosz",
-        "repo": "Nous-Code",
+        "repo": "Nous",
         "releaseType": "release"
       }
     ],

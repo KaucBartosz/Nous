@@ -11,7 +11,7 @@ const { autoUpdater } = require('electron-updater');
 autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'KaucBartosz',
-    repo: 'Nous-Code'
+    repo: 'Nous'
 });
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
