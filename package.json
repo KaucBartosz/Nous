@@ -1,7 +1,7 @@
 {
   "name": "nous",
   "version": "1.0.5",
-  "description": "BBTP Launcher application",
+  "description": "Nous Launcher application",
   "main": "main.js",
   "repository": {
     "type": "git",
