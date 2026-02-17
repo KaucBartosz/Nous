@@ -1,64 +1,20 @@
-name: Release & Build
+name: Build macOS
 
 on:
-  workflow_dispatch:
-
-permissions:
-  contents: write
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  # ZADANIE 1: Podbij wersję i stwórz Tag
-  bump-version:
-    runs-on: ubuntu-latest
-    outputs:
-      new_tag: ${{ steps.tag_version.outputs.new_tag }}
-      new_version: ${{ steps.tag_version.outputs.new_version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Ważne do historii commitów
-
-      # Ta akcja analizuje commity i tworzy nowy tag (np. v1.0.1)
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: patch # Domyślnie podbija o 0.0.1
-          tag_prefix: ""      # Wersja bez "v" na początku w package.json (opcjonalne)
-          # Konfiguracja Semantic Versioning:
-          # feat -> minor
-          # fix -> patch
-          # perf -> patch
-          custom_release_rules: "feat:minor:Features,fix:patch:Bug Fixes,perf:patch:Performance,chore:patch:Chores"
-
-
-      # Tworzy pusty Release na GitHubie, do którego zaraz wrzucimy pliki
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.tag_version.outputs.new_tag }}
-          name: Release ${{ steps.tag_version.outputs.new_tag }}
-          body: "Automatyczny build wersji ${{ steps.tag_version.outputs.new_tag }}"
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ZADANIE 2: Zbuduj aplikacje na wszystkich systemach
-  build-and-upload:
-    needs: bump-version
-    runs-on: ${{ matrix.os }}
+  build-mac:
+    runs-on: macos-latest
     
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-
+    permissions:
+      contents: write
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.bump-version.outputs.new_tag }} # Pobierz kod z nowym tagiem
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -69,29 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Musimy zaktualizować wersję w package.json na maszynie budującej
-      # (bo git tag został stworzony, ale plik package.json w kodzie mógł zostać stary)
-      - name: Sync package.json version
-        run: npm version ${{ needs.bump-version.outputs.new_version }} --no-git-tag-version
-        shell: bash
-
-      # BUDOWANIE I PUBLIKACJA (Linux)
-      - name: Build & Publish Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: npm run dist:linux -- -p always
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-
-      # BUDOWANIE I PUBLIKACJA (Windows)
-      - name: Build & Publish Windows
-        if: matrix.os == 'windows-latest'
-        run: npm run dist -- -p always
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-
-      # BUDOWANIE I PUBLIKACJA (Mac)
+      # Build & Publish for macOS
+      # GH_TOKEN is required for electron-builder to publish artifacts to the GitHub Release
       - name: Build & Publish Mac
-        if: matrix.os == 'macos-latest'
         run: npm run dist:mac -- -p always
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
