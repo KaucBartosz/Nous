@@ -1,8 +1,6 @@
 name: Build macOS App
 
 on:
-  push:
-    branches: [ "main", "master" ]
   # Opcjonalnie: Uruchom ręcznie z zakładki Actions
   workflow_dispatch:
 

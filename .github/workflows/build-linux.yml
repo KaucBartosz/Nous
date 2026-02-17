@@ -1,8 +1,6 @@
 name: Build Linux App
 
 on:
-  push:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
