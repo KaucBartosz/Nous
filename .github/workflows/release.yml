@@ -50,6 +50,7 @@ jobs:
           # perf -> patch
           custom_release_rules: "feat:minor:Features,fix:patch:Bug Fixes,perf:patch:Performance,chore:patch:Chores"
 
+
       # Tworzy pusty Release na GitHubie, do którego zaraz wrzucimy pliki
       - name: Create Release
         uses: softprops/action-gh-release@v1
