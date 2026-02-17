@@ -195,7 +195,7 @@ export async function syncSingleResult(record) {
  */
 function updateSyncUI(syncing, remaining) {
     const toggleContainer = document.getElementById('sync-toggle-container');
-    const toggleLabel = toggleContainer?.querySelector('span:last-child');
+    const toggleLabel = document.getElementById('sync-status-label');
 
     if (toggleContainer) {
         if (syncing) {
