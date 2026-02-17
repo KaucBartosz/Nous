@@ -23,6 +23,7 @@ jobs:
             echo "Brak tagu [Release] lub [Publish]. Pomijam budowanie."
           fi
 
+          
   # ZADANIE 1: Podbij wersję i stwórz Tag (tylko jeśli check-commit == true)
   bump-version:
     needs: check-commit
