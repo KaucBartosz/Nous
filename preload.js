@@ -34,5 +34,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onAppUpdateNotAvailable: (callback) => ipcRenderer.on('app-update-not-available', (event, info) => callback(info)),
     onAppUpdateError: (callback) => ipcRenderer.on('app-update-error', (event, message) => callback(message)),
     onAppDownloadProgress: (callback) => ipcRenderer.on('app-download-progress', (event, progressObj) => callback(progressObj)),
-    onAppUpdateDownloaded: (callback) => ipcRenderer.on('app-update-downloaded', (event, info) => callback(info))
+    onAppUpdateDownloaded: (callback) => ipcRenderer.on('app-update-downloaded', (event, info) => callback(info)),
+
+    // 7. IMPORT / EKSPORT SZABLONÓW
+    exportTemplate: (data) => ipcRenderer.invoke('export-template', data),
+    importTemplate: () => ipcRenderer.invoke('import-template')
 });

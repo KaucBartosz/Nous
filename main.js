@@ -549,3 +549,75 @@ autoUpdater.on('download-progress', (progressObj) => {
 autoUpdater.on('update-downloaded', (info) => {
     if (mainWindow) mainWindow.webContents.send('app-update-downloaded', info);
 });
+
+
+// ==========================================================
+// 7. IMPORT / EKSPORT SZABLONÓW (IPC)
+// ==========================================================
+
+ipcMain.handle('export-template', async (event, templateData) => {
+    const dialog = require('electron').dialog;
+
+    // Sanity check name
+    const safeName = (templateData.name || 'szablon').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+    // Structure to save
+    const fileContent = {
+        meta: {
+            app: "Nous",
+            type: "demographics_template",
+            version: "1.0",
+            exportedAt: new Date().toISOString()
+        },
+        template: templateData
+    };
+
+    const { filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Eksportuj Szablon Metryczki',
+        defaultPath: `szablon_${safeName}.json`,
+        filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+
+    if (filePath) {
+        try {
+            fs.writeFileSync(filePath, JSON.stringify(fileContent, null, 2));
+            return { success: true };
+        } catch (e) {
+            console.error("Export template error:", e);
+            return { success: false, error: e.message };
+        }
+    }
+    return { success: false, cancelled: true };
+});
+
+ipcMain.handle('import-template', async (event) => {
+    const dialog = require('electron').dialog;
+
+    const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Importuj Szablon Metryczki',
+        properties: ['openFile'],
+        filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+
+    if (filePaths && filePaths.length > 0) {
+        try {
+            const content = fs.readFileSync(filePaths[0], 'utf8');
+            const json = JSON.parse(content);
+
+            // Validation basics
+            if (!json.template || !json.template.fields) {
+                // Try direct template object fallback (if user saved raw JSON manually)
+                if (json.name && json.fields) {
+                    return { success: true, data: json };
+                }
+                throw new Error("Nieprawidłowy format pliku (brak pola template lub fields).");
+            }
+
+            return { success: true, data: json.template };
+        } catch (e) {
+            console.error("Import template error:", e);
+            return { success: false, error: e.message };
+        }
+    }
+    return { success: false, cancelled: true };
+});

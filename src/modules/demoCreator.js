@@ -17,6 +17,11 @@ export function initDemoCreator() {
         btnSaveTemplate.addEventListener('click', saveCurrentTemplate);
     }
 
+    const btnImportTemplate = document.getElementById('btn-import-template');
+    if (btnImportTemplate) {
+        btnImportTemplate.addEventListener('click', importTemplateFromFile);
+    }
+
     refreshTemplatesList();
 }
 
@@ -231,6 +236,51 @@ async function loadTemplateIntoCreator(id) {
     }
 }
 
+async function exportCurrentTemplate(template) {
+    try {
+        const result = await window.electronAPI.exportTemplate(template);
+        if (result.success) {
+            await Dialog.alert(`Szablon "${template.name}" został wyeksportowany pomyślnie.`, 'info');
+        } else if (!result.cancelled) {
+            await Dialog.alert("Błąd eksportu: " + result.error, 'error');
+        }
+    } catch (e) {
+        console.error("Export error:", e);
+        await Dialog.alert("Błąd eksportu: " + e.message, 'error');
+    }
+}
+
+async function importTemplateFromFile() {
+    try {
+        const result = await window.electronAPI.importTemplate();
+        if (result.success && result.data) {
+            const imported = result.data;
+
+            // Check if name is taken? 
+            // We can just load it into the creator and let the user decide to save (maybe rename).
+
+            resetCreatorForm();
+
+            document.getElementById('creator-template-name').value = imported.name + " (Import)";
+
+            if (imported.fields && Array.isArray(imported.fields)) {
+                imported.fields.forEach(field => addFieldUI(field));
+            }
+
+            await Dialog.alert("Szablon został zaimportowany do kreatora. Możesz go teraz zapisać.", 'info');
+
+            // Scroll to top
+            document.getElementById('demo-creator-view').scrollIntoView({ behavior: 'smooth' });
+
+        } else if (!result.cancelled) {
+            await Dialog.alert("Błąd importu: " + result.error, 'error');
+        }
+    } catch (e) {
+        console.error("Import error:", e);
+        await Dialog.alert("Błąd importu: " + e.message, 'error');
+    }
+}
+
 export async function refreshTemplatesList() {
     const list = document.getElementById('existing-templates-list');
     if (!list) return;
@@ -259,11 +309,22 @@ export async function refreshTemplatesList() {
                     <h4>${escapeHtml(t.name)}</h4>
                     <p>${t.fields.length} pól</p>
                 </div>
-                <div style="margin-top:10px; display:flex; gap:10px;">
-                    <button class="btn secondary small btn-edit-template" style="flex:1;">Edytuj</button>
-                    <button class="btn danger small btn-delete-template" style="flex:1;">Usuń</button>
+                <div style="margin-top:10px; display:flex; gap:5px;">
+                    <button class="btn secondary small btn-edit-template" style="flex:1;" title="Edytuj">
+                        <span class="material-icons">edit</span>
+                    </button>
+                    <button class="btn secondary small btn-export-template" style="flex:1;" title="Eksportuj">
+                        <span class="material-icons">download</span>
+                    </button>
+                    <button class="btn danger small btn-delete-template" style="flex:1;" title="Usuń">
+                        <span class="material-icons">delete</span>
+                    </button>
                 </div>
             `;
+
+            card.querySelector('.btn-export-template').addEventListener('click', () => {
+                exportCurrentTemplate(t);
+            });
 
             card.querySelector('.btn-edit-template').addEventListener('click', () => {
                 loadTemplateIntoCreator(t.id);
