@@ -44,6 +44,7 @@ jobs:
           name: nous-mac-installer-Intel-x86_64
           path: dist/*-x86_64.dmg
           if-no-files-found: warn
+          
 
       - name: Upload macOS Installer (Apple Silicon arm64)
         uses: actions/upload-artifact@v4
