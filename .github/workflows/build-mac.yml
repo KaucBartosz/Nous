@@ -32,7 +32,7 @@ jobs:
 
       # 4. Budowanie aplikacji (z dodanym tokenem, aby naprawić błąd)
       - name: Build macOS app
-        run: npm run dist:mac
+        run: npm run dist:mac -- --x64 --arm64
         env:
           # To naprawia błąd "GitHub Personal Access Token is not set"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
