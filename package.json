@@ -11,7 +11,8 @@
     "start": "electron .",
     "admin": "electron admin_main.js",
     "dist": "electron-builder --win --x64",
-    "dist:linux": "electron-builder --linux --x64",
+    "dist:linux": "electron-builder --linux --x64 -c.linux.target=zip",
+    "dist:linux:ci": "electron-builder --linux --x64 -c.linux.target=AppImage",
     "dist:mac": "electron-builder --mac"
   },
   "keywords": [],

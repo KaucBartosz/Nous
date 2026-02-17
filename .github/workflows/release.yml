@@ -5,7 +5,25 @@ on:
     tags:
       - 'v*'
 
-jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm install
+      - name: Build & Publish Linux
+        run: npm run dist:linux:ci -- -p always
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
   build-mac:
     runs-on: macos-latest
     
