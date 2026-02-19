@@ -23,41 +23,41 @@
 
 /* Light Theme Variables */
 [data-theme="light"] {
-    --bg-dark: #f0f2f5;
-    --bg-card: rgba(255, 255, 255, 0.9);
+    --bg-dark: #f1f5f9;
+    --bg-card: #ffffff;
     --bg-sidebar: #ffffff;
-    --primary: #4f8cf2;
-    --primary-hover: #6ea1f7;
-    --primary-glow: rgba(79, 140, 242, 0.3);
-    --text-main: #1a1a1a;
-    --text-muted: #666666;
-    --text-inactive-tab: #666666;
-    --text-test-description: #666666;
-    --text-test-name: #1a1a1a;
+    --primary: #1d4ed8;
+    --primary-hover: #1e40af;
+    --primary-glow: rgba(29, 78, 216, 0.2);
+    --text-main: #000000;
+    --text-muted: #334155;
+    --text-inactive-tab: #475569;
+    --text-test-description: #334155;
+    --text-test-name: #000000;
     --text-button: #ffffff;
-    --border: rgba(0, 0, 0, 0.1);
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
+    --border: #94a3b8;
+    --success: #15803d;
+    --warning: #a16207;
+    --danger: #b91c1c;
     --glass-bg: rgba(0, 0, 0, 0.02);
-    --glass-border: rgba(0, 0, 0, 0.08);
-    --icon-color: #666666;
-    --icon-active: #4f8cf2;
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --icon-color: #1e293b;
+    --icon-active: #1d4ed8;
 }
 
 /* Light Theme Specific Overrides */
 [data-theme="light"] .login-card {
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+    background: #ffffff;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="light"] input {
-    background: rgba(0, 0, 0, 0.05);
+    background: #f8fafc;
     color: var(--text-main);
 }
 
 [data-theme="light"] input:focus {
-    background: rgba(0, 0, 0, 0.08);
+    background: #ffffff;
 }
 
 [data-theme="light"] .full-screen-center {
@@ -72,15 +72,15 @@
 
 [data-theme="light"] .modal-content {
     background: #ffffff;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #94a3b8;
 }
 
 [data-theme="light"] .modal-header {
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 2px solid #e2e8f0;
 }
 
 [data-theme="light"] .modal-footer {
-    border-top: 1px solid #e0e0e0;
+    border-top: 2px solid #e2e8f0;
 }
 
 [data-theme="light"] .json-preview {
@@ -92,9 +92,13 @@
 [data-theme="light"] input[type="number"],
 [data-theme="light"] select,
 [data-theme="light"] textarea {
-    background: #f8f8f8;
-    border: 1px solid #ddd;
+    background: #ffffff;
+    border: 1px solid #94a3b8;
     color: var(--text-main);
+}
+
+[data-theme="light"] input::placeholder {
+    color: #64748b;
 }
 
 [data-theme="light"] th {
@@ -103,7 +107,7 @@
 }
 
 [data-theme="light"] td {
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid #cbd5e1;
 }
 
 body {
@@ -458,8 +462,12 @@ header {
 
 .test-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.3);
     border-color: var(--primary);
+}
+
+[data-theme="light"] .test-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
 
 .test-card h4 {
@@ -634,6 +642,10 @@ label {
     font-weight: 600;
     color: #ccc;
     font-size: 14px;
+}
+
+[data-theme="light"] label {
+    color: #000000;
 }
 
 /* Style dla inputów, selectów i textarea */
@@ -1182,6 +1194,13 @@ input:checked+.slider:before {
     margin: 0 0 15px 0;
     font-size: 16px;
     color: var(--primary);
+    font-weight: 700;
+}
+
+[data-theme="light"] .settings-section h4 {
+    color: #000000;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 5px;
 }
 
 /* Theme Switcher */
@@ -1209,6 +1228,11 @@ input:checked+.slider:before {
     border: 2px solid var(--border);
     border-radius: 8px;
     transition: all 0.3s ease;
+}
+
+[data-theme="light"] .theme-label {
+    background: #ffffff;
+    border-color: #94a3b8;
 }
 
 .theme-label .material-icons {
@@ -1270,9 +1294,9 @@ input:checked+.slider:before {
 }
 
 [data-theme="light"] .color-picker-group input[type="text"] {
-    background: #f0f0f0;
-    border: 1px solid #ccc;
-    color: #333;
+    background: #ffffff;
+    border: 1px solid #94a3b8;
+    color: var(--text-main);
 }
 
 /* Settings Preview */

@@ -31,24 +31,24 @@ const DEFAULT_DARK_SETTINGS = {
 const DEFAULT_LIGHT_SETTINGS = {
     theme: 'light',
     // Interactive Elements
-    primaryColor: '#4f8cf2',
-    primaryHover: '#6ea1f7',
+    primaryColor: '#1d4ed8',
+    primaryHover: '#1e40af',
     // Text Colors
-    textMain: '#1a1a1a',
-    textMuted: '#666666',
-    textInactiveTab: '#666666',
-    textTestDescription: '#666666',
-    textTestName: '#1a1a1a',
+    textMain: '#000000',
+    textMuted: '#334155',
+    textInactiveTab: '#475569',
+    textTestDescription: '#334155',
+    textTestName: '#000000',
     buttonText: '#ffffff',
     // Icons
-    iconColor: '#666666',
-    iconActive: '#4f8cf2',
+    iconColor: '#1e293b',
+    iconActive: '#1d4ed8',
     // Backgrounds
-    bgDark: '#f0f2f5',
-    bgCard: 'rgba(255, 255, 255, 0.9)',
+    bgDark: '#f1f5f9',
+    bgCard: '#ffffff',
     bgSidebar: '#ffffff',
     // Borders
-    borderColor: 'rgba(0, 0, 0, 0.1)'
+    borderColor: '#94a3b8'
 };
 
 // Current settings (in memory)
