@@ -210,6 +210,33 @@ input:focus {
     color: white;
 }
 
+.download-format-selector {
+    margin-bottom: 20px;
+    background: #1e1e1e;
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: inline-flex;
+    gap: 20px;
+    align-items: center;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.download-format-selector span {
+    font-weight: 500;
+}
+
+[data-theme="light"] .download-format-selector {
+    background: #ffffff;
+    color: #475569;
+    border-color: #94a3b8;
+}
+
+[data-theme="light"] .download-format-selector span {
+    color: #000000;
+}
+
 .btn {
     padding: 12px 20px;
     border: none;
@@ -271,8 +298,13 @@ input:focus {
 }
 
 [data-theme="light"] .btn.secondary {
-    background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.1);
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #000000;
+}
+
+[data-theme="light"] .btn.secondary:hover {
+    background: #cbd5e1;
 }
 
 .btn.secondary:hover {
@@ -289,6 +321,17 @@ input:focus {
     background: rgba(255, 255, 255, 0.05);
     border-color: var(--text-muted);
     color: white;
+}
+
+[data-theme="light"] .btn.outline {
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+[data-theme="light"] .btn.outline:hover {
+    background: #f1f5f9;
+    color: #000000;
+    border-color: #000000;
 }
 
 .btn.danger {
@@ -585,7 +628,17 @@ header {
     gap: 10px;
 }
 
-/* --- TABELA HISTORII --- */
+#custom-dialog-message {
+    font-size: 15px;
+    color: #e0e0e0;
+    margin: 0;
+    line-height: 1.5;
+}
+
+[data-theme="light"] #custom-dialog-message {
+    color: #000000;
+}
+
 .table-container {
     background: var(--bg-card);
     border-radius: 8px;
@@ -797,6 +850,16 @@ input:checked+.slider:before {
     margin: 0;
     font-size: 18px;
     color: #fff;
+}
+
+[data-theme="light"] #custom-dialog-modal .modal-content {
+    background: #ffffff;
+    border: 1px solid #94a3b8;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] #custom-dialog-title {
+    color: #000000;
 }
 
 /* --- LIBRARY VIEW TOOLBAR --- */
