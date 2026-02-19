@@ -9,6 +9,11 @@ let cachedTests = [];
 let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
 let currentViewMode = 'grid'; // 'grid', 'list', 'table', 'compact'
+let isTrainingMode = false;
+
+export function getTrainingMode() {
+    return isTrainingMode;
+}
 
 // View mode button references
 const viewButtons = {
@@ -103,6 +108,14 @@ export function initViewSwitcher() {
             });
             isSearchBound = true;
         }
+    }
+
+    // Bind training mode toggle
+    if (elements.toggleTrainingMode) {
+        elements.toggleTrainingMode.addEventListener('change', (e) => {
+            isTrainingMode = e.target.checked;
+            console.log("Training Mode:", isTrainingMode);
+        });
     }
 
     // Init Electron listeners

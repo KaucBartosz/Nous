@@ -62,10 +62,27 @@ function getElementsLazy() {
         btnGuest: document.getElementById('btn-guest'),
         btnTogglePassword: document.getElementById('btn-toggle-password'),
         btnToggleGuestView: document.getElementById('btn-toggle-guest-view'),
+        btnToggleCloudView: document.getElementById('btn-toggle-cloud-view'),
+        cloudActionsContainer: document.getElementById('cloud-actions-container'),
+        btnCloudImportAll: document.getElementById('btn-cloud-import-all'),
+        btnCloudDownloadAll: document.getElementById('btn-cloud-download-all'),
+
+        guestActionsContainer: document.getElementById('guest-actions-container'),
+        btnGuestImportAll: document.getElementById('btn-guest-import-all'),
+        btnGuestDownloadAll: document.getElementById('btn-guest-download-all'),
+
+        localActionsContainer: document.getElementById('local-actions-container'),
+        btnLocalDownloadAll: document.getElementById('btn-local-download-all'),
 
         // Sync Toggle
         toggleSync: document.getElementById('toggle-sync'),
         syncToggleContainer: document.getElementById('sync-toggle-container'),
+
+        // Training Mode
+        toggleTrainingMode: document.getElementById('toggle-training-mode'),
+        trainingResultsContent: document.getElementById('training-results-content'),
+        normalResultsContent: document.getElementById('normal-results-content'),
+        modalHeaderTitle: document.querySelector('#results-modal .modal-header h3'),
     };
 
     return _elements;

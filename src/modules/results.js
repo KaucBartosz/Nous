@@ -5,7 +5,7 @@ import { getActiveDemographics } from './demographics.js';
 import { saveResult } from './database.js';
 import { syncNow } from './sync.js';
 import { Dialog } from './dialog.js';
-import { loadTestsList } from './library.js';
+import { loadTestsList, getTrainingMode } from './library.js';
 
 let currentResultPackage = null;
 
@@ -104,31 +104,57 @@ function handleTestResults(raw) {
         researcher_uid: user ? user.uid : "GUEST",
         subject_id: participantId,
         demographics: currentDemo,
-        wyniki: raw
+        wyniki: raw,
+        isTraining: getTrainingMode()
     };
 
     openModal(currentResultPackage);
 }
 
 function openModal(data) {
-    const s = data.wyniki.czas_reakcji ? `${data.wyniki.czas_reakcji} ms` : (data.wyniki.score || "Koniec");
-    document.getElementById('modal-score').textContent = s;
-    document.getElementById('modal-json-preview').textContent = JSON.stringify(data.wyniki, null, 2);
+    const isTraining = data.isTraining;
 
-    updateSaveButtonState();
+    if (isTraining) {
+        elements.modalHeaderTitle.textContent = "Badanie Zakończone (Tryb treningowy)";
+        elements.normalResultsContent.classList.add('hidden');
+        elements.trainingResultsContent.classList.remove('hidden');
+        elements.btnDiscard.classList.add('hidden');
+    } else {
+        elements.modalHeaderTitle.textContent = "Badanie Zakończone";
+        elements.normalResultsContent.classList.remove('hidden');
+        elements.trainingResultsContent.classList.add('hidden');
+        elements.btnDiscard.classList.remove('hidden');
+
+        const s = data.wyniki.czas_reakcji ? `${data.wyniki.czas_reakcji} ms` : (data.wyniki.score || "Koniec");
+        document.getElementById('modal-score').textContent = s;
+        document.getElementById('modal-json-preview').textContent = JSON.stringify(data.wyniki, null, 2);
+    }
+
+    updateSaveButtonState(isTraining);
     elements.modalOverlay.classList.remove('hidden');
 }
 
-function updateSaveButtonState() {
-    // Teraz zawsze pozwalamy zapisać (chyba że guest?)
-    // Guest też może zapisać lokalnie, ale nie wyśle do chmury.
-    elements.btnUploadCloud.disabled = false;
-    elements.btnUploadCloud.textContent = "Zapisz i Zamknij";
-    elements.modalUploadInfo.innerHTML = '';
+function updateSaveButtonState(isTraining) {
+    if (isTraining) {
+        elements.btnUploadCloud.disabled = false;
+        elements.btnUploadCloud.textContent = "Zamknij";
+        elements.modalUploadInfo.innerHTML = '';
+    } else {
+        elements.btnUploadCloud.disabled = false;
+        elements.btnUploadCloud.textContent = "Zapisz i Zamknij";
+        elements.modalUploadInfo.innerHTML = '';
+    }
 }
 
 async function saveResultToSystem() {
     if (!currentResultPackage) return;
+
+    if (currentResultPackage.isTraining) {
+        elements.modalOverlay.classList.add('hidden');
+        loadTestsList();
+        return;
+    }
+
     try {
         elements.btnUploadCloud.textContent = "Zapisywanie...";
 

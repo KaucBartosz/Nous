@@ -111,7 +111,18 @@
                 <div class="library-toolbar">
                     <input type="text" id="library-search" placeholder="Szukaj testu..." class="library-search-input">
 
-                    <div class="view-switcher">
+                    <div class="view-switcher" style="margin-left: auto;">
+                        <div class="training-mode-container"
+                            style="display: flex; align-items: center; gap: 8px; margin-right: 20px; padding-right: 20px; border-right: 1px solid var(--border);">
+                            <span class="view-switcher-label">Tryb treningowy:</span>
+                            <label class="switch" title="Tryb treningowy">
+                                <input type="checkbox" id="toggle-training-mode">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="material-icons info-icon" id="training-info-icon"
+                                style="font-size: 18px; color: var(--text-muted); cursor: help;"
+                                title="W trybie treningowym wyniki nie są zapisywane ani ocenianie">info</span>
+                        </div>
                         <span class="view-switcher-label">Widok:</span>
                         <button id="view-grid" class="view-btn active" title="Siatka kart">
                             <span class="material-icons">grid_view</span>
@@ -142,22 +153,70 @@
                             title="Pokaż wyniki zapisane lokalnie w trybie Gościa">
                             <span class="material-icons">no_accounts</span> Pokaż wyniki Gościa
                         </button>
+                        <button id="btn-toggle-cloud-view" class="btn outline small hidden"
+                            title="Pokaż moje wyniki zapisane w chmurze">
+                            <span class="material-icons">cloud_queue</span> Pokaż moje wyniki z bazy danych
+                        </button>
                         <button id="btn-export-csv" class="btn secondary small">
                             <span class="material-icons">download</span> Pobierz historię wyników w CSV
                         </button>
                     </div>
                 </div>
 
-                <div class="download-format-selector">
-                    <span>Format pobierania pojedynczego wyniku:</span>
-                    <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                        <input type="radio" name="dl-format" value="json" checked>
-                        <span>JSON (Pełny)</span>
-                    </label>
-                    <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                        <input type="radio" name="dl-format" value="csv">
-                        <span>CSV (Tabela)</span>
-                    </label>
+                <div class="history-actions-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap;">
+                    <div class="format-selector-wrapper">
+                        <div class="download-format-selector" style="margin-bottom: 0;">
+                            <span>Format pobierania plików:</span>
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="dl-format" value="json">
+                                <span>JSON (Pełny)</span>
+                            </label>
+                            <label
+                                style="cursor: pointer; display: flex; align-items: center; gap: 5px; margin-left: 10px;">
+                                <input type="radio" name="dl-format" value="csv" checked>
+                                <span>CSV (Tabela)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="actions-wrapper">
+                        <div id="cloud-actions-container" class="hidden"
+                            style="display:flex; gap:10px; align-items:center;">
+                            <button id="btn-cloud-import-all" class="btn primary small">
+                                <span class="material-icons">input</span> Importuj wszystkie do lokalnej bazy
+                            </button>
+                            <button id="btn-cloud-download-all" class="btn secondary small" style="min-width: 160px;">
+                                <span id="btn-cloud-download-text">
+                                    <span class="material-icons">download</span> Pobierz wszystkie
+                                </span>
+                                <div class="btn-progress" id="btn-cloud-download-progress"></div>
+                            </button>
+                        </div>
+
+                        <div id="guest-actions-container" class="hidden"
+                            style="display:flex; gap:10px; align-items:center;">
+                            <button id="btn-guest-import-all" class="btn primary small">
+                                <span class="material-icons">move_to_inbox</span> Importuj wszystkie wyniki Gościa
+                            </button>
+                            <button id="btn-guest-download-all" class="btn secondary small" style="min-width: 160px;">
+                                <span id="btn-guest-download-text">
+                                    <span class="material-icons">download</span> Pobierz wszystkie
+                                </span>
+                                <div class="btn-progress" id="btn-guest-download-progress"></div>
+                            </button>
+                        </div>
+
+                        <div id="local-actions-container" class="hidden"
+                            style="display:flex; gap:10px; align-items:center;">
+                            <button id="btn-local-download-all" class="btn secondary small" style="min-width: 160px;">
+                                <span id="btn-local-download-text">
+                                    <span class="material-icons">download</span> Pobierz wszystkie wyniki
+                                </span>
+                                <div class="btn-progress" id="btn-local-download-progress"></div>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table id="history-table">
@@ -561,12 +620,19 @@
                 <button id="btn-close-modal" class="close-x">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="score-display">
-                    <span class="label">Wynik:</span>
-                    <span class="value" id="modal-score">---</span>
+                <div id="normal-results-content">
+                    <div class="score-display">
+                        <span class="label">Wynik:</span>
+                        <span class="value" id="modal-score">---</span>
+                    </div>
+                    <div class="json-preview">
+                        <pre id="modal-json-preview">{...}</pre>
+                    </div>
                 </div>
-                <div class="json-preview">
-                    <pre id="modal-json-preview">{...}</pre>
+                <div id="training-results-content" class="hidden" style="text-align: center; padding: 20px 0;">
+                    <p style="font-size: 18px; color: var(--primary); font-weight: 600; margin-bottom: 10px;">Zakończono
+                        test w trybie treningowym</p>
+                    <p style="color: var(--text-muted);">W trybie treningowym żadne dane nie są zapisywane.</p>
                 </div>
                 <div class="status-info" id="modal-upload-info"></div>
             </div>

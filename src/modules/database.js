@@ -102,7 +102,7 @@ export async function saveResult(resultData, currentUserId) {
             id,
             researcher_uid: currentUserId, // Ensure correct user
             timestamp,
-            sync_status: 'PENDING',
+            sync_status: resultData.sync_status || 'PENDING',
             created_at: timestamp
         };
 
@@ -114,7 +114,7 @@ export async function saveResult(resultData, currentUserId) {
             payloadToSave = {
                 id: id,
                 timestamp: timestamp,           // INDEXED
-                sync_status: 'PENDING',         // INDEXED
+                sync_status: resultData.sync_status || 'PENDING',         // INDEXED
                 created_at: timestamp,
                 is_encrypted: true,
                 encrypted_payload: payload,
@@ -255,6 +255,22 @@ export async function deleteResult(id) {
     } catch (error) {
         console.error('Error deleting result:', error);
         throw new Error(`Nie udało się usunąć wyniku: ${error.message}`);
+    }
+}
+
+/**
+ * Checks if a result already exists in the local database.
+ */
+export async function checkResultExists(firestoreId, timestamp, testId, subjectId) {
+    try {
+        const results = await getAllResults();
+        return results.some(r =>
+            (firestoreId && r.firestore_id === firestoreId) ||
+            (r.timestamp === timestamp && r.test_id === testId && r.subject_id === subjectId)
+        );
+    } catch (e) {
+        console.error("Error checking for duplicate:", e);
+        return false;
     }
 }
 

@@ -485,6 +485,71 @@ ipcMain.on('save-local-result', (event, dataToSave) => {
     });
 });
 
+ipcMain.handle('download-bulk-zip', async (event, { results, filename, format }) => {
+    const dialog = require('electron').dialog;
+    const zip = new AdmZip();
+
+    try {
+        results.forEach((res, index) => {
+            const dateStr = new Date(res.timestamp || res.synced_at).toISOString().replace(/[:.]/g, '-');
+            const testId = res.test_id || res.testId || 'unknown';
+            const subjectId = res.subject_id || 'unknown';
+            const baseName = `Wynik_${testId}_${subjectId}_${dateStr}`;
+
+            if (format === 'csv') {
+                // We'll receive pre-formatted CSV content or format it here.
+                // To keep main.js clean, let's assume the renderer sends the content 
+                // but that might be heavy for IPC. 
+                // Better: Renderer sends raw data, we format here.
+
+                let csvContent = "\uFEFF"; // BOM
+                const flat = {};
+                flat['Data'] = new Date(res.timestamp || res.synced_at).toLocaleString();
+                flat['Test ID'] = testId;
+                flat['ID Badanego'] = subjectId;
+
+                const resData = res.wyniki || res.data || {};
+                // Simple flattening for CSV
+                Object.keys(resData).forEach(k => {
+                    if (typeof resData[k] === 'object') {
+                        flat[k] = JSON.stringify(resData[k]);
+                    } else {
+                        flat[k] = resData[k];
+                    }
+                });
+
+                const headers = Object.keys(flat);
+                csvContent += headers.join(';') + "\r\n";
+                csvContent += headers.map(h => {
+                    let val = String(flat[h]);
+                    if (val.includes(';') || val.includes('\n')) val = `"${val.replace(/"/g, '""')}"`;
+                    return val;
+                }).join(';') + "\r\n";
+
+                zip.addFile(`${baseName}.csv`, Buffer.from(csvContent, 'utf8'));
+            } else {
+                const jsonStr = JSON.stringify(res, null, 2);
+                zip.addFile(`${baseName}.json`, Buffer.from(jsonStr, 'utf8'));
+            }
+        });
+
+        const { filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Zapisz paczkę wyników (ZIP)',
+            defaultPath: filename,
+            filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
+        });
+
+        if (filePath) {
+            zip.writeZip(filePath);
+            return { success: true };
+        }
+        return { success: false, cancelled: true };
+    } catch (e) {
+        console.error("Bulk Zip Error:", e);
+        return { success: false, error: e.message };
+    }
+});
+
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
