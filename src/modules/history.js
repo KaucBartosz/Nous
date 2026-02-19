@@ -40,6 +40,8 @@ export function initHistoryView() {
         const user = getCurrentUser();
         if (user) handleDownloadAllLocal(user.uid);
     };
+
+    updateToggleButtonsState();
 }
 
 function updateToggleButtonsState() {
@@ -87,7 +89,7 @@ function updateToggleButtonsState() {
 }
 
 export async function loadHistoryData() {
-
+    updateToggleButtonsState();
     elements.historyTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
     const user = getCurrentUser();
 
