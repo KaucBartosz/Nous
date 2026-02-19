@@ -37,13 +37,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist
+        run: npm run dist -- --publish always
 
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:linux:ci
+        run: npm run dist:linux:ci -- --publish always
 
       - name: Build macOS
         if: matrix.os == 'macos-latest'
@@ -52,4 +52,4 @@ jobs:
           # Code signing secrets (optional but recommended for macOS)
           # CSC_LINK: ${{ secrets.CSC_LINK }}
           # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-        run: npm run dist:mac
+        run: npm run dist:mac -- --publish always
