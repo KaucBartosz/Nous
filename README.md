@@ -1,7 +1,6 @@
 # Nous - Oficjalne Wydania
 
 Witaj w repozytorium dystrybucyjnym aplikacji **Nous**.
-To miejsce służy do hostowania plików instalacyjnych i aktualizacji. Kod źródłowy aplikacji jest prywatny.
 
 ## 📥 Pobierz najnowszą wersję
 
@@ -58,7 +57,7 @@ Gdy wydamy nową wersję w tym repozytorium, Twoja aplikacja automatycznie ją w
 
 ## 🐛 Zgłaszanie błędów
 
-Mimo że kod jest prywatny, możesz zgłaszać problemy z działaniem aplikacji w zakładce [Issues](https://github.com/KaucBartosz/Nous/issues) tego repozytorium, bądź mailowo na <kaucb@ukw.edu.pl>.
+Możesz zgłaszać problemy z działaniem aplikacji w zakładce [Issues](https://github.com/KaucBartosz/Nous/issues), bądź mailowo na <kaucb@ukw.edu.pl>.
 
 1. Przejdź do zakładki Issues.
 2. Kliknij "New Issue".
