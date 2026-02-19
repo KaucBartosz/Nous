@@ -226,7 +226,7 @@ async function handleClaimResult(result, userUid) {
     const choice = await Dialog.custom(
         "Czy chcesz przenieść ten wynik (zniknie z konta Gościa) czy skopiować (zostanie na koncie Gościa)?",
         [
-            { label: "Przenieś (Wycinij)", value: "move", class: "btn primary" },
+            { label: "Przenieś (Wytnij)", value: "move", class: "btn primary" },
             { label: "Kopiuj (Duplikuj)", value: "copy", class: "btn secondary" },
             { label: "Anuluj", value: false, class: "btn outline" }
         ]
