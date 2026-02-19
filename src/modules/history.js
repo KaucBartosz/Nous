@@ -1,29 +1,75 @@
-// src/modules/history.js
-import { getAllResults } from './database.js';
+
+import { getAllResults, claimGuestResult } from './database.js';
 import { getCurrentUser } from './auth.js';
 import { elements } from './ui.js';
 import { syncSingleResult } from './sync.js';
 import { Dialog } from './dialog.js';
 
+let isGuestViewActive = false;
+
+export function initHistoryView() {
+    if (elements.btnToggleGuestView) {
+        elements.btnToggleGuestView.addEventListener('click', () => {
+            isGuestViewActive = !isGuestViewActive;
+            updateGuestViewButtonState();
+            loadHistoryData();
+        });
+    }
+}
+
+function updateGuestViewButtonState() {
+    if (!elements.btnToggleGuestView) return;
+
+    if (isGuestViewActive) {
+        elements.btnToggleGuestView.classList.add('active');
+        elements.btnToggleGuestView.innerHTML = '<span class="material-icons">person</span> Pokaż moje wyniki';
+        elements.btnToggleGuestView.title = "Wróć do wyników zalogowanego użytkownika";
+    } else {
+        elements.btnToggleGuestView.classList.remove('active');
+        elements.btnToggleGuestView.innerHTML = '<span class="material-icons">no_accounts</span> Pokaż wyniki Gościa';
+        elements.btnToggleGuestView.title = "Pokaż wyniki zapisane lokalnie w trybie Gościa";
+    }
+}
+
 export async function loadHistoryData() {
+
     elements.historyTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
     const user = getCurrentUser();
 
-    // Allow GUEST access too - they only see their own local data
-    const uid = user ? user.uid : "GUEST";
+    // Show toggle button ONLY if user is logged in
+    if (elements.btnToggleGuestView) {
+        if (user) {
+            elements.btnToggleGuestView.classList.remove('hidden');
+        } else {
+            elements.btnToggleGuestView.classList.add('hidden');
+            isGuestViewActive = false; // Reset to safe state
+        }
+    }
+
+    // Determine target UID based on view mode
+    // If Guest View is Active -> Show 'GUEST' data
+    // If Normal View -> Show User's data (or 'GUEST' if actually logged in as guest)
+    let targetUid = user ? user.uid : "GUEST";
+
+    if (user && isGuestViewActive) {
+        targetUid = "GUEST";
+    }
 
     try {
         const allResults = await getAllResults();
 
-        // Filter by user locally
+        // Filter by target UID
         const myResults = allResults
-            .filter(r => r.researcher_uid === uid)
+            .filter(r => r.researcher_uid === targetUid)
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Descending
 
         elements.historyTableBody.innerHTML = '';
 
         if (myResults.length === 0) {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="6">Brak wyników.</td></tr>';
+            const msg = isGuestViewActive
+                ? 'Brak wyników w trybie Gościa.'
+                : 'Brak wyników.';
+            elements.historyTableBody.innerHTML = `<tr><td colspan="6">${msg}</td></tr>`;
             return;
         }
 
@@ -57,66 +103,87 @@ export async function loadHistoryData() {
             tdScore.appendChild(strongScore);
             row.appendChild(tdScore);
 
-            // 5. Sync Status
-            const tdSync = document.createElement('td');
-            tdSync.style.textAlign = 'center';
-            const icon = document.createElement('span');
-            icon.className = 'material-icons';
-            icon.style.fontSize = '18px';
+            // 5. Sync Status / Actions
+            const tdStatus = document.createElement('td');
+            tdStatus.style.textAlign = 'center';
 
-            const sync_status = r.sync_status || r.syncStatus;
+            if (isGuestViewActive && user) {
+                // CLAIMS MODE
+                // Show Import Button instead of Sync Status
+                const btnClaim = document.createElement('button');
+                btnClaim.className = 'btn small primary';
+                btnClaim.style.padding = '2px 8px';
+                btnClaim.style.fontSize = '12px';
+                btnClaim.innerHTML = '<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> Przejmij';
+                btnClaim.title = "Przypisz ten wynik do swojego konta";
 
-            if (r.researcher_uid === 'GUEST') {
-                icon.textContent = 'dns';
-                icon.style.color = '#888';
-                icon.title = 'Lokalne (Tryb Gościa)';
-            } else if (sync_status === 'SYNCED') {
-                icon.textContent = 'cloud_done';
-                icon.style.color = '#4caf50';
-                icon.title = 'Zsynchronizowano';
-            } else if (sync_status === 'PENDING') {
-                // Check permissions dynamically from UI state
-                const statusEl = document.getElementById('user-status-display');
-                const userStatus = statusEl ? statusEl.textContent : '';
-                const canUpload = (userStatus === 'APPROVED' || userStatus === 'ADMIN');
+                btnClaim.onclick = async (e) => {
+                    e.stopPropagation();
+                    await handleClaimResult(r, user.uid);
+                };
 
-                if (canUpload) {
-                    icon.textContent = 'cloud_upload';
-                    icon.style.color = '#ff9800';
-                    icon.style.cursor = 'pointer';
-                    icon.title = 'Kliknij, aby wysłać do chmury';
+                tdStatus.appendChild(btnClaim);
 
-                    icon.onclick = async (e) => {
-                        e.stopPropagation();
-                        // Loading state
-                        icon.textContent = 'sync';
-                        icon.classList.add('spin');
-                        icon.style.color = '#2196f3';
-                        icon.onclick = null; // Disable double click
-
-                        try {
-                            await syncSingleResult(r);
-                            // Success -> Reload handled by event sync-complete
-                        } catch (err) {
-                            icon.classList.remove('spin');
-                            icon.textContent = 'error';
-                            icon.style.color = 'red';
-                            await Dialog.alert("Błąd wysyłania: " + err.message, 'error');
-                            loadHistoryData(); // Restore state
-                        }
-                    };
-                } else {
-                    icon.textContent = 'cloud_off';
-                    icon.style.color = '#aaa';
-                    icon.title = 'Czeka na wysyłkę (Wymagany status APPROVED)';
-                }
             } else {
-                icon.textContent = 'error';
-                icon.style.color = 'red';
-                icon.title = `Status nieznany: ${sync_status}`;
+                // NORMAL MODE (Sync Status)
+                const icon = document.createElement('span');
+                icon.className = 'material-icons';
+                icon.style.fontSize = '18px';
+
+                const sync_status = r.sync_status || r.syncStatus;
+
+                if (r.researcher_uid === 'GUEST') {
+                    icon.textContent = 'dns';
+                    icon.style.color = '#888';
+                    icon.title = 'Lokalne (Tryb Gościa)';
+                } else if (sync_status === 'SYNCED') {
+                    icon.textContent = 'cloud_done';
+                    icon.style.color = '#4caf50';
+                    icon.title = 'Zsynchronizowano';
+                } else if (sync_status === 'PENDING') {
+                    // Check permissions dynamically from UI state
+                    const statusEl = document.getElementById('user-status-display');
+                    const userStatus = statusEl ? statusEl.textContent : '';
+                    const canUpload = (userStatus === 'APPROVED' || userStatus === 'ADMIN');
+
+                    if (canUpload) {
+                        icon.textContent = 'cloud_upload';
+                        icon.style.color = '#ff9800';
+                        icon.style.cursor = 'pointer';
+                        icon.title = 'Kliknij, aby wysłać do chmury';
+
+                        icon.onclick = async (e) => {
+                            e.stopPropagation();
+                            // Loading state
+                            icon.textContent = 'sync';
+                            icon.classList.add('spin');
+                            icon.style.color = '#2196f3';
+                            icon.onclick = null; // Disable double click
+
+                            try {
+                                await syncSingleResult(r);
+                                // Success -> Reload handled by event sync-complete
+                            } catch (err) {
+                                icon.classList.remove('spin');
+                                icon.textContent = 'error';
+                                icon.style.color = 'red';
+                                await Dialog.alert("Błąd wysyłania: " + err.message, 'error');
+                                loadHistoryData(); // Restore state
+                            }
+                        };
+                    } else {
+                        icon.textContent = 'cloud_off';
+                        icon.style.color = '#aaa';
+                        icon.title = 'Czeka na wysyłkę (Wymagany status APPROVED)';
+                    }
+                } else {
+                    icon.textContent = 'error';
+                    icon.style.color = 'red';
+                    icon.title = `Status nieznany: ${sync_status}`;
+                }
+                tdStatus.appendChild(icon);
             }
-            tdSync.appendChild(icon);
-            row.appendChild(tdSync);
+            row.appendChild(tdStatus);
 
             // 6. Action (Download)
             const tdAction = document.createElement('td');
@@ -152,6 +219,29 @@ export async function loadHistoryData() {
         } else {
             elements.historyTableBody.innerHTML = `<tr><td colspan="6" style="color: #f44336;">Błąd: ${e.message}</td></tr>`;
         }
+    }
+}
+
+async function handleClaimResult(result, userUid) {
+    const choice = await Dialog.custom(
+        "Czy chcesz przenieść ten wynik (zniknie z konta Gościa) czy skopiować (zostanie na koncie Gościa)?",
+        [
+            { label: "Przenieś (Wycinij)", value: "move", class: "btn primary" },
+            { label: "Kopiuj (Duplikuj)", value: "copy", class: "btn secondary" },
+            { label: "Anuluj", value: false, class: "btn outline" }
+        ]
+    );
+
+    if (!choice) return;
+
+    try {
+        const keepOriginal = (choice === 'copy');
+        await claimGuestResult(result, userUid, keepOriginal);
+
+        await Dialog.alert("Wynik został pomyślnie przypisany do Twojego konta!", "success");
+        loadHistoryData(); // Refresh list
+    } catch (e) {
+        await Dialog.alert("Błąd podczas przejmowania wyniku: " + e.message, "error");
     }
 }
 

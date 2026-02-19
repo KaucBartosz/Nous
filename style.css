@@ -219,7 +219,18 @@ input:focus {
     transition: all 0.2s;
     font-size: 14px;
     overflow: hidden;
+
     position: relative;
+}
+
+.btn.small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn.active {
+    background: var(--primary);
+    color: white;
 }
 
 .btn.full-width {

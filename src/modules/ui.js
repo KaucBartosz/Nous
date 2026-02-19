@@ -58,8 +58,10 @@ function getElementsLazy() {
         // Auth buttons
         btnLogin: document.getElementById('btn-login'),
         btnRegister: document.getElementById('btn-register'),
+
         btnGuest: document.getElementById('btn-guest'),
         btnTogglePassword: document.getElementById('btn-toggle-password'),
+        btnToggleGuestView: document.getElementById('btn-toggle-guest-view'),
 
         // Sync Toggle
         toggleSync: document.getElementById('toggle-sync'),

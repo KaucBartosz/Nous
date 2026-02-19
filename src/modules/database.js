@@ -247,6 +247,7 @@ export async function markAsSynced(local_id, firestore_id) {
     }
 }
 
+
 export async function deleteResult(id) {
     try {
         const db = await initDB();
@@ -255,6 +256,40 @@ export async function deleteResult(id) {
         console.error('Error deleting result:', error);
         throw new Error(`Nie udało się usunąć wyniku: ${error.message}`);
     }
+}
+
+/**
+ * Claims a Guest result and assigns it to the current user.
+ * @param {Object} guestResult - The fully decrypted result object
+ * @param {string} currentUserId - The user claiming the result
+ * @param {boolean} keepOriginal - If true, copies (new ID); if false, moves (overwrites ID)
+ */
+export async function claimGuestResult(guestResult, currentUserId, keepOriginal) {
+    if (!currentUserId || currentUserId === 'GUEST') {
+        throw new Error("Tylko zalogowany użytkownik może przejąć wyniki.");
+    }
+
+    const payload = { ...guestResult };
+
+    // Set new owner
+    payload.researcher_uid = currentUserId;
+
+    // Reset sync status ensures it will be synced to cloud
+    payload.sync_status = 'PENDING';
+
+    // Remove cloud reference if exists (Guest results shouldn't have one, but just in case)
+    delete payload.firestore_id;
+    delete payload.firestoreId;
+
+    if (keepOriginal) {
+        // COPY: Remove ID to let saveResult generate a new unique one
+        delete payload.id;
+    } else {
+        // MOVE: We keep the ID to overwrite the old record.
+        // The record was previously owned by GUEST, now by USER.
+    }
+
+    return await saveResult(payload, currentUserId);
 }
 
 // --- TEMPLATES (Metryczki - NOT ENCRYPTED intentionally) ---

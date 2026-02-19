@@ -134,11 +134,18 @@
 
             <!-- WIDOK 2: Historia (Tabela) -->
             <div id="history-view" class="hidden">
+
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <h3>Ostatnie Badania</h3>
-                    <button id="btn-export-csv" class="btn secondary small">
-                        <span class="material-icons">download</span> Pobierz historię wyników w CSV
-                    </button>
+                    <div style="display:flex; gap: 10px;">
+                        <button id="btn-toggle-guest-view" class="btn outline small hidden"
+                            title="Pokaż wyniki zapisane lokalnie w trybie Gościa">
+                            <span class="material-icons">no_accounts</span> Pokaż wyniki Gościa
+                        </button>
+                        <button id="btn-export-csv" class="btn secondary small">
+                            <span class="material-icons">download</span> Pobierz historię wyników w CSV
+                        </button>
+                    </div>
                 </div>
 
                 <div class="download-format-selector"

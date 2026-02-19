@@ -45,10 +45,42 @@ export const Dialog = {
      * @param {string} message 
      * @returns {Promise<boolean>} - true if confirmed, false otherwise
      */
+
     confirm(message) {
         this.init();
         return new Promise((resolve) => {
             this.setupDialog(message, 'question', true);
+            this.resolvePromise = resolve;
+            this.show();
+        });
+    },
+
+    /**
+     * Show a custom dialog with specific buttons.
+     * @param {string} message 
+     * @param {Array<{label: string, value: any, class: string}>} buttons 
+     * @returns {Promise<any>} - Returns value of clicked button, or null/false if cancelled
+     */
+    custom(message, buttons) {
+        this.init();
+        return new Promise((resolve) => {
+            // 1. Setup Content
+            this.titleEl.textContent = 'Wybór akcji';
+            this.messageEl.textContent = message;
+            this.iconEl.innerHTML = `<span class="material-icons" style="font-size: 48px; color: #3771c8;">help_outline</span>`;
+
+            // 2. Setup Buttons
+            this.footerEl.innerHTML = '';
+
+            buttons.forEach(btnConfig => {
+                const btn = document.createElement('button');
+                btn.textContent = btnConfig.label;
+                btn.className = btnConfig.class || 'btn outline';
+                btn.addEventListener('click', () => this.close(btnConfig.value));
+                this.footerEl.appendChild(btn);
+            });
+
+            // 3. Show
             this.resolvePromise = resolve;
             this.show();
         });

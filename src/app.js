@@ -2,7 +2,8 @@
 import { elements, switchView } from './modules/ui.js';
 import { initAuth, login, register, logout, loginGuest } from './modules/auth.js';
 import { loadTestsList, initViewSwitcher } from './modules/library.js';
-import { loadHistoryData, exportHistoryToCSV } from './modules/history.js';
+
+import { loadHistoryData, exportHistoryToCSV, initHistoryView } from './modules/history.js';
 import { loadUpdatesData } from './modules/updates.js';
 import { initDemographics, saveDemographicsFromForm } from './modules/demographics.js';
 import { initDemoCreator, refreshTemplatesList } from './modules/demoCreator.js';
@@ -61,7 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. About Modal
     if (elements.navAbout) elements.navAbout.addEventListener('click', () => elements.aboutModal.classList.remove('hidden'));
     if (elements.btnCloseAbout) elements.btnCloseAbout.addEventListener('click', () => elements.aboutModal.classList.add('hidden'));
+
     if (elements.btnAboutCloseFooter) elements.btnAboutCloseFooter.addEventListener('click', () => elements.aboutModal.classList.add('hidden'));
+
+    // 5.5. History View Init
+    initHistoryView();
 
     // 6. Subsystems
     initDemographics();
