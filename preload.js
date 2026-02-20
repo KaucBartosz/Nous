@@ -44,5 +44,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     downloadBulkZip: (data) => ipcRenderer.invoke('download-bulk-zip', data),
 
     // 9. OTWIERANIE LINKÓW
-    openExternal: (url) => ipcRenderer.send('open-external', url)
+    openExternal: (url) => ipcRenderer.send('open-external', url),
+
+    // 10. SYSTEM INFO
+    isMac: process.platform === 'darwin'
 });

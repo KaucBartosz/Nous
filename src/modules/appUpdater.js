@@ -58,6 +58,10 @@ export function initAppUpdater() {
 
     if (btnDownload) {
         btnDownload.addEventListener('click', () => {
+            if (api.isMac) {
+                api.openExternal('https://github.com/KaucBartosz/Nous/releases/latest');
+                return;
+            }
             hide(btnDownload); // Hide download button to prevent double click
             show(progressContainer);
             setStatus('Inicjowanie pobierania...', '#aaa');
@@ -80,6 +84,11 @@ export function initAppUpdater() {
 
     api.onAppUpdateAvailable((info) => {
         setStatus(`Dostępna nowa wersja: v${info.version}`, '#4caf50');
+
+        if (api.isMac) {
+            btnDownload.innerHTML = '<span class="material-icons">open_in_new</span> Otwórz GitHub (Pobierz)';
+        }
+
         show(btnDownload);
         hide(btnInstall);
 
@@ -103,10 +112,10 @@ export function initAppUpdater() {
                     <h4 class="toast-title">Dostępna Aktualizacja</h4>
                     <button class="toast-close">&times;</button>
                 </div>
-                <p class="toast-message">Dostępna jest nowa wersja programu Nous (v${newVersion}).</p>
+                <p class="toast-message">Dostępna jest nowa wersja programu Nous (v${newVersion}).${api.isMac ? ' (Wymaga ręcznego pobrania na Mac)' : ''}</p>
                 <div class="toast-actions">
                     <button class="toast-btn" id="btn-toast-dismiss">Później</button>
-                    <button class="toast-btn primary" id="btn-toast-update">Idź do Aktualizacji</button>
+                    <button class="toast-btn primary" id="btn-toast-update">${api.isMac ? 'Pobierz z GitHub' : 'Idź do Aktualizacji'}</button>
                 </div>
             </div>
         `;
@@ -127,9 +136,13 @@ export function initAppUpdater() {
 
         toast.querySelector('#btn-toast-update').addEventListener('click', () => {
             close();
-            // Switch to Updates Tab
-            const updatesBtn = document.getElementById('nav-updates');
-            if (updatesBtn) updatesBtn.click();
+            if (api.isMac) {
+                api.openExternal('https://github.com/KaucBartosz/Nous/releases/latest');
+            } else {
+                // Switch to Updates Tab
+                const updatesBtn = document.getElementById('nav-updates');
+                if (updatesBtn) updatesBtn.click();
+            }
         });
     }
 

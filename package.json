@@ -13,7 +13,7 @@
     "dist": "electron-builder --win --x64",
     "dist:linux": "electron-builder --linux --x64 -c.linux.target=zip",
     "dist:linux:ci": "electron-builder --linux --x64 -c.linux.target=AppImage",
-    "dist:mac": "electron-builder --mac --x64 --arm64"
+    "dist:mac": "electron-builder --mac --universal"
   },
   "keywords": [],
   "author": "KaucBartosz <112867979+KaucBartosz@users.noreply.github.com>",
@@ -59,7 +59,8 @@
     },
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.utilities",
       "icon": "icon.icns",

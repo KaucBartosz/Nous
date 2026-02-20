@@ -103,7 +103,13 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
             return;
         }
 
-        const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'www.github.com', 'www.raw.githubusercontent.com'];
+        const allowedDomains = [
+            'github.com',
+            'raw.githubusercontent.com',
+            'www.github.com',
+            'www.raw.githubusercontent.com',
+            'objects.githubusercontent.com' // Dodane dla przekierowań pobierania
+        ];
         if (!allowedDomains.includes(parsedUrl.hostname)) {
             console.error(`Blocked download from unauthorized domain: ${parsedUrl.hostname}`);
             sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Niedozwolona domena pobierania!');
@@ -270,7 +276,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
 
                     } catch (err) {
                         console.error("Błąd ZIP:", err);
-                        sender.send('test-status', 'Błąd rozpakowywania archiwum!');
+                        sender.send('test-status', `Błąd rozpakowywania: ${err.message}`);
                         activeDownloads.delete(testId);
                     }
                 });
