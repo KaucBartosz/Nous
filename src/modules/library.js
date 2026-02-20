@@ -133,6 +133,17 @@ export function initViewSwitcher() {
         }
     }
 
+    // Bind Training Mode toggle
+    if (elements.toggleTrainingMode) {
+        isTrainingMode = localStorage.getItem('trainingMode') === 'true';
+        elements.toggleTrainingMode.checked = isTrainingMode;
+
+        elements.toggleTrainingMode.addEventListener('change', (e) => {
+            isTrainingMode = e.target.checked;
+            localStorage.setItem('trainingMode', isTrainingMode);
+        });
+    }
+
     // Bind HPM toggle
     if (elements.toggleHPM) {
         // Load HPM state from storage - Default to OFF (false)
@@ -701,6 +712,6 @@ export async function startTestProcess(url, id, ver) {
             btn.style.overflow = 'hidden';
         }
 
-        window.electronAPI.downloadAndRun(url, id, ver, false, isHpmEnabled);
+        window.electronAPI.downloadAndRun(url, id, ver, false, isHpmEnabled, isTrainingMode);
     } else await Dialog.alert("Brak Electrona", 'error');
 }

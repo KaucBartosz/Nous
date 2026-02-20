@@ -2,9 +2,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    // 1. Aktualizacja downloadAndRun (dodano parametr onlyDownload i hpmEnabled)
-    downloadAndRun: (url, testId, version, onlyDownload = false, hpmEnabled = false) =>
-        ipcRenderer.send('download-and-run', { url, testId, version, onlyDownload, hpmEnabled }),
+    // 1. Aktualizacja downloadAndRun (dodano parametr onlyDownload, hpmEnabled i trainingMode)
+    downloadAndRun: (url, testId, version, onlyDownload = false, hpmEnabled = false, trainingMode = false) =>
+        ipcRenderer.send('download-and-run', { url, testId, version, onlyDownload, hpmEnabled, trainingMode }),
 
     onStatusUpdate: (callback) => ipcRenderer.on('test-status', (event, message) => callback(message)),
     onTestResults: (callback) => ipcRenderer.on('test-results-forwarded', (event, data) => callback(data)),

@@ -71,7 +71,7 @@ function findStartFile(folderPath) {
 // 1. OBSŁUGA POBIERANIA (ZIP) I URUCHAMIANIA
 // ==========================================================
 
-ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpmEnabled }) => {
+ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpmEnabled, trainingMode }) => {
     const sender = event.sender;
 
     // --- SECURITY CHECK: RATE LIMITING ---
@@ -157,7 +157,12 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
             sender.send('test-status', `Test (v${version}) jest gotowy.`);
         } else {
             sender.send('test-status', `Uruchamianie z cache (v${version})...`);
-            openTestWindow(entryFile);
+
+            if (hpmEnabled) {
+                runPythonTestIfPossible(testFolder, sender, trainingMode);
+            } else {
+                openTestWindow(entryFile);
+            }
         }
         activeDownloads.delete(testId); // Clean up
         return;
@@ -271,7 +276,7 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
 
                             // Wybór silnika (JS vs Python)
                             if (hpmEnabled) {
-                                runPythonTestIfPossible(testFolder, sender);
+                                runPythonTestIfPossible(testFolder, sender, trainingMode);
                             } else {
                                 openTestWindow(entryFile);
                             }
@@ -714,9 +719,9 @@ ipcMain.on('open-external', (event, url) => {
 // ==========================================================
 
 const HPM_ENGINE_URLS = {
-    'win32': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_win.zip',
-    'darwin-x64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_mac_x64.zip',
-    'darwin-arm64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_mac_arm64.zip'
+    'win32': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_win.zip',
+    'darwin-x64': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_mac_x64.zip',
+    'darwin-arm64': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_mac_arm64.zip'
 };
 
 function getPythonPath() {
@@ -806,7 +811,7 @@ ipcMain.on('download-hpm-engine', (event) => {
     });
 });
 
-function runPythonTestIfPossible(testFolder, sender) {
+function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
     const pythonPath = getPythonPath();
     const mainPyPath = path.join(testFolder, 'main.py');
 
@@ -830,7 +835,11 @@ function runPythonTestIfPossible(testFolder, sender) {
 
     const pythonProcess = spawn(pythonPath, [mainPyPath], {
         cwd: testFolder,
-        env: { ...process.env, NOUS_LAUNCHER: '1' }
+        env: {
+            ...process.env,
+            NOUS_LAUNCHER: '1',
+            NOUS_TRAINING: trainingMode ? '1' : '0'
+        }
     });
 
     pythonProcess.on('error', (err) => {
