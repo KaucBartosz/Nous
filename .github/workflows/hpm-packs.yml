@@ -1,0 +1,115 @@
+name: Build HPM Precision Packs
+
+on:
+  workflow_dispatch: # Wyłącznie ręczne uruchomienie z panelu GitHub Actions
+
+jobs:
+  build-packs:
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }} Pack
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: macos-13 # Intel Mac
+            platform: mac
+            arch: x64
+          - os: macos-14 # Apple Silicon Mac
+            platform: mac
+            arch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Standalone Python
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" == "win" ]; then
+            URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-x86_64-pc-windows-msvc-shared-install_runtime.tar.gz"
+          elif [ "${{ matrix.platform }}" == "mac" ]; then
+            if [ "${{ matrix.arch }}" == "arm64" ]; then
+              URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-aarch64-apple-darwin-install_runtime.tar.gz"
+            else
+              URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-x86_64-apple-darwin-install_runtime.tar.gz"
+            fi
+          else
+            URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-x86_64-unknown-linux-gnu-install_runtime.tar.gz"
+          fi
+          curl -L "$URL" -o python_standalone.tar.gz
+          tar -xzf python_standalone.tar.gz
+          mv python python_env
+
+      - name: Install PsychoPy and Dependencies
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" == "win" ]; then
+            ./python_env/python.exe -m pip install --no-cache-dir setuptools wheel
+            ./python_env/python.exe -m pip install --no-cache-dir psychopy numpy scipy pandas pyglet
+          else
+            ./python_env/bin/python3 -m pip install --no-cache-dir setuptools wheel
+            ./python_env/bin/python3 -m pip install --no-cache-dir psychopy numpy scipy pandas pyglet
+          fi
+
+      - name: Cleanup and Optimize
+        shell: bash
+        run: |
+          find python_env -name "__pycache__" -type d -exec rm -rf {} +
+          rm python_standalone.tar.gz
+
+      - name: Archive Pack
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" == "mac" ]; then
+            ZIP_NAME="python_env_${{ matrix.platform }}_${{ matrix.arch }}.zip"
+          else
+            ZIP_NAME="python_env_${{ matrix.platform }}.zip"
+          fi
+          zip -r "$ZIP_NAME" python_env/
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hpm-pack-${{ matrix.platform }}-${{ matrix.arch }}
+          path: ${{ env.ZIP_NAME }}
+          retention-days: 1
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-packs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+          merge-multiple: true
+
+      - name: Create or Update Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: hpm-precision-packs
+          name: "HPM Precision Packs (PsychoPy Portable)"
+          body: |
+            Automatycznie wygenerowane środowiska PsychoPy dla trybu HPM.
+            
+            **Paczki w tym wydaniu:**
+            - `python_env_win.zip` (Windows)
+            - `python_env_linux.zip` (Linux)
+            - `python_env_mac_x64.zip` (macOS Intel)
+            - `python_env_mac_arm64.zip` (macOS Apple Silicon)
+            
+            *Zbudowano: ${{ github.event.repository.updated_at }}*
+          files: release_assets/*.zip
+          draft: false
+          prerelease: false
+          target_commitish: ${{ github.sha }}
+          make_latest: true

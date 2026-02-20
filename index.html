@@ -126,6 +126,18 @@
                                 style="font-size: 18px; color: var(--text-muted); cursor: help;"
                                 title="W trybie treningowym wyniki nie są zapisywane ani ocenianie">info</span>
                         </div>
+
+                        <div class="hpm-mode-container"
+                            style="display: flex; align-items: center; gap: 8px; margin-right: 20px; padding-right: 20px; border-right: 1px solid var(--border);">
+                            <span class="view-switcher-label">Tryb wysokiej precyzji:</span>
+                            <label class="switch" title="Tryb wysokiej precyzji">
+                                <input type="checkbox" id="toggle-hpm">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="material-icons info-icon" id="hpm-info-icon"
+                                style="font-size: 18px; color: var(--text-muted); cursor: help;"
+                                title="Uruchamia testy natywnie w Pythonie (wymaga silnika PsychoPy)">info</span>
+                        </div>
                         <span class="view-switcher-label">Widok:</span>
                         <button id="view-grid" class="view-btn active" title="Siatka kart">
                             <span class="material-icons">grid_view</span>
@@ -732,7 +744,7 @@
             </div>
             <div class="modal-body">
                 <div id="custom-dialog-icon" style="margin-bottom: 15px;"></div>
-                <p id="custom-dialog-message">Treść komunikatu...
+                <p id="custom-dialog-message">Treść komunikatu...</p>
             </div>
             <div class="modal-footer" id="custom-dialog-footer" style="justify-content: center; gap: 15px;">
                 <!-- Buttons injected via JS -->

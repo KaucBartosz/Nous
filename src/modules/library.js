@@ -10,9 +10,14 @@ let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
 let currentViewMode = 'grid'; // 'grid', 'list', 'table', 'compact'
 let isTrainingMode = false;
+let isHpmEnabled = false;
 
 export function getTrainingMode() {
     return isTrainingMode;
+}
+
+export function getHpmEnabled() {
+    return isHpmEnabled;
 }
 
 // View mode button references
@@ -60,6 +65,24 @@ export function initLibraryListeners() {
         console.log("Test installed, refreshing library:", data);
         invalidateLocalVersionsCache(); // Unieważnij cache
         loadTestsList(undefined, true); // Force refresh
+    });
+
+    window.electronAPI.onHpmDownloadProgress((percent) => {
+        console.log(`HPM Download: ${percent}%`);
+        const statusLabel = document.getElementById('hpm-status-label');
+        if (statusLabel) statusLabel.textContent = `Pobieranie: ${percent}%`;
+    });
+
+    window.electronAPI.onHpmInstalled((success) => {
+        if (success) {
+            Dialog.alert("Silnik Python (HPM) został zainstalowany pomyślnie!", 'success');
+        } else {
+            Dialog.alert("Błąd podczas instalacji silnika Python.", 'error');
+            if (elements.toggleHPM) elements.toggleHPM.checked = false;
+            isHpmEnabled = false;
+        }
+        const statusLabel = document.getElementById('hpm-status-label');
+        if (statusLabel) statusLabel.textContent = '';
     });
 
     listenersRegistered = true;
@@ -110,11 +133,49 @@ export function initViewSwitcher() {
         }
     }
 
-    // Bind training mode toggle
-    if (elements.toggleTrainingMode) {
-        elements.toggleTrainingMode.addEventListener('change', (e) => {
-            isTrainingMode = e.target.checked;
-            console.log("Training Mode:", isTrainingMode);
+    // Bind HPM toggle
+    if (elements.toggleHPM) {
+        // Load HPM state from storage - Default to OFF (false)
+        const savedHpm = localStorage.getItem('hpmEnabled');
+        isHpmEnabled = savedHpm === 'true'; // If null or 'false', stays false
+        elements.toggleHPM.checked = isHpmEnabled;
+
+        elements.toggleHPM.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                // Check if engine exists
+                const engineExists = await window.electronAPI.getHpmStatus();
+                if (!engineExists) {
+                    const confirm = await Dialog.confirm(
+                        "Tryb Wysokiej Precyzji (HPM)",
+                        "Ten tryb uruchamia testy natywnie w Pythonie (PsychoPy), co zapewnia precyzję rzędu milisekund. Wymaga to pobrania dodatkowych narzędzi (ok. 300MB). Czy kontynuować?",
+                        'info'
+                    );
+
+                    if (confirm) {
+                        isHpmEnabled = true;
+                        localStorage.setItem('hpmEnabled', 'true');
+                        // Dodaj label stanu pod toggle (opcjonalnie, lub użyj istniejącego mechanizmu)
+                        let statusLabel = document.getElementById('hpm-status-label');
+                        if (!statusLabel) {
+                            statusLabel = document.createElement('span');
+                            statusLabel.id = 'hpm-status-label';
+                            statusLabel.style.cssText = 'font-size: 10px; color: var(--primary); margin-left: 10px;';
+                            elements.toggleHPM.parentElement.parentElement.appendChild(statusLabel);
+                        }
+                        statusLabel.textContent = 'Pobieranie...';
+                        window.electronAPI.downloadHpmEngine();
+                    } else {
+                        e.target.checked = false;
+                        isHpmEnabled = false;
+                    }
+                } else {
+                    isHpmEnabled = true;
+                    localStorage.setItem('hpmEnabled', 'true');
+                }
+            } else {
+                isHpmEnabled = false;
+                localStorage.setItem('hpmEnabled', 'false');
+            }
         });
     }
 
@@ -160,7 +221,14 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
     // 2. Always update local versions (using cached getter)
     const localVersions = await getLocalVersionsCached();
     cachedTests.forEach(t => {
-        t.local_ver = localVersions[t.id] ? Number(localVersions[t.id]) : 0;
+        const local = localVersions[t.id];
+        if (local) {
+            t.local_ver = Number(local.version);
+            t.hasPython = local.hasPython;
+        } else {
+            t.local_ver = 0;
+            t.hasPython = false;
+        }
     });
 
     renderTests(cachedTests, filterText);
@@ -274,8 +342,17 @@ function renderGridView(tests) {
 
         const versionSpan = document.createElement('span');
         versionSpan.className = 'meta';
-        versionSpan.style.color = '#666';
-        versionSpan.textContent = `v${t.version}`;
+        versionSpan.style.cssText = 'color: #666; display: flex; align-items: center; gap: 8px;';
+
+        if (t.hasPython) {
+            const badge = document.createElement('span');
+            badge.className = 'hpm-badge';
+            badge.textContent = 'HPM';
+            badge.title = 'Ten test wspiera tryb wysokiej precyzji (Python/PsychoPy)';
+            versionSpan.appendChild(badge);
+        }
+
+        versionSpan.appendChild(document.createTextNode(`v${t.version}`));
 
         topDiv.appendChild(iconsDiv);
         topDiv.appendChild(versionSpan);
@@ -363,7 +440,17 @@ function renderListView(tests) {
         metaDiv.className = 'list-meta';
 
         const versionSpan = document.createElement('span');
-        versionSpan.textContent = `v${t.version}`;
+        versionSpan.style.display = 'flex';
+        versionSpan.style.alignItems = 'center';
+        versionSpan.style.gap = '8px';
+
+        if (t.hasPython) {
+            const badge = document.createElement('span');
+            badge.className = 'hpm-badge small';
+            badge.textContent = 'HPM';
+            versionSpan.appendChild(badge);
+        }
+        versionSpan.appendChild(document.createTextNode(`v${t.version}`));
 
         const statusSpan = document.createElement('span');
         statusSpan.style.color = status.iconColor;
@@ -534,7 +621,17 @@ function renderCompactView(tests) {
 
         const versionSpan = document.createElement('span');
         versionSpan.className = 'compact-version';
-        versionSpan.textContent = `v${t.version}`;
+        versionSpan.style.display = 'flex';
+        versionSpan.style.alignItems = 'center';
+        versionSpan.style.gap = '4px';
+
+        if (t.hasPython) {
+            const badge = document.createElement('span');
+            badge.className = 'hpm-badge compact';
+            badge.textContent = 'HPM';
+            versionSpan.appendChild(badge);
+        }
+        versionSpan.appendChild(document.createTextNode(`v${t.version}`));
 
         const button = document.createElement('button');
         button.className = `btn ${status.btnClass} compact`;
@@ -583,6 +680,6 @@ export async function startTestProcess(url, id, ver) {
             btn.style.overflow = 'hidden';
         }
 
-        window.electronAPI.downloadAndRun(url, id, ver, false);
+        window.electronAPI.downloadAndRun(url, id, ver, false, isHpmEnabled);
     } else await Dialog.alert("Brak Electrona", 'error');
 }

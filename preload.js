@@ -2,9 +2,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    // 1. Aktualizacja downloadAndRun (dodano parametr onlyDownload = false)
-    downloadAndRun: (url, testId, version, onlyDownload = false) =>
-        ipcRenderer.send('download-and-run', { url, testId, version, onlyDownload }),
+    // 1. Aktualizacja downloadAndRun (dodano parametr onlyDownload i hpmEnabled)
+    downloadAndRun: (url, testId, version, onlyDownload = false, hpmEnabled = false) =>
+        ipcRenderer.send('download-and-run', { url, testId, version, onlyDownload, hpmEnabled }),
 
     onStatusUpdate: (callback) => ipcRenderer.on('test-status', (event, message) => callback(message)),
     onTestResults: (callback) => ipcRenderer.on('test-results-forwarded', (event, data) => callback(data)),
@@ -46,6 +46,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 9. OTWIERANIE LINKÓW
     openExternal: (url) => ipcRenderer.send('open-external', url),
 
-    // 10. SYSTEM INFO
+    // 10. HIGH PRECISION MODE (HPM)
+    getHpmStatus: () => ipcRenderer.invoke('get-hpm-status'),
+    downloadHpmEngine: () => ipcRenderer.send('download-hpm-engine'),
+    onHpmDownloadProgress: (callback) => ipcRenderer.on('hpm-download-progress', (event, percent) => callback(percent)),
+    onHpmInstalled: (callback) => ipcRenderer.on('hpm-installed', (event, success) => callback(success)),
+
+    // 11. SYSTEM INFO
     isMac: process.platform === 'darwin'
 });

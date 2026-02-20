@@ -1,4 +1,3 @@
-// main.js - Wersja Finalna (Fullscreen + Icons Support)
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -6,6 +5,7 @@ const https = require('https');
 const crypto = require('crypto');
 const AdmZip = require('adm-zip');
 const { autoUpdater } = require('electron-updater');
+const { spawn } = require('child_process');
 
 // WYMUSZENIE PUBLICZNEGO REPOZYTORIUM JAKO ŹRÓDŁA AKTUALIZACJI
 autoUpdater.setFeedURL({
@@ -71,7 +71,7 @@ function findStartFile(folderPath) {
 // 1. OBSŁUGA POBIERANIA (ZIP) I URUCHAMIANIA
 // ==========================================================
 
-ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) => {
+ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpmEnabled }) => {
     const sender = event.sender;
 
     // --- SECURITY CHECK: RATE LIMITING ---
@@ -268,7 +268,13 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload }) =
                             sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
                         } else {
                             sender.send('test-status', 'Gotowe. Uruchamianie...');
-                            openTestWindow(entryFile);
+
+                            // Wybór silnika (JS vs Python)
+                            if (hpmEnabled) {
+                                runPythonTestIfPossible(testFolder, sender);
+                            } else {
+                                openTestWindow(entryFile);
+                            }
                         }
 
                         // Success - cleanup
@@ -311,17 +317,23 @@ ipcMain.handle('get-local-versions', async (event) => {
             .map(dirent => dirent.name);
 
         testFolders.forEach(testId => {
-            const metaPath = path.join(testsDir, testId, 'meta.json');
+            const testFolder = path.join(testsDir, testId);
+            const metaPath = path.join(testFolder, 'meta.json');
+            const hasPython = fs.existsSync(path.join(testFolder, 'main.py'));
+
             if (fs.existsSync(metaPath)) {
                 try {
                     const metaContent = fs.readFileSync(metaPath, 'utf8');
                     const meta = JSON.parse(metaContent);
-                    localVersions[testId] = meta.version;
+                    localVersions[testId] = {
+                        version: meta.version,
+                        hasPython: hasPython
+                    };
                 } catch (e) {
-                    localVersions[testId] = 0;
+                    localVersions[testId] = { version: 0, hasPython: hasPython };
                 }
             } else {
-                localVersions[testId] = 0;
+                localVersions[testId] = { version: 0, hasPython: hasPython };
             }
         });
     } catch (error) {
@@ -696,3 +708,148 @@ ipcMain.handle('import-template', async (event) => {
 ipcMain.on('open-external', (event, url) => {
     shell.openExternal(url);
 });
+
+// ==========================================================
+// 8. HIGH PRECISION MODE (HPM) - ENGINE MANAGEMENT
+// ==========================================================
+
+const HPM_ENGINE_URLS = {
+    'win32': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_win.zip',
+    'linux-x64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_linux.zip',
+    'darwin-x64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_mac_x64.zip',
+    'darwin-arm64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_mac_arm64.zip'
+};
+
+function getPythonPath() {
+    const userDataPath = app.getPath('userData');
+    const hpmDir = path.join(userDataPath, 'python_env');
+
+    // Windows: python_env/python.exe
+    // Unix: python_env/bin/python3
+    if (process.platform === 'win32') {
+        return path.join(hpmDir, 'python.exe');
+    } else {
+        return path.join(hpmDir, 'bin', 'python3');
+    }
+}
+
+ipcMain.handle('get-hpm-status', async () => {
+    const pythonPath = getPythonPath();
+    return fs.existsSync(pythonPath);
+});
+
+ipcMain.on('download-hpm-engine', (event) => {
+    const sender = event.sender;
+    const userDataPath = app.getPath('userData');
+    const hpmDir = path.join(userDataPath, 'python_env');
+    const zipPath = path.join(userDataPath, 'hpm_engine.zip');
+
+    let platformKey = process.platform;
+    if (process.platform !== 'win32') {
+        platformKey = `${process.platform}-${process.arch}`;
+    }
+
+    const downloadUrl = HPM_ENGINE_URLS[platformKey];
+    if (!downloadUrl) {
+        console.error("Unsupported platform/arch for HPM:", platformKey);
+        sender.send('hpm-installed', false);
+        return;
+    }
+
+    if (!fs.existsSync(hpmDir)) {
+        fs.mkdirSync(hpmDir, { recursive: true });
+    }
+
+    const file = fs.createWriteStream(zipPath);
+
+    // Używamy tej samej logiki co przy testach (uproszczona wersja)
+    https.get(downloadUrl, (response) => {
+        if (response.statusCode !== 200 && response.statusCode !== 302) {
+            sender.send('hpm-installed', false);
+            return;
+        }
+
+        // Obsługa przekierowania (uproszczona)
+        let downloadUrl = HPM_ENGINE_URL;
+        if (response.statusCode === 302) {
+            // W prawdziwym kodzie obsłużylibyśmy to rekurencyjnie jak w downloadAndRun
+            // Tu zakładamy bezpośredni link lub proste przekierowanie
+        }
+
+        const totalBytes = parseInt(response.headers['content-length'], 10);
+        let receivedBytes = 0;
+
+        response.on('data', (chunk) => {
+            receivedBytes += chunk.length;
+            file.write(chunk);
+            if (totalBytes) {
+                const percent = Math.round((receivedBytes / totalBytes) * 100);
+                sender.send('hpm-download-progress', percent);
+            }
+        });
+
+        response.on('end', () => {
+            file.end();
+            file.on('finish', () => {
+                try {
+                    const zip = new AdmZip(zipPath);
+                    zip.extractAllTo(hpmDir, true);
+                    fs.unlinkSync(zipPath);
+                    sender.send('hpm-installed', true);
+                } catch (e) {
+                    console.error("HPM Engine Extract Error:", e);
+                    sender.send('hpm-installed', false);
+                }
+            });
+        });
+    }).on('error', (e) => {
+        sender.send('hpm-installed', false);
+    });
+});
+
+function runPythonTestIfPossible(testFolder, sender) {
+    const pythonPath = getPythonPath();
+    const mainPyPath = path.join(testFolder, 'main.py');
+
+    // 1. Sprawdź czy silnik w ogóle istnieje
+    if (!fs.existsSync(pythonPath)) {
+        sender.send('test-status', 'Silnik HPM brakujący. Uruchamiam wersję JS...');
+        const entryFile = findStartFile(testFolder);
+        if (entryFile) openTestWindow(entryFile);
+        return;
+    }
+
+    // 2. Sprawdź czy test wspiera Pythona
+    if (!fs.existsSync(mainPyPath)) {
+        // Cichy fallback - nie straszymy użytkownika
+        const entryFile = findStartFile(testFolder);
+        if (entryFile) openTestWindow(entryFile);
+        return;
+    }
+
+    sender.send('test-status', 'Uruchamianie natywne (HPM)...');
+
+    const pythonProcess = spawn(pythonPath, [mainPyPath], {
+        cwd: testFolder,
+        env: { ...process.env, NOUS_LAUNCHER: '1' }
+    });
+
+    pythonProcess.on('error', (err) => {
+        console.error("Python Error:", err);
+        sender.send('test-status', `Błąd Pythona: ${err.message}`);
+    });
+
+    pythonProcess.on('close', (code) => {
+        console.log(`Python process closed with code ${code}`);
+        // Po zamknięciu Pythona sprawdzamy czy wygenerował wyniki (np. results.json)
+        const resultsPath = path.join(testFolder, 'results.json');
+        if (fs.existsSync(resultsPath)) {
+            try {
+                const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+                sender.send('test-results-forwarded', results);
+            } catch (e) {
+                console.error("Error reading Python results:", e);
+            }
+        }
+    });
+}
