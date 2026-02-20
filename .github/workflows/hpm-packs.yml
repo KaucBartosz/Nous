@@ -13,9 +13,6 @@ jobs:
           - os: windows-latest
             platform: win
             arch: x64
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
           - os: macos-13 # Intel Mac
             platform: mac
             arch: x64
@@ -103,7 +100,6 @@ jobs:
             
             **Paczki w tym wydaniu:**
             - `python_env_win.zip` (Windows)
-            - `python_env_linux.zip` (Linux)
             - `python_env_mac_x64.zip` (macOS Intel)
             - `python_env_mac_arm64.zip` (macOS Apple Silicon)
             

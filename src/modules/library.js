@@ -142,9 +142,30 @@ export function initViewSwitcher() {
 
         elements.toggleHPM.addEventListener('change', async (e) => {
             if (e.target.checked) {
+                // Check if user on Linux
+                const isLinux = window.navigator.platform.toLowerCase().includes('linux');
+
                 // Check if engine exists
                 const engineExists = await window.electronAPI.getHpmStatus();
                 if (!engineExists) {
+                    if (isLinux) {
+                        // Linux Manual Instructions
+                        await Dialog.alert(
+                            "Instalacja HPM na Linux",
+                            "Na systemie Linux zalecamy ręczną instalację środowiska ze względu na różnorodność dystrybucji.<br><br>" +
+                            "Otwórz terminal i wklej poniższe komendy:<br>" +
+                            "<pre style='background:#f4f4f4;padding:10px;font-size:11px;user-select:all;'>" +
+                            "mkdir -p ~/.config/Nous/python_env\n" +
+                            "python3 -m venv ~/.config/Nous/python_env\n" +
+                            "~/.config/Nous/python_env/bin/python3 -m pip install psychopy numpy scipy pandas pyglet" +
+                            "</pre><br>" +
+                            "Po zakończeniu zamknij i otwórz ponownie Launcher.",
+                            'info'
+                        );
+                        e.target.checked = false;
+                        return;
+                    }
+
                     const confirm = await Dialog.confirm(
                         "Tryb Wysokiej Precyzji (HPM)",
                         "Ten tryb uruchamia testy natywnie w Pythonie (PsychoPy), co zapewnia precyzję rzędu milisekund. Wymaga to pobrania dodatkowych narzędzi (ok. 300MB). Czy kontynuować?",

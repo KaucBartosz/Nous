@@ -715,7 +715,6 @@ ipcMain.on('open-external', (event, url) => {
 
 const HPM_ENGINE_URLS = {
     'win32': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_win.zip',
-    'linux-x64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_linux.zip',
     'darwin-x64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_mac_x64.zip',
     'darwin-arm64': 'https://github.com/KaucBartosz/Nous-Precision-Pack/releases/download/hpm-precision-packs/python_env_mac_arm64.zip'
 };
