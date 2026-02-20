@@ -23,6 +23,7 @@ function getElementsLazy() {
         navDemographics: document.getElementById('nav-demographics'),
         navDemoCreator: document.getElementById('nav-demo-creator'),
         navSettings: document.getElementById('nav-settings'),
+        navWhatsNew: document.getElementById('nav-whats-new'),
         navAbout: document.getElementById('nav-about'),
 
         viewLibrary: document.getElementById('library-view'),
@@ -32,6 +33,7 @@ function getElementsLazy() {
         viewDemographics: document.getElementById('demographics-view'),
         viewDemoCreator: document.getElementById('demo-creator-view'),
         viewSettings: document.getElementById('settings-view'),
+        viewWhatsNew: document.getElementById('whats-new-view'),
 
         historyTableBody: document.querySelector('#history-table tbody'),
         updatesTableBody: document.querySelector('#updates-table tbody'),
@@ -122,6 +124,11 @@ const VIEW_CONFIG = {
         view: 'viewDemoCreator',
         nav: 'navDemoCreator',
         callback: 'onCreator'
+    },
+    whatsNew: {
+        view: 'viewWhatsNew',
+        nav: 'navWhatsNew',
+        callback: 'onWhatsNew'
     },
     settings: {
         view: 'viewSettings',

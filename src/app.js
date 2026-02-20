@@ -11,6 +11,7 @@ import { initResultsHandler } from './modules/results.js';
 import { initSyncService, setAutoSync, getAutoSyncState } from './modules/sync.js';
 import { initSettings } from './modules/settings.js';
 import { initAppUpdater } from './modules/appUpdater.js';
+import { initWhatsNew, loadWhatsNewView } from './modules/whatsNew.js';
 
 // --- INITIALIZATION ---
 
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.navUpdates.addEventListener('click', () => switchView('updates', { onUpdates: loadUpdatesData }));
     elements.navDemographics.addEventListener('click', () => switchView('demographics'));
     elements.navDemoCreator.addEventListener('click', () => switchView('creator', { onCreator: refreshTemplatesList }));
+    elements.navWhatsNew.addEventListener('click', () => switchView('whatsNew', { onWhatsNew: loadWhatsNewView }));
     elements.navSettings.addEventListener('click', () => switchView('settings'));
 
     // 3. Auth Buttons
@@ -73,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDemoCreator();
     initResultsHandler();
     initAppUpdater();
+    initWhatsNew();
 
     // 7. Offline Sync & Toggle
     initSyncService();

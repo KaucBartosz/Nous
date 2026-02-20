@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com; script-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.gstatic.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://github.com https://raw.githubusercontent.com https://www.google.com; frame-src https://www.google.com;">
+        content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com; script-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.gstatic.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://github.com https://*.github.com https://api.github.com https://raw.githubusercontent.com https://www.google.com; frame-src https://www.google.com;">
     <title>Nous</title>
     <!-- Czcionki Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -73,6 +73,9 @@
 
                 <button id="nav-settings" class="nav-item">
                     <span class="material-icons">settings</span> Ustawienia
+                </button>
+                <button id="nav-whats-new" class="nav-item">
+                    <span class="material-icons">new_releases</span> Co nowego?
                 </button>
                 <button id="nav-about" class="nav-item">
                     <span class="material-icons">info</span> O programie
@@ -606,7 +609,42 @@
                         zapisane!</span>
                 </div>
             </div>
+            <!-- WIDOK 7: Co nowego? -->
+            <div id="whats-new-view" class="hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <div>
+                        <h3>Co nowego w Nous?</h3>
+                        <p style="color:#888; margin: 0;">Ostatnie zmiany i aktualizacje aplikacji.</p>
+                    </div>
+                    <div style="display:flex; gap: 10px;">
+                        <button id="btn-refresh-whats-new" class="btn secondary small">
+                            <span class="material-icons">refresh</span> Odśwież
+                        </button>
+                        <button id="btn-open-github" class="btn primary small">
+                            <span class="material-icons">open_in_new</span> Otwórz GitHub
+                        </button>
+                    </div>
+                </div>
 
+                <div class="whats-new-container">
+                    <div id="whats-new-content" class="markdown-content">
+                        <!-- Treść zostanie załadowana przez JS -->
+                    </div>
+
+                    <div id="whats-new-loading" class="loading-spinner"
+                        style="display:none; text-align:center; padding: 40px;">
+                        <span class="material-icons" style="font-size: 48px; color: var(--primary-color);">sync</span>
+                        <p style="margin-top: 15px; color: var(--text-muted);">Ładowanie informacji o zmianach...</p>
+                    </div>
+
+                    <div id="whats-new-error" class="error-message"
+                        style="display:none; text-align:center; padding: 40px; color: #ff5252;">
+                        <span class="material-icons" style="font-size: 48px;">error</span>
+                        <p style="margin-top: 15px;">Nie udało się załadować informacji o zmianach.</p>
+                        <p style="font-size: 14px; color: #888;">Spróbuj ponownie później lub otwórz GitHub ręcznie.</p>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
