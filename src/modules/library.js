@@ -178,8 +178,7 @@ export function initViewSwitcher() {
                     }
 
                     const confirm = await Dialog.confirm(
-                        "Tryb Wysokiej Precyzji (HPM)",
-                        "Ten tryb uruchamia testy natywnie w Pythonie (PsychoPy), co zapewnia precyzję rzędu milisekund. Wymaga to pobrania dodatkowych narzędzi (ok. 300MB). Czy kontynuować?",
+                        "Tryb Wysokiej Precyzji (HPM) zapewnia najwyższą dokładność pomiaru parametrów czasowych poprzez natywne wykonywanie testów. Aktywacja tego trybu wymaga jednorazowego pobrania specjalistycznego pakietu zasobów (ok. 300MB). Czy chcesz kontynuować?",
                         'info'
                     );
 

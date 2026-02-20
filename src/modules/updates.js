@@ -74,7 +74,7 @@ export async function loadUpdatesData(filterText = '') {
         remoteSnap.forEach(doc => {
             const r = doc.data();
             r.id = doc.id;
-            r.local_ver = localVersions[r.id] ? Number(localVersions[r.id]) : 0;
+            r.local_ver = localVersions[r.id] ? Number(localVersions[r.id].version) : 0;
             r.remote_ver = Number(r.version);
             tests.push(r);
         });

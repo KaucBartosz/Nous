@@ -728,10 +728,10 @@ function getPythonPath() {
     const userDataPath = app.getPath('userData');
     const hpmDir = path.join(userDataPath, 'python_env');
 
-    // Windows: python_env/python.exe
-    // Unix: python_env/bin/python3
     if (process.platform === 'win32') {
-        return path.join(hpmDir, 'python.exe');
+        const rootPath = path.join(hpmDir, 'python.exe');
+        const nestedPath = path.join(hpmDir, 'python_env', 'python.exe');
+        return fs.existsSync(nestedPath) ? nestedPath : rootPath;
     } else {
         return path.join(hpmDir, 'bin', 'python3');
     }
@@ -742,8 +742,17 @@ ipcMain.handle('get-hpm-status', async () => {
     return fs.existsSync(pythonPath);
 });
 
-ipcMain.on('download-hpm-engine', (event) => {
+ipcMain.on('download-hpm-engine', async (event) => {
     const sender = event.sender;
+
+    // Check if already exists to prevent redundant downloads
+    const pythonPath = getPythonPath();
+    if (fs.existsSync(pythonPath)) {
+        console.log("HPM Engine already exists, skipping download.");
+        sender.send('hpm-installed', true);
+        return;
+    }
+
     const userDataPath = app.getPath('userData');
     const hpmDir = path.join(userDataPath, 'python_env');
     const zipPath = path.join(userDataPath, 'hpm_engine.zip');
@@ -753,8 +762,8 @@ ipcMain.on('download-hpm-engine', (event) => {
         platformKey = `${process.platform}-${process.arch}`;
     }
 
-    const downloadUrl = HPM_ENGINE_URLS[platformKey];
-    if (!downloadUrl) {
+    const initialUrl = HPM_ENGINE_URLS[platformKey];
+    if (!initialUrl) {
         console.error("Unsupported platform/arch for HPM:", platformKey);
         sender.send('hpm-installed', false);
         return;
@@ -764,51 +773,66 @@ ipcMain.on('download-hpm-engine', (event) => {
         fs.mkdirSync(hpmDir, { recursive: true });
     }
 
-    const file = fs.createWriteStream(zipPath);
-
-    // Używamy tej samej logiki co przy testach (uproszczona wersja)
-    https.get(downloadUrl, (response) => {
-        if (response.statusCode !== 200 && response.statusCode !== 302) {
+    // Funkcja do pobierania z obsługą przekierowań (GitHub releases!)
+    const downloadHpmWithRedirect = (currentUrl, redirects = 5) => {
+        if (redirects === 0) {
+            console.error("Too many redirects for HPM download");
             sender.send('hpm-installed', false);
             return;
         }
 
-        // Obsługa przekierowania (uproszczona)
-        let downloadUrl = HPM_ENGINE_URL;
-        if (response.statusCode === 302) {
-            // W prawdziwym kodzie obsłużylibyśmy to rekurencyjnie jak w downloadAndRun
-            // Tu zakładamy bezpośredni link lub proste przekierowanie
-        }
-
-        const totalBytes = parseInt(response.headers['content-length'], 10);
-        let receivedBytes = 0;
-
-        response.on('data', (chunk) => {
-            receivedBytes += chunk.length;
-            file.write(chunk);
-            if (totalBytes) {
-                const percent = Math.round((receivedBytes / totalBytes) * 100);
-                sender.send('hpm-download-progress', percent);
+        https.get(currentUrl, (response) => {
+            // Obsługa przekierowań (301, 302, 303, 307, 308)
+            if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+                const redirectUrl = response.headers.location;
+                if (redirectUrl) {
+                    downloadHpmWithRedirect(redirectUrl, redirects - 1);
+                    return;
+                }
             }
-        });
 
-        response.on('end', () => {
-            file.end();
-            file.on('finish', () => {
-                try {
-                    const zip = new AdmZip(zipPath);
-                    zip.extractAllTo(hpmDir, true);
-                    fs.unlinkSync(zipPath);
-                    sender.send('hpm-installed', true);
-                } catch (e) {
-                    console.error("HPM Engine Extract Error:", e);
-                    sender.send('hpm-installed', false);
+            if (response.statusCode !== 200) {
+                console.error(`HPM Download failed with status: ${response.statusCode}`);
+                sender.send('hpm-installed', false);
+                return;
+            }
+
+            const file = fs.createWriteStream(zipPath);
+            const totalBytes = parseInt(response.headers['content-length'], 10);
+            let receivedBytes = 0;
+
+            response.on('data', (chunk) => {
+                receivedBytes += chunk.length;
+                file.write(chunk);
+                if (totalBytes) {
+                    const percent = Math.round((receivedBytes / totalBytes) * 100);
+                    sender.send('hpm-download-progress', percent);
                 }
             });
+
+            response.on('end', () => {
+                file.end();
+                file.on('finish', () => {
+                    try {
+                        const zip = new AdmZip(zipPath);
+                        // Folder nadrzędny 'python_env' już istnieje (hpmDir),
+                        // AdmZip extractAllTo(path, overwrite)
+                        zip.extractAllTo(hpmDir, true);
+                        try { fs.unlinkSync(zipPath); } catch (e) { }
+                        sender.send('hpm-installed', true);
+                    } catch (e) {
+                        console.error("HPM Engine Extract Error:", e);
+                        sender.send('hpm-installed', false);
+                    }
+                });
+            });
+        }).on('error', (err) => {
+            console.error("HPM Network Error:", err);
+            sender.send('hpm-installed', false);
         });
-    }).on('error', (e) => {
-        sender.send('hpm-installed', false);
-    });
+    };
+
+    downloadHpmWithRedirect(initialUrl);
 });
 
 function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
@@ -854,6 +878,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         if (fs.existsSync(resultsPath)) {
             try {
                 const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+                results.__hpm_context = true; // Flaga dla launchera
                 sender.send('test-results-forwarded', results);
             } catch (e) {
                 console.error("Error reading Python results:", e);

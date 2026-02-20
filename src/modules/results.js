@@ -101,6 +101,7 @@ function handleTestResults(raw) {
     currentResultPackage = {
         test_id: raw.testId || "test",
         timestamp: new Date().toISOString(),
+        hpm_used: !!raw.__hpm_context, // Czy test faktycznie wykonał się w HPM
         researcher_uid: user ? user.uid : "GUEST",
         subject_id: participantId,
         demographics: currentDemo,
@@ -125,13 +126,54 @@ function openModal(data) {
         elements.trainingResultsContent.classList.add('hidden');
         elements.btnDiscard.classList.remove('hidden');
 
-        const s = data.wyniki.czas_reakcji ? `${data.wyniki.czas_reakcji} ms` : (data.wyniki.score || "Koniec");
-        document.getElementById('modal-score').textContent = s;
-        document.getElementById('modal-json-preview').textContent = JSON.stringify(data.wyniki, null, 2);
+        // Render Extended Results (Labels mapping)
+        renderExtendedResults(data.wyniki);
     }
 
     updateSaveButtonState(isTraining);
     elements.modalOverlay.classList.remove('hidden');
+}
+
+/**
+ * Renderuje kafelki z dodatkowymi wynikami (RT, poprawność itp.)
+ */
+function renderExtendedResults(wyniki) {
+    const container = document.getElementById('modal-extended-results');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const fieldsToShow = [
+        { key: 'ilosc_poprawnych_nacisniec', label: 'Poprawne' },
+        { key: 'ilosc_blednych_nacisniec', label: 'Błędne' },
+        { key: 'ogolna_ilosc_nacisniec', label: 'Łącznie' },
+        { key: 'sredni_czas_reakcji', label: 'Śr. RT', unit: 'ms' }
+    ];
+
+    fieldsToShow.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'result-item';
+
+        const label = document.createElement('div');
+        label.className = 'result-label';
+        label.textContent = f.label;
+
+        const value = document.createElement('div');
+        value.className = 'result-value';
+
+        if (wyniki[f.key] !== undefined && wyniki[f.key] !== null) {
+            value.textContent = `${wyniki[f.key]}${f.unit ? ' ' + f.unit : ''}`;
+        } else {
+            value.textContent = 'Nie dotyczy';
+            value.style.fontSize = '14px'; // Mniejsza czcionka dla tekstu zastępczego
+            value.style.opacity = '0.5';
+        }
+
+        item.appendChild(label);
+        item.appendChild(value);
+        container.appendChild(item);
+    });
+
+    container.classList.remove('hidden');
 }
 
 function updateSaveButtonState(isTraining) {

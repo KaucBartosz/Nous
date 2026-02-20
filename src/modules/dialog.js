@@ -46,10 +46,10 @@ export const Dialog = {
      * @returns {Promise<boolean>} - true if confirmed, false otherwise
      */
 
-    confirm(message) {
+    confirm(message, type = 'question') {
         this.init();
         return new Promise((resolve) => {
-            this.setupDialog(message, 'question', true);
+            this.setupDialog(message, type, true);
             this.resolvePromise = resolve;
             this.show();
         });

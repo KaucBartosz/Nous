@@ -136,7 +136,7 @@
                             </label>
                             <span class="material-icons info-icon" id="hpm-info-icon"
                                 style="font-size: 18px; color: var(--text-muted); cursor: help;"
-                                title="Uruchamia testy natywnie w Pythonie (wymaga silnika PsychoPy)">info</span>
+                                title="Aktywacja trybu zwiększonej precyzji (HPM) wymaga pobrania dodatkowego, specjalistycznego pakietu zasobów.">info</span>
                         </div>
                         <span class="view-switcher-label">Widok:</span>
                         <button id="view-grid" class="view-btn active" title="Siatka kart">
@@ -683,13 +683,10 @@
             </div>
             <div class="modal-body">
                 <div id="normal-results-content">
-                    <div class="score-display">
-                        <span class="label">Wynik:</span>
-                        <span class="value" id="modal-score">---</span>
+                    <div id="modal-extended-results" class="extended-results hidden">
+                        <!-- JS wstrzyknie tu kafelki wyników -->
                     </div>
-                    <div class="json-preview">
-                        <pre id="modal-json-preview">{...}</pre>
-                    </div>
+                    <p class="results-hint">Dokładne dane do pobrania w zakładce Historia Wyników</p>
                 </div>
                 <div id="training-results-content" class="hidden" style="text-align: center; padding: 20px 0;">
                     <p style="font-size: 18px; color: var(--primary); font-weight: 600; margin-bottom: 10px;">Zakończono

@@ -623,6 +623,62 @@ header {
     display: block;
 }
 
+.extended-results {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.result-item {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.result-item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.result-item .result-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.result-item .result-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+[data-theme="light"] .result-item {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+[data-theme="light"] .result-value {
+    color: #1a1c26;
+}
+
+.results-hint {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 15px;
+    font-style: italic;
+    opacity: 0.8;
+}
+
 .json-preview {
     background: #111;
     padding: 10px;
