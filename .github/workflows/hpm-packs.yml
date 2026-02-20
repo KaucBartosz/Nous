@@ -44,13 +44,7 @@ jobs:
           fi
           
           echo "Downloading from $URL..."
-          curl -L "$URL" -o python_standalone.tar.gz
-          
-          if ! file python_standalone.tar.gz | grep -q 'gzip compressed data'; then
-            echo "Error: Downloaded file is not a valid gzip archive or was not found."
-            ls -lh python_standalone.tar.gz
-            exit 1
-          fi
+          curl -f -L "$URL" -o python_standalone.tar.gz
           
           tar -xzf python_standalone.tar.gz
           mv python python_env
@@ -69,7 +63,7 @@ jobs:
       - name: Cleanup and Optimize
         shell: bash
         run: |
-          find python_env -name "__pycache__" -type d -exec rm -rf {} +
+          find python_env -name "__pycache__" -type d -exec rm -rf {} + || true
           rm python_standalone.tar.gz
 
       - name: Archive Pack
@@ -81,7 +75,13 @@ jobs:
           else
             ZIP_NAME="python_env_${{ matrix.platform }}.zip"
           fi
-          zip -r "$ZIP_NAME" python_env/
+          
+          if [ "${{ matrix.platform }}" == "win" ]; then
+            7z a -r "$ZIP_NAME" python_env/
+          else
+            zip -r "$ZIP_NAME" python_env/
+          fi
+          
           echo "zip_path=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
