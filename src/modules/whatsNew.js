@@ -1,29 +1,25 @@
 import { elements } from './ui.js';
 
-const CACHE_KEY = 'whats_new_cache';
+const CACHE_KEY = 'whats_new_cache_v2';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 let isInitialized = false;
+let allReleases = [];
+let currentIndex = 0;
 
 export function initWhatsNew() {
     if (isInitialized) return;
 
-    // Inicjalizacja elementów DOM - używamy document.getElementById zamiast elements.XXX
+    // Inicjalizacja elementów DOM
     const contentEl = document.getElementById('whats-new-content');
     const loadingEl = document.getElementById('whats-new-loading');
     const errorEl = document.getElementById('whats-new-error');
     const refreshBtn = document.getElementById('btn-refresh-whats-new');
     const githubBtn = document.getElementById('btn-open-github');
+    const prevBtn = document.getElementById('btn-prev-release');
+    const nextBtn = document.getElementById('btn-next-release');
 
-    console.log('Elements for Whats New:', {
-        contentEl,
-        loadingEl,
-        errorEl,
-        refreshBtn,
-        githubBtn
-    });
-
-    if (!contentEl || !loadingEl || !errorEl || !refreshBtn || !githubBtn) {
+    if (!contentEl || !loadingEl || !errorEl || !refreshBtn || !githubBtn || !prevBtn || !nextBtn) {
         console.error('Nie można znaleźć elementów DOM dla "Co nowego".');
         return;
     }
@@ -31,6 +27,21 @@ export function initWhatsNew() {
     // Obsługa przycisku odświeżania
     refreshBtn.addEventListener('click', () => {
         loadWhatsNew(true);
+    });
+
+    // Obsługa nawigacji
+    prevBtn.addEventListener('click', () => {
+        if (currentIndex < allReleases.length - 1) {
+            currentIndex++;
+            displayWhatsNew(allReleases[currentIndex]);
+        }
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (currentIndex > 0) {
+            currentIndex--;
+            displayWhatsNew(allReleases[currentIndex]);
+        }
     });
 
     // Obsługa przycisku otwierania GitHub
@@ -75,17 +86,21 @@ export function loadWhatsNew(forceRefresh = false) {
     // Spróbuj pobrać cache, jeśli nie wymuszamy odświeżenia
     if (!forceRefresh) {
         const cachedData = getCacheData();
-        if (cachedData) {
-            displayWhatsNew(cachedData);
+        if (cachedData && cachedData.length > 0) {
+            allReleases = cachedData;
+            currentIndex = 0;
+            displayWhatsNew(allReleases[currentIndex]);
             return;
         }
     }
 
-    // Pobierz dane z GitHub API
-    fetchLatestRelease()
+    // Pobierz dane z GitHub API (listę 10 ostatnich wersji)
+    fetchReleases()
         .then(data => {
-            cacheData(data);
-            displayWhatsNew(data);
+            allReleases = data;
+            currentIndex = 0;
+            cacheData(allReleases);
+            displayWhatsNew(allReleases[currentIndex]);
         })
         .catch(err => {
             console.error('Błąd podczas pobierania danych "Co nowego":', err);
@@ -93,9 +108,9 @@ export function loadWhatsNew(forceRefresh = false) {
         });
 }
 
-async function fetchLatestRelease() {
+async function fetchReleases() {
     try {
-        const response = await fetch('https://api.github.com/repos/KaucBartosz/Nous/releases/latest', {
+        const response = await fetch('https://api.github.com/repos/KaucBartosz/Nous/releases?per_page=10', {
             headers: {
                 'Accept': 'application/vnd.github.v3+json'
             }
@@ -105,19 +120,19 @@ async function fetchLatestRelease() {
             throw new Error(`GitHub API zwróciło błąd: ${response.status}`);
         }
 
-        const release = await response.json();
+        const releases = await response.json();
 
-        if (!release || !release.tag_name || !release.body) {
-            throw new Error('Nieprawidłowa odpowiedź z GitHub API');
+        if (!Array.isArray(releases) || releases.length === 0) {
+            throw new Error('Brak wersji w repozytorium');
         }
 
-        return {
+        return releases.map(release => ({
             title: release.name || release.tag_name,
             version: release.tag_name,
             date: new Date(release.published_at).toLocaleDateString('pl-PL'),
             body: release.body || 'Brak opisu.',
             html_url: release.html_url
-        };
+        }));
     } catch (error) {
         console.error('Błąd podczas pobierania danych z GitHub API:', error);
         throw error;
@@ -127,13 +142,29 @@ async function fetchLatestRelease() {
 function displayWhatsNew(data) {
     const contentEl = document.getElementById('whats-new-content');
     const loadingEl = document.getElementById('whats-new-loading');
+    const prevBtn = document.getElementById('btn-prev-release');
+    const nextBtn = document.getElementById('btn-next-release');
+    const indexSpan = document.getElementById('release-nav-index');
+
+    if (!data) return;
 
     // Ukryj loader
     loadingEl.style.display = 'none';
     contentEl.style.display = 'block';
 
-    // Konwersja Markdown na HTML (prosta implementacja)
+    // Aktualizacja nawigacji (indeks 0 to najnowsza wersja)
+    // btn-prev-release płynie "wstecz w czasie" (wyższy index w tablicy)
+    // btn-next-release płynie "w przód w czasie" (niższy index w tablicy)
+    prevBtn.disabled = (currentIndex >= allReleases.length - 1);
+    nextBtn.disabled = (currentIndex <= 0);
+    indexSpan.textContent = `${currentIndex + 1} / ${allReleases.length}`;
+
+    // Konwersja Markdown na HTML
     const htmlContent = convertMarkdownToHTML(data.body);
+
+    // Przewiń do góry przy zmianie wersji
+    const container = document.querySelector('.content-area');
+    if (container) container.scrollTop = 0;
 
     contentEl.innerHTML = `
         <div class="release-header">
@@ -148,7 +179,7 @@ function displayWhatsNew(data) {
         </div>
         <div class="release-actions">
             <a href="${escapeHtml(data.html_url)}" target="_blank" class="btn primary small">
-                <span class="material-icons">open_in_new</span> Zobacz na GitHubie
+                <span class="material-icons">open_in_new</span> Zobacz szczegóły tej wersji na GitHubie
             </a>
         </div>
     `;
@@ -176,8 +207,7 @@ function convertMarkdownToHTML(markdown) {
     // Links: [text](url)
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
 
-    // Existing <img ... /> tags (often produced by GitHub for attachments)
-    // We adjust them to ensure they are responsive and block-level
+    // Existing <img ... /> tags
     html = html.replace(/<img (.*?)src=["'](.*?)["'](.*?)>/g, '<img src="$2" $1 $3 style="max-width: 100%; height: auto; border-radius: 4px; margin: 10px 0; display: block;">');
 
     // List items (dash and asterisk)
@@ -205,7 +235,7 @@ function convertMarkdownToHTML(markdown) {
     if (inList) processedLines.push('</ul>');
     html = processedLines.join('\n');
 
-    // Newlines to <br> (only for lines that don't look like HTML block tags)
+    // Newlines to <br>
     html = html.split('\n').map(line => {
         if (line.match(/^<(h[1-3]|ul|li|img|div)/) || line.match(/<\/(ul|li|div)>$/)) return line;
         if (line.trim() === '') return '<br>';
@@ -216,6 +246,7 @@ function convertMarkdownToHTML(markdown) {
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
