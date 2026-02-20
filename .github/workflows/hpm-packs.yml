@@ -3,6 +3,9 @@ name: Build HPM Precision Packs
 on:
   workflow_dispatch: # Wyłącznie ręczne uruchomienie z panelu GitHub Actions
 
+permissions:
+  contents: write # Wymagane do tworzenia/aktualizacji wydań (Releases)
+
 jobs:
   build-packs:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }} Pack
@@ -60,6 +63,7 @@ jobs:
           rm python_standalone.tar.gz
 
       - name: Archive Pack
+        id: archive
         shell: bash
         run: |
           if [ "${{ matrix.platform }}" == "mac" ]; then
@@ -68,13 +72,13 @@ jobs:
             ZIP_NAME="python_env_${{ matrix.platform }}.zip"
           fi
           zip -r "$ZIP_NAME" python_env/
-          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+          echo "zip_path=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: hpm-pack-${{ matrix.platform }}-${{ matrix.arch }}
-          path: ${{ env.ZIP_NAME }}
+          path: ${{ steps.archive.outputs.zip_path }}
           retention-days: 1
 
   create-release:
