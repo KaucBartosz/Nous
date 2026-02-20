@@ -1,5 +1,5 @@
 // main.js - Wersja Finalna (Fullscreen + Icons Support)
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -685,4 +685,8 @@ ipcMain.handle('import-template', async (event) => {
         }
     }
     return { success: false, cancelled: true };
+});
+
+ipcMain.on('open-external', (event, url) => {
+    shell.openExternal(url);
 });

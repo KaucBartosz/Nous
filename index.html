@@ -631,9 +631,9 @@
                         <!-- Treść zostanie załadowana przez JS -->
                     </div>
 
-                    <div id="whats-new-loading" class="loading-spinner"
-                        style="display:none; text-align:center; padding: 40px;">
-                        <span class="material-icons" style="font-size: 48px; color: var(--primary-color);">sync</span>
+                    <div id="whats-new-loading" style="display:none; text-align:center; padding: 40px;">
+                        <span class="material-icons loading-spinner"
+                            style="font-size: 48px; color: var(--primary); display: inline-block;">sync</span>
                         <p style="margin-top: 15px; color: var(--text-muted);">Ładowanie informacji o zmianach...</p>
                     </div>
 
@@ -702,7 +702,10 @@
                     Rok: 2026/2027
                 </p>
             </div>
-            <div class="modal-footer" style="justify-content: center;">
+            <div class="modal-footer" style="justify-content: center; gap: 15px;">
+                <button id="btn-about-project" class="btn secondary">
+                    <span class="material-icons">code</span> Strona projektu
+                </button>
                 <button id="btn-about-close-footer" class="btn primary">Zamknij</button>
             </div>
         </div>

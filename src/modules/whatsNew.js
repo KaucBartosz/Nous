@@ -35,12 +35,29 @@ export function initWhatsNew() {
 
     // Obsługa przycisku otwierania GitHub
     githubBtn.addEventListener('click', () => {
+        const url = 'https://github.com/KaucBartosz/Nous/releases/';
         if (window.electronAPI && window.electronAPI.openExternal) {
-            window.electronAPI.openExternal('https://github.com/KaucBartosz/Nous/releases/');
+            window.electronAPI.openExternal(url);
         } else {
-            window.open('https://github.com/KaucBartosz/Nous/releases/', '_blank');
+            window.open(url, '_blank');
         }
     });
+
+    // Przechwytywanie wszystkich linków w kontenerze (w tym tych z Markdown)
+    const container = document.querySelector('.whats-new-container');
+    if (container) {
+        container.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (link && link.href && link.href.startsWith('http')) {
+                e.preventDefault();
+                if (window.electronAPI && window.electronAPI.openExternal) {
+                    window.electronAPI.openExternal(link.href);
+                } else {
+                    window.open(link.href, '_blank');
+                }
+            }
+        });
+    }
 
     isInitialized = true;
 }

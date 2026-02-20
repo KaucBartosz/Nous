@@ -41,5 +41,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     importTemplate: () => ipcRenderer.invoke('import-template'),
 
     // 8. ZAPIS PACZKI ZIP
-    downloadBulkZip: (data) => ipcRenderer.invoke('download-bulk-zip', data)
+    downloadBulkZip: (data) => ipcRenderer.invoke('download-bulk-zip', data),
+
+    // 9. OTWIERANIE LINKÓW
+    openExternal: (url) => ipcRenderer.send('open-external', url)
 });
