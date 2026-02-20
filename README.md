@@ -24,10 +24,6 @@ Kliknij poniżej, aby przejść do sekcji pobierania i wybrać wersję dla swoje
 ### macOS
 
 1. Pobierz plik `.dmg` z sekcji [Releases](https://github.com/KaucBartosz/Nous/releases/latest).
-
-   🍎 Mac z Apple Silicon (M1 / M2 / M3 / M4) → pobierz ARM
-
-   💻 Mac z procesorem Intel → pobierz x64 (Intel)
 2. Otwórz go i przeciągnij ikonę aplikacji do folderu `Applications`.
 3. **Przy pierwszym uruchomieniu:**
    - Jeśli system zablokuje otwarcie ("Nieznany programista"), kliknij na ikonę aplikacji **Prawym Przyciskiem Myszy** i wybierz **Otwórz**.
