@@ -16,12 +16,12 @@ jobs:
           - os: windows-latest
             platform: win
             arch: x64
-          - os: macos-13 # Intel Mac
-            platform: mac
-            arch: x64
-          - os: macos-14 # Apple Silicon Mac
+          - os: macos-latest # Apple Silicon (ARM64)
             platform: mac
             arch: arm64
+          - os: macos-latest # Will run Intel build via Rosetta if needed, or just package it
+            platform: mac
+            arch: x64
 
     steps:
       - name: Checkout repository
@@ -30,18 +30,28 @@ jobs:
       - name: Download Standalone Python
         shell: bash
         run: |
+          TAG="20240224"
+          BASE_URL="https://github.com/astral-sh/python-build-standalone/releases/download/$TAG"
+          
           if [ "${{ matrix.platform }}" == "win" ]; then
-            URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-x86_64-pc-windows-msvc-shared-install_runtime.tar.gz"
+            URL="$BASE_URL/cpython-3.10.13+$TAG-x86_64-pc-windows-msvc-shared-install_only.tar.gz"
           elif [ "${{ matrix.platform }}" == "mac" ]; then
             if [ "${{ matrix.arch }}" == "arm64" ]; then
-              URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-aarch64-apple-darwin-install_runtime.tar.gz"
+              URL="$BASE_URL/cpython-3.10.13+$TAG-aarch64-apple-darwin-install_only.tar.gz"
             else
-              URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-x86_64-apple-darwin-install_runtime.tar.gz"
+              URL="$BASE_URL/cpython-3.10.13+$TAG-x86_64-apple-darwin-install_only.tar.gz"
             fi
-          else
-            URL="https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-x86_64-unknown-linux-gnu-install_runtime.tar.gz"
           fi
+          
+          echo "Downloading from $URL..."
           curl -L "$URL" -o python_standalone.tar.gz
+          
+          if ! file python_standalone.tar.gz | grep -q 'gzip compressed data'; then
+            echo "Error: Downloaded file is not a valid gzip archive or was not found."
+            ls -lh python_standalone.tar.gz
+            exit 1
+          fi
+          
           tar -xzf python_standalone.tar.gz
           mv python python_env
 
