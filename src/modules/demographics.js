@@ -97,52 +97,93 @@ async function renderDynamicForm(templateId) {
             }
         } else if (field.type === 'checkbox') {
             if (field.options) {
-                // Radio Group Mode
-                // Use a container as the "input" placeholder to keep structure similar, 
-                // but we'll need special handling for saving/loading.
+                // Checkbox Group Mode (Multiple selection)
                 input = document.createElement('div');
-                input.className = 'radio-group-container demo-dynamic-field';
-                input.dataset.radioGroup = 'true'; // Marker
-                input.id = inputId; // ID on container
+                input.className = 'checkbox-group-container demo-dynamic-field';
+                input.dataset.checkboxGroup = 'true';
+                input.id = inputId;
 
+                const opts = field.options.split(',').map(s => s.trim());
+                opts.forEach(optVal => {
+                    const cbWrapper = document.createElement('div');
+                    cbWrapper.style.display = 'flex';
+                    cbWrapper.style.alignItems = 'center';
+                    cbWrapper.style.marginBottom = '8px';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.value = optVal;
+                    cb.style.width = 'auto';
+                    cb.style.margin = '0 10px 0 0';
+
+                    const cbLabel = document.createElement('label');
+                    cbLabel.textContent = optVal;
+                    cbLabel.style.fontWeight = 'normal';
+                    cbLabel.style.margin = '0';
+                    cbLabel.style.cursor = 'pointer';
+                    cbLabel.style.display = 'inline-block';
+                    cbLabel.addEventListener('click', () => cb.checked = !cb.checked);
+
+                    cbWrapper.appendChild(cb);
+                    cbWrapper.appendChild(cbLabel);
+                    input.appendChild(cbWrapper);
+                });
+            } else {
+                // Classic Checkbox Mode (Tak/Nie)
+                div.style.display = 'flex';
+                div.style.flexDirection = 'row';
+                div.style.alignItems = 'center';
+                div.innerHTML = '';
+
+                input = document.createElement('input');
+                input.type = 'checkbox';
+                input.id = inputId;
+                input.style.width = 'auto';
+                input.style.margin = '0 10px 0 0';
+
+                label.style.display = 'inline-block';
+                label.style.margin = '0';
+                label.style.cursor = 'pointer';
+                label.addEventListener('click', () => input.checked = !input.checked);
+
+                div.appendChild(input);
+                div.appendChild(label);
+            }
+
+        } else if (field.type === 'radio') {
+            // Radio Group Mode (Single selection)
+            input = document.createElement('div');
+            input.className = 'radio-group-container demo-dynamic-field';
+            input.dataset.radioGroup = 'true';
+            input.id = inputId;
+
+            if (field.options) {
                 const opts = field.options.split(',').map(s => s.trim());
                 opts.forEach(optVal => {
                     const radioWrapper = document.createElement('div');
                     radioWrapper.style.display = 'flex';
                     radioWrapper.style.alignItems = 'center';
-                    radioWrapper.style.marginBottom = '5px';
+                    radioWrapper.style.marginBottom = '8px';
 
                     const radio = document.createElement('input');
                     radio.type = 'radio';
                     radio.name = `radio-${inputId}`; // Group name
                     radio.value = optVal;
                     radio.style.width = 'auto';
-                    radio.style.marginRight = '8px';
+                    radio.style.margin = '0 10px 0 0';
 
                     const radioLabel = document.createElement('label');
                     radioLabel.textContent = optVal;
                     radioLabel.style.fontWeight = 'normal';
+                    radioLabel.style.margin = '0';
                     radioLabel.style.cursor = 'pointer';
+                    radioLabel.style.display = 'inline-block';
                     radioLabel.addEventListener('click', () => radio.checked = true);
 
                     radioWrapper.appendChild(radio);
                     radioWrapper.appendChild(radioLabel);
                     input.appendChild(radioWrapper);
                 });
-            } else {
-                // Classic Checkbox Mode (Tak/Nie)
-                div.style.flexDirection = 'row';
-                div.style.alignItems = 'center';
-                div.innerHTML = ''; // Reset standard label
-
-                input = document.createElement('input');
-                input.type = 'checkbox';
-                input.id = inputId;
-                input.style.width = 'auto';
-                input.style.marginRight = '10px';
-
-                div.appendChild(input);
-                div.appendChild(label); // Label after checkbox
             }
 
         } else if (field.type === 'date') {
@@ -209,13 +250,9 @@ async function renderDynamicForm(templateId) {
             input.classList.add('demo-dynamic-field');
         }
 
-        // Checkbox special render handled inside its block
-        // Radio group is also special
-        if (field.type !== 'checkbox') {
-            div.appendChild(label);
-            div.appendChild(input);
-        } else if (field.options) {
-            // Radio Group - Label above
+        if (field.type === 'checkbox' && !field.options) {
+            // Already appended in the 'else' block
+        } else {
             div.appendChild(label);
             div.appendChild(input);
         }
@@ -242,16 +279,23 @@ export function loadSavedDemographics() {
 
                     if (val !== undefined) {
                         if (input.dataset.type === 'checkbox') {
-                            if (input.dataset.radioGroup === 'true') {
-                                // Radio Group
-                                const radios = input.querySelectorAll('input[type="radio"]');
-                                radios.forEach(r => {
-                                    if (r.value === val) r.checked = true;
+                            if (input.dataset.checkboxGroup === 'true') {
+                                // Checkbox Group (Multiple selection)
+                                const selectedOpts = Array.isArray(val) ? val : (typeof val === 'string' ? val.split(',').map(s => s.trim()) : []);
+                                const checkboxes = input.querySelectorAll('input[type="checkbox"]');
+                                checkboxes.forEach(cb => {
+                                    if (selectedOpts.includes(cb.value)) cb.checked = true;
                                 });
                             } else {
                                 // Classic Checkbox
-                                input.checked = val;
+                                input.checked = !!val;
                             }
+                        } else if (input.dataset.type === 'radio') {
+                            // Radio Group (Single selection)
+                            const radios = input.querySelectorAll('input[type="radio"]');
+                            radios.forEach(r => {
+                                if (r.value === val) r.checked = true;
+                            });
                         } else {
                             input.value = val;
                         }
@@ -278,15 +322,23 @@ export async function saveDemographicsFromForm() {
         const type = input.dataset.type;
 
         if (type === 'checkbox') {
-            if (input.dataset.radioGroup === 'true') {
-                // Radio Group - Find checked
-                const checkedRadio = input.querySelector('input[type="radio"]:checked');
-                const val = checkedRadio ? checkedRadio.value : "";
+            if (input.dataset.checkboxGroup === 'true') {
+                // Checkbox Group - Collect all checked values
+                const checked = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                const val = checked.join(', ');
                 data[input.dataset.label] = val;
-                if (val) isEmpty = false;
+                if (checked.length > 0) isEmpty = false;
             } else {
                 data[input.dataset.label] = input.checked; // Boolean
+                // Checkbox (bool) usually doesn't count towards "isEmpty" being false for submission validation
+                // unless we want it to. Usually it's an optional toggle.
             }
+        } else if (type === 'radio') {
+            // Radio Group - Find checked
+            const checkedRadio = input.querySelector('input[type="radio"]:checked');
+            const val = checkedRadio ? checkedRadio.value : "";
+            data[input.dataset.label] = val;
+            if (val) isEmpty = false;
         } else {
             const val = input.value.trim();
             if (val) isEmpty = false;
@@ -306,15 +358,13 @@ export async function saveDemographicsFromForm() {
     // If there are NO text fields (only checkboxes/radios), then it's valid?
     // Modified logic includes RadioGroups as "text-like" fields that contribute to "isEmpty = false" if selected.
 
-    // Check if we have any fields that are NOT simple boolean checkboxes
-    // Radio groups are 'checkbox' type but have radioGroup=true dataset
-    const hasTextFields = Array.from(inputs).some(i => {
-        // It counts as a "text field" (requires input) if it's NOT a boolean checkbox
-        if (i.dataset.type === 'checkbox' && i.dataset.radioGroup !== 'true') return false;
+    const hasInputs = Array.from(inputs).some(i => {
+        // Exclude classic boolean checkboxes from "required at least one" check
+        if (i.dataset.type === 'checkbox' && i.dataset.checkboxGroup !== 'true') return false;
         return true;
     });
 
-    if (hasTextFields && isEmpty) {
+    if (hasInputs && isEmpty) {
         await Dialog.alert("Wypełnij przynajmniej jedno pole!", 'warning');
         return;
     }

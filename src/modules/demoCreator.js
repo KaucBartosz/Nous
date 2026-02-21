@@ -73,8 +73,9 @@ function addFieldUI(initialData = null) {
                         <option value="text">Tekst (String)</option>
                         <option value="number">Liczba (Int)</option>
                         <option value="float">Liczba (Float)</option>
-                        <option value="select">Lista (Select)</option>
-                        <option value="checkbox">Przełącznik (Tak/Nie)</option>
+                        <option value="select">Lista rozwijana (Select)</option>
+                        <option value="checkbox">Pola wielokrotnego wyboru (Checkboxy)</option>
+                        <option value="radio">Pola pojedynczego wyboru (Radio)</option>
                         <option value="date">Data</option>
                     </select>
                 </div>
@@ -103,13 +104,15 @@ function addFieldUI(initialData = null) {
 
     // Toggle Options Visibility based on type
     const updateOptionsVisibility = () => {
-        // Show options for 'select' OR 'checkbox' (for radio group mode)
-        if (typeSelect.value === 'select' || typeSelect.value === 'checkbox') {
+        // Show options for 'select', 'checkbox' OR 'radio'
+        if (['select', 'checkbox', 'radio'].includes(typeSelect.value)) {
             optionsContainer.classList.add('visible');
 
             // Helpful placeholder change
             if (typeSelect.value === 'checkbox') {
-                optionsInput.placeholder = "Opcje dla przełącznika (np. Opcja A, Opcja B)";
+                optionsInput.placeholder = "Opcje (np. Opcja A, Opcja B) - będzie można zaznaczyć kilka";
+            } else if (typeSelect.value === 'radio') {
+                optionsInput.placeholder = "Opcje (np. Tak, Nie, Nie wiem) - będzie można wybrać jedną";
             } else {
                 optionsInput.placeholder = "np. Kobieta, Mężczyzna, Inna";
             }
@@ -158,7 +161,7 @@ async function saveCurrentTemplate() {
 
         if (label) {
             const fieldObj = { label, type };
-            if (type === 'select') {
+            if (['select', 'checkbox', 'radio'].includes(type)) {
                 fieldObj.options = optionsInput.value.trim();
             }
             fields.push(fieldObj);
