@@ -725,7 +725,21 @@ const HPM_ENGINE_URLS = {
 };
 
 function getPythonPath() {
-    const userDataPath = app.getPath('userData');
+    let userDataPath = app.getPath('userData');
+
+    // Linux case-sensitivity parity: check both 'nous' and 'Nous'
+    if (process.platform === 'linux') {
+        const os = require('os');
+        const nousLower = path.join(os.homedir(), '.config', 'nous');
+        const nousUpper = path.join(os.homedir(), '.config', 'Nous');
+
+        if (fs.existsSync(path.join(nousLower, 'python_env'))) {
+            userDataPath = nousLower;
+        } else if (fs.existsSync(path.join(nousUpper, 'python_env'))) {
+            userDataPath = nousUpper;
+        }
+    }
+
     const hpmDir = path.join(userDataPath, 'python_env');
 
     if (process.platform === 'win32') {
@@ -864,6 +878,14 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
             NOUS_LAUNCHER: '1',
             NOUS_TRAINING: trainingMode ? '1' : '0'
         }
+    });
+
+    pythonProcess.stdout.on('data', (data) => {
+        console.log(`Python STDOUT: ${data.toString()}`);
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+        console.error(`Python STDERR: ${data.toString()}`);
     });
 
     pythonProcess.on('error', (err) => {

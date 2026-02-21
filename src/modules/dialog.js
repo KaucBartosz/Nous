@@ -23,6 +23,12 @@ export const Dialog = {
                 this.close(false); // Treat X as cancellation/false
             });
         }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.overlay && !this.overlay.classList.contains('hidden')) {
+                this.close(false);
+            }
+        });
     },
 
     /**
@@ -88,7 +94,14 @@ export const Dialog = {
 
     setupDialog(message, type, isConfirm) {
         // 1. Text
-        this.messageEl.textContent = message;
+        // Check if message contains HTML tags
+        if (message.includes('<') && message.includes('>')) {
+            // HTML content - use innerHTML
+            this.messageEl.innerHTML = message;
+        } else {
+            // Plain text - use textContent
+            this.messageEl.textContent = message;
+        }
 
         // 2. Icon & Title & Color
         let iconName = '';

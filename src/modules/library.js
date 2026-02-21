@@ -160,17 +160,25 @@ export function initViewSwitcher() {
                 const engineExists = await window.electronAPI.getHpmStatus();
                 if (!engineExists) {
                     if (isLinux) {
-                        // Linux Manual Instructions
                         await Dialog.alert(
-                            "Instalacja HPM na Linux",
-                            "Na systemie Linux zalecamy ręczną instalację środowiska ze względu na różnorodność dystrybucji.<br><br>" +
-                            "Otwórz terminal i wklej poniższe komendy:<br>" +
-                            "<pre style='background:#f4f4f4;padding:10px;font-size:11px;user-select:all;'>" +
-                            "mkdir -p ~/.config/Nous/python_env\n" +
-                            "python3 -m venv ~/.config/Nous/python_env\n" +
-                            "~/.config/Nous/python_env/bin/python3 -m pip install psychopy numpy scipy pandas pyglet" +
-                            "</pre><br>" +
-                            "Po zakończeniu zamknij i otwórz ponownie Launcher.",
+                            "<strong>Instalacja HPM na Linux</strong><br><br>" +
+                            "Wsparcie dla Linux wymaga samodzielnego przygotowania środowiska Python. Launcher szuka interpretera w folderze:<br>" +
+                            "<code>~/.config/nous/python_env/bin/python3</code><br><br>" +
+                            "<strong>Wymagania:</strong><br>" +
+                            "• <b>Środowisko:</b> Virtualenv oparty na <b>Python 3.11</b> (najlepsza kompatybilność).<br>" +
+                            "• <b>Pakiety Python:</b> <code>psychopy, numpy, scipy, pandas, pyglet, wxPython</code>.<br>" +
+                            "• <b>Zależności systemowe:</b> Biblioteki <i>SDL2, libjpeg (v8), libtiff (v5), GTK3</i>.<br><br>" +
+                            "Przykładowa ścieżka instalacji (może wymagać dociągnięcia zależności systemowych):<br>" +
+                            "<div style='position:relative; margin:10px 0;'>" +
+                            "<pre id='linux-hpm-cmd' style='background:#1e1e1e;color:#eee;padding:12px 65px 12px 12px;font-size:12px;user-select:all;white-space:pre;text-align:left;border-radius:6px;border:1px solid #333;margin:0;line-height:1.4;max-height:150px;overflow:auto;'>" +
+                            "mkdir -p ~/.config/nous/python_env\n" +
+                            "python3.11 -m venv ~/.config/nous/python_env\n" +
+                            "~/.config/nous/python_env/bin/python3 -m pip install -U pip setuptools wheel\n" +
+                            "~/.config/nous/python_env/bin/python3 -m pip install psychopy numpy scipy pandas pyglet" +
+                            "</pre>" +
+                            "<button onclick=\"navigator.clipboard.writeText(document.getElementById('linux-hpm-cmd').innerText); this.textContent='OK!'; setTimeout(() => this.textContent='Kopiuj', 1500);\" style='position:absolute;top:8px;right:8px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:bold;transition:0.2s;'>Kopiuj</button>" +
+                            "</div>" +
+                            "Jeśli <i>wxPython</i> zgłasza błędy (np. brak <i>libjpeg.so.8</i>), należy zainstalować odpowiednie paczki 'compat' lub utworzyć symlinki w <code>/usr/lib64</code> zgodnie z dokumentacją Twojej dystrybucji.",
                             'info'
                         );
                         e.target.checked = false;

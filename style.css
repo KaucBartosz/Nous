@@ -947,6 +947,8 @@ input:checked+.slider:before {
     background: #252526;
     border: 1px solid #444;
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    width: 650px;
+    max-width: 90vw;
 }
 
 #custom-dialog-title {
