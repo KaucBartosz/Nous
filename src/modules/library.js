@@ -235,11 +235,16 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
     if (!cachedTests.length || forceRefresh) {
         elements.testsGrid.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
         try {
+            // Check if online before trying cloud fetch to avoid long timeouts
+            if (!navigator.onLine) {
+                throw new Error("Brak połączenia internetowego (navigator.onLine)");
+            }
+
             const snap = await getDocs(collection(db, "tests"));
             cachedTests = []; // Clear cache
 
             if (snap.empty) {
-                elements.testsGrid.innerHTML = '<p>Brak testów.</p>';
+                elements.testsGrid.innerHTML = '<p>Brak testów w chmurze.</p>';
                 return;
             }
 
@@ -250,15 +255,30 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
                 t.remote_ver = Number(t.version);
                 cachedTests.push(t);
             });
+
+            // Save to local cache for offline usage
+            localStorage.setItem('cached_tests_metadata', JSON.stringify(cachedTests));
+
         } catch (e) {
-            console.error(e);
-            elements.testsGrid.innerHTML = '<p>Błąd ładowania danych z chmury.</p>';
-            return;
+            console.warn("Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):", e);
+
+            // Try to load from local storage cache
+            const saved = localStorage.getItem('cached_tests_metadata');
+            if (saved) {
+                try {
+                    cachedTests = JSON.parse(saved);
+                    console.log("Załadowano listę testów z cache lokalnego.");
+                } catch (jsonErr) {
+                    console.error("Błąd parsowania cache lokalnego:", jsonErr);
+                }
+            }
         }
     }
 
     // 2. Always update local versions (using cached getter)
     const localVersions = await getLocalVersionsCached();
+    const scannedPath = localVersions.__scannedDir || 'nieznana';
+
     cachedTests.forEach(t => {
         const local = localVersions[t.id];
         if (local) {
@@ -270,7 +290,40 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
         }
     });
 
-    renderTests(cachedTests, filterText);
+    // 3. Backfill tests from disk that are missing from metadata 
+    // This allows showing already downloaded tests even if they are not in the cloud/cache list
+    Object.keys(localVersions).forEach(testId => {
+        if (testId === '__scannedDir') return; // Skip debug field
+
+        if (!cachedTests.find(t => t.id === testId)) {
+            const local = localVersions[testId];
+            if (local.version >= 0) {
+                cachedTests.push({
+                    id: testId,
+                    name: local.name || `Test lokalny (${testId})`,
+                    description: local.description || 'Pobrano wcześniej.',
+                    version: local.version || 0,
+                    local_ver: Number(local.version || 0),
+                    remote_ver: Number(local.version || 0),
+                    hasPython: local.hasPython,
+                    download_url: ''
+                });
+            }
+        }
+    });
+
+    if (cachedTests.length === 0) {
+        elements.testsGrid.innerHTML = `
+            <div style="text-align:center; padding:40px; color:#888;">
+                <span class="material-icons" style="font-size:48px; margin-bottom:15px;">signal_wifi_off</span>
+                <p>Brak połączenia z Internetem i nie znaleziono pobranych testów.</p>
+                <p style="font-size:11px; margin-top:10px;">Przeszukano folder:<br><code style="background:rgba(255,255,255,0.05); padding:2px 5px; border-radius:3px;">${scannedPath}</code></p>
+                <button class="btn secondary small" onclick="location.reload()" style="margin-top:20px;">Spróbuj ponownie</button>
+            </div>
+        `;
+    } else {
+        renderTests(cachedTests, filterText);
+    }
 }
 
 function getTestStatus(t) {
@@ -428,7 +481,7 @@ function renderGridView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
         });
     });
 }
@@ -525,7 +578,7 @@ function renderListView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
         });
     });
 }
@@ -620,7 +673,7 @@ function renderTableView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
         });
     });
 
@@ -695,12 +748,12 @@ function renderCompactView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
         });
     });
 }
 
-export async function startTestProcess(url, id, ver) {
+export async function startTestProcess(url, id, ver, name = '', description = '') {
     if (window.electronAPI) {
         // Change button state immediately
         const btn = document.getElementById(`start-test-${id}`);
@@ -719,6 +772,6 @@ export async function startTestProcess(url, id, ver) {
             btn.style.overflow = 'hidden';
         }
 
-        window.electronAPI.downloadAndRun(url, id, ver, false, isHpmEnabled, isTrainingMode);
+        window.electronAPI.downloadAndRun(url, id, ver, false, isHpmEnabled, isTrainingMode, name, description);
     } else await Dialog.alert("Brak Electrona", 'error');
 }

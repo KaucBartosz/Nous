@@ -71,7 +71,7 @@ function findStartFile(folderPath) {
 // 1. OBSŁUGA POBIERANIA (ZIP) I URUCHAMIANIA
 // ==========================================================
 
-ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpmEnabled, trainingMode }) => {
+ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription }) => {
     const sender = event.sender;
 
     // --- SECURITY CHECK: RATE LIMITING ---
@@ -254,7 +254,12 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
                         await fs.promises.unlink(zipPath); // Usuń ZIP
 
                         // Aktualizacja meta
-                        const metaData = { version: Number(version), lastUpdated: new Date().toISOString() };
+                        const metaData = {
+                            version: Number(version),
+                            lastUpdated: new Date().toISOString(),
+                            name: testName || '',
+                            description: testDescription || ''
+                        };
                         await fs.promises.writeFile(metaPath, JSON.stringify(metaData));
 
                         // Szukamy pliku ponownie po rozpakowaniu
@@ -310,11 +315,39 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
 // ==========================================================
 
 ipcMain.handle('get-local-versions', async (event) => {
-    const userDataPath = app.getPath('userData');
-    const testsDir = path.join(userDataPath, 'tests_library');
-    const localVersions = {};
+    let userDataPath = app.getPath('userData');
+    let testsDir = path.join(userDataPath, 'tests_library');
 
-    if (!fs.existsSync(testsDir)) return {};
+    // Linux-specific fallback: Check common paths as Electron behavior on Linux 
+    // can vary depending on whether it's running via AppImage, generic electron, or local build.
+    if (process.platform === 'linux' && !fs.existsSync(testsDir)) {
+        const os = require('os');
+        const altPaths = [
+            path.join(os.homedir(), '.config', 'nous', 'tests_library'),
+            path.join(os.homedir(), '.config', 'Nous', 'tests_library'),
+            path.join(os.homedir(), '.config', 'nous-launcher', 'tests_library'),
+            path.join(os.homedir(), '.config', 'Electron', 'tests_library'),
+            path.join(os.homedir(), '.config', 'electron', 'tests_library'),
+            path.join(__dirname, 'tests_library') // Check current directory as well
+        ];
+
+        for (const altPath of altPaths) {
+            if (fs.existsSync(altPath)) {
+                console.log(`Found tests_library in alternative path: ${altPath}`);
+                testsDir = altPath;
+                break;
+            }
+        }
+    }
+
+    const localVersions = {};
+    // Store the path we used for debugging in a special key
+    localVersions.__scannedDir = testsDir;
+
+    if (!fs.existsSync(testsDir)) {
+        console.log(`Tests directory not found at: ${testsDir}`);
+        return localVersions; // Still return with __scannedDir
+    }
 
     try {
         const testFolders = fs.readdirSync(testsDir, { withFileTypes: true })
@@ -332,7 +365,9 @@ ipcMain.handle('get-local-versions', async (event) => {
                     const meta = JSON.parse(metaContent);
                     localVersions[testId] = {
                         version: meta.version,
-                        hasPython: hasPython
+                        hasPython: hasPython,
+                        name: meta.name || '',
+                        description: meta.description || ''
                     };
                 } catch (e) {
                     localVersions[testId] = { version: 0, hasPython: hasPython };
