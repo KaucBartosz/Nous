@@ -85,6 +85,11 @@ export function initLibraryListeners() {
         if (statusLabel) statusLabel.textContent = '';
     });
 
+    window.electronAPI.onTestProcessStopped(() => {
+        console.log("Test process stopped, refreshing UI");
+        loadTestsList(); // Re-render triggers UI reset
+    });
+
     listenersRegistered = true;
 }
 
@@ -481,7 +486,8 @@ function renderGridView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
+            const onlyDownload = (status.btnText === 'Pobierz');
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
         });
     });
 }
@@ -578,7 +584,8 @@ function renderListView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
+            const onlyDownload = (status.btnText === 'Pobierz');
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
         });
     });
 }
@@ -673,7 +680,8 @@ function renderTableView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
+            const onlyDownload = (status.btnText === 'Pobierz');
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
         });
     });
 
@@ -748,12 +756,13 @@ function renderCompactView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, t.name, t.description);
+            const onlyDownload = (status.btnText === 'Pobierz');
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
         });
     });
 }
 
-export async function startTestProcess(url, id, ver, name = '', description = '') {
+export async function startTestProcess(url, id, ver, onlyDownload = false, name = '', description = '') {
     if (window.electronAPI) {
         // Change button state immediately
         const btn = document.getElementById(`start-test-${id}`);
@@ -772,6 +781,6 @@ export async function startTestProcess(url, id, ver, name = '', description = ''
             btn.style.overflow = 'hidden';
         }
 
-        window.electronAPI.downloadAndRun(url, id, ver, false, isHpmEnabled, isTrainingMode, name, description);
+        window.electronAPI.downloadAndRun(url, id, ver, onlyDownload, isHpmEnabled, isTrainingMode, name, description);
     } else await Dialog.alert("Brak Electrona", 'error');
 }

@@ -25,8 +25,24 @@ autoUpdater.logger.transports.file.level = "info";
 
 let mainWindow;
 
-// Rate limiting: Track active downloads to prevent concurrent downloads of the same test
+// Queue management for downloads
+const downloadQueue = [];
+let isDownloadingInProgress = false;
 const activeDownloads = new Set();
+let activeTestWindow = null;
+let activePythonProcess = null;
+
+function isTestRunning() {
+    return !!activeTestWindow || !!activePythonProcess;
+}
+
+function processDownloadQueue() {
+    if (isDownloadingInProgress || downloadQueue.length === 0) return;
+
+    const task = downloadQueue.shift();
+    isDownloadingInProgress = true;
+    executeDownloadTask(task);
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -71,60 +87,54 @@ function findStartFile(folderPath) {
 // 1. OBSŁUGA POBIERANIA (ZIP) I URUCHAMIANIA
 // ==========================================================
 
-ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription }) => {
+ipcMain.on('download-and-run', (event, taskData) => {
+    const { testId, url } = taskData;
     const sender = event.sender;
 
     // --- SECURITY CHECK: RATE LIMITING ---
-    // Prevent concurrent downloads of the same test
     if (activeDownloads.has(testId)) {
-        console.log(`Download already in progress for testId: ${testId}`);
-        sender.send('test-status', 'Pobieranie już w toku!');
+        sender.send('test-status', 'Zadanie dla tego testu jest już w kolejce!');
         return;
     }
 
     // --- SECURITY CHECK: TEST ID VALIDATION ---
-    // Prevent Path Traversal (e.g. "../../../Windows")
     if (!/^[a-zA-Z0-9_-]+$/.test(testId)) {
-        console.error(`Blocked invalid testId: ${testId}`);
-        sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Nieprawidłowe ID testu!');
-        activeDownloads.delete(testId); // Clean up
+        sender.send('test-status', 'BŁĄD: Nieprawidłowe ID testu!');
         return;
     }
 
     // --- SECURITY CHECK: DOMAIN & PROTOCOL ALLOWLIST ---
     try {
         const parsedUrl = new URL(url);
-
-        // Walidacja protokołu - tylko HTTPS
         if (parsedUrl.protocol !== 'https:') {
-            console.error(`Blocked download: non-HTTPS protocol: ${parsedUrl.protocol}`);
-            sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Tylko HTTPS jest dozwolony!');
-            activeDownloads.delete(testId);
+            sender.send('test-status', 'BŁĄD: Tylko HTTPS!');
             return;
         }
-
-        const allowedDomains = [
-            'github.com',
-            'raw.githubusercontent.com',
-            'www.github.com',
-            'www.raw.githubusercontent.com',
-            'objects.githubusercontent.com' // Dodane dla przekierowań pobierania
-        ];
-        if (!allowedDomains.includes(parsedUrl.hostname)) {
-            console.error(`Blocked download from unauthorized domain: ${parsedUrl.hostname}`);
-            sender.send('test-status', 'BŁĄD BEZPIECZEŃSTWA: Niedozwolona domena pobierania!');
-            activeDownloads.delete(testId);
+        const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'objects.githubusercontent.com'];
+        if (!allowedDomains.some(d => parsedUrl.hostname.endsWith(d))) {
+            sender.send('test-status', 'BŁĄD: Niedozwolona domena!');
             return;
         }
     } catch (e) {
-        console.error(`Invalid URL blocked: ${url}`);
-        sender.send('test-status', 'BŁĄD: Nieprawidłowy adres URL!');
-        activeDownloads.delete(testId);
+        sender.send('test-status', 'BŁĄD: Nieprawidłowy URL!');
         return;
     }
 
-    // Mark download as active
+    // Add to queue
     activeDownloads.add(testId);
+    downloadQueue.push({ ...taskData, sender });
+    sender.send('test-status', 'Dodano do kolejki pobierania...');
+    processDownloadQueue();
+});
+
+async function executeDownloadTask(task) {
+    const { sender, url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription } = task;
+
+    const finishTask = () => {
+        activeDownloads.delete(testId);
+        isDownloadingInProgress = false;
+        processDownloadQueue();
+    };
 
     // Definicje ścieżek
     const userDataPath = app.getPath('userData');
@@ -156,15 +166,15 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
         if (onlyDownload) {
             sender.send('test-status', `Test (v${version}) jest gotowy.`);
         } else {
-            sender.send('test-status', `Uruchamianie z cache (v${version})...`);
-
-            if (hpmEnabled) {
-                runPythonTestIfPossible(testFolder, sender, trainingMode);
+            if (isTestRunning()) {
+                sender.send('test-status', 'Inny test w toku. Uruchomienie wstrzymane.');
             } else {
-                openTestWindow(entryFile);
+                sender.send('test-status', `Uruchamianie (v${version})...`);
+                if (hpmEnabled) runPythonTestIfPossible(testFolder, sender, trainingMode);
+                else openTestWindow(entryFile);
             }
         }
-        activeDownloads.delete(testId); // Clean up
+        finishTask();
         return;
     }
 
@@ -180,9 +190,9 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
     // Funkcja do obsługi przekierowań
     const downloadWithRedirect = (downloadUrl, maxRedirects = 5) => {
         if (maxRedirects <= 0) {
-            sender.send('test-status', 'BŁĄD: Zbyt wiele przekierowań!');
+            sender.send('test-status', 'BŁĄD: Za dużo przekierowań!');
             fs.unlink(zipPath, () => { });
-            activeDownloads.delete(testId);
+            finishTask();
             return;
         }
 
@@ -198,9 +208,9 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
             }
 
             if (response.statusCode !== 200) {
-                sender.send('test-status', `Błąd serwera: ${response.statusCode}`);
+                sender.send('test-status', `Błąd HTTP: ${response.statusCode}`);
                 fs.unlink(zipPath, () => { });
-                activeDownloads.delete(testId);
+                finishTask();
                 return;
             }
 
@@ -269,31 +279,29 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
                         sender.send('test-installed', { test_id: testId, version: Number(version) });
 
                         if (!entryFile) {
-                            sender.send('test-status', 'BŁĄD KRYTYCZNY: Brak index.html w paczce!');
-                            activeDownloads.delete(testId);
+                            sender.send('test-status', 'BŁĄD: Brak index.html!');
+                            finishTask();
                             return;
                         }
 
                         if (onlyDownload) {
-                            sender.send('test-status', 'Pobrano i zainstalowano pomyślnie.');
+                            sender.send('test-status', 'Zainstalowano pomyślnie.');
                         } else {
-                            sender.send('test-status', 'Gotowe. Uruchamianie...');
-
-                            // Wybór silnika (JS vs Python)
-                            if (hpmEnabled) {
-                                runPythonTestIfPossible(testFolder, sender, trainingMode);
+                            if (isTestRunning()) {
+                                sender.send('test-status', 'Pobrano. Uruchomienie wstrzymane - inny test w toku.');
                             } else {
-                                openTestWindow(entryFile);
+                                sender.send('test-status', 'Uruchamianie...');
+                                if (hpmEnabled) runPythonTestIfPossible(testFolder, sender, trainingMode);
+                                else openTestWindow(entryFile);
                             }
                         }
 
-                        // Success - cleanup
-                        activeDownloads.delete(testId);
+                        finishTask();
 
                     } catch (err) {
                         console.error("Błąd ZIP:", err);
-                        sender.send('test-status', `Błąd rozpakowywania: ${err.message}`);
-                        activeDownloads.delete(testId);
+                        sender.send('test-status', `Błąd ZIP: ${err.message}`);
+                        finishTask();
                     }
                 });
             });
@@ -301,13 +309,12 @@ ipcMain.on('download-and-run', (event, { url, testId, version, onlyDownload, hpm
         }).on('error', (err) => {
             fs.unlink(zipPath, () => { });
             sender.send('test-status', `Błąd sieci: ${err.message}`);
-            activeDownloads.delete(testId);
+            finishTask();
         });
     };
 
-    // Rozpocznij pobieranie z obsługą przekierowań
     downloadWithRedirect(url);
-});
+}
 
 
 // ==========================================================
@@ -451,8 +458,14 @@ ipcMain.handle('get-encryption-key', async () => {
     return getOrGenerateMasterKey();
 });
 
+ipcMain.handle('is-test-running', async () => {
+    return isTestRunning();
+});
+
 function openTestWindow(htmlPath) {
-    const testWindow = new BrowserWindow({
+    if (activeTestWindow) return;
+
+    activeTestWindow = new BrowserWindow({
         width: 1024,
         height: 768,
         parent: mainWindow,
@@ -469,12 +482,17 @@ function openTestWindow(htmlPath) {
         }
     });
 
-    testWindow.loadFile(htmlPath);
+    activeTestWindow.loadFile(htmlPath);
+
+    activeTestWindow.on('closed', () => {
+        activeTestWindow = null;
+        if (mainWindow) mainWindow.webContents.send('test-process-stopped');
+    });
 
     // Obsługa ESC (opcjonalna - pozwala wyjść z FullScreen)
-    testWindow.webContents.on('before-input-event', (event, input) => {
+    activeTestWindow.webContents.on('before-input-event', (event, input) => {
         if (input.key === 'Escape' && input.type === 'keyDown') {
-            testWindow.setFullScreen(false);
+            if (activeTestWindow) activeTestWindow.setFullScreen(false);
         }
     });
 }
@@ -905,8 +923,12 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
     }
 
     sender.send('test-status', 'Uruchamianie natywne (HPM)...');
+    if (activePythonProcess) {
+        sender.send('test-status', 'BŁĄD: Proces nadrzędny HPM jest już uruchomiony!');
+        return;
+    }
 
-    const pythonProcess = spawn(pythonPath, [mainPyPath], {
+    activePythonProcess = spawn(pythonPath, [mainPyPath], {
         cwd: testFolder,
         env: {
             ...process.env,
@@ -915,21 +937,23 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         }
     });
 
-    pythonProcess.stdout.on('data', (data) => {
+    activePythonProcess.stdout.on('data', (data) => {
         console.log(`Python STDOUT: ${data.toString()}`);
     });
 
-    pythonProcess.stderr.on('data', (data) => {
+    activePythonProcess.stderr.on('data', (data) => {
         console.error(`Python STDERR: ${data.toString()}`);
     });
 
-    pythonProcess.on('error', (err) => {
+    activePythonProcess.on('error', (err) => {
         console.error("Python Error:", err);
-        sender.send('test-status', `Błąd Pythona: ${err.message}`);
+        sender.send('test-status', `BŁĄD Pythona: ${err.message}`);
     });
 
-    pythonProcess.on('close', (code) => {
+    activePythonProcess.on('close', (code) => {
         console.log(`Python process closed with code ${code}`);
+        activePythonProcess = null;
+        if (mainWindow) mainWindow.webContents.send('test-process-stopped');
         // Po zamknięciu Pythona sprawdzamy czy wygenerował wyniki (np. results.json)
         const resultsPath = path.join(testFolder, 'results.json');
         if (fs.existsSync(resultsPath)) {

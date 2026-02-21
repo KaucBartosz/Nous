@@ -52,6 +52,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onHpmDownloadProgress: (callback) => ipcRenderer.on('hpm-download-progress', (event, percent) => callback(percent)),
     onHpmInstalled: (callback) => ipcRenderer.on('hpm-installed', (event, success) => callback(success)),
 
-    // 11. SYSTEM INFO
+    // 11. ZDARZENIA PROCESU TESTU
+    onTestProcessStopped: (callback) => ipcRenderer.on('test-process-stopped', () => callback()),
+
+    // 12. SYSTEM INFO
     isMac: process.platform === 'darwin'
 });
