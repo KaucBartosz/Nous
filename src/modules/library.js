@@ -3,7 +3,7 @@ import { db } from '../firebaseConfig.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { elements } from './ui.js';
 import { Dialog } from './dialog.js';
-import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache } from './utils.js';
+import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache, escapeHtml } from './utils.js';
 
 let cachedTests = [];
 let isSearchBound = false;
@@ -322,7 +322,7 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
             <div style="text-align:center; padding:40px; color:#888;">
                 <span class="material-icons" style="font-size:48px; margin-bottom:15px;">signal_wifi_off</span>
                 <p>Brak połączenia z Internetem i nie znaleziono pobranych testów.</p>
-                <p style="font-size:11px; margin-top:10px;">Przeszukano folder:<br><code style="background:rgba(255,255,255,0.05); padding:2px 5px; border-radius:3px;">${scannedPath}</code></p>
+                <p style="font-size:11px; margin-top:10px;">Przeszukano folder:<br><code style="background:rgba(255,255,255,0.05); padding:2px 5px; border-radius:3px;">${escapeHtml(scannedPath)}</code></p>
                 <button class="btn secondary small" onclick="location.reload()" style="margin-top:20px;">Spróbuj ponownie</button>
             </div>
         `;

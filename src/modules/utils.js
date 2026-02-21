@@ -30,6 +30,18 @@ export function sortByInstallStatus(tests) {
 }
 
 /**
+ * Escapes HTML special characters to prevent XSS.
+ * @param {string} text 
+ * @returns {string}
+ */
+export function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
  * Debounce - opóźnia wykonanie funkcji do momentu gdy użytkownik
  * przestanie wywoływać ją przez określony czas.
  * 

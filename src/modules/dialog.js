@@ -93,15 +93,10 @@ export const Dialog = {
     },
 
     setupDialog(message, type, isConfirm) {
-        // 1. Text
-        // Check if message contains HTML tags
-        if (message.includes('<') && message.includes('>')) {
-            // HTML content - use innerHTML
-            this.messageEl.innerHTML = message;
-        } else {
-            // Plain text - use textContent
-            this.messageEl.textContent = message;
-        }
+        // ALWAYS use textContent to prevent XSS. 
+        // If we really need HTML (e.g. specialized formatting), 
+        // we should use a proper sanitizer or explicit elements.
+        this.messageEl.textContent = message;
 
         // 2. Icon & Title & Color
         let iconName = '';

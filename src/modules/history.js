@@ -133,7 +133,13 @@ export async function loadHistoryData() {
             const msg = isGuestViewActive
                 ? 'Brak wyników w trybie Gościa.'
                 : 'Brak wyników.';
-            elements.historyTableBody.innerHTML = `<tr><td colspan="6">${msg}</td></tr>`;
+
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 6;
+            td.textContent = msg;
+            tr.appendChild(td);
+            elements.historyTableBody.appendChild(tr);
             return;
         }
 
@@ -278,11 +284,18 @@ export async function loadHistoryData() {
     } catch (e) {
         console.error('Error loading history:', e);
         // Check if it's a decryption error
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.style.color = '#f44336';
+
         if (e.message && e.message.includes('decrypt')) {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="6" style="color: #f44336;">Błąd odczytu danych: Problem z deszyfrowaniem. Sprawdź klucz szyfrowania.</td></tr>';
+            td.textContent = 'Błąd odczytu danych: Problem z deszyfrowaniem. Sprawdź klucz szyfrowania.';
         } else {
-            elements.historyTableBody.innerHTML = `<tr><td colspan="6" style="color: #f44336;">Błąd: ${e.message}</td></tr>`;
+            td.textContent = `Błąd: ${e.message}`;
         }
+        tr.appendChild(td);
+        elements.historyTableBody.appendChild(tr);
     }
 }
 
@@ -428,7 +441,13 @@ async function loadCloudResults() {
 
     } catch (e) {
         console.error("Cloud Fetch Error:", e);
-        elements.historyTableBody.innerHTML = `<tr><td colspan="6" style="color:red;">Błąd pobierania: ${e.message}</td></tr>`;
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.style.color = 'red';
+        td.textContent = `Błąd pobierania: ${e.message}`;
+        tr.appendChild(td);
+        elements.historyTableBody.appendChild(tr);
     }
 }
 

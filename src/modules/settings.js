@@ -2,6 +2,7 @@
 
 const SETTINGS_KEY = 'nous-app-settings';
 const CUSTOM_CACHE_KEY = 'nous-app-settings-custom-cache';
+const SAVED_THEMES_KEY = 'nous-app-saved-themes';
 
 // Default settings for DARK theme
 const DEFAULT_DARK_SETTINGS = {
@@ -221,6 +222,8 @@ export function resetToDefaultsForTheme(theme) {
     return currentSettings;
 }
 
+
+
 /**
  * Convert rgba/complex color to hex for color picker
  */
@@ -231,6 +234,58 @@ function colorToHex(color) {
     // For rgba or other complex colors, extract or return a default
     // This is a simplified version - for full accuracy we'd need to parse rgba
     return '#000000';
+}
+
+/**
+ * XSS Protection - Sanitize string
+ */
+function sanitize(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Load all saved custom themes
+ */
+function getSavedThemes() {
+    try {
+        const stored = localStorage.getItem(SAVED_THEMES_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+/**
+ * Save a new custom theme
+ */
+function saveCustomTheme(name, settings) {
+    const themes = getSavedThemes();
+    const cleanName = sanitize(name.trim());
+    if (!cleanName) return { success: false, error: 'Nazwa nie może być pusta!' };
+
+    // Update if exists or add new
+    const existingIndex = themes.findIndex(t => t.name === cleanName);
+    const themeObj = { name: cleanName, settings: { ...settings, theme: 'custom' } };
+
+    if (existingIndex >= 0) {
+        themes[existingIndex] = themeObj;
+    } else {
+        themes.push(themeObj);
+    }
+
+    localStorage.setItem(SAVED_THEMES_KEY, JSON.stringify(themes));
+    return { success: true };
+}
+
+/**
+ * Delete a saved theme
+ */
+function deleteCustomTheme(name) {
+    const themes = getSavedThemes();
+    const updated = themes.filter(t => t.name !== name);
+    localStorage.setItem(SAVED_THEMES_KEY, JSON.stringify(updated));
 }
 
 /**
@@ -282,8 +337,33 @@ export function initSettings() {
         themeRadios: document.querySelectorAll('input[name="theme"]'),
         btnSave: document.getElementById('btn-save-settings'),
         btnReset: document.getElementById('btn-reset-settings'),
-        status: document.getElementById('settings-status')
+        status: document.getElementById('settings-status'),
+
+        // Theme management elements
+        savedThemesSelect: document.getElementById('saved-themes-select'),
+        newThemeNameInput: document.getElementById('new-theme-name'),
+        btnSaveCustomTheme: document.getElementById('btn-save-custom-theme'),
+        btnDeleteTheme: document.getElementById('btn-delete-theme')
     };
+
+    // Populate saved themes dropdown
+    function refreshThemesDropdown() {
+        if (!elements.savedThemesSelect) return;
+        const themes = getSavedThemes();
+        const currentVal = elements.savedThemesSelect.value;
+
+        elements.savedThemesSelect.innerHTML = '<option value="">-- Domyślny Własny --</option>';
+        themes.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.name;
+            opt.textContent = t.name;
+            elements.savedThemesSelect.appendChild(opt);
+        });
+
+        if (currentVal) elements.savedThemesSelect.value = currentVal;
+    }
+
+    refreshThemesDropdown();
 
     // Initialize form values
     function updateFormValues(settings) {
@@ -391,8 +471,81 @@ export function initSettings() {
             const newTheme = e.target.value;
             const settings = switchToTheme(newTheme);
             updateFormValues(settings);
+            if (newTheme !== 'custom' && elements.savedThemesSelect) {
+                elements.savedThemesSelect.value = "";
+            }
         });
     });
+
+    // Saved theme selection
+    if (elements.savedThemesSelect) {
+        elements.savedThemesSelect.addEventListener('change', (e) => {
+            const themeName = e.target.value;
+            if (!themeName) {
+                // Return to default custom if nothing selected but mode is custom
+                if (currentSettings.theme === 'custom') {
+                    const defaults = getDefaultsForTheme('custom');
+                    currentSettings = { ...defaults };
+                    applySettings(currentSettings);
+                    updateFormValues(currentSettings);
+                }
+                return;
+            }
+
+            const themes = getSavedThemes();
+            const theme = themes.find(t => t.name === themeName);
+            if (theme) {
+                currentSettings = { ...theme.settings };
+                applySettings(currentSettings);
+                updateFormValues(currentSettings);
+
+                // Ensure custom radio is checked
+                const customRadio = document.querySelector('input[name="theme"][value="custom"]');
+                if (customRadio) customRadio.checked = true;
+            }
+        });
+    }
+
+    // Save as new custom theme
+    if (elements.btnSaveCustomTheme) {
+        elements.btnSaveCustomTheme.addEventListener('click', async () => {
+            const name = elements.newThemeNameInput.value;
+            if (!name) {
+                const { Dialog } = await import('./dialog.js');
+                await Dialog.alert("Podaj nazwę dla nowego motywu!", 'warning');
+                return;
+            }
+
+            const result = saveCustomTheme(name, currentSettings);
+            if (result.success) {
+                elements.newThemeNameInput.value = "";
+                refreshThemesDropdown();
+                elements.savedThemesSelect.value = sanitize(name.trim());
+
+                const { Dialog } = await import('./dialog.js');
+                await Dialog.alert(`Motyw "${name}" został zapisany!`, 'success');
+            } else {
+                const { Dialog } = await import('./dialog.js');
+                await Dialog.alert(result.error, 'error');
+            }
+        });
+    }
+
+    // Delete saved theme
+    if (elements.btnDeleteTheme) {
+        elements.btnDeleteTheme.addEventListener('click', async () => {
+            const name = elements.savedThemesSelect.value;
+            if (!name) return;
+
+            const { Dialog } = await import('./dialog.js');
+            const confirm = await Dialog.confirm(`Czy na pewno chcesz usunąć motyw "${name}"?`, 'warning');
+            if (confirm) {
+                deleteCustomTheme(name);
+                refreshThemesDropdown();
+                elements.savedThemesSelect.value = "";
+            }
+        });
+    }
 
 
     // Save button

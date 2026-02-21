@@ -1,4 +1,5 @@
 import { elements } from './ui.js';
+import { escapeHtml } from './utils.js';
 
 const CACHE_KEY = 'whats_new_cache_v2';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
@@ -153,8 +154,6 @@ function displayWhatsNew(data) {
     contentEl.style.display = 'block';
 
     // Aktualizacja nawigacji (indeks 0 to najnowsza wersja)
-    // btn-prev-release płynie "wstecz w czasie" (wyższy index w tablicy)
-    // btn-next-release płynie "w przód w czasie" (niższy index w tablicy)
     prevBtn.disabled = (currentIndex >= allReleases.length - 1);
     nextBtn.disabled = (currentIndex <= 0);
     indexSpan.textContent = `${currentIndex + 1} / ${allReleases.length}`;
@@ -242,14 +241,12 @@ function convertMarkdownToHTML(markdown) {
         return line + '<br>';
     }).join('\n');
 
-    return html;
-}
+    // Strip dangerous attributes (on*, javascript:, etc)
+    html = html.replace(/ on\w+="[^"]*"/g, '');
+    html = html.replace(/ on\w+='[^']*'/g, '');
+    html = html.replace(/javascript:/gi, 'no-script:');
 
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return html;
 }
 
 function showErrorState() {

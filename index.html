@@ -451,6 +451,33 @@
                                     style="font-size: 12px; vertical-align: text-top;">info</span>
                                 Zmiana motywu przywróci domyślne kolory dla wybranego trybu.
                             </p>
+
+                            <!-- Theme Management -->
+                            <div id="custom-theme-management"
+                                style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border);">
+                                <label style="font-size: 13px; margin-bottom: 10px; display: block;">Twoje Własne
+                                    Motywy:</label>
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <select id="saved-themes-select" style="flex: 1; margin-bottom: 0;">
+                                        <option value="">-- Domyślny Własny --</option>
+                                    </select>
+                                    <button id="btn-delete-theme" class="btn danger small" title="Usuń wybrany motyw">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 11px; margin-bottom: 5px;">Zapisz obecną konfigurację
+                                            jako:</label>
+                                        <input type="text" id="new-theme-name" placeholder="np. Mój Rubinowy"
+                                            style="margin-bottom: 0; padding: 8px 12px;">
+                                    </div>
+                                    <button id="btn-save-custom-theme" class="btn secondary small">
+                                        <span class="material-icons">save_as</span> Zapisz motyw
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
