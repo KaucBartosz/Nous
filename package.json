@@ -13,15 +13,27 @@
     "dist": "electron-builder --win --x64",
     "dist:linux": "electron-builder --linux --x64 -c.linux.target=zip",
     "dist:linux:ci": "electron-builder --linux --x64 -c.linux.target=AppImage",
-    "dist:mac": "electron-builder --mac --universal"
+    "dist:mac": "electron-builder --mac --universal",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test tests/e2e-electron.spec.js",
+    "test:e2e:ui": "playwright test tests/e2e-electron.spec.js --ui",
+    "test:e2e:debug": "playwright test tests/e2e-electron.spec.js --debug",
+    "test:e2e:report": "playwright show-report"
   },
   "keywords": [],
   "author": "KaucBartosz <112867979+KaucBartosz@users.noreply.github.com>",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@vitest/coverage-v8": "^4.0.18",
     "electron": "^40.0.0",
-    "electron-builder": "^26.4.0"
+    "electron-builder": "^26.4.0",
+    "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^20.7.0",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
