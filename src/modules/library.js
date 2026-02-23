@@ -151,10 +151,10 @@ export function initViewSwitcher() {
 
     // Bind HPM toggle
     if (elements.toggleHPM) {
-        // Load HPM state from storage - Default to OFF (false)
-        const savedHpm = localStorage.getItem('hpmEnabled');
-        isHpmEnabled = savedHpm === 'true'; // If null or 'false', stays false
-        elements.toggleHPM.checked = isHpmEnabled;
+        // Zawsze wyłączony przy uruchomieniu (zgodnie z życzeniem użytkownika)
+        isHpmEnabled = false;
+        elements.toggleHPM.checked = false;
+        localStorage.setItem('hpmEnabled', 'false'); // Opcjonalnie resetujemy też w storage
 
         elements.toggleHPM.addEventListener('change', async (e) => {
             if (e.target.checked) {
