@@ -289,9 +289,11 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
         if (local) {
             t.local_ver = Number(local.version);
             t.hasPython = local.hasPython;
+            t.isLocalDev = local.isLocalDev || false;
         } else {
             t.local_ver = 0;
             t.hasPython = false;
+            t.isLocalDev = false;
         }
     });
 
@@ -311,6 +313,7 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
                     local_ver: Number(local.version || 0),
                     remote_ver: Number(local.version || 0),
                     hasPython: local.hasPython,
+                    isLocalDev: local.isLocalDev || false,
                     download_url: ''
                 });
             }
@@ -334,6 +337,18 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
 function getTestStatus(t) {
     const local_ver = t.local_ver;
     const remote_ver = t.remote_ver;
+
+    if (t.isLocalDev) {
+        return {
+            iconName: 'code',
+            iconColor: '#2196f3',
+            iconTitle: 'Wersja Lokalna (Deweloperska)',
+            btnText: 'Uruchom (Dev)',
+            btnClass: 'secondary',
+            statusText: 'Lokalny',
+            versionParam: local_ver
+        };
+    }
 
     if (local_ver === 0) {
         return {
@@ -487,7 +502,7 @@ function renderGridView(tests) {
         // Bind click event
         button.addEventListener('click', () => {
             const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
         });
     });
 }
@@ -585,7 +600,7 @@ function renderListView(tests) {
         // Bind click event
         button.addEventListener('click', () => {
             const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
         });
     });
 }
@@ -681,7 +696,7 @@ function renderTableView(tests) {
         // Bind click event
         button.addEventListener('click', () => {
             const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
         });
     });
 
@@ -757,12 +772,12 @@ function renderCompactView(tests) {
         // Bind click event
         button.addEventListener('click', () => {
             const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
         });
     });
 }
 
-export async function startTestProcess(url, id, ver, onlyDownload = false, name = '', description = '') {
+export async function startTestProcess(url, id, ver, onlyDownload = false, name = '', description = '', isLocalDev = false) {
     if (window.electronAPI) {
         // Change button state immediately
         const btn = document.getElementById(`start-test-${id}`);
@@ -781,6 +796,21 @@ export async function startTestProcess(url, id, ver, onlyDownload = false, name 
             btn.style.overflow = 'hidden';
         }
 
-        window.electronAPI.downloadAndRun(url, id, ver, onlyDownload, isHpmEnabled, isTrainingMode, name, description);
+        if (isLocalDev) {
+            const confirm = await Dialog.confirm(
+                "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
+                "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
+                "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
+                "Czy na pewno chcesz kontynuować?",
+                'warning'
+            );
+            if (!confirm) {
+                // Reset button state
+                loadTestsList();
+                return;
+            }
+        }
+
+        window.electronAPI.downloadAndRun(url, id, ver, onlyDownload, isHpmEnabled, isTrainingMode, name, description, isLocalDev);
     } else await Dialog.alert("Brak Electrona", 'error');
 }

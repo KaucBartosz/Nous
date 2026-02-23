@@ -88,7 +88,7 @@ function findStartFile(folderPath) {
 // ==========================================================
 
 ipcMain.on('download-and-run', (event, taskData) => {
-    const { testId, url } = taskData;
+    const { testId, url, isLocalDev } = taskData;
     const sender = event.sender;
 
     // --- SECURITY CHECK: RATE LIMITING ---
@@ -103,32 +103,35 @@ ipcMain.on('download-and-run', (event, taskData) => {
         return;
     }
 
-    // --- SECURITY CHECK: DOMAIN & PROTOCOL ALLOWLIST ---
-    try {
-        const parsedUrl = new URL(url);
-        if (parsedUrl.protocol !== 'https:') {
-            sender.send('test-status', 'BŁĄD: Tylko HTTPS!');
+    // Skip URL validation for local dev tests
+    if (!isLocalDev) {
+        // --- SECURITY CHECK: DOMAIN & PROTOCOL ALLOWLIST ---
+        try {
+            const parsedUrl = new URL(url);
+            if (parsedUrl.protocol !== 'https:') {
+                sender.send('test-status', 'BŁĄD: Tylko HTTPS!');
+                return;
+            }
+            const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'objects.githubusercontent.com'];
+            if (!allowedDomains.some(d => parsedUrl.hostname.endsWith(d))) {
+                sender.send('test-status', 'BŁĄD: Niedozwolona domena!');
+                return;
+            }
+        } catch (e) {
+            sender.send('test-status', 'BŁĄD: Nieprawidłowy URL!');
             return;
         }
-        const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'objects.githubusercontent.com'];
-        if (!allowedDomains.some(d => parsedUrl.hostname.endsWith(d))) {
-            sender.send('test-status', 'BŁĄD: Niedozwolona domena!');
-            return;
-        }
-    } catch (e) {
-        sender.send('test-status', 'BŁĄD: Nieprawidłowy URL!');
-        return;
     }
 
     // Add to queue
     activeDownloads.add(testId);
     downloadQueue.push({ ...taskData, sender });
-    sender.send('test-status', 'Dodano do kolejki pobierania...');
+    sender.send('test-status', 'Dodano do kolejki...');
     processDownloadQueue();
 });
 
 async function executeDownloadTask(task) {
-    const { sender, url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription } = task;
+    const { sender, url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription, isLocalDev } = task;
 
     const finishTask = () => {
         activeDownloads.delete(testId);
@@ -138,19 +141,33 @@ async function executeDownloadTask(task) {
 
     // Definicje ścieżek
     const userDataPath = app.getPath('userData');
-    const testsDir = path.join(userDataPath, 'tests_library');
-    const testFolder = path.join(testsDir, testId);
+    const testsLibraryDir = path.join(userDataPath, 'tests_library');
+    const devTestsDir = path.join(__dirname, 'tests');
+
+    let testFolder;
+    let entryFile;
+
+    if (isLocalDev) {
+        const potentialDevFile = path.join(devTestsDir, `${testId}.js`);
+        if (fs.existsSync(potentialDevFile)) {
+            testFolder = devTestsDir;
+            entryFile = potentialDevFile;
+        } else {
+            testFolder = path.join(testsLibraryDir, testId);
+            entryFile = findStartFile(testFolder);
+        }
+    } else {
+        testFolder = path.join(testsLibraryDir, testId);
+        entryFile = findStartFile(testFolder);
+    }
 
     const zipPath = path.join(testFolder, 'package.zip');
     const metaPath = path.join(testFolder, 'meta.json');
 
-    // Szukamy pliku startowego (może być głębiej)
-    let entryFile = findStartFile(testFolder);
-
     // --- KROK 1: SPRAWDZANIE CACHE ---
-    let needsDownload = true;
+    let needsDownload = !isLocalDev; // Local dev tests never need download
 
-    if (fs.existsSync(testFolder) && fs.existsSync(metaPath) && entryFile) {
+    if (!isLocalDev && fs.existsSync(testFolder) && fs.existsSync(metaPath) && entryFile) {
         try {
             const localMeta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
             if (Number(localMeta.version) >= Number(version)) {
@@ -374,15 +391,35 @@ ipcMain.handle('get-local-versions', async (event) => {
                         version: meta.version,
                         hasPython: hasPython,
                         name: meta.name || '',
-                        description: meta.description || ''
+                        description: meta.description || '',
+                        isLocalDev: false
                     };
                 } catch (e) {
-                    localVersions[testId] = { version: 0, hasPython: hasPython };
+                    localVersions[testId] = { version: 0, hasPython: hasPython, isLocalDev: true };
                 }
             } else {
-                localVersions[testId] = { version: 0, hasPython: hasPython };
+                localVersions[testId] = { version: 0, hasPython: hasPython, isLocalDev: true };
             }
         });
+
+        // --- NEW: Scan local 'tests' folder for dev tests (.js) ---
+        const devTestsDir = path.join(__dirname, 'tests');
+        if (fs.existsSync(devTestsDir)) {
+            const devFiles = fs.readdirSync(devTestsDir, { withFileTypes: true });
+            devFiles.forEach(file => {
+                if (file.isFile() && file.name.endsWith('.js')) {
+                    const testId = file.name.replace('.js', '');
+                    // DEV folder has priority - overwrite library entries
+                    localVersions[testId] = {
+                        version: 1, // Treat as v1
+                        name: testId,
+                        description: 'Test Lokalny',
+                        isLocalDev: true,
+                        entryFile: path.join(devTestsDir, file.name)
+                    };
+                }
+            });
+        }
     } catch (error) {
         console.error("Błąd skanowania:", error);
     }
