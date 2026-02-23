@@ -60,35 +60,27 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 }
 
-// --- FUNKCJE POMOCNICZE: Szukanie plików w podfolderach ---
-function findFileInSubfolders(folderPath, filename) {
+// --- FUNKCJA POMOCNICZA: Szukanie index.html w podfolderach ---
+function findStartFile(folderPath) {
     if (!fs.existsSync(folderPath)) return null;
 
     // 1. Sprawdź bezpośrednio
-    const directPath = path.join(folderPath, filename);
+    const directPath = path.join(folderPath, 'index.html');
     if (fs.existsSync(directPath)) return directPath;
 
-    // 2. Sprawdź podfoldery (maksymalnie 1 poziom głębi - typowe dla ZIP z GitHub)
+    // 2. Sprawdź podfoldery
     try {
         const entries = fs.readdirSync(folderPath, { withFileTypes: true });
         for (const entry of entries) {
             if (entry.isDirectory()) {
-                const subPath = path.join(folderPath, entry.name, filename);
+                const subPath = path.join(folderPath, entry.name, 'index.html');
                 if (fs.existsSync(subPath)) return subPath;
             }
         }
     } catch (e) {
-        console.error(`Błąd przeszukiwania folderu pod kątem ${filename}:`, e);
+        console.error("Błąd przeszukiwania folderu:", e);
     }
     return null;
-}
-
-function findStartFile(folderPath) {
-    return findFileInSubfolders(folderPath, 'index.html');
-}
-
-function findPythonFile(folderPath) {
-    return findFileInSubfolders(folderPath, 'main.py');
 }
 
 // ==========================================================
@@ -96,7 +88,7 @@ function findPythonFile(folderPath) {
 // ==========================================================
 
 ipcMain.on('download-and-run', (event, taskData) => {
-    const { testId, url, isLocalDev } = taskData;
+    const { testId, url } = taskData;
     const sender = event.sender;
 
     // --- SECURITY CHECK: RATE LIMITING ---
@@ -111,35 +103,32 @@ ipcMain.on('download-and-run', (event, taskData) => {
         return;
     }
 
-    // Skip URL validation for local dev tests
-    if (!isLocalDev) {
-        // --- SECURITY CHECK: DOMAIN & PROTOCOL ALLOWLIST ---
-        try {
-            const parsedUrl = new URL(url);
-            if (parsedUrl.protocol !== 'https:') {
-                sender.send('test-status', 'BŁĄD: Tylko HTTPS!');
-                return;
-            }
-            const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'objects.githubusercontent.com'];
-            if (!allowedDomains.some(d => parsedUrl.hostname.endsWith(d))) {
-                sender.send('test-status', 'BŁĄD: Niedozwolona domena!');
-                return;
-            }
-        } catch (e) {
-            sender.send('test-status', 'BŁĄD: Nieprawidłowy URL!');
+    // --- SECURITY CHECK: DOMAIN & PROTOCOL ALLOWLIST ---
+    try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== 'https:') {
+            sender.send('test-status', 'BŁĄD: Tylko HTTPS!');
             return;
         }
+        const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'objects.githubusercontent.com'];
+        if (!allowedDomains.some(d => parsedUrl.hostname.endsWith(d))) {
+            sender.send('test-status', 'BŁĄD: Niedozwolona domena!');
+            return;
+        }
+    } catch (e) {
+        sender.send('test-status', 'BŁĄD: Nieprawidłowy URL!');
+        return;
     }
 
     // Add to queue
     activeDownloads.add(testId);
     downloadQueue.push({ ...taskData, sender });
-    sender.send('test-status', 'Dodano do kolejki...');
+    sender.send('test-status', 'Dodano do kolejki pobierania...');
     processDownloadQueue();
 });
 
 async function executeDownloadTask(task) {
-    const { sender, url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription, isLocalDev } = task;
+    const { sender, url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription } = task;
 
     const finishTask = () => {
         activeDownloads.delete(testId);
@@ -149,18 +138,19 @@ async function executeDownloadTask(task) {
 
     // Definicje ścieżek
     const userDataPath = app.getPath('userData');
-    const testsLibraryDir = path.join(userDataPath, 'tests_library');
-
-    let testFolder = path.join(testsLibraryDir, testId);
-    let entryFile = findStartFile(testFolder);
+    const testsDir = path.join(userDataPath, 'tests_library');
+    const testFolder = path.join(testsDir, testId);
 
     const zipPath = path.join(testFolder, 'package.zip');
     const metaPath = path.join(testFolder, 'meta.json');
 
-    // --- KROK 1: SPRAWDZANIE CACHE ---
-    let needsDownload = !isLocalDev; // Local dev tests never need download
+    // Szukamy pliku startowego (może być głębiej)
+    let entryFile = findStartFile(testFolder);
 
-    if (!isLocalDev && fs.existsSync(testFolder) && fs.existsSync(metaPath) && entryFile) {
+    // --- KROK 1: SPRAWDZANIE CACHE ---
+    let needsDownload = true;
+
+    if (fs.existsSync(testFolder) && fs.existsSync(metaPath) && entryFile) {
         try {
             const localMeta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
             if (Number(localMeta.version) >= Number(version)) {
@@ -374,7 +364,7 @@ ipcMain.handle('get-local-versions', async (event) => {
         testFolders.forEach(testId => {
             const testFolder = path.join(testsDir, testId);
             const metaPath = path.join(testFolder, 'meta.json');
-            const hasPython = !!findPythonFile(testFolder);
+            const hasPython = fs.existsSync(path.join(testFolder, 'main.py'));
 
             if (fs.existsSync(metaPath)) {
                 try {
@@ -384,14 +374,13 @@ ipcMain.handle('get-local-versions', async (event) => {
                         version: meta.version,
                         hasPython: hasPython,
                         name: meta.name || '',
-                        description: meta.description || '',
-                        isLocalDev: false
+                        description: meta.description || ''
                     };
                 } catch (e) {
-                    localVersions[testId] = { version: 0, hasPython: hasPython, isLocalDev: true };
+                    localVersions[testId] = { version: 0, hasPython: hasPython };
                 }
             } else {
-                localVersions[testId] = { version: 0, hasPython: hasPython, isLocalDev: true };
+                localVersions[testId] = { version: 0, hasPython: hasPython };
             }
         });
     } catch (error) {
@@ -915,7 +904,7 @@ ipcMain.on('download-hpm-engine', async (event) => {
 
 function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
     const pythonPath = getPythonPath();
-    const mainPyPath = findPythonFile(testFolder);
+    const mainPyPath = path.join(testFolder, 'main.py');
 
     // 1. Sprawdź czy silnik w ogóle istnieje
     if (!fs.existsSync(pythonPath)) {
@@ -926,7 +915,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
     }
 
     // 2. Sprawdź czy test wspiera Pythona
-    if (!mainPyPath) {
+    if (!fs.existsSync(mainPyPath)) {
         // Cichy fallback - nie straszymy użytkownika
         const entryFile = findStartFile(testFolder);
         if (entryFile) openTestWindow(entryFile);
@@ -939,10 +928,8 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         return;
     }
 
-    const workingDir = path.dirname(mainPyPath);
-
     activePythonProcess = spawn(pythonPath, [mainPyPath], {
-        cwd: workingDir,
+        cwd: testFolder,
         env: {
             ...process.env,
             NOUS_LAUNCHER: '1',
@@ -968,7 +955,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         activePythonProcess = null;
         if (mainWindow) mainWindow.webContents.send('test-process-stopped');
         // Po zamknięciu Pythona sprawdzamy czy wygenerował wyniki (np. results.json)
-        const resultsPath = path.join(workingDir, 'results.json');
+        const resultsPath = path.join(testFolder, 'results.json');
         if (fs.existsSync(resultsPath)) {
             try {
                 const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
