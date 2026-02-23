@@ -60,27 +60,35 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 }
 
-// --- FUNKCJA POMOCNICZA: Szukanie index.html w podfolderach ---
-function findStartFile(folderPath) {
+// --- FUNKCJE POMOCNICZE: Szukanie plików w podfolderach ---
+function findFileInSubfolders(folderPath, filename) {
     if (!fs.existsSync(folderPath)) return null;
 
     // 1. Sprawdź bezpośrednio
-    const directPath = path.join(folderPath, 'index.html');
+    const directPath = path.join(folderPath, filename);
     if (fs.existsSync(directPath)) return directPath;
 
-    // 2. Sprawdź podfoldery
+    // 2. Sprawdź podfoldery (maksymalnie 1 poziom głębi - typowe dla ZIP z GitHub)
     try {
         const entries = fs.readdirSync(folderPath, { withFileTypes: true });
         for (const entry of entries) {
             if (entry.isDirectory()) {
-                const subPath = path.join(folderPath, entry.name, 'index.html');
+                const subPath = path.join(folderPath, entry.name, filename);
                 if (fs.existsSync(subPath)) return subPath;
             }
         }
     } catch (e) {
-        console.error("Błąd przeszukiwania folderu:", e);
+        console.error(`Błąd przeszukiwania folderu pod kątem ${filename}:`, e);
     }
     return null;
+}
+
+function findStartFile(folderPath) {
+    return findFileInSubfolders(folderPath, 'index.html');
+}
+
+function findPythonFile(folderPath) {
+    return findFileInSubfolders(folderPath, 'main.py');
 }
 
 // ==========================================================
@@ -381,7 +389,7 @@ ipcMain.handle('get-local-versions', async (event) => {
         testFolders.forEach(testId => {
             const testFolder = path.join(testsDir, testId);
             const metaPath = path.join(testFolder, 'meta.json');
-            const hasPython = fs.existsSync(path.join(testFolder, 'main.py'));
+            const hasPython = !!findPythonFile(testFolder);
 
             if (fs.existsSync(metaPath)) {
                 try {
@@ -941,7 +949,7 @@ ipcMain.on('download-hpm-engine', async (event) => {
 
 function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
     const pythonPath = getPythonPath();
-    const mainPyPath = path.join(testFolder, 'main.py');
+    const mainPyPath = findPythonFile(testFolder);
 
     // 1. Sprawdź czy silnik w ogóle istnieje
     if (!fs.existsSync(pythonPath)) {
@@ -952,7 +960,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
     }
 
     // 2. Sprawdź czy test wspiera Pythona
-    if (!fs.existsSync(mainPyPath)) {
+    if (!mainPyPath) {
         // Cichy fallback - nie straszymy użytkownika
         const entryFile = findStartFile(testFolder);
         if (entryFile) openTestWindow(entryFile);
@@ -965,8 +973,10 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         return;
     }
 
+    const workingDir = path.dirname(mainPyPath);
+
     activePythonProcess = spawn(pythonPath, [mainPyPath], {
-        cwd: testFolder,
+        cwd: workingDir,
         env: {
             ...process.env,
             NOUS_LAUNCHER: '1',
@@ -992,7 +1002,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         activePythonProcess = null;
         if (mainWindow) mainWindow.webContents.send('test-process-stopped');
         // Po zamknięciu Pythona sprawdzamy czy wygenerował wyniki (np. results.json)
-        const resultsPath = path.join(testFolder, 'results.json');
+        const resultsPath = path.join(workingDir, 'results.json');
         if (fs.existsSync(resultsPath)) {
             try {
                 const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
