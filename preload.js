@@ -56,5 +56,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onTestProcessStopped: (callback) => ipcRenderer.on('test-process-stopped', () => callback()),
 
     // 12. SYSTEM INFO
-    isMac: process.platform === 'darwin'
+    isMac: process.platform === 'darwin',
+    isLinux: process.platform === 'linux',
+    getLinuxDistro: () => ipcRenderer.invoke('get-linux-distro'),
+    checkHpmUpdate: () => ipcRenderer.invoke('check-hpm-update')
 });

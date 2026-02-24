@@ -49,8 +49,8 @@ export async function encryptData(data) {
     );
 
     return {
-        payload: arrayBufferToBase64(encryptedBuffer),
-        iv: arrayBufferToBase64(iv.buffer)
+        payload: await arrayBufferToBase64(encryptedBuffer),
+        iv: await arrayBufferToBase64(iv.buffer)
     };
 }
 
@@ -85,14 +85,21 @@ export async function decryptData(encryptedBase64, ivBase64) {
 }
 
 // Helpers
+
+/**
+ * Zoptymalizowana konwersja ArrayBuffer do Base64 przy użyciu Bloba.
+ * Zapobiega zawieszaniu UI i błędów stosu przy bardzo dużych wynikach testów.
+ */
 function arrayBufferToBase64(buffer) {
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return window.btoa(binary);
+    return new Promise((resolve) => {
+        const blob = new Blob([buffer], { type: 'application/octet-stream' });
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            resolve(dataUrl.split(',')[1]);
+        };
+        reader.readAsDataURL(blob);
+    });
 }
 
 function base64ToArrayBuffer(base64) {

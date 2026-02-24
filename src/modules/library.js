@@ -158,55 +158,41 @@ export function initViewSwitcher() {
 
         elements.toggleHPM.addEventListener('change', async (e) => {
             if (e.target.checked) {
-                // Check if user on Linux
-                const isLinux = window.navigator.platform.toLowerCase().includes('linux');
+                // Dodaj label stanu pod toggle
+                let statusLabel = document.getElementById('hpm-status-label');
+                if (!statusLabel) {
+                    statusLabel = document.createElement('span');
+                    statusLabel.id = 'hpm-status-label';
+                    statusLabel.style.cssText = 'font-size: 10px; color: var(--primary); margin-left: 10px;';
+                    elements.toggleHPM.parentElement.parentElement.appendChild(statusLabel);
+                }
 
                 // Check if engine exists
                 const engineExists = await window.electronAPI.getHpmStatus();
                 if (!engineExists) {
-                    if (isLinux) {
-                        await Dialog.alert(
-                            "<strong>Instalacja HPM na Linux</strong><br><br>" +
-                            "Wsparcie dla Linux wymaga samodzielnego przygotowania środowiska Python. Launcher szuka interpretera w folderach:<br>" +
-                            "<code>~/.config/nous/python_env/bin/python3</code> lub <br>" +
-                            "<code>~/.config/nous/python_env/python_env/bin/python3</code><br><br>" +
-                            "<strong>Wymagania:</strong><br>" +
-                            "• <b>Środowisko:</b> Virtualenv oparty na <b>Python 3.11</b> (najlepsza kompatybilność).<br>" +
-                            "• <b>Pakiety Python:</b> <code>psychopy, numpy, scipy, pandas, pyglet, wxPython</code>.<br>" +
-                            "• <b>Zależności systemowe:</b> Biblioteki <i>SDL2, libjpeg (v8), libtiff (v5), GTK3</i>.<br><br>" +
-                            "Przykładowa ścieżka instalacji (może wymagać dociągnięcia zależności systemowych):<br>" +
-                            "<div style='position:relative; margin:10px 0;'>" +
-                            "<pre id='linux-hpm-cmd' style='background:#1e1e1e;color:#eee;padding:12px 65px 12px 12px;font-size:12px;user-select:all;white-space:pre;text-align:left;border-radius:6px;border:1px solid #333;margin:0;line-height:1.4;max-height:150px;overflow:auto;'>" +
-                            "mkdir -p ~/.config/nous/python_env\n" +
-                            "python3.11 -m venv ~/.config/nous/python_env\n" +
-                            "~/.config/nous/python_env/bin/python3 -m pip install -U pip setuptools wheel\n" +
-                            "~/.config/nous/python_env/bin/python3 -m pip install psychopy numpy scipy pandas pyglet" +
-                            "</pre>" +
-                            "<button onclick=\"navigator.clipboard.writeText(document.getElementById('linux-hpm-cmd').innerText); this.textContent='OK!'; setTimeout(() => this.textContent='Kopiuj', 1500);\" style='position:absolute;top:8px;right:8px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:bold;transition:0.2s;'>Kopiuj</button>" +
-                            "</div>" +
-                            "Jeśli <i>wxPython</i> zgłasza błędy (np. brak <i>libjpeg.so.8</i>), należy zainstalować odpowiednie paczki 'compat' lub utworzyć symlinki w <code>/usr/lib64</code> zgodnie z dokumentacją Twojej dystrybucji.",
-                            'info'
-                        );
-                        e.target.checked = false;
-                        return;
+                    // Buduj notę o wymaganiach systemowych dla Linux
+                    let linuxNote = '';
+                    if (window.electronAPI.isLinux) {
+                        const distro = await window.electronAPI.getLinuxDistro();
+                        if (distro.family === 'rhel') {
+                            linuxNote =
+                                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>Fedora/RHEL</strong> (${distro.id || 'linux'}).` +
+                                ` Jeśli wystąpią błędy graficzne: <code>sudo dnf install SDL2 mesa-libGL alsa-lib</code></small>`;
+                        } else {
+                            linuxNote =
+                                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>Debian/Ubuntu</strong> (${distro.id || 'linux'}).` +
+                                ` Jeśli wystąpią błędy graficzne: <code>sudo apt-get install libsdl2-2.0-0 libgl1 libasound2</code></small>`;
+                        }
                     }
 
                     const confirm = await Dialog.confirm(
-                        "Tryb Wysokiej Precyzji (HPM) zapewnia najwyższą dokładność pomiaru parametrów czasowych poprzez natywne wykonywanie testów. Aktywacja tego trybu wymaga jednorazowego pobrania specjalistycznego pakietu zasobów (ok. 300MB). Czy chcesz kontynuować?",
+                        "Tryb Wysokiej Precyzji (HPM) zapewnia najwyższą dokładność pomiaru parametrów czasowych poprzez natywne wykonywanie testów. Aktywacja tego trybu wymaga jednorazowego pobrania specjalistycznego pakietu zasobów (ok. 300MB). Czy chcesz kontynuować?" + linuxNote,
                         'info'
                     );
 
                     if (confirm) {
                         isHpmEnabled = true;
                         localStorage.setItem('hpmEnabled', 'true');
-                        // Dodaj label stanu pod toggle (opcjonalnie, lub użyj istniejącego mechanizmu)
-                        let statusLabel = document.getElementById('hpm-status-label');
-                        if (!statusLabel) {
-                            statusLabel = document.createElement('span');
-                            statusLabel.id = 'hpm-status-label';
-                            statusLabel.style.cssText = 'font-size: 10px; color: var(--primary); margin-left: 10px;';
-                            elements.toggleHPM.parentElement.parentElement.appendChild(statusLabel);
-                        }
                         statusLabel.textContent = 'Pobieranie...';
                         window.electronAPI.downloadHpmEngine();
                     } else {
@@ -214,14 +200,41 @@ export function initViewSwitcher() {
                         isHpmEnabled = false;
                     }
                 } else {
+                    // Engine exists, check for update
+                    statusLabel.textContent = 'Sprawdzanie aktualizacji...';
+                    try {
+                        const updateInfo = await window.electronAPI.checkHpmUpdate();
+                        statusLabel.textContent = ''; // Clear label after check
+
+                        if (updateInfo.hasUpdate) {
+                            const confirmUpdate = await Dialog.confirm(
+                                "Dodano nową wersję silnika HPM online.<br><br>" +
+                                "Zalecamy aktualizację dla lepszej stabilności i precyzji pomiarów.<br>" +
+                                "<small style='color:#ff9800'>Uwaga: Możesz odmówić i używać obecnej wersji, ale robisz to na własną odpowiedzialność.</small><br><br>" +
+                                "Czy chcesz teraz pobrać aktualizację?",
+                                'info'
+                            );
+                            if (confirmUpdate) {
+                                statusLabel.textContent = 'Aktualizacja...';
+                                window.electronAPI.downloadHpmEngine();
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Błąd sprawdzania aktualizacji HPM:", err);
+                        statusLabel.textContent = '';
+                    }
+
                     isHpmEnabled = true;
                     localStorage.setItem('hpmEnabled', 'true');
                 }
             } else {
                 isHpmEnabled = false;
                 localStorage.setItem('hpmEnabled', 'false');
+                const statusLabel = document.getElementById('hpm-status-label');
+                if (statusLabel) statusLabel.textContent = '';
             }
         });
+
     }
 
     // Init Electron listeners

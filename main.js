@@ -44,12 +44,42 @@ function processDownloadQueue() {
     executeDownloadTask(task);
 }
 
+/**
+ * Helper do znajdowania właściwego folderu danych na Linux (case-sensitivity)
+ */
+function getLinuxUserDataPath() {
+    let userDataPath = app.getPath('userData');
+    if (process.platform === 'linux') {
+        const os = require('os');
+        const candidates = [
+            path.join(os.homedir(), '.config', 'nous'),
+            path.join(os.homedir(), '.config', 'Nous')
+        ];
+        for (const cand of candidates) {
+            if (fs.existsSync(path.join(cand, 'tests_library')) || fs.existsSync(path.join(cand, 'python_env'))) {
+                return cand;
+            }
+        }
+    }
+    return userDataPath;
+}
+
 function createWindow() {
+    // Dobierz ikonę odpowiednią dla platformy
+    let iconPath;
+    if (process.platform === 'darwin') {
+        iconPath = path.join(__dirname, 'icon.icns'); // macOS wymaga .icns
+    } else if (process.platform === 'win32') {
+        iconPath = path.join(__dirname, 'icon.ico');  // Windows wymaga .ico
+    } else {
+        iconPath = path.join(__dirname, 'logo.png');  // Linux: PNG
+    }
+
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
         title: "Nous",
-        icon: path.join(__dirname, 'icon.ico'),
+        icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -148,7 +178,7 @@ async function executeDownloadTask(task) {
     };
 
     // Definicje ścieżek
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getLinuxUserDataPath();
     const testsLibraryDir = path.join(userDataPath, 'tests_library');
 
     let testFolder = path.join(testsLibraryDir, testId);
@@ -332,7 +362,7 @@ async function executeDownloadTask(task) {
 // ==========================================================
 
 ipcMain.handle('get-local-versions', async (event) => {
-    let userDataPath = app.getPath('userData');
+    let userDataPath = getLinuxUserDataPath();
     let testsDir = path.join(userDataPath, 'tests_library');
 
     // Linux-specific fallback: Check common paths as Electron behavior on Linux 
@@ -412,7 +442,7 @@ ipcMain.handle('delete-test', async (event, testId) => {
         return { success: false, error: "Nieprawidłowe ID testu" };
     }
 
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getLinuxUserDataPath();
     const testFolder = path.join(userDataPath, 'tests_library', testId);
 
     try {
@@ -436,8 +466,15 @@ ipcMain.handle('delete-test', async (event, testId) => {
 // --- SZYFROWANIE (Key Management) ---
 const { safeStorage } = require('electron');
 
-// Ścieżka do pliku z kluczem
-const keyFilePath = path.join(app.getPath('userData'), 'master_key.enc');
+// Ścieżka do pliku z kluczem — lazy, żeby app.getPath() nie było
+// wywoływane przed app.whenReady()
+let _keyFilePath = null;
+function getKeyFilePath() {
+    if (!_keyFilePath) {
+        _keyFilePath = path.join(getLinuxUserDataPath(), 'master_key.enc');
+    }
+    return _keyFilePath;
+}
 
 function getOrGenerateMasterKey() {
     try {
@@ -445,9 +482,9 @@ function getOrGenerateMasterKey() {
             throw new Error("safeStorage is not available on this system!");
         }
 
-        if (fs.existsSync(keyFilePath)) {
+        if (fs.existsSync(getKeyFilePath())) {
             // 1. Load existing
-            const encryptedKey = fs.readFileSync(keyFilePath);
+            const encryptedKey = fs.readFileSync(getKeyFilePath());
             const decryptedKey = safeStorage.decryptString(encryptedKey);
             console.log("Master Key loaded successfully.");
             return decryptedKey; // Hex string expected
@@ -455,7 +492,7 @@ function getOrGenerateMasterKey() {
             // 2. Generate new
             const newKey = crypto.randomBytes(32).toString('hex'); // 32 bytes = 256 bits
             const encryptedKey = safeStorage.encryptString(newKey);
-            fs.writeFileSync(keyFilePath, encryptedKey);
+            fs.writeFileSync(getKeyFilePath(), encryptedKey);
             console.log("New Master Key generated and secured.");
             return newKey;
         }
@@ -474,7 +511,7 @@ ipcMain.handle('is-test-running', async () => {
 });
 
 function openTestWindow(htmlPath) {
-    if (activeTestWindow) return;
+    if (isTestRunning()) return;
 
     activeTestWindow = new BrowserWindow({
         width: 1024,
@@ -555,7 +592,8 @@ ipcMain.on('save-local-result', (event, dataToSave) => {
 
     dialog.showSaveDialog(mainWindow, {
         title: 'Zapisz wynik badania',
-        defaultPath: `Wynik_${dataToSave.testId}_${Date.now()}.json`,
+        // Używamy test_id (snake_case) jako primary, testId jako fallback
+        defaultPath: `Wynik_${dataToSave.test_id || dataToSave.testId || 'wynik'}_${Date.now()}.json`,
         filters: [{ name: 'JSON', extensions: ['json'] }]
     }).then(result => {
         if (!result.canceled) {
@@ -584,32 +622,45 @@ ipcMain.handle('download-bulk-zip', async (event, { results, filename, format })
             const baseName = `Wynik_${testId}_${subjectId}_${dateStr}`;
 
             if (format === 'csv') {
-                // We'll receive pre-formatted CSV content or format it here.
-                // To keep main.js clean, let's assume the renderer sends the content 
-                // but that might be heavy for IPC. 
-                // Better: Renderer sends raw data, we format here.
-
                 let csvContent = "\uFEFF"; // BOM
                 const flat = {};
                 flat['Data'] = new Date(res.timestamp || res.synced_at).toLocaleString();
                 flat['Test ID'] = testId;
                 flat['ID Badanego'] = subjectId;
+                flat['Badacz ID'] = res.researcher_uid || 'unknown';
 
+                // Dodaj dane metryczki (Demographics)
+                const demographics = res.demographics || {};
+                const demoData = demographics.data || demographics;
+                if (demoData && typeof demoData === 'object') {
+                    Object.keys(demoData).forEach(k => {
+                        if (typeof demoData[k] !== 'object') {
+                            flat[`Metryczka_${k}`] = demoData[k];
+                        }
+                    });
+                }
+
+                // Spłaszczanie wyników (wyniki/data)
                 const resData = res.wyniki || res.data || {};
-                // Simple flattening for CSV
-                Object.keys(resData).forEach(k => {
-                    if (typeof resData[k] === 'object') {
-                        flat[k] = JSON.stringify(resData[k]);
-                    } else {
-                        flat[k] = resData[k];
-                    }
-                });
+                const flatten = (obj, prefix = 'Wynik') => {
+                    Object.keys(obj).forEach(k => {
+                        const key = `${prefix}_${k}`;
+                        if (obj[k] !== null && typeof obj[k] === 'object' && !Array.isArray(obj[k])) {
+                            flatten(obj[k], key);
+                        } else {
+                            flat[key] = Array.isArray(obj[k]) ? JSON.stringify(obj[k]) : obj[k];
+                        }
+                    });
+                };
+                flatten(resData);
 
                 const headers = Object.keys(flat);
                 csvContent += headers.join(';') + "\r\n";
                 csvContent += headers.map(h => {
-                    let val = String(flat[h]);
-                    if (val.includes(';') || val.includes('\n')) val = `"${val.replace(/"/g, '""')}"`;
+                    let val = String(flat[h] === undefined ? '' : flat[h]);
+                    if (val.includes(';') || val.includes('\n') || val.includes('"')) {
+                        val = `"${val.replace(/"/g, '""')}"`;
+                    }
                     return val;
                 }).join(';') + "\r\n";
 
@@ -641,6 +692,13 @@ app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('will-quit', () => {
+    if (activePythonProcess) {
+        activePythonProcess.kill();
+        activePythonProcess = null;
+    }
 });
 
 app.on('activate', () => {
@@ -775,7 +833,17 @@ ipcMain.handle('import-template', async (event) => {
 });
 
 ipcMain.on('open-external', (event, url) => {
-    shell.openExternal(url);
+    // Walidacja: tylko bezpieczne protokoły (zapobieganie SSRF przez shell.openExternal)
+    try {
+        const parsed = new URL(url);
+        if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol)) {
+            console.error(`[Security] Zablokowano open-external dla protokołu: ${parsed.protocol}`);
+            return;
+        }
+        shell.openExternal(url);
+    } catch (e) {
+        console.error(`[Security] Nieprawidłowy URL w open-external: ${url}`);
+    }
 });
 
 // ==========================================================
@@ -783,33 +851,109 @@ ipcMain.on('open-external', (event, url) => {
 // ==========================================================
 
 const HPM_ENGINE_URLS = {
+    // Windows
     'win32': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_win.zip',
+    // macOS
     'darwin-x64': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_mac_x64.zip',
-    'darwin-arm64': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_mac_arm64.zip'
+    'darwin-arm64': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_mac_arm64.zip',
+    // Linux Debian/Ubuntu/Mint family
+    'linux-x64-debian': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_linux_x64_debian.zip',
+    'linux-arm64-debian': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_linux_x64_debian.zip', // fallback x64
+    // Linux RHEL/Fedora/CentOS/Rocky family
+    'linux-x64-rhel': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_linux_x64_rhel.zip',
+    'linux-arm64-rhel': 'https://github.com/KaucBartosz/Nous/releases/download/hpm-precision-packs/python_env_linux_x64_rhel.zip'  // fallback x64
 };
 
-function getPythonPath() {
-    let userDataPath = app.getPath('userData');
-
-    // Linux case-sensitivity parity: check both 'nous' and 'Nous'
-    if (process.platform === 'linux') {
-        const os = require('os');
-        const nousLower = path.join(os.homedir(), '.config', 'nous');
-        const nousUpper = path.join(os.homedir(), '.config', 'Nous');
-
-        if (fs.existsSync(path.join(nousLower, 'python_env'))) {
-            userDataPath = nousLower;
-        } else if (fs.existsSync(path.join(nousUpper, 'python_env'))) {
-            userDataPath = nousUpper;
+/**
+ * Zwraca klucz platformy dla silnika HPM (np. 'win32', 'linux-x64-debian', 'darwin-arm64')
+ */
+function getHpmPlatformKey() {
+    let platformKey = process.platform;
+    if (process.platform !== 'win32') {
+        const archKey = process.arch === 'arm64' ? 'arm64' : 'x64';
+        if (process.platform === 'linux') {
+            const distroFamily = getLinuxDistroFamily();
+            platformKey = `linux-${archKey}-${distroFamily}`;
+        } else {
+            platformKey = `${process.platform}-${archKey}`;
         }
     }
+    return platformKey;
+}
 
+/**
+ * Pobiera metadane o wydaniu HPM z GitHub API.
+ */
+async function fetchLatestHpmMetadata() {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'api.github.com',
+            path: '/repos/KaucBartosz/Nous/releases/tags/hpm-precision-packs',
+            headers: { 'User-Agent': 'Nous-Launcher' }
+        };
+
+        https.get(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                try {
+                    if (res.statusCode !== 200) throw new Error(`Status ${res.statusCode}`);
+                    resolve(JSON.parse(data));
+                } catch (e) { reject(e); }
+            });
+        }).on('error', reject);
+    });
+}
+
+/**
+ * Wykrywa rodzinę dystrybucji Linux na podstawie /etc/os-release.
+ * @returns {'rhel'|'debian'} Rodzina dystrybucji.
+ */
+function getLinuxDistroFamily() {
+    try {
+        const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
+
+        // Wyciągnij pola ID i ID_LIKE
+        const getId = (key) => (osRelease.match(new RegExp(`^${key}=(.*)`, 'm')) || [])[1] || '';
+        const id = getId('ID').replace(/"/g, '').toLowerCase().trim();
+        const idLike = getId('ID_LIKE').replace(/"/g, '').toLowerCase().trim();
+        const combined = `${id} ${idLike}`;
+
+        // Rozpoznane dystrybucje rodziny RHEL
+        const rhelFamily = ['rhel', 'fedora', 'centos', 'rocky', 'almalinux', 'oracle', 'scientific'];
+        if (rhelFamily.some(f => combined.includes(f))) {
+            console.log(`[HPM] Wykryto dystrybucję RHEL/Fedora (ID="${id}", ID_LIKE="${idLike}")`);
+            return 'rhel';
+        }
+
+        console.log(`[HPM] Wykryto dystrybucję Debian/Ubuntu (ID="${id}", ID_LIKE="${idLike}")`);
+        return 'debian';
+    } catch (e) {
+        console.warn('[HPM] Nie można odczytać /etc/os-release, zakładam Debian:', e.message);
+        return 'debian'; // bezpieczny fallback
+    }
+}
+
+function getPythonPath() {
+    const userDataPath = getLinuxUserDataPath();
     const hpmDir = path.join(userDataPath, 'python_env');
 
     if (process.platform === 'win32') {
         const rootPath = path.join(hpmDir, 'python.exe');
         const nestedPath = path.join(hpmDir, 'python_env', 'python.exe');
         return fs.existsSync(nestedPath) ? nestedPath : rootPath;
+    } else if (process.platform === 'linux') {
+        // Na Linuxie preferuj wrapper skrypt który ustawia LD_LIBRARY_PATH
+        // dla bundlowanych bibliotek systemowych (SDL2, OpenGL, itp.)
+        const wrapperPath = path.join(hpmDir, 'bin', 'python3_nous');
+        const wrapperNestedPath = path.join(hpmDir, 'python_env', 'bin', 'python3_nous');
+        const rootPath = path.join(hpmDir, 'bin', 'python3');
+        const nestedPath = path.join(hpmDir, 'python_env', 'bin', 'python3');
+
+        if (fs.existsSync(wrapperNestedPath)) return wrapperNestedPath;
+        if (fs.existsSync(wrapperPath)) return wrapperPath;
+        if (fs.existsSync(nestedPath)) return nestedPath;
+        return rootPath;
     } else {
         const rootPath = path.join(hpmDir, 'bin', 'python3');
         const nestedPath = path.join(hpmDir, 'python_env', 'bin', 'python3');
@@ -817,30 +961,67 @@ function getPythonPath() {
     }
 }
 
+ipcMain.handle('check-hpm-update', async () => {
+    try {
+        const userDataPath = getLinuxUserDataPath();
+        const manifestPath = path.join(userDataPath, 'hpm_manifest.json');
+
+        if (!fs.existsSync(manifestPath)) return { hasUpdate: false, engineExists: false };
+
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        const metadata = await fetchLatestHpmMetadata();
+        const platformKey = getHpmPlatformKey();
+        const expectedUrl = HPM_ENGINE_URLS[platformKey];
+        const fileName = path.basename(expectedUrl);
+
+        const asset = metadata.assets.find(a => a.name === fileName);
+        if (!asset) return { hasUpdate: false, error: 'Asset not found in release' };
+
+        const latestDate = new Date(asset.updated_at);
+        const currentDate = new Date(manifest.version_date);
+
+        return {
+            hasUpdate: latestDate > currentDate,
+            latestDate: latestDate.toISOString(),
+            currentDate: currentDate.toISOString(),
+            engineExists: true
+        };
+    } catch (e) {
+        console.error("[HPM Update Check] Error:", e);
+        return { hasUpdate: false, error: e.message };
+    }
+});
+
 ipcMain.handle('get-hpm-status', async () => {
     const pythonPath = getPythonPath();
     return fs.existsSync(pythonPath);
 });
 
+ipcMain.handle('get-linux-distro', async () => {
+    if (process.platform !== 'linux') return { family: 'other', id: '', idLike: '' };
+    const family = getLinuxDistroFamily();
+    try {
+        const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
+        const getId = (key) => (osRelease.match(new RegExp(`^${key}=(.*)`, 'm')) || [])[1] || '';
+        return {
+            family,
+            id: getId('ID').replace(/"/g, '').trim(),
+            idLike: getId('ID_LIKE').replace(/"/g, '').trim()
+        };
+    } catch (e) {
+        return { family, id: 'linux', idLike: '' };
+    }
+});
+
+
 ipcMain.on('download-hpm-engine', async (event) => {
     const sender = event.sender;
 
-    // Check if already exists to prevent redundant downloads
-    const pythonPath = getPythonPath();
-    if (fs.existsSync(pythonPath)) {
-        console.log("HPM Engine already exists, skipping download.");
-        sender.send('hpm-installed', true);
-        return;
-    }
-
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getLinuxUserDataPath();
     const hpmDir = path.join(userDataPath, 'python_env');
     const zipPath = path.join(userDataPath, 'hpm_engine.zip');
 
-    let platformKey = process.platform;
-    if (process.platform !== 'win32') {
-        platformKey = `${process.platform}-${process.arch}`;
-    }
+    let platformKey = getHpmPlatformKey();
 
     const initialUrl = HPM_ENGINE_URLS[platformKey];
     if (!initialUrl) {
@@ -895,7 +1076,12 @@ ipcMain.on('download-hpm-engine', async (event) => {
                 file.on('finish', () => {
                     try {
                         const zip = new AdmZip(zipPath);
-                        // Folder nadrzędny 'python_env' już istnieje (hpmDir),
+                        // Czyścimy folder przed rozpakowaniem, aby uniknąć konfliktów starych bibliotek
+                        if (fs.existsSync(hpmDir)) {
+                            fs.rmSync(hpmDir, { recursive: true, force: true });
+                        }
+                        fs.mkdirSync(hpmDir, { recursive: true });
+
                         // AdmZip extractAllTo(path, overwrite)
                         zip.extractAllTo(hpmDir, true);
                         try { fs.unlinkSync(zipPath); } catch (e) { }
@@ -918,7 +1104,31 @@ ipcMain.on('download-hpm-engine', async (event) => {
                             }
                         }
 
-                        sender.send('hpm-installed', true);
+                        // Zapisz manifest z datą pobrania z GitHub
+                        fetchLatestHpmMetadata().then(metadata => {
+                            const expectedUrl = HPM_ENGINE_URLS[platformKey];
+                            const fileName = path.basename(expectedUrl);
+                            const asset = metadata.assets.find(a => a.name === fileName);
+                            const versionDate = asset ? asset.updated_at : new Date().toISOString();
+
+                            const manifest = {
+                                version_date: versionDate,
+                                platform: platformKey,
+                                installed_at: new Date().toISOString()
+                            };
+                            fs.writeFileSync(path.join(userDataPath, 'hpm_manifest.json'), JSON.stringify(manifest, null, 2));
+                            console.log(`[HPM] Manifest created successfully for ${platformKey} (v: ${versionDate})`);
+                        }).catch(err => {
+                            console.warn("[HPM] Could not fetch metadata for manifest, using current time:", err.message);
+                            const manifest = {
+                                version_date: new Date().toISOString(),
+                                platform: platformKey,
+                                installed_at: new Date().toISOString()
+                            };
+                            fs.writeFileSync(path.join(userDataPath, 'hpm_manifest.json'), JSON.stringify(manifest, null, 2));
+                        }).finally(() => {
+                            sender.send('hpm-installed', true);
+                        });
                     } catch (e) {
                         console.error("HPM Engine Extract Error:", e);
                         sender.send('hpm-installed', false);
@@ -960,8 +1170,8 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
     }
 
     sender.send('test-status', 'Uruchamianie natywne (HPM)...');
-    if (activePythonProcess) {
-        sender.send('test-status', 'BŁĄD: Proces nadrzędny HPM jest już uruchomiony!');
+    if (isTestRunning()) {
+        sender.send('test-status', 'BŁĄD: Test jest już uruchomiony!');
         return;
     }
 
@@ -971,8 +1181,18 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         cwd: workingDir,
         env: {
             ...process.env,
+            // Flagi launchera
             NOUS_LAUNCHER: '1',
-            NOUS_TRAINING: trainingMode ? '1' : '0'
+            NOUS_TRAINING: trainingMode ? '1' : '0',
+            // Ustaw PYTHONHOME na katalog standalone Pythona
+            // aby uniknąć konfliktu z systemowym Pythonem lub Pythonem Electrona
+            PYTHONHOME: path.dirname(path.dirname(pythonPath)), // np. .../python_env
+            // Wyczyść zmienne które Electron ustawia i które mogą kolidować
+            // ze standalone Python (szczególnie groźne na macOS)
+            PYTHONPATH: '',
+            DYLD_INSERT_LIBRARIES: '', // macOS: Electron wstrzykuje własne lib
+            DYLD_LIBRARY_PATH: '',     // macOS: może wskazywać na biblioteki Electrona
+            ELECTRON_RUN_AS_NODE: '',  // zapobiegaj uruchamianiu jako Node.js
         }
     });
 

@@ -7,32 +7,79 @@ permissions:
   contents: write # Wymagane do tworzenia/aktualizacji wydań (Releases)
 
 jobs:
+
+  # ==========================================================
+  #  JOB 1: Windows + macOS + Linux (Debian/Ubuntu)
+  # ==========================================================
   build-packs:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }} Pack
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             platform: win
             arch: x64
-          - os: macos-latest # Apple Silicon (ARM64)
+
+          # macOS ARM64 (Apple Silicon) — macos-latest = macos-15 = M series
+          - os: macos-latest
             platform: mac
             arch: arm64
-          - os: macos-latest # Will run Intel build via Rosetta if needed, or just package it
+
+          # macOS Intel x64 — macos-13 to ostatni runner Intel (x86_64)
+          # macos-latest (macos-15) jest ARM-only i nie może natywnie
+          # uruchomić x86_64 standalone Python bez Rosetta
+          - os: macos-13
             platform: mac
             arch: x64
+
+          # Linux Debian/Ubuntu
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x64
+            distro: debian
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ── Linux (Debian/Ubuntu): zależności systemowe ──────────────────
+      - name: Install Linux System Dependencies (Debian/Ubuntu)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libsdl2-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libgtk-3-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            libjpeg-dev \
+            libtiff5-dev \
+            libpng-dev \
+            libportaudio2 \
+            libportaudiocpp0 \
+            portaudio19-dev \
+            libasound2-dev \
+            libffi-dev \
+            libssl-dev \
+            libxcb-xinerama0 \
+            libxkbcommon-x11-0 \
+            libdbus-1-3 \
+            libharfbuzz0b \
+            pkg-config \
+            patchelf \
+            zip
+
+      # ── Pobieranie standalone Python ─────────────────────────────────
       - name: Download Standalone Python
         shell: bash
         run: |
           TAG="20240224"
           BASE_URL="https://github.com/astral-sh/python-build-standalone/releases/download/$TAG"
-          
+
           if [ "${{ matrix.platform }}" == "win" ]; then
             URL="$BASE_URL/cpython-3.10.13+$TAG-x86_64-pc-windows-msvc-shared-install_only.tar.gz"
           elif [ "${{ matrix.platform }}" == "mac" ]; then
@@ -41,62 +88,267 @@ jobs:
             else
               URL="$BASE_URL/cpython-3.10.13+$TAG-x86_64-apple-darwin-install_only.tar.gz"
             fi
+          elif [ "${{ matrix.platform }}" == "linux" ]; then
+            URL="$BASE_URL/cpython-3.10.13+$TAG-x86_64-unknown-linux-gnu-install_only.tar.gz"
           fi
-          
+
           echo "Downloading from $URL..."
           curl -f -L "$URL" -o python_standalone.tar.gz
-          
           tar -xzf python_standalone.tar.gz
           mv python python_env
 
+      # ── Instalacja PsychoPy ──────────────────────────────────────────
       - name: Install PsychoPy and Dependencies
         shell: bash
         run: |
           if [ "${{ matrix.platform }}" == "win" ]; then
-            ./python_env/python.exe -m pip install --no-cache-dir setuptools wheel
-            ./python_env/python.exe -m pip install --no-cache-dir psychopy numpy scipy pandas pyglet
+            PYTHON="./python_env/python.exe"
           else
-            ./python_env/bin/python3 -m pip install --no-cache-dir setuptools wheel
-            ./python_env/bin/python3 -m pip install --no-cache-dir psychopy numpy scipy pandas pyglet
+            PYTHON="./python_env/bin/python3"
           fi
 
+          $PYTHON -m pip install --no-cache-dir --upgrade pip setuptools wheel
+          $PYTHON -m pip install --no-cache-dir psychopy numpy scipy pandas pyglet
+
+      # ── Czyszczenie cache ────────────────────────────────────────────
       - name: Cleanup and Optimize
         shell: bash
         run: |
-          find python_env -name "__pycache__" -type d -exec rm -rf {} + || true
-          rm python_standalone.tar.gz
+          find python_env -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+          find python_env -name "*.pyc" -delete 2>/dev/null || true
+          find python_env -name "*.pyo" -delete 2>/dev/null || true
+          find python_env -name "test"  -type d -exec rm -rf {} + 2>/dev/null || true
+          find python_env -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+          rm -f python_standalone.tar.gz
 
+      # ── Linux: bundluj biblioteki systemowe + stwórz wrapper ─────────
+      # UWAGA: heredoc musi zaczynać się od kolumny 0 (bez wcięcia).
+      # Używamy printf zamiast heredoc żeby uniknąć problemów z YAML indent.
+      - name: Bundle Linux System Libraries (Debian/Ubuntu)
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          LIB_DIR="./python_env/lib/system_libs"
+          mkdir -p "$LIB_DIR"
+
+          SYSTEM_LIBS=(
+            "libSDL2-2.0.so.0"
+            "libGL.so.1"
+            "libGLU.so.1"
+            "libportaudio.so.2"
+            "libasound.so.2"
+            "libgtk-3.so.0"
+            "libgdk-3.so.0"
+            "libglib-2.0.so.0"
+            "libgobject-2.0.so.0"
+            "libgio-2.0.so.0"
+            "libharfbuzz.so.0"
+            "libfreetype.so.6"
+            "libfontconfig.so.1"
+          )
+
+          for lib in "${SYSTEM_LIBS[@]}"; do
+            LIB_PATH=$(ldconfig -p 2>/dev/null | grep " $lib " | head -1 | awk '{print $NF}')
+            if [ -n "$LIB_PATH" ] && [ -f "$LIB_PATH" ]; then
+              echo "Bundling: $LIB_PATH"
+              cp "$LIB_PATH" "$LIB_DIR/$lib" 2>/dev/null || true
+            else
+              for search_path in /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib; do
+                if [ -f "$search_path/$lib" ]; then
+                  echo "Bundling (alt): $search_path/$lib"
+                  cp "$search_path/$lib" "$LIB_DIR/$lib" 2>/dev/null || true
+                  break
+                fi
+              done
+            fi
+          done
+
+          # Wrapper ustawiający LD_LIBRARY_PATH — używamy printf żeby uniknąć
+          # problemu z wcięciem heredoc w YAML
+          printf '#!/bin/bash\nSCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\nexport LD_LIBRARY_PATH="$SCRIPT_DIR/../lib/system_libs:$LD_LIBRARY_PATH"\nexec "$SCRIPT_DIR/python3" "$@"\n' > ./python_env/bin/python3_nous
+          chmod +x ./python_env/bin/python3_nous
+
+          echo "Wrapper content:"
+          cat ./python_env/bin/python3_nous
+
+          echo "Bundled libs:"
+          ls -lh "$LIB_DIR/" || echo "No libs bundled"
+
+      # ── Archiwizacja ─────────────────────────────────────────────────
       - name: Archive Pack
         id: archive
         shell: bash
         run: |
           if [ "${{ matrix.platform }}" == "mac" ]; then
             ZIP_NAME="python_env_${{ matrix.platform }}_${{ matrix.arch }}.zip"
+          elif [ "${{ matrix.platform }}" == "linux" ]; then
+            ZIP_NAME="python_env_linux_x64_${{ matrix.distro }}.zip"
           else
             ZIP_NAME="python_env_${{ matrix.platform }}.zip"
           fi
-          
+
+          echo "Creating: $ZIP_NAME"
+
           if [ "${{ matrix.platform }}" == "win" ]; then
             7z a -r "$ZIP_NAME" python_env/
           else
             zip -r "$ZIP_NAME" python_env/
           fi
-          
+
+          ls -lh "$ZIP_NAME"
           echo "zip_path=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hpm-pack-${{ matrix.platform }}-${{ matrix.arch }}
+          name: hpm-pack-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.distro || 'default' }}
           path: ${{ steps.archive.outputs.zip_path }}
           retention-days: 1
 
+
+  # ==========================================================
+  #  JOB 2: Linux (RHEL/Fedora) — osobny job z kontenerem
+  # ==========================================================
+  build-pack-rhel:
+    name: Build linux-x64-rhel Pack (Fedora container)
+    runs-on: ubuntu-22.04
+    container:
+      image: fedora:38
+      options: --user root
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Fedora: zależności systemowe (dnf) ──────────────────────────
+      - name: Install System Dependencies (Fedora/RHEL)
+        run: |
+          dnf install -y \
+            SDL2-devel \
+            mesa-libGL \
+            mesa-libGL-devel \
+            mesa-libGLU \
+            mesa-libGLU-devel \
+            gtk3-devel \
+            gstreamer1-devel \
+            gstreamer1-plugins-base-devel \
+            libjpeg-turbo-devel \
+            libtiff-devel \
+            libpng-devel \
+            portaudio-devel \
+            alsa-lib-devel \
+            libffi-devel \
+            openssl-devel \
+            libxcb \
+            libxkbcommon-x11 \
+            dbus-libs \
+            harfbuzz \
+            patchelf \
+            curl \
+            tar \
+            zip \
+            findutils \
+            which
+
+      # ── Pobieranie standalone Python ─────────────────────────────────
+      - name: Download Standalone Python
+        run: |
+          TAG="20240224"
+          URL="https://github.com/astral-sh/python-build-standalone/releases/download/$TAG/cpython-3.10.13+$TAG-x86_64-unknown-linux-gnu-install_only.tar.gz"
+
+          echo "Downloading from $URL..."
+          curl -f -L "$URL" -o python_standalone.tar.gz
+          tar -xzf python_standalone.tar.gz
+          mv python python_env
+
+      # ── Instalacja PsychoPy ──────────────────────────────────────────
+      - name: Install PsychoPy and Dependencies
+        run: |
+          PYTHON="./python_env/bin/python3"
+          $PYTHON -m pip install --no-cache-dir --upgrade pip setuptools wheel
+          $PYTHON -m pip install --no-cache-dir psychopy numpy scipy pandas pyglet
+
+      # ── Czyszczenie ──────────────────────────────────────────────────
+      - name: Cleanup and Optimize
+        run: |
+          find python_env -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+          find python_env -name "*.pyc" -delete 2>/dev/null || true
+          find python_env -name "*.pyo" -delete 2>/dev/null || true
+          find python_env -name "test"  -type d -exec rm -rf {} + 2>/dev/null || true
+          find python_env -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+          rm -f python_standalone.tar.gz
+
+      # ── Bundluj biblioteki systemowe (ścieżki RPM: /usr/lib64) ───────
+      - name: Bundle System Libraries (Fedora/RHEL)
+        run: |
+          LIB_DIR="./python_env/lib/system_libs"
+          mkdir -p "$LIB_DIR"
+
+          SYSTEM_LIBS=(
+            "libSDL2-2.0.so.0"
+            "libGL.so.1"
+            "libGLU.so.1"
+            "libportaudio.so.2"
+            "libasound.so.2"
+            "libgtk-3.so.0"
+            "libgdk-3.so.0"
+            "libglib-2.0.so.0"
+            "libgobject-2.0.so.0"
+            "libgio-2.0.so.0"
+            "libharfbuzz.so.0"
+            "libfreetype.so.6"
+            "libfontconfig.so.1"
+            "libjpeg.so.62"
+            "libtiff.so.5"
+          )
+
+          for lib in "${SYSTEM_LIBS[@]}"; do
+            for search_path in /usr/lib64 /usr/lib /lib64 /lib; do
+              if [ -f "$search_path/$lib" ]; then
+                echo "Bundling: $search_path/$lib"
+                cp "$search_path/$lib" "$LIB_DIR/$lib" 2>/dev/null || true
+                break
+              fi
+            done
+          done
+
+          # Wrapper ze ścieżkami RPM — printf zamiast heredoc (brak problemu z wcięciem YAML)
+          printf '#!/bin/bash\nSCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\nexport LD_LIBRARY_PATH="$SCRIPT_DIR/../lib/system_libs:$LD_LIBRARY_PATH"\nexec "$SCRIPT_DIR/python3" "$@"\n' > ./python_env/bin/python3_nous
+          chmod +x ./python_env/bin/python3_nous
+
+          echo "Wrapper content:"
+          cat ./python_env/bin/python3_nous
+
+          echo "Bundled libs:"
+          ls -lh "$LIB_DIR/" || echo "No libs bundled"
+
+      # ── Archiwizacja ─────────────────────────────────────────────────
+      - name: Archive Pack
+        id: archive
+        run: |
+          ZIP_NAME="python_env_linux_x64_rhel.zip"
+          zip -r "$ZIP_NAME" python_env/
+          ls -lh "$ZIP_NAME"
+          echo "zip_path=$ZIP_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hpm-pack-linux-x64-rhel
+          path: ${{ steps.archive.outputs.zip_path }}
+          retention-days: 1
+
+
+  # ==========================================================
+  #  JOB 3: Tworzenie Release (czeka na OBA poprzednie joby)
+  # ==========================================================
   create-release:
     name: Create GitHub Release
-    needs: build-packs
+    needs: [build-packs, build-pack-rhel]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -104,20 +356,42 @@ jobs:
           path: release_assets
           merge-multiple: true
 
+      - name: List release assets
+        run: ls -lh release_assets/
+
       - name: Create or Update Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: hpm-precision-packs
           name: "HPM Precision Packs (PsychoPy Portable)"
           body: |
-            Automatycznie wygenerowane środowiska PsychoPy dla trybu HPM.
-            
-            **Paczki w tym wydaniu:**
-            - `python_env_win.zip` (Windows)
-            - `python_env_mac_x64.zip` (macOS Intel)
-            - `python_env_mac_arm64.zip` (macOS Apple Silicon)
-            
-            *Zbudowano: ${{ github.event.repository.updated_at }}*
+            Automatycznie wygenerowane środowiska PsychoPy dla trybu HPM (High Precision Mode).
+            Launcher automatycznie wybiera właściwą paczkę na podstawie wykrytej dystrybucji.
+
+            ## Paczki w tym wydaniu:
+            | Plik | System | Architektura | Dystrybucja |
+            |------|--------|--------------|-------------|
+            | `python_env_win.zip` | Windows | x64 | — |
+            | `python_env_mac_x64.zip` | macOS | Intel (x64) | zbudowano na macos-13 |
+            | `python_env_mac_arm64.zip` | macOS | Apple Silicon | zbudowano na macos-latest |
+            | `python_env_linux_x64_debian.zip` | Linux | x64 | Ubuntu / Debian / Mint |
+            | `python_env_linux_x64_rhel.zip` | Linux | x64 | Fedora / RHEL / CentOS / Rocky |
+
+            ## Wymagania dla Linux
+
+            ### Debian/Ubuntu/Mint
+            Paczka zawiera bundlowane biblioteki. Jeśli wystąpią błędy:
+            ```
+            sudo apt-get install libsdl2-2.0-0 libgl1 libasound2
+            ```
+
+            ### Fedora/RHEL/CentOS/Rocky Linux
+            Paczka zawiera bundlowane biblioteki. Jeśli wystąpią błędy:
+            ```
+            sudo dnf install SDL2 mesa-libGL alsa-lib
+            ```
+
+            *Zbudowano: run #${{ github.run_id }}*
           files: release_assets/*.zip
           draft: false
           prerelease: false
