@@ -23,7 +23,7 @@ jobs:
           # 1. może zbudować universal binary (ARM64 + x64 fat binary)
           # 2. uruchamia x64 Python natywnie (potrzebne do npm ci na electron-builder)
           # macos-latest (macos-15) = Apple Silicon, nie może cross-compile x64 natywnie
-          - os: macos-13
+          - os: macos-latest
             name: macOS Universal
           - os: ubuntu-latest
             name: Linux
