@@ -19,10 +19,6 @@ jobs:
         include:
           - os: windows-latest
             name: Windows
-          # macos-13 = Intel x86_64 runner — jedyny runner który:
-          # 1. może zbudować universal binary (ARM64 + x64 fat binary)
-          # 2. uruchamia x64 Python natywnie (potrzebne do npm ci na electron-builder)
-          # macos-latest (macos-15) = Apple Silicon, nie może cross-compile x64 natywnie
           - os: macos-latest
             name: macOS Universal
           - os: ubuntu-latest
@@ -35,30 +31,26 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
 
-      # --- BUILD STEPS ---
-
       - name: Build Windows
-        if: matrix.os == 'windows-latest'
+        if: runner.os == 'Windows'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist -- --publish always
 
       - name: Build Linux
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:linux:ci -- --publish always
 
-      # Universal binary = działa natywnie na Intel i Apple Silicon
-      # Budujemy na Intel runnerze (macos-13) bo musi cross-compile ARM64
       - name: Build macOS Universal
-        if: matrix.os == 'macos-13'
+        if: runner.os == 'macOS'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Odkomentuj gdy masz certyfikat Apple Developer:

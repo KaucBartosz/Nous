@@ -27,10 +27,9 @@ jobs:
             platform: mac
             arch: arm64
 
-          # macOS Intel x64 — macos-13 to ostatni runner Intel (x86_64)
-          # macos-latest (macos-15) jest ARM-only i nie może natywnie
-          # uruchomić x86_64 standalone Python bez Rosetta
-          - os: macos-13
+          # macOS Intel x64 — korzystamy z macos-latest (Apple Silicon), 
+          # ponieważ macos-13 (Intel) nie jest już wspierany.
+          - os: macos-latest
             platform: mac
             arch: x64
 
