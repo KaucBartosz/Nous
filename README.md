@@ -53,7 +53,7 @@ Gdy wydamy nową wersję w tym repozytorium, Twoja aplikacja automatycznie ją w
 
 ## 🐛 Zgłaszanie błędów
 
-Możesz zgłaszać problemy z działaniem aplikacji w zakładce [Issues](https://github.com/KaucBartosz/Nous/issues), bądź mailowo na <kaucb@ukw.edu.pl>.
+Możesz zgłaszać problemy z działaniem aplikacji w zakładce [Issues](https://github.com/KaucBartosz/Nous/issues) lub na email 7k89yxz17@mozmail.com.
 
 1. Przejdź do zakładki Issues.
 2. Kliknij "New Issue".
