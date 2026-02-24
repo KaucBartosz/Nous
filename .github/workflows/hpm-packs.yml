@@ -152,21 +152,27 @@ jobs:
           )
 
           for lib in "${SYSTEM_LIBS[@]}"; do
-            LIB_PATH=$(ldconfig -p 2>/dev/null | grep " $lib " | head -1 | awk '{print $NF}')
+            # Używamy subshella z wyłączonym pipefail dla grep, żeby nie wywaliło skryptu przy braku biblioteki
+            LIB_PATH=$(set +o pipefail; ldconfig -p 2>/dev/null | grep " $lib " | head -1 | awk '{print $NF}' || echo "")
             echo "Searching for $lib: ldconfig path=$LIB_PATH"
 
             if [ -n "$LIB_PATH" ] && [ -f "$LIB_PATH" ]; then
               echo "Bundling: $LIB_PATH"
               cp "$LIB_PATH" "$LIB_DIR/$lib" 2>/dev/null || true
             else
-              echo "Library $lib not found via ldconfig; searching default paths..."
-              for search_path in /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib; do
+              echo "Library $lib not found via ldconfig; searching manual paths..."
+              FOUND=false
+              for search_path in /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /usr/lib64 /lib64; do
                 if [ -f "$search_path/$lib" ]; then
-                  echo "Bundling (alt): $search_path/$lib"
+                  echo "Bundling (manual): $search_path/$lib"
                   cp "$search_path/$lib" "$LIB_DIR/$lib" 2>/dev/null || true
+                  FOUND=true
                   break
                 fi
               done
+              if [ "$FOUND" = false ]; then
+                echo "WARNING: Library $lib NOT FOUND anywhere!"
+              fi
             fi
           done
 
