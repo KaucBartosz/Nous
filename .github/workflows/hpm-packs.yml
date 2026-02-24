@@ -55,7 +55,7 @@ jobs:
             libgtk-3-dev \
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
-            libjpeg-dev \
+            libjpeg62-turbo-dev \
             libtiff5-dev \
             libpng-dev \
             libportaudio2 \
@@ -146,14 +146,19 @@ jobs:
             "libharfbuzz.so.0"
             "libfreetype.so.6"
             "libfontconfig.so.1"
+            "libjpeg.so.62"
+            "libtiff.so.5"
           )
 
           for lib in "${SYSTEM_LIBS[@]}"; do
             LIB_PATH=$(ldconfig -p 2>/dev/null | grep " $lib " | head -1 | awk '{print $NF}')
+            echo "Searching for $lib: ldconfig path=$LIB_PATH"
+
             if [ -n "$LIB_PATH" ] && [ -f "$LIB_PATH" ]; then
               echo "Bundling: $LIB_PATH"
               cp "$LIB_PATH" "$LIB_DIR/$lib" 2>/dev/null || true
             else
+              echo "Library $lib not found via ldconfig; searching default paths..."
               for search_path in /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib; do
                 if [ -f "$search_path/$lib" ]; then
                   echo "Bundling (alt): $search_path/$lib"
@@ -164,16 +169,18 @@ jobs:
             fi
           done
 
-          # Wrapper ustawiający LD_LIBRARY_PATH — używamy printf żeby uniknąć
-          # problemu z wcięciem heredoc w YAML
+          # Upewnij się że katalog bin istnieje przed zapisem wrappera
+          mkdir -p ./python_env/bin
+
+          # Wrapper ustawiający LD_LIBRARY_PATH
           printf '#!/bin/bash\nSCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\nexport LD_LIBRARY_PATH="$SCRIPT_DIR/../lib/system_libs:$LD_LIBRARY_PATH"\nexec "$SCRIPT_DIR/python3" "$@"\n' > ./python_env/bin/python3_nous
           chmod +x ./python_env/bin/python3_nous
 
           echo "Wrapper content:"
           cat ./python_env/bin/python3_nous
 
-          echo "Bundled libs:"
-          ls -lh "$LIB_DIR/" || echo "No libs bundled"
+          echo "Bundled libs in $LIB_DIR:"
+          ls -lh "$LIB_DIR/" || echo "No libs bundled or directory empty"
 
       # ── Archiwizacja ─────────────────────────────────────────────────
       - name: Archive Pack
