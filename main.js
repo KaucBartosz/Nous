@@ -811,7 +811,9 @@ function getPythonPath() {
         const nestedPath = path.join(hpmDir, 'python_env', 'python.exe');
         return fs.existsSync(nestedPath) ? nestedPath : rootPath;
     } else {
-        return path.join(hpmDir, 'bin', 'python3');
+        const rootPath = path.join(hpmDir, 'bin', 'python3');
+        const nestedPath = path.join(hpmDir, 'python_env', 'bin', 'python3');
+        return fs.existsSync(nestedPath) ? nestedPath : rootPath;
     }
 }
 
