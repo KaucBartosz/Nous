@@ -899,6 +899,25 @@ ipcMain.on('download-hpm-engine', async (event) => {
                         // AdmZip extractAllTo(path, overwrite)
                         zip.extractAllTo(hpmDir, true);
                         try { fs.unlinkSync(zipPath); } catch (e) { }
+
+                        // Fix for Mac/Linux: AdmZip strips executable permissions
+                        if (process.platform !== 'win32') {
+                            try {
+                                const pyPath = getPythonPath();
+                                if (fs.existsSync(pyPath)) {
+                                    const binDir = path.dirname(pyPath);
+                                    if (fs.existsSync(binDir)) {
+                                        fs.readdirSync(binDir).forEach(file => {
+                                            const filePath = path.join(binDir, file);
+                                            try { fs.chmodSync(filePath, 0o755); } catch (e) { }
+                                        });
+                                    }
+                                }
+                            } catch (chmodErr) {
+                                console.error("Chmod error:", chmodErr);
+                            }
+                        }
+
                         sender.send('hpm-installed', true);
                     } catch (e) {
                         console.error("HPM Engine Extract Error:", e);
@@ -925,6 +944,11 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         const entryFile = findStartFile(testFolder);
         if (entryFile) openTestWindow(entryFile);
         return;
+    }
+
+    // Fix permissions on Mac/Linux if they were lost
+    if (process.platform !== 'win32') {
+        try { fs.chmodSync(pythonPath, 0o755); } catch (e) { }
     }
 
     // 2. Sprawdź czy test wspiera Pythona
