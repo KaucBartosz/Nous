@@ -71,7 +71,8 @@ jobs:
             pkg-config \
             patchelf \
             libunwind-dev \
-            zip
+            zip \
+            clang
 
       # ── Pobieranie standalone Python ─────────────────────────────────
       - name: Download Standalone Python
@@ -251,7 +252,8 @@ jobs:
             which \
             gcc \
             gcc-c++ \
-            make
+            make \
+            clang
 
       # ── Pobieranie standalone Python ─────────────────────────────────
       - name: Download Standalone Python
