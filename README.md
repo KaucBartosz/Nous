@@ -24,7 +24,7 @@ Kliknij poniżej, aby przejść do sekcji pobierania i wybrać wersję dla swoje
 ### macOS
 
 1. Pobierz plik `.dmg` z sekcji [Releases](https://github.com/KaucBartosz/Nous/releases/latest).
-2. Otwórz go i przeciągnij ikonę aplikacji do folderu `Applications`.
+2. Otwórz go i przeciągnij ikonę aplikacji do folderu `Applications/Aplikacje`.
 3. **Przy pierwszym uruchomieniu:**
    - Jeśli system zablokuje otwarcie ("Nieznany programista"), kliknij na ikonę aplikacji **Prawym Przyciskiem Myszy** i wybierz **Otwórz**.
    - W oknie dialogowym potwierdź chęć otwarcia.
