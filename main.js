@@ -49,12 +49,12 @@ function processDownloadQueue() {
  */
 function getUserDataPath() {
     let userDataPath = app.getPath('userData');
-    
+
     // macOS: ~/Library/Application Support/Nous
     if (process.platform === 'darwin') {
         return path.join(app.getPath('home'), 'Library', 'Application Support', 'Nous');
     }
-    
+
     // Linux: sprawdź różne ścieżki dla różnych dystrybucji
     if (process.platform === 'linux') {
         const os = require('os');
@@ -65,14 +65,14 @@ function getUserDataPath() {
             path.join(os.homedir(), '.config', 'Electron'),
             path.join(os.homedir(), '.config', 'electron')
         ];
-        
+
         for (const cand of candidates) {
             if (fs.existsSync(path.join(cand, 'tests_library')) || fs.existsSync(path.join(cand, 'python_env'))) {
                 return cand;
             }
         }
     }
-    
+
     // Windows: domyślna ścieżka Electrona
     return userDataPath;
 }
@@ -191,7 +191,7 @@ async function executeDownloadTask(task) {
     };
 
     // Definicje ścieżek
-    const userDataPath = getLinuxUserDataPath();
+    const userDataPath = getUserDataPath();
     const testsLibraryDir = path.join(userDataPath, 'tests_library');
 
     let testFolder = path.join(testsLibraryDir, testId);
@@ -375,7 +375,7 @@ async function executeDownloadTask(task) {
 // ==========================================================
 
 ipcMain.handle('get-local-versions', async (event) => {
-    let userDataPath = getLinuxUserDataPath();
+    let userDataPath = getUserDataPath();
     let testsDir = path.join(userDataPath, 'tests_library');
 
     // Linux-specific fallback: Check common paths as Electron behavior on Linux 
@@ -455,7 +455,7 @@ ipcMain.handle('delete-test', async (event, testId) => {
         return { success: false, error: "Nieprawidłowe ID testu" };
     }
 
-    const userDataPath = getLinuxUserDataPath();
+    const userDataPath = getUserDataPath();
     const testFolder = path.join(userDataPath, 'tests_library', testId);
 
     try {
@@ -484,7 +484,7 @@ const { safeStorage } = require('electron');
 let _keyFilePath = null;
 function getKeyFilePath() {
     if (!_keyFilePath) {
-        _keyFilePath = path.join(getLinuxUserDataPath(), 'master_key.enc');
+        _keyFilePath = path.join(getUserDataPath(), 'master_key.enc');
     }
     return _keyFilePath;
 }
@@ -948,7 +948,7 @@ function getLinuxDistroFamily() {
 }
 
 function getPythonPath() {
-    const userDataPath = getLinuxUserDataPath();
+    const userDataPath = getUserDataPath();
     const hpmDir = path.join(userDataPath, 'python_env');
 
     if (process.platform === 'win32') {
@@ -976,7 +976,7 @@ function getPythonPath() {
 
 ipcMain.handle('check-hpm-update', async () => {
     try {
-        const userDataPath = getLinuxUserDataPath();
+        const userDataPath = getUserDataPath();
         const manifestPath = path.join(userDataPath, 'hpm_manifest.json');
 
         if (!fs.existsSync(manifestPath)) return { hasUpdate: false, engineExists: false };
@@ -1030,7 +1030,7 @@ ipcMain.handle('get-linux-distro', async () => {
 ipcMain.on('download-hpm-engine', async (event) => {
     const sender = event.sender;
 
-    const userDataPath = getLinuxUserDataPath();
+    const userDataPath = getUserDataPath();
     const hpmDir = path.join(userDataPath, 'python_env');
     const zipPath = path.join(userDataPath, 'hpm_engine.zip');
 
@@ -1169,21 +1169,12 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         return;
     }
 
-// Fix permissions on Mac/Linux if they were lost
+    // Fix permissions on Mac/Linux if they were lost
     if (process.platform !== 'win32') {
         try { fs.chmodSync(pythonPath, 0o755); } catch (e) { }
     }
-    
-// macOS: clear potentially conflicting environment variables
-    if (process.platform === 'darwin') {
-        env.DYLD_INSERT_LIBRARIES = '';
-        env.DYLD_LIBRARY_PATH = '';
-    }
-    
-    // Linux: clear potentially conflicting environment variables
-    if (process.platform === 'linux') {
-        env.LD_LIBRARY_PATH = '';
-    }
+
+
 
     // 2. Sprawdź czy test wspiera Pythona
     if (!mainPyPath) {
@@ -1216,6 +1207,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
             PYTHONPATH: '',
             DYLD_INSERT_LIBRARIES: '', // macOS: Electron wstrzykuje własne lib
             DYLD_LIBRARY_PATH: '',     // macOS: może wskazywać na biblioteki Electrona
+            LD_LIBRARY_PATH: '',       // Linux: może kolidować z systemowymi bibliotekami
             ELECTRON_RUN_AS_NODE: '',  // zapobiegaj uruchamianiu jako Node.js
         }
     });
