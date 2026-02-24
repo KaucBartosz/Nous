@@ -45,22 +45,35 @@ function processDownloadQueue() {
 }
 
 /**
- * Helper do znajdowania właściwego folderu danych na Linux (case-sensitivity)
+ * Helper do znajdowania właściwego folderu danych na wszystkich platformach
  */
-function getLinuxUserDataPath() {
+function getUserDataPath() {
     let userDataPath = app.getPath('userData');
+    
+    // macOS: ~/Library/Application Support/Nous
+    if (process.platform === 'darwin') {
+        return path.join(app.getPath('home'), 'Library', 'Application Support', 'Nous');
+    }
+    
+    // Linux: sprawdź różne ścieżki dla różnych dystrybucji
     if (process.platform === 'linux') {
         const os = require('os');
         const candidates = [
             path.join(os.homedir(), '.config', 'nous'),
-            path.join(os.homedir(), '.config', 'Nous')
+            path.join(os.homedir(), '.config', 'Nous'),
+            path.join(os.homedir(), '.config', 'nous-launcher'),
+            path.join(os.homedir(), '.config', 'Electron'),
+            path.join(os.homedir(), '.config', 'electron')
         ];
+        
         for (const cand of candidates) {
             if (fs.existsSync(path.join(cand, 'tests_library')) || fs.existsSync(path.join(cand, 'python_env'))) {
                 return cand;
             }
         }
     }
+    
+    // Windows: domyślna ścieżka Electrona
     return userDataPath;
 }
 
@@ -1156,9 +1169,20 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         return;
     }
 
-    // Fix permissions on Mac/Linux if they were lost
+// Fix permissions on Mac/Linux if they were lost
     if (process.platform !== 'win32') {
         try { fs.chmodSync(pythonPath, 0o755); } catch (e) { }
+    }
+    
+// macOS: clear potentially conflicting environment variables
+    if (process.platform === 'darwin') {
+        env.DYLD_INSERT_LIBRARIES = '';
+        env.DYLD_LIBRARY_PATH = '';
+    }
+    
+    // Linux: clear potentially conflicting environment variables
+    if (process.platform === 'linux') {
+        env.LD_LIBRARY_PATH = '';
     }
 
     // 2. Sprawdź czy test wspiera Pythona
