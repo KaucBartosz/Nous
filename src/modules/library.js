@@ -167,8 +167,9 @@ export function initViewSwitcher() {
                     if (isLinux) {
                         await Dialog.alert(
                             "<strong>Instalacja HPM na Linux</strong><br><br>" +
-                            "Wsparcie dla Linux wymaga samodzielnego przygotowania środowiska Python. Launcher szuka interpretera w folderze:<br>" +
-                            "<code>~/.config/nous/python_env/bin/python3</code><br><br>" +
+                            "Wsparcie dla Linux wymaga samodzielnego przygotowania środowiska Python. Launcher szuka interpretera w folderach:<br>" +
+                            "<code>~/.config/nous/python_env/bin/python3</code> lub <br>" +
+                            "<code>~/.config/nous/python_env/python_env/bin/python3</code><br><br>" +
                             "<strong>Wymagania:</strong><br>" +
                             "• <b>Środowisko:</b> Virtualenv oparty na <b>Python 3.11</b> (najlepsza kompatybilność).<br>" +
                             "• <b>Pakiety Python:</b> <code>psychopy, numpy, scipy, pandas, pyglet, wxPython</code>.<br>" +
