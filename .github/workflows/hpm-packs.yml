@@ -70,6 +70,7 @@ jobs:
             libharfbuzz0b \
             pkg-config \
             patchelf \
+            libunwind-dev \
             zip
 
       # ── Pobieranie standalone Python ─────────────────────────────────
@@ -247,7 +248,10 @@ jobs:
             tar \
             zip \
             findutils \
-            which
+            which \
+            gcc \
+            gcc-c++ \
+            make
 
       # ── Pobieranie standalone Python ─────────────────────────────────
       - name: Download Standalone Python

@@ -31,11 +31,17 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
+          # Node 22 jest wymagany przez nowsze wersje Electrona i narzędzia do rebuilda modułów natywnych.
+          # Użycie starszej wersji (np. 20) powoduje błędy EBADENGINE przy budowaniu na macOS.
           node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
+
+      # --- WAŻNE: Używamy 'runner.os' w warunkach 'if' ---
+      # Dzięki temu kroki budowania NIE zostaną pominięte, jeśli GitHub zmieni wersję 
+      # obrazu pod etykietą 'macos-latest' lub 'windows-latest'.
 
       - name: Build Windows
         if: runner.os == 'Windows'
@@ -50,6 +56,7 @@ jobs:
         run: npm run dist:linux:ci -- --publish always
 
       - name: Build macOS Universal
+        # Warunek 'runner.os == macOS' gwarantuje uruchomienie kroku na każdym Macu (Intel/Silicon)
         if: runner.os == 'macOS'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
