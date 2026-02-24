@@ -55,7 +55,8 @@ jobs:
             libgtk-3-dev \
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
-            libjpeg62-turbo-dev \
+            libjpeg-dev \
+            libjpeg62 \
             libtiff5-dev \
             libpng-dev \
             libportaudio2 \
