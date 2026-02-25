@@ -6,3 +6,4 @@ build_linux_on_win.ps1
 firestore.rules
 tests/Piorkowski/
 test_mac_hpm/
+HPMinneSystemy/

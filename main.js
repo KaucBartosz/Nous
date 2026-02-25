@@ -1099,6 +1099,28 @@ ipcMain.on('download-hpm-engine', async (event) => {
                         zip.extractAllTo(hpmDir, true);
                         try { fs.unlinkSync(zipPath); } catch (e) { }
 
+                        // --- POLYFILL DLA WYBRAKOWANYCH BIBLIOTEK NUMPY ---
+                        // Jeśli ZIP z HPM miał agresywnie usunięte foldery "tests" (np. przez odchudzanie wagi), 
+                        // Numpy 2.0+ wywali błąd `ModuleNotFoundError: No module named 'numpy._core.tests'`.
+                        // Tworzymy na szybko zaślepkę tego modułu:
+                        try {
+                            const sitePackagesPathMatch = fs.readdirSync(hpmDir, { recursive: true, withFileTypes: true })
+                                .find(dirent => dirent.isDirectory() && dirent.name === 'site-packages');
+
+                            if (sitePackagesPathMatch) {
+                                const sitePackagesDir = path.join(sitePackagesPathMatch.parentPath || sitePackagesPathMatch.path, 'site-packages');
+                                const numpyTestsDir = path.join(sitePackagesDir, 'numpy', '_core', 'tests');
+                                if (fs.existsSync(path.join(sitePackagesDir, 'numpy', '_core')) && !fs.existsSync(numpyTestsDir)) {
+                                    fs.mkdirSync(numpyTestsDir, { recursive: true });
+                                    fs.writeFileSync(path.join(numpyTestsDir, '__init__.py'), '# Polyfill');
+                                    fs.writeFileSync(path.join(numpyTestsDir, '_natype.py'), 'pd_NA = None\n');
+                                    console.log('[HPM] Applied polyfill for numpy._core.tests');
+                                }
+                            }
+                        } catch (polyfillErr) {
+                            console.warn('[HPM] Could not apply numpy polyfill:', polyfillErr);
+                        }
+
                         // Fix for Mac/Linux: AdmZip strips executable permissions
                         if (process.platform !== 'win32') {
                             try {
@@ -1192,6 +1214,12 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
 
     const workingDir = path.dirname(mainPyPath);
 
+    // Usuwamy stare wyniki, aby nie zostały wysłane w przypadku natychmiastowego błędu Pythona
+    const resultsPath = path.join(workingDir, 'results.json');
+    if (fs.existsSync(resultsPath)) {
+        try { fs.unlinkSync(resultsPath); } catch (e) { console.error("Could not remove old results.json", e); }
+    }
+
     activePythonProcess = spawn(pythonPath, [mainPyPath], {
         cwd: workingDir,
         env: {
@@ -1201,7 +1229,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
             NOUS_TRAINING: trainingMode ? '1' : '0',
             // Ustaw PYTHONHOME na katalog standalone Pythona
             // aby uniknąć konfliktu z systemowym Pythonem lub Pythonem Electrona
-            PYTHONHOME: path.dirname(path.dirname(pythonPath)), // np. .../python_env
+            PYTHONHOME: process.platform === 'win32' ? path.dirname(pythonPath) : path.dirname(path.dirname(pythonPath)), // np. .../python_env
             // Wyczyść zmienne które Electron ustawia i które mogą kolidować
             // ze standalone Python (szczególnie groźne na macOS)
             PYTHONPATH: '',
@@ -1229,6 +1257,7 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
         console.log(`Python process closed with code ${code}`);
         activePythonProcess = null;
         if (mainWindow) mainWindow.webContents.send('test-process-stopped');
+
         // Po zamknięciu Pythona sprawdzamy czy wygenerował wyniki (np. results.json)
         const resultsPath = path.join(workingDir, 'results.json');
         if (fs.existsSync(resultsPath)) {
@@ -1238,7 +1267,10 @@ function runPythonTestIfPossible(testFolder, sender, trainingMode = false) {
                 sender.send('test-results-forwarded', results);
             } catch (e) {
                 console.error("Error reading Python results:", e);
+                sender.send('test-status', `BŁĄD: Nie można odczytać wyników testu: ${e.message}`);
             }
+        } else if (code !== 0) {
+            sender.send('test-status', `BŁĄD: Proces testowy zakończył się awaryjnie (kod: ${code}). Upewnij się, że silnik HPM jest poprawnie zainstalowany.`);
         }
     });
 }
