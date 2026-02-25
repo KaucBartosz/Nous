@@ -7,3 +7,4 @@ firestore.rules
 tests/Piorkowski/
 test_mac_hpm/
 HPMinneSystemy/
+test-output.txt
