@@ -1121,6 +1121,29 @@ ipcMain.on('download-hpm-engine', async (event) => {
                             console.warn('[HPM] Could not apply numpy polyfill:', polyfillErr);
                         }
 
+                        // Usuń konfliktujące biblioteki glib/gtk z system_libs na RHEL/Fedora
+                        if (platformKey.includes('rhel')) {
+                            try {
+                                const sysLibsDir = path.join(hpmDir, 'python_env', 'lib', 'system_libs');
+                                if (fs.existsSync(sysLibsDir)) {
+                                    const problematic = [
+                                        'libglib-2.0.so.0', 'libgobject-2.0.so.0', 'libgio-2.0.so.0',
+                                        'libgdk-3.so.0', 'libgtk-3.so.0', 'libfontconfig.so.1',
+                                        'libfreetype.so.6', 'libharfbuzz.so.0', 'libjpeg.so.62', 'libtiff.so.5'
+                                    ];
+                                    problematic.forEach(lib => {
+                                        const libPath = path.join(sysLibsDir, lib);
+                                        if (fs.existsSync(libPath)) {
+                                            fs.unlinkSync(libPath);
+                                            console.log(`[HPM] Removed conflicting library on RHEL: ${lib}`);
+                                        }
+                                    });
+                                }
+                            } catch (rmErr) {
+                                console.warn('[HPM] Could not remove conflicting RHEL libraries:', rmErr);
+                            }
+                        }
+
                         // Fix for Mac/Linux: AdmZip strips executable permissions
                         if (process.platform !== 'win32') {
                             try {
