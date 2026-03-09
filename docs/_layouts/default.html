@@ -83,8 +83,10 @@
             
             <!-- Nawigacja -->
             <nav class="hidden md:flex items-center gap-8 font-medium text-sm text-slate-300">
-                <a href="#features" class="hover:text-white transition-colors">O funkcjach</a>
-                <a href="#download" class="hover:text-white transition-colors">Pobierz</a>
+                <a href="{{ '/' | relative_url }}" class="hover:text-white transition-colors">Start</a>
+                <a href="{{ '/features' | relative_url }}" class="hover:text-white transition-colors font-bold text-white">Przewodnik</a>
+                <a href="{{ '/' | relative_url }}#features" class="hover:text-white transition-colors">O funkcjach</a>
+                <a href="{{ '/' | relative_url }}#download" class="hover:text-white transition-colors">Pobierz</a>
                 <a href="https://github.com/KaucBartosz/Nous" target="_blank" class="flex items-center gap-2 hover:text-white transition-colors">
                     Kod źródłowy
                 </a>
