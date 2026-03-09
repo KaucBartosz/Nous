@@ -1,108 +1,308 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nous - Twój nowy wymiar produktywności</title>
-    <!-- Ładujemy nowoczesne style (TailwindCSS) prosto z chmury -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+---
+layout: default
+---
 
-    <!-- SEKACJA GŁÓWNA (HERO) -->
-    <header class="bg-blue-600 text-white py-20">
-        <div class="max-w-5xl mx-auto px-6 text-center">
-            <h1 class="text-5xl font-extrabold mb-4">Aplikacja Nous</h1>
-            <p class="text-xl mb-8 opacity-90">Platforma do przeprowadzania ustandaryzowanych testów psychologicznych i poznawczych z precyzyjnym raportowaniem.</p>
-            
-            <!-- Magiczny przycisk pobierania (One-Click Download) -->
-            <a id="download-btn" href="https://github.com/KaucBartosz/Nous/releases/latest" 
-               class="inline-block bg-white text-blue-600 font-bold py-4 px-8 rounded-full text-lg shadow-lg hover:bg-gray-100 transition-transform transform hover:scale-105">
-               Ładowanie wersji...
+<!-- 1. HERO SECTION -->
+<!-- Tło z subtelnymi radialnymi gradientami -->
+<section class="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-gradient-to-br from-purple-100/50 via-white to-blue-100/50">
+    <div class="max-w-6xl mx-auto px-6 relative z-10 text-center">
+        <!-- Ikona główna -->
+        <div class="mx-auto w-24 h-24 bg-slate-900 rounded-3xl flex items-center justify-center shadow-2xl mb-8 relative">
+            <div class="absolute inset-0 bg-brand-blue opacity-20 blur-xl rounded-full"></div>
+            <svg class="w-12 h-12 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <!-- Ścieżka SVG symulująca chip/mózg/technologię jak na Designie -->
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+            </svg>
+        </div>
+
+        <!-- Typography -->
+        <h1 class="text-6xl md:text-8xl font-extrabold mb-6 tracking-tight gradient-text py-2">
+            Nous
+        </h1>
+        <p class="text-xl md:text-2xl text-slate-700 font-medium max-w-2xl mx-auto mb-3">
+            Nowoczesne narzędzie do przeprowadzania testów psychometrycznych
+        </p>
+        <p class="text-slate-500 mb-10 text-lg">
+            Testuj, Badaj, Rozwijaj
+        </p>
+
+        <!-- Dynamiczny przycisk pobierania (mechanizm JS + Styling) -->
+        <a id="download-btn-hero" href="https://github.com/KaucBartosz/Nous/releases/latest" 
+           class="inline-flex items-center gap-3 bg-white border border-gray-200 text-slate-900 font-semibold py-4 px-10 rounded-full text-[17px] shadow-xl shadow-blue-900/5 hover:bg-gray-50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+            <svg class="w-5 h-5 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            <span id="download-text-btn">Ładowanie instalatora...</span>
+        </a>
+        <div class="mt-4">
+            <a href="#download" class="text-sm text-slate-500 hover:text-brand-blue transition-colors underline underline-offset-4">
+                Pobierz dla innych architektur
             </a>
-            
-            <p class="mt-4 text-sm opacity-80">
-                <a href="https://github.com/KaucBartosz/Nous/releases/latest" class="underline hover:text-white">
-                    Pobierz dla innych systemów operacyjnych
-                </a>
-            </p>
         </div>
-    </header>
+    </div>
+</section>
 
-    <!-- SEKACJA: NAJWAŻNIEJSZE FUNKCJE -->
-    <section class="py-16 max-w-6xl mx-auto px-6">
-        <h2 class="text-3xl font-bold text-center mb-12 text-gray-900">Dlaczego warto wybrać Nous?</h2>
+<!-- 2. KEY PROMISES -->
+<section class="py-12 border-y border-gray-100 bg-white">
+    <div class="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+        <div class="text-center px-4 pt-4 md:pt-0">
+            <div class="text-3xl mb-2 font-bold text-slate-900">100%</div>
+            <div class="text-slate-500 font-medium">Darmowe (Open Source)</div>
+        </div>
+        <div class="text-center px-4 pt-4 md:pt-0">
+            <div class="text-3xl mb-2 font-bold text-slate-900">Lokalne</div>
+            <div class="text-slate-500 font-medium">Dane na urządzeniu</div>
+        </div>
+        <div class="text-center px-4 pt-4 md:pt-0">
+            <div class="text-3xl mb-2 font-bold text-slate-900">Wydajne</div>
+            <div class="text-slate-500 font-medium">Napisane nowocześnie</div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. FUNKCJE (Features) -->
+<section id="features" class="py-24 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="text-center mb-20">
+            <h2 class="text-sm font-bold tracking-widest text-brand-blue uppercase mb-3">Funkcje</h2>
+            <h3 class="text-3xl md:text-4xl font-bold text-slate-900 max-w-3xl mx-auto leading-tight">
+                Wszystko czego potrzebujesz do efektywnego zarządzania wiedzą
+            </h3>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- 1 -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-6">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h4 class="text-xl font-bold text-slate-900 mb-3">W pełni funkcjonalny Offline</h4>
+                <p class="text-slate-600 leading-relaxed">Testuj i zbieraj dane nawet bez internetu. Wystarczy pobrać testy wcześniej.</p>
+            </div>
+            
+            <!-- 2 -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <div class="w-14 h-14 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center mb-6">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <h4 class="text-xl font-bold text-slate-900 mb-3">Błyskawiczna wydajność</h4>
+                <p class="text-slate-600 leading-relaxed">Zoptymalizowana architektura zapewnia natychmiastowy dostęp do testów w każdym miejscu na świecie.</p>
+            </div>
+
+            <!-- 3 -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-6">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                </div>
+                <h4 class="text-xl font-bold text-slate-900 mb-3">Prywatność przede wszystkim</h4>
+                <p class="text-slate-600 leading-relaxed">Twoje dane pozostają na Twoim urządzeniu. Pełna kontrola nad informacjami.</p>
+            </div>
+
+            <!-- 4 -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <div class="w-14 h-14 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-6">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <h4 class="text-xl font-bold text-slate-900 mb-3">Potężne wyszukiwanie</h4>
+                <p class="text-slate-600 leading-relaxed">Znajdź test w mgnieniu oka dzięki zaawansowanemu silnikowi wyszukiwania.</p>
+            </div>
+
+            <!-- 5 -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <div class="w-14 h-14 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center mb-6">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                </div>
+                <h4 class="text-xl font-bold text-slate-900 mb-3">Personalizacja</h4>
+                <p class="text-slate-600 leading-relaxed">Dostosuj interfejs i funkcje do swoich potrzeb i stylu pracy.</p>
+            </div>
+
+            <!-- 6 -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <div class="w-14 h-14 bg-cyan-100 text-cyan-600 rounded-xl flex items-center justify-center mb-6">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <h4 class="text-xl font-bold text-slate-900 mb-3">Wsparcie Metryczek</h4>
+                <p class="text-slate-600 leading-relaxed">Zbierz dane, których potrzebujesz do skutecznego badania.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. INSTALLATION INSTRUCTIONS (Download) -->
+<section id="download" class="py-24 bg-white relative overflow-hidden">
+    <div class="max-w-4xl mx-auto px-6 relative z-10">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Wybierz swoją platformę</h2>
+            <p class="text-lg text-slate-600">Prosty proces instalacji dla każdego systemu operacyjnego.</p>
+        </div>
+
+        <!-- Taby Systemów (Oparte na interakcji HTML z minimalnym klasowym przełączaniem) -->
+        <div class="glossy-card rounded-2xl overflow-hidden">
+            <!-- Pasek selekcji -->
+            <div class="flex border-b border-gray-200/50 bg-gray-50/50">
+                <button onclick="switchTab('windows')" id="tab-windows" class="flex-1 py-4 text-sm font-semibold text-brand-blue border-b-2 border-brand-blue flex items-center justify-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0zM10.949 1.936L24 0v11.516H10.949zM0 12.46h9.75v9.451L0 20.537zM10.949 12.46H24V24l-12.949-1.921z"/></svg>
+                    Windows
+                </button>
+                <button onclick="switchTab('macos')" id="tab-macos" class="flex-1 py-4 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-900 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                    macOS
+                </button>
+                <button onclick="switchTab('linux')" id="tab-linux" class="flex-1 py-4 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-900 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C7.2 0 4.1 2 3.5 5.5v3.4C2.3 9.4 0 10.8 0 13c0 1.8 1.4 3 3 3.5 1 .3 2.1 0 2.8-.8.6.6 1.7.9 2.7.6.2-.1.4-.2.6-.3.4.4.9.8 1.4 1 2.5 1 5.4.1 6.5-2.2l-1.5-1.2c-.7 1.5-2.6 2.1-4.2 1.5-1.6-.6-2.6-2.1-2.6-2.1-1.3-.4-2.2-1.9-2.2-1.9L6 14.5c.3-1.6 1.6-2.6 3.1-2.6 1.1 0 2.1.6 2.6 1.6C12.3 12.6 14 12 15.6 12c1.7 0 3.1 1.4 3.1 3.1v1.6l1.5-1.2C20.5 14.2 21 12.7 21 11c0-2.8-2.3-5.1-5.1-5.1H14V4.1C14 1.8 12.2 0 10 0zm0 1.7C11.3 1.7 12.3 2.7 12.3 4v1.9h2c1.7 0 3.1 1.4 3.1 3.1 0 1-.5 1.9-1.2 2.5l-1-.8C14.7 9.8 13.9 9 13 9c-1.3 0-2.4 1-2.4 2.4 0 1 .6 1.9 1.5 2.2l-.7-.5c-.7-.5-1.6-.3-2.1.4-.5.7-.3 1.6.4 2.1l2.4 1.7c-2 1.3-4.6.6-5.8-1.5z"/></svg>
+                    Linux
+                </button>
+            </div>
+            
+            <!-- Zawartość Tabów -->
+            <div class="p-8 md:p-12">
+                <!-- Windows -->
+                <div id="content-windows" class="block animate-fade-in">
+                    <h3 class="text-2xl font-bold text-slate-900 mb-6">Pobierz dla Windows</h3>
+                    <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                        <a id="btn-dl-win" href="https://github.com/KaucBartosz/Nous/releases/latest" class="bg-black text-white hover:bg-gray-800 py-3 px-8 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors w-full sm:w-auto">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Pobierz plik instalacyjny .exe
+                        </a>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="text-yellow-600 mt-1">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-yellow-800 mb-1">Uwaga: System Windows ochronił ten komputer</h4>
+                                <p class="text-yellow-700 text-sm leading-relaxed">System Windows (SmartScreen) może zablokować uruchomienie ponieważ aplikacja jest nowa. Aby zainstalować:<br><br>1. Kliknij <strong>"Więcej informacji"</strong>.<br>2. Kliknij <strong>"Uruchom mimo to"</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- macOS -->
+                <div id="content-macos" class="hidden animate-fade-in">
+                    <h3 class="text-2xl font-bold text-slate-900 mb-6">Pobierz dla macOS</h3>
+                    <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                        <a id="btn-dl-mac" href="https://github.com/KaucBartosz/Nous/releases/latest" class="bg-black text-white hover:bg-gray-800 py-3 px-8 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors w-full sm:w-auto">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Pobierz plik .dmg
+                        </a>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                        <div class="flex items-start gap-4">
+                            <div class="text-blue-600 mt-1">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-blue-800 mb-1">Przy pierwszym uruchomieniu</h4>
+                                <p class="text-blue-700 text-sm leading-relaxed">System macOS (Gatekeeper) może zablokować aplikację, ponieważ pochodzi od "niezidentyfikowanego dewelopera".<br><br>1. Otwórz folder <strong>Aplikacje</strong>.<br>2. <strong>Kliknij prawym przyciskiem myszy</strong> na "Nous" i wybierz <strong>"Otwórz"</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Linux -->
+                <div id="content-linux" class="hidden animate-fade-in">
+                    <h3 class="text-2xl font-bold text-slate-900 mb-6">Pobierz dla Linux</h3>
+                    <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                        <a id="btn-dl-lin" href="https://github.com/KaucBartosz/Nous/releases/latest" class="bg-black text-white hover:bg-gray-800 py-3 px-8 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors w-full sm:w-auto">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Pobierz plik .AppImage
+                        </a>
+                    </div>
+                    
+                    <h4 class="font-semibold text-slate-900 mb-3">Jak uruchomić w terminalu:</h4>
+                    <div class="bg-[#0f172a] rounded-xl overflow-hidden mb-4 shadow-inner">
+                        <div class="bg-slate-800 px-4 py-2 border-b border-slate-700/50 flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                            <span class="text-xs text-slate-400 ml-2 font-mono">terminal</span>
+                        </div>
+                        <div class="p-4 font-mono text-sm">
+                            <p class="text-emerald-400 mb-2">$ chmod +x Nous*.AppImage</p>
+                            <p class="text-emerald-400">$ ./Nous*.AppImage</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500 italic mt-6">Skoro używasz linuxa to na pewno sobie poradzisz! 🐧</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Auto OS Detection & Download Script + Tabs JS -->
+<script>
+    // Prosta logika animacji i kart
+    const activeClass = ['text-brand-blue', 'border-brand-blue'];
+    const inactiveClass = ['text-slate-500', 'border-transparent', 'hover:text-slate-900'];
+
+    function switchTab(os) {
+        // Hide all
+        document.getElementById('content-windows').classList.add('hidden');
+        document.getElementById('content-macos').classList.add('hidden');
+        document.getElementById('content-linux').classList.add('hidden');
         
-        <div class="grid md:grid-cols-3 gap-8">
-            <!-- Funkcja 1 -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div class="text-blue-600 text-3xl mb-4">⚡</div>
-                <h3 class="text-xl font-bold mb-2">Zestaw Testów Poznawczych</h3>
-                <p class="text-gray-600">Aplikacja oferuje precyzyjne narzędzia, takie jak test Stroopa czy GoNoGo, stworzone z myślą o miarodajnych badaniach.</p>
-            </div>
+        // Reset Tabs styles
+        ['windows', 'macos', 'linux'].forEach(t => {
+            const el = document.getElementById('tab-' + t);
+            el.classList.remove(...activeClass);
+            el.classList.add(...inactiveClass);
+        });
+
+        // Show selected
+        document.getElementById('content-' + os).classList.remove('hidden');
+        const activeTab = document.getElementById('tab-' + os);
+        activeTab.classList.remove(...inactiveClass);
+        activeTab.classList.add(...activeClass);
+    }
+
+    // OS Detection Fetch Logic
+    async function setupDownloadLinks() {
+        const btnHero = document.getElementById('download-btn-hero');
+        const txtHero = document.getElementById('download-text-btn');
+        
+        try {
+            const response = await fetch('https://api.github.com/repos/KaucBartosz/Nous/releases/latest');
+            const data = await response.json();
             
-            <!-- Funkcja 2 -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div class="text-blue-600 text-3xl mb-4">🔄</div>
-                <h3 class="text-xl font-bold mb-2">Automatyczne Aktualizacje</h3>
-                <p class="text-gray-600">Zawsze korzystaj z najnowszej wersji. Aplikacja zaktualizuje się automatycznie, gdy tylko opublikujemy nową poprawkę.</p>
-            </div>
-            
-            <!-- Funkcja 3 -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div class="text-blue-600 text-3xl mb-4">💻</div>
-                <h3 class="text-xl font-bold mb-2">Działa wszędzie</h3>
-                <p class="text-gray-600">Niezależnie od tego czy używasz Windowsa, systemu macOS, czy dystrybucji Linux. Nous ma dedykowaną instalkę dla Ciebie.</p>
-            </div>
-        </div>
-    </section>
+            const ua = navigator.userAgent;
+            let currentOS = "windows"; // domyślny
+            let extension = ".exe";
 
-    <!-- STOPKA -->
-    <footer class="bg-gray-900 text-gray-400 py-8 text-center">
-        <p>&copy; 2026 Nous. Wszelkie prawa zastrzeżone.</p>
-        <p class="mt-2 text-sm">Masz problem? Napisz na <a href="mailto:7k89yxz17@mozmail.com" class="text-white hover:underline">7k89yxz17@mozmail.com</a> lub odwiedź nasz <a href="https://github.com/KaucBartosz/Nous" class="text-white hover:underline">GitHub</a>.</p>
-    </footer>
+            if (ua.indexOf("Mac") !== -1) { currentOS = "macos"; extension = ".dmg"; }
+            else if (ua.indexOf("Linux") !== -1) { currentOS = "linux"; extension = ".AppImage"; }
 
-    <!-- SKRYPT: ONE-CLICK INSTALLER -->
-    <script>
-        async function setupDownloadButton() {
-            const btn = document.getElementById('download-btn');
-            try {
-                // Pobranie danych o najnowszym release z API GitHuba
-                const response = await fetch('https://api.github.com/repos/KaucBartosz/Nous/releases/latest');
-                const data = await response.json();
-                
-                // Detekcja systemu operacyjnego
-                const ua = navigator.userAgent;
-                let os = "Unknown";
-                let extension = "";
+            // Auto-switch UI Tab based on OS
+            switchTab(currentOS);
 
-                if (ua.indexOf("Win") !== -1) { os = "Windows"; extension = ".exe"; }
-                else if (ua.indexOf("Mac") !== -1) { os = "macOS"; extension = ".dmg"; }
-                else if (ua.indexOf("Linux") !== -1) { os = "Linux"; extension = ".AppImage"; }
+            // Populate API Links to specific buttons based on extension
+            const extWin = data.assets.find(a => a.name.endsWith(".exe"));
+            const extMac = data.assets.find(a => a.name.endsWith(".dmg"));
+            const extLin = data.assets.find(a => a.name.endsWith(".AppImage"));
 
-                // Jeśli wykryto system, szukamy odpowiedniego pliku w zasobach release
-                if (os !== "Unknown") {
-                    const asset = data.assets.find(a => a.name.endsWith(extension));
-                    if (asset) {
-                        btn.href = asset.browser_download_url;
-                        btn.innerHTML = `Pobierz dla ${os} <span class="text-sm font-normal block">(${data.tag_name})</span>`;
-                        return;
-                    }
-                }
-                
-                // Fallback: jeśli system jest nieznany lub brakuje pliku
-                btn.href = data.html_url;
-                btn.innerHTML = `Pobierz Nous <span class="text-sm font-normal block">(${data.tag_name})</span>`;
-                
-            } catch (error) {
-                console.error("Błąd podczas ładowania wersji z GitHub API:", error);
-                btn.innerHTML = "Pobierz najnowszą wersję";
+            if(extWin) document.getElementById('btn-dl-win').href = extWin.browser_download_url;
+            if(extMac) document.getElementById('btn-dl-mac').href = extMac.browser_download_url;
+            if(extLin) document.getElementById('btn-dl-lin').href = extLin.browser_download_url;
+
+            // Populate Hero button based on detected OS
+            const asset = data.assets.find(a => a.name.endsWith(extension));
+            if (asset) {
+                btnHero.href = asset.browser_download_url;
+                txtHero.innerHTML = `Pobierz Nous <span class="font-normal opacity-80 pl-1">(${data.tag_name})</span>`;
+            } else {
+                btnHero.href = data.html_url;
+                txtHero.innerHTML = `Pobierz Nous <span class="font-normal opacity-80 pl-1">(${data.tag_name})</span>`;
             }
-        }
 
-        // Uruchomienie skryptu po załadowaniu strony
-        setupDownloadButton();
-    </script>
-</body>
-</html>
+        } catch (error) {
+            console.error(error);
+            txtHero.innerHTML = "Pobierz najnowszą wersję";
+        }
+    }
+
+    // Inicjalizacja
+    document.addEventListener("DOMContentLoaded", () => {
+        setupDownloadLinks();
+    });
+</script>
