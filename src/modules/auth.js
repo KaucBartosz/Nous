@@ -103,7 +103,6 @@ export function logout() {
 
 export function loginGuest() {
     updateAuthUI(null, "GUEST");
-    // Trigger callback if needed, handled by UI state change mostly
 }
 
 export function getCurrentUser() {
