@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nous - Twój nowy wymiar produktywności</title>
+    <!-- Ładujemy nowoczesne style (TailwindCSS) prosto z chmury -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- SEKACJA GŁÓWNA (HERO) -->
+    <header class="bg-blue-600 text-white py-20">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+            <h1 class="text-5xl font-extrabold mb-4">Aplikacja Nous</h1>
+            <p class="text-xl mb-8 opacity-90">Platforma do przeprowadzania ustandaryzowanych testów psychologicznych i poznawczych z precyzyjnym raportowaniem.</p>
+            
+            <!-- Magiczny przycisk pobierania (One-Click Download) -->
+            <a id="download-btn" href="https://github.com/KaucBartosz/Nous/releases/latest" 
+               class="inline-block bg-white text-blue-600 font-bold py-4 px-8 rounded-full text-lg shadow-lg hover:bg-gray-100 transition-transform transform hover:scale-105">
+               Ładowanie wersji...
+            </a>
+            
+            <p class="mt-4 text-sm opacity-80">
+                <a href="https://github.com/KaucBartosz/Nous/releases/latest" class="underline hover:text-white">
+                    Pobierz dla innych systemów operacyjnych
+                </a>
+            </p>
+        </div>
+    </header>
+
+    <!-- SEKACJA: NAJWAŻNIEJSZE FUNKCJE -->
+    <section class="py-16 max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold text-center mb-12 text-gray-900">Dlaczego warto wybrać Nous?</h2>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Funkcja 1 -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="text-blue-600 text-3xl mb-4">⚡</div>
+                <h3 class="text-xl font-bold mb-2">Zestaw Testów Poznawczych</h3>
+                <p class="text-gray-600">Aplikacja oferuje precyzyjne narzędzia, takie jak test Stroopa czy GoNoGo, stworzone z myślą o miarodajnych badaniach.</p>
+            </div>
+            
+            <!-- Funkcja 2 -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="text-blue-600 text-3xl mb-4">🔄</div>
+                <h3 class="text-xl font-bold mb-2">Automatyczne Aktualizacje</h3>
+                <p class="text-gray-600">Zawsze korzystaj z najnowszej wersji. Aplikacja zaktualizuje się automatycznie, gdy tylko opublikujemy nową poprawkę.</p>
+            </div>
+            
+            <!-- Funkcja 3 -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="text-blue-600 text-3xl mb-4">💻</div>
+                <h3 class="text-xl font-bold mb-2">Działa wszędzie</h3>
+                <p class="text-gray-600">Niezależnie od tego czy używasz Windowsa, systemu macOS, czy dystrybucji Linux. Nous ma dedykowaną instalkę dla Ciebie.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- STOPKA -->
+    <footer class="bg-gray-900 text-gray-400 py-8 text-center">
+        <p>&copy; 2026 Nous. Wszelkie prawa zastrzeżone.</p>
+        <p class="mt-2 text-sm">Masz problem? Napisz na <a href="mailto:7k89yxz17@mozmail.com" class="text-white hover:underline">7k89yxz17@mozmail.com</a> lub odwiedź nasz <a href="https://github.com/KaucBartosz/Nous" class="text-white hover:underline">GitHub</a>.</p>
+    </footer>
+
+    <!-- SKRYPT: ONE-CLICK INSTALLER -->
+    <script>
+        async function setupDownloadButton() {
+            const btn = document.getElementById('download-btn');
+            try {
+                // Pobranie danych o najnowszym release z API GitHuba
+                const response = await fetch('https://api.github.com/repos/KaucBartosz/Nous/releases/latest');
+                const data = await response.json();
+                
+                // Detekcja systemu operacyjnego
+                const ua = navigator.userAgent;
+                let os = "Unknown";
+                let extension = "";
+
+                if (ua.indexOf("Win") !== -1) { os = "Windows"; extension = ".exe"; }
+                else if (ua.indexOf("Mac") !== -1) { os = "macOS"; extension = ".dmg"; }
+                else if (ua.indexOf("Linux") !== -1) { os = "Linux"; extension = ".AppImage"; }
+
+                // Jeśli wykryto system, szukamy odpowiedniego pliku w zasobach release
+                if (os !== "Unknown") {
+                    const asset = data.assets.find(a => a.name.endsWith(extension));
+                    if (asset) {
+                        btn.href = asset.browser_download_url;
+                        btn.innerHTML = `Pobierz dla ${os} <span class="text-sm font-normal block">(${data.tag_name})</span>`;
+                        return;
+                    }
+                }
+                
+                // Fallback: jeśli system jest nieznany lub brakuje pliku
+                btn.href = data.html_url;
+                btn.innerHTML = `Pobierz Nous <span class="text-sm font-normal block">(${data.tag_name})</span>`;
+                
+            } catch (error) {
+                console.error("Błąd podczas ładowania wersji z GitHub API:", error);
+                btn.innerHTML = "Pobierz najnowszą wersję";
+            }
+        }
+
+        // Uruchomienie skryptu po załadowaniu strony
+        setupDownloadButton();
+    </script>
+</body>
+</html>
