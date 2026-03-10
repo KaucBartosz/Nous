@@ -1,0 +1,395 @@
+---
+layout: default
+title: Przewodnik po Nous
+---
+
+<section class="relative pt-32 pb-20 overflow-hidden bg-transparent min-h-screen">
+    <div class="max-w-6xl mx-auto px-6 relative z-10">
+        <div class="text-center mb-16">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight text-white drop-shadow-md">
+                Poznaj możliwości <span class="gradient-text">Nous</span>
+            </h1>
+            <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+                Przewodnik po najważniejszych modułach aplikacji, który pomoże Ci w pełni wykorzystać jej potencjał.
+            </p>
+        </div>
+
+        <div class="grid lg:grid-cols-4 gap-8">
+            <!-- Sidebar Navigation -->
+            <div class="lg:col-span-1 space-y-2">
+                <button onclick="showFeature('library')" id="nav-library" class="feature-nav-btn active">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                            </path>
+                        </svg>
+                    </div>
+                    Biblioteka Testów
+                </button>
+                <button onclick="showFeature('history')" id="nav-history" class="feature-nav-btn">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                            </path>
+                        </svg>
+                    </div>
+                    Historia Wyników
+                </button>
+                <button onclick="showFeature('creator')" id="nav-creator" class="feature-nav-btn">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                            </path>
+                        </svg>
+                    </div>
+                    Kreator Metryczek
+                </button>
+                <button onclick="showFeature('settings')" id="nav-settings" class="feature-nav-btn">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z">
+                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </div>
+                    Ustawienia
+                </button>
+            </div>
+
+            <!-- Content Area -->
+            <div class="lg:col-span-3">
+                <div class="glossy-card rounded-3xl p-8 md:p-12 min-h-[500px] border-white/10 bg-slate-900/40">
+
+                    <!-- Content: Library -->
+                    <div id="feature-library" class="feature-content active animate-fade-in">
+                        <div class="grid md:grid-cols-2 gap-10 items-center">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white mb-6">Biblioteka Testów</h2>
+                                <p class="text-slate-300 leading-relaxed mb-6">
+                                    Centralne miejsce zarządzania Twoimi narzędziami badawczymi. Przeglądaj dostępne
+                                    testy, pobieraj nowe paczki i uruchamiaj badania jednym kliknięciem.
+                                </p>
+                                <ul class="space-y-4 text-slate-400">
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-blue-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Zautomatyzowana instalacja paczek testowych
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-blue-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Szybkie wyszukiwanie i filtrowanie
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-blue-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Podgląd instrukcji przed badaniem
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="relative group">
+                                <div
+                                    class="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
+                                </div>
+                                <div
+                                    class="relative bg-slate-800 rounded-2xl overflow-hidden aspect-video border border-white/10 flex items-center justify-center text-slate-500">
+                                    <img src="{{ '/assets/img/library.png' | relative_url }}" alt="Biblioteka Testów"
+                                        class="w-full h-full object-cover">
+                                    <!-- Placeholder Text if image missing -->
+                                    <span
+                                        class="absolute inset-0 flex items-center justify-center bg-slate-800 text-sm italic image-placeholder">Oczekiwanie
+                                        na zrzut ekranu...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content: History -->
+                    <div id="feature-history" class="feature-content hidden animate-fade-in">
+                        <div class="grid md:grid-cols-2 gap-10 items-center">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white mb-6">Historia Wyników</h2>
+                                <p class="text-slate-300 leading-relaxed mb-6">
+                                    Wszystkie przeprowadzone badania w jednym miejscu. Analizuj surowe dane, eksportuj
+                                    wyniki i śledź postępy swoich badanych.
+                                </p>
+                                <ul class="space-y-4 text-slate-400">
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-emerald-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Przejrzysta tabela z wynikami
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-emerald-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Eksport do formatów CSV i JSON
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-emerald-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Bezpieczne, lokalne przechowywanie danych z możliwością eksportu do chmury
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-emerald-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Wykonano test w trybie offline? Tu możesz go podejrzeć/zaimportować!
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="relative group">
+                                <div
+                                    class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
+                                </div>
+                                <div
+                                    class="relative bg-slate-800 rounded-2xl overflow-hidden aspect-video border border-white/10 flex items-center justify-center text-slate-500">
+                                    <img src="{{ '/assets/img/history.png' | relative_url }}" alt="Historia Wyników"
+                                        class="w-full h-full object-cover">
+                                    <span
+                                        class="absolute inset-0 flex items-center justify-center bg-slate-800 text-sm italic image-placeholder">Oczekiwanie
+                                        na zrzut ekranu...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content: Creator -->
+                    <div id="feature-creator" class="feature-content hidden animate-fade-in">
+                        <div class="grid md:grid-cols-2 gap-10 items-center">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white mb-6">Kreator Metryczek</h2>
+                                <p class="text-slate-300 leading-relaxed mb-6">
+                                    Dostosuj dane wejściowe do swoich potrzeb. Twórz własne formularze metryczek, które
+                                    użytkownik wypełnia przed przystąpieniem do testu.
+                                </p>
+                                <ul class="space-y-4 text-slate-400">
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-purple-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Intuicyjny edytor pól (wiek, płeć, ID)
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-purple-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Możliwość definiowania własnych zmiennych
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-purple-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Zapisywanie szablonów dla różnych badań
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="relative group">
+                                <div
+                                    class="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
+                                </div>
+                                <div
+                                    class="relative bg-slate-800 rounded-2xl overflow-hidden aspect-video border border-white/10 flex items-center justify-center text-slate-500">
+                                    <img src="{{ '/assets/img/creator.png' | relative_url }}" alt="Kreator Metryczek"
+                                        class="w-full h-full object-cover">
+                                    <span
+                                        class="absolute inset-0 flex items-center justify-center bg-slate-800 text-sm italic image-placeholder">Oczekiwanie
+                                        na zrzut ekranu...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content: Settings -->
+                    <div id="feature-settings" class="feature-content hidden animate-fade-in">
+                        <div class="grid md:grid-cols-2 gap-10 items-center">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white mb-6">Ustawienia</h2>
+                                <p class="text-slate-300 leading-relaxed mb-6">
+                                    Spersonalizuj swoje doświadczenie z Nous. Dostosuj interfejs i wygląd aplikacji.
+                                </p>
+                                <ul class="space-y-4 text-slate-400">
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-orange-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Przełączanie motywów (Light/Dark/Custom)
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <svg class="w-6 h-6 text-orange-400 -mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Możliwość stworzenia wielu motywów i ich zapisania
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="relative group">
+                                <div
+                                    class="absolute -inset-1 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
+                                </div>
+                                <div
+                                    class="relative bg-slate-800 rounded-2xl overflow-hidden aspect-video border border-white/10 flex items-center justify-center text-slate-500">
+                                    <img src="{{ '/assets/img/settings.png' | relative_url }}" alt="Ustawienia"
+                                        class="w-full h-full object-cover">
+                                    <span
+                                        class="absolute inset-0 flex items-center justify-center bg-slate-800 text-sm italic image-placeholder">Oczekiwanie
+                                        na zrzut ekranu...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .feature-nav-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        color: #94a3b8;
+        /* text-slate-400 */
+    }
+
+    .feature-nav-btn:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: white;
+    }
+
+    .feature-nav-btn.active {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .feature-content {
+        transition-property: opacity, transform;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 500ms;
+    }
+
+    .feature-content.animate-fade-in {
+        animation: fadeInSlide 0.5s ease-out forwards;
+    }
+
+    .image-placeholder {
+        z-index: 10;
+        pointer-events: none;
+    }
+
+    /* Hide placeholder if image loads successfully */
+    img:not([src*="placeholder"]):not([src=""]):valid+.image-placeholder {
+        display: none;
+    }
+
+    @keyframes fadeInSlide {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<script>
+    function showFeature(id) {
+        // Hide all content
+        document.querySelectorAll('.feature-content').forEach(el => {
+            el.classList.add('hidden');
+        });
+
+        // Reset nav buttons
+        document.querySelectorAll('.feature-nav-btn').forEach(el => {
+            el.classList.remove('active');
+        });
+
+        // Show target content
+        const target = document.getElementById('feature-' + id);
+        if (target) {
+            target.classList.remove('hidden');
+        }
+
+        // Activate nav button
+        const navBtn = document.getElementById('nav-' + id);
+        if (navBtn) {
+            navBtn.classList.add('active');
+        }
+    }
+
+    // Dynamic handling of missing images for demo
+    document.addEventListener("DOMContentLoaded", () => {
+        const images = document.querySelectorAll('.feature-content img');
+        
+        const checkImage = (img) => {
+            if (img.complete && img.naturalWidth > 0) {
+                if (img.nextElementSibling) img.nextElementSibling.classList.add('hidden');
+                img.style.opacity = "1";
+            }
+        };
+
+        images.forEach(img => {
+            // Force reset opacity for clean start
+            img.style.opacity = "0";
+            img.style.transition = "opacity 0.5s ease";
+
+            img.onload = () => checkImage(img);
+            img.onerror = () => {
+                img.style.opacity = "0";
+                if (img.nextElementSibling) img.nextElementSibling.classList.remove('hidden');
+            };
+
+            // Check if already loaded (cache)
+            if (img.complete) checkImage(img);
+        });
+    });
+</script>

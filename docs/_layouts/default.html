@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Wstrzyknięcie tytułu z _config.yml lub własnego -->
+    <title>{% if page.title %}{{ page.title }}{% else %}{{ site.title }}{% endif %}</title>
+    
+    <!-- Nowoczesna Typografia: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ '/logo.png' | relative_url }}">
+    
+    <!-- Load TailwindCSS with custom config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        // Kolory wzięte z designu Figma (Purple/Blue gradient)
+                        brand: {
+                            purple: '#8A2BE2', // Mniej jaskrawy, czysty fiolet
+                            blue: '#4169E1',   // Czysty royal blue
+                            dark: '#0f172a',   // Ciemny z Figma
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Smooth scrolling as good practice */
+        html { scroll-behavior: smooth; }
+        .gradient-text {
+            background: linear-gradient(90deg, #8A2BE2 0%, #4169E1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glossy-card {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        }
+        #star-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: #0f172a; /* Dark background as base */
+            pointer-events: none;
+        }
+    </style>
+    <script src="{{ '/assets/js/stars.js' | relative_url }}" defer></script>
+</head>
+<body class="bg-transparent text-slate-800 font-sans antialiased overflow-x-hidden transition-colors duration-500">
+    <canvas id="star-canvas"></canvas>
+
+    <!-- Sticky Header -->
+    <header class="fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-xl z-50 border-b border-white/5 shadow-2xl transition-all duration-300">
+        <div class="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+            <!-- Logo -->
+            <a href="#" class="flex items-center gap-3 group">
+                <img src="{{ '/logo.png' | relative_url }}" alt="Nous Logo" class="w-10 h-10 rounded-xl shadow-md group-hover:scale-105 transition-transform object-cover">
+                <span class="text-2xl font-bold gradient-text tracking-tight">Nous</span>
+            </a>
+            
+            <!-- Mobile Menu Button (Optional/Future proofing) -->
+            <button class="md:hidden text-slate-300 hover:text-white focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                </svg>
+            </button>
+            
+            <!-- Nawigacja -->
+            <nav class="hidden md:flex items-center gap-8 font-medium text-sm text-slate-300">
+                <a href="{{ '/' | relative_url }}" class="hover:text-white transition-colors">Start</a>
+                <a href="{{ '/features' | relative_url }}" class="hover:text-white transition-colors font-bold text-white">Przewodnik</a>
+                <a href="{{ '/' | relative_url }}#features" class="hover:text-white transition-colors">O funkcjach</a>
+                <a href="{{ '/' | relative_url }}#download" class="hover:text-white transition-colors">Pobierz</a>
+                <a href="https://github.com/KaucBartosz/Nous" target="_blank" class="flex items-center gap-2 hover:text-white transition-colors">
+                    Kod źródłowy
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- CONTENT PLACEHOLDER -->
+    <main class="w-full relative min-h-screen pt-20">
+        {{ content }}
+    </main>
+
+    <!-- Dark Footer -->
+    <footer class="bg-slate-950 text-slate-400 py-12 md:py-16">
+        <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-8 items-center">
+            <!-- Lewa -->
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="{{ '/logo.png' | relative_url }}" alt="Nous Logo" class="w-8 h-8 rounded-lg shadow-sm object-cover">
+                    <span class="text-xl font-semibold text-white tracking-tight">Nous</span>
+                </div>
+                <p class="text-sm max-w-sm mb-6">Platforma do dystrybucji i przeprowadzania testów psychometrycznych.</p>
+                
+                <div class="flex gap-4">
+                    <a href="https://github.com/KaucBartosz/Nous" target="_blank" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors text-white" aria-label="GitHub">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Prawa -->
+            <div class="md:text-right text-sm">
+                <p class="mb-2 text-slate-500">&copy; 2026 Nous. Wszelkie prawa zastrzeżone.</p>
+                <p>
+                    Stworzone z <span class="text-red-500">❤️</span> przez 
+                    <a href="https://github.com/KaucBartosz" class="text-white hover:text-brand-blue transition-colors font-medium">Bartosz Kauc</a>
+                </p>
+                <p class="mt-4 text-xs text-slate-600">Praca Inżynierska &middot; Uniwersytet Kazimierza Wielkiego</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

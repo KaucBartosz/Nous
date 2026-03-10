@@ -66,6 +66,7 @@ function getUserDataPath() {
             path.join(os.homedir(), '.config', 'electron')
         ];
 
+        // Sprawdza czy w którejś z ścieżek znajduje sie folder z testami. Jeśli tak tą ścieżkę jako ścieżkę do której odnosi się program (Testy i HPM)
         for (const cand of candidates) {
             if (fs.existsSync(path.join(cand, 'tests_library')) || fs.existsSync(path.join(cand, 'python_env'))) {
                 return cand;
@@ -89,8 +90,8 @@ function createWindow() {
     }
 
     mainWindow = new BrowserWindow({
-        width: 1280,
-        height: 800,
+        width: 1920,
+        height: 1080,
         title: "Nous",
         icon: iconPath,
         webPreferences: {
@@ -111,7 +112,7 @@ function findFileInSubfolders(folderPath, filename) {
     const directPath = path.join(folderPath, filename);
     if (fs.existsSync(directPath)) return directPath;
 
-    // 2. Sprawdź podfoldery (maksymalnie 1 poziom głębi - typowe dla ZIP z GitHub)
+    // 2. Sprawdź podfoldery (maksymalnie 1 poziom głębi - częste przy pobieraniu z GitHub)
     try {
         const entries = fs.readdirSync(folderPath, { withFileTypes: true });
         for (const entry of entries) {
