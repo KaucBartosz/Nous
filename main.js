@@ -366,7 +366,11 @@ async function executeDownloadTask(task) {
         });
     };
 
-    downloadWithRedirect(url);
+    let finalUrl = url;
+    if (finalUrl.includes('github.com') || finalUrl.includes('githubusercontent.com')) {
+        finalUrl += (finalUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+    }
+    downloadWithRedirect(finalUrl);
 }
 
 

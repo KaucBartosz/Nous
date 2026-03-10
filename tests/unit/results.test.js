@@ -79,23 +79,49 @@ describe('Results Module', () => {
   // ==========================================================
   // initResultsHandler Tests
   // ==========================================================
-  describe('initResultsHandler', () => {
     it('registers onTestResults listener', async () => {
       const { initResultsHandler } = await import('../../src/modules/results.js');
+      const { handleTestResults } = await import('../../src/modules/results.js');
+
+      // Mock the onTestResults callback to be called immediately
+      const mockCallback = vi.fn();
+      window.electronAPI.onTestResults = mockCallback;
+
       initResultsHandler();
 
-      expect(window.electronAPI.onTestResults).toHaveBeenCalled();
+      // Test data
+      const testData = {
+        testId: 'test-123',
+        subjectId: 'participant',
+        __hpm_context: true,
+        ilosc_poprawnych_nacisniec: 10,
+        ilosc_blednych_nacisniec: 2,
+        ogolna_ilosc_nacisniec: 12,
+        sredni_czas_reakcji: 350
+      };
+
+      // Call the callback immediately with test data
+      mockCallback(testData);
+
+      // Verify that handleTestResults was called with the correct data
+      expect(handleTestResults).toHaveBeenCalledWith(testData);
     });
 
     it('registers button click listeners', async () => {
       const { initResultsHandler } = await import('../../src/modules/results.js');
       const { elements } = await import('../../src/modules/ui.js');
-      
+
       initResultsHandler();
 
+      // Verify that event listeners were added
       expect(elements.btnCloseModal.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
       expect(elements.btnDiscard.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
       expect(elements.btnUploadCloud.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
+
+      // Verify that the listeners are actually functions
+      const listeners = elements.btnCloseModal.addEventListener.mock.calls;
+      expect(listeners.length).toBeGreaterThan(0);
+      expect(typeof listeners[0][1]).toBe('function');
     });
   });
 
@@ -253,7 +279,7 @@ describe('Results Module', () => {
   describe('renderExtendedResults', () => {
     it('renders result fields', async () => {
       const { initResultsHandler } = await import('../../src/modules/results.js');
-      
+
       document.body.innerHTML = '<div id="modal-extended-results"></div>';
 
       initResultsHandler();
