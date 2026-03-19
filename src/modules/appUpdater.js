@@ -3,6 +3,11 @@
  * Logic for handling Application Updates (Nous Launcher itself)
  */
 
+import { updateUpdatesBadge } from './utils.js';
+
+// Tracks whether an app update is available (so we can add/remove +1 from badge)
+let _appUpdateAvailable = false;
+
 export function initAppUpdater() {
     const api = window.electronAPI;
 
@@ -91,6 +96,15 @@ export function initAppUpdater() {
 
         show(btnDownload);
         hide(btnInstall);
+
+        // #12: Add +1 to updates badge for app update
+        if (!_appUpdateAvailable) {
+            _appUpdateAvailable = true;
+            // Increment badge by reading current value and adding 1
+            const badge = document.getElementById('updates-badge');
+            const current = badge ? (parseInt(badge.textContent) || 0) : 0;
+            updateUpdatesBadge(current + 1);
+        }
 
         // Show Toast Notification
         showUpdateToast(info.version);

@@ -4,7 +4,9 @@ import {
   escapeHtml,
   debounce,
   getLocalVersionsCached,
-  invalidateLocalVersionsCache
+  invalidateLocalVersionsCache,
+  flattenObject,
+  updateUpdatesBadge
 } from '../../src/modules/utils.js';
 
 // ==========================================================
@@ -398,5 +400,73 @@ describe('invalidateLocalVersionsCache', () => {
     // After invalidation, should fetch again
     await getLocalVersionsCached();
     expect(window.electronAPI.getLocalVersions).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ==========================================================
+// flattenObject Tests
+// ==========================================================
+describe('flattenObject', () => {
+  it('flattens deeply nested objects with dash separators', () => {
+    const obj = { ObjectA: 1, LevelB: { ItemC: 2, InnerD: { ValueE: 3 } } };
+    const target = {};
+    flattenObject(obj, target, 'Prefix');
+    expect(target).toEqual({ 
+      'Prefix - ObjectA': 1, 
+      'Prefix - LevelB - ItemC': 2, 
+      'Prefix - LevelB - InnerD - ValueE': 3 
+    });
+  });
+
+  it('handles empty objects', () => {
+    const target = {};
+    flattenObject({}, target, 'Pref');
+    expect(target).toEqual({});
+  });
+
+  it('keeps flat objects and formats keys properly', () => {
+    const obj = { A: 1, B: 2 };
+    const target = {};
+    flattenObject(obj, target, '');
+    expect(target).toEqual({ ' - A': 1, ' - B': 2 });
+  });
+
+  it('stringifies arrays as JSON', () => {
+    const obj = { Arr: [1, 2, 3] };
+    const target = {};
+    flattenObject(obj, target, 'Pref');
+    expect(target).toEqual({ 'Pref - Arr': '[1,2,3]' });
+  });
+});
+
+// ==========================================================
+// updateUpdatesBadge Tests
+// ==========================================================
+describe('updateUpdatesBadge', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<span id="updates-badge" class="nav-badge hidden">0</span>';
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('shows badge when count > 0', () => {
+    updateUpdatesBadge(5);
+    const badge = document.getElementById('updates-badge');
+    expect(badge.textContent).toBe('5');
+    expect(badge.classList.contains('hidden')).toBe(false);
+  });
+
+  it('hides badge when count === 0', () => {
+    updateUpdatesBadge(0);
+    const badge = document.getElementById('updates-badge');
+    expect(badge.textContent).toBe('0');
+    expect(badge.classList.contains('hidden')).toBe(true);
+  });
+
+  it('does not throw when badge is missing', () => {
+    document.body.innerHTML = '';
+    expect(() => updateUpdatesBadge(5)).not.toThrow();
   });
 });
