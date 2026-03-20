@@ -4,6 +4,7 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/f
 import { elements } from './ui.js';
 import { Dialog } from './dialog.js';
 import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache, escapeHtml } from './utils.js';
+import * as Tags from './tags.js';
 
 let cachedTests = [];
 let isSearchBound = false;
@@ -409,7 +410,54 @@ function renderTests(testsSource, filterText) {
     // 1. Filter
     if (filterText) {
         const lower = filterText.toLowerCase();
-        tests = tests.filter(t => (t.name || '').toLowerCase().includes(lower));
+        
+        // Wyodrębnij tagi (@tag) i tekst wyszukiwania
+        const words = lower.split(/\s+/).filter(w => w.length > 0);
+        const tagFilters = []; // { tag: string, operator: 'AND'|'OR' }
+        const textFilters = [];
+        
+        let currentOperator = 'AND';
+        
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            if (word === 'and') {
+                currentOperator = 'AND';
+            } else if (word === 'or') {
+                currentOperator = 'OR';
+            } else if (word.startsWith('@')) {
+                tagFilters.push({ tag: word.substring(1), operator: currentOperator });
+                // Reset operatora do domyślnego dla kolejnych tagów (chyba że jawnie podano inny)
+                currentOperator = 'AND'; 
+            } else {
+                textFilters.push(word);
+            }
+        }
+
+        tests = tests.filter(t => {
+            // Filtr tekstowy (nazwa)
+            const nameMatch = textFilters.length === 0 || textFilters.every(word => (t.name || '').toLowerCase().includes(word));
+            if (!nameMatch) return false;
+            
+            if (tagFilters.length === 0) return true;
+            
+            // Logika tagów
+            const testTags = Tags.getTagsForTest(t.id).map(tag => tag.toLowerCase());
+            
+            // Pierwszy tag ustala bazową wartość
+            let match = testTags.includes(tagFilters[0].tag);
+            
+            // Kolejne tagi łączone operatorami
+            for (let i = 1; i < tagFilters.length; i++) {
+                const currentTagMatch = testTags.includes(tagFilters[i].tag);
+                if (tagFilters[i].operator === 'OR') {
+                    match = match || currentTagMatch;
+                } else {
+                    match = match && currentTagMatch;
+                }
+            }
+            
+            return match;
+        });
     }
 
     if (tests.length === 0) {
@@ -467,8 +515,30 @@ function renderGridView(tests) {
         statusIcon.title = status.iconTitle;
         statusIcon.textContent = status.iconName;
 
+        const tagBtn = document.createElement('span');
+        tagBtn.className = 'material-icons tag-btn';
+        tagBtn.textContent = 'menu_book';
+        tagBtn.title = 'Zarządzaj tagami';
+        const currentTags = Tags.getTagsForTest(test_id);
+        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
+        
+        tagBtn.onclick = (e) => {
+            e.stopPropagation();
+            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
+                tagBtn.className = 'material-icons tag-btn';
+                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
+                
+                // Jeśli jest aktywny filtr, odśwież całą listę
+                const searchInput = document.getElementById('library-search');
+                if (searchInput && searchInput.value) {
+                    renderTests(cachedTests, searchInput.value);
+                }
+            });
+        };
+
         iconsDiv.appendChild(assignmentIcon);
         iconsDiv.appendChild(statusIcon);
+        iconsDiv.appendChild(tagBtn);
 
         const versionSpan = document.createElement('span');
         versionSpan.className = 'meta';
@@ -550,8 +620,51 @@ function renderListView(tests) {
         statusIcon.title = status.iconTitle;
         statusIcon.textContent = status.iconName;
 
+        const tagBtn = document.createElement('span');
+        tagBtn.className = 'material-icons tag-btn';
+        tagBtn.style.fontSize = '20px';
+        tagBtn.textContent = 'menu_book';
+        tagBtn.title = 'Zarządzaj tagami';
+        const currentTags = Tags.getTagsForTest(test_id);
+        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
+
+        const tagContainer = document.createElement('div');
+        tagContainer.className = 'list-tag-container';
+        tagContainer.style.display = 'flex';
+        tagContainer.style.flexWrap = 'wrap';
+        tagContainer.style.gap = '4px';
+        tagContainer.style.marginTop = '2px';
+
+        const renderChips = (tags) => {
+            tagContainer.innerHTML = '';
+            tags.forEach(tag => {
+                const chip = document.createElement('span');
+                chip.className = 'tag-chip';
+                chip.textContent = tag;
+                tagContainer.appendChild(chip);
+            });
+        };
+        renderChips(currentTags);
+
+        tagBtn.onclick = (e) => {
+            e.stopPropagation();
+            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
+                tagBtn.className = 'material-icons tag-btn';
+                tagBtn.style.fontSize = '20px';
+                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
+                renderChips(updatedTags);
+
+                // Jeśli jest aktywny filtr, odśwież całą listę
+                const searchInput = document.getElementById('library-search');
+                if (searchInput && searchInput.value) {
+                    renderTests(cachedTests, searchInput.value);
+                }
+            });
+        };
+
         iconDiv.appendChild(assignmentIcon);
         iconDiv.appendChild(statusIcon);
+        iconDiv.appendChild(tagBtn);
 
         // Info section
         const infoDiv = document.createElement('div');
@@ -565,6 +678,7 @@ function renderListView(tests) {
 
         infoDiv.appendChild(title);
         infoDiv.appendChild(desc);
+        infoDiv.appendChild(tagContainer);
 
         // Meta section
         const metaDiv = document.createElement('div');
@@ -684,8 +798,34 @@ function renderTableView(tests) {
         statusText.style.color = status.iconColor;
         statusText.textContent = status.statusText;
 
+        const tagBtn = document.createElement('span');
+        tagBtn.className = 'material-icons tag-btn';
+        tagBtn.style.fontSize = '18px';
+        tagBtn.style.marginLeft = '8px';
+        tagBtn.textContent = 'menu_book';
+        tagBtn.title = 'Zarządzaj tagami';
+        const currentTags = Tags.getTagsForTest(test_id);
+        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
+
+        tagBtn.onclick = (e) => {
+            e.stopPropagation();
+            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
+                tagBtn.className = 'material-icons tag-btn';
+                tagBtn.style.fontSize = '18px';
+                tagBtn.style.marginLeft = '8px';
+                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
+
+                // Jeśli jest aktywny filtr, odśwież całą listę
+                const searchInput = document.getElementById('library-search');
+                if (searchInput && searchInput.value) {
+                    renderTests(cachedTests, searchInput.value);
+                }
+            });
+        };
+
         statusDiv.appendChild(statusIcon);
         statusDiv.appendChild(statusText);
+        statusDiv.appendChild(tagBtn);
         statusCell.appendChild(statusDiv);
 
         // Action cell
@@ -742,7 +882,33 @@ function renderCompactView(tests) {
         statusIcon.title = status.iconTitle;
         statusIcon.textContent = status.iconName;
 
+        const tagBtn = document.createElement('span');
+        tagBtn.className = 'material-icons tag-btn';
+        tagBtn.style.fontSize = '18px';
+        tagBtn.style.marginLeft = 'auto';
+        tagBtn.textContent = 'menu_book';
+        tagBtn.title = 'Zarządzaj tagami';
+        const currentTags = Tags.getTagsForTest(test_id);
+        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
+
+        tagBtn.onclick = (e) => {
+            e.stopPropagation();
+            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
+                tagBtn.className = 'material-icons tag-btn';
+                tagBtn.style.fontSize = '18px';
+                tagBtn.style.marginLeft = 'auto';
+                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
+
+                // Jeśli jest aktywny filtr, odśwież całą listę
+                const searchInput = document.getElementById('library-search');
+                if (searchInput && searchInput.value) {
+                    renderTests(cachedTests, searchInput.value);
+                }
+            });
+        };
+
         headerDiv.appendChild(statusIcon);
+        headerDiv.appendChild(tagBtn);
 
         // Title
         const title = document.createElement('h4');
