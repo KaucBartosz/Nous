@@ -45,15 +45,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.title = msg;
                 // Bezpośrednio zatrzymaj kliknięcie na przycisku
                 el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    import('./modules/dialog.js').then(({ Dialog }) => Dialog.alert(msg, 'info'));
-                }, true); // Use capture to intercept before anything else
+                    // Sprawdzamy czy to na pewno ten element (zapobiega bleed-through)
+                    if (e.currentTarget === el) {
+                        e.stopImmediatePropagation();
+                        e.preventDefault();
+                        import('./modules/dialog.js').then(({ Dialog }) => Dialog.alert(msg, 'info'));
+                    }
+                }, true); 
             }
         };
 
         disableNav(elements.navHistory, "Historia wyników dostępna jest tylko w aplikacji Desktopowej. Z poziomu przeglądarki plik .csv jest generowany od razu po badaniu.");
         disableNav(elements.navUpdates, "Zarządzanie aktualizacjami dotyczy wyłącznie aplikacji Desktopowej.");
+
+        // Ukryj wylogowanie i synchronizację w wersji WEB
+        if (elements.btnLogout) elements.btnLogout.style.display = 'none';
+        if (elements.syncToggleContainer) elements.syncToggleContainer.style.display = 'none';
         
         // Zablokuj HPM
         if (elements.toggleHPM) {
@@ -77,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // W wersji WEB od razu logujemy jako Gość i ładujemy bibliotekę (pomijając ekran logowania)
         loginGuest();
-        loadTestsList();
+        switchView('library', { onLibrary: loadTestsList });
     } else {
         // --- DESKTOP MODE ---
         initAuth(() => {

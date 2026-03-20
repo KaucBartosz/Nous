@@ -1,0 +1,44 @@
+name: "Synchronizuj z BBTP i Opublikuj WebApp"
+
+on:
+  schedule:
+    # Codziennie o północy UTC
+    - cron: '0 0 * * *'
+  # Pozwala na ręczne wywołanie skryptu z poziomu panelu Actions -> Run workflow
+  workflow_dispatch:
+
+jobs:
+  sync_and_deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Pobieranie repozytorium Nous
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Konfiguracja Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Uruchamianie synchronizacji testów BBTP
+      run: node scripts/sync-bbtp.js
+
+    - name: Przebudowywanie logiczne WebApp
+      run: node build_web.js
+      
+    - name: Sprawdzanie zmian i zatwierdzanie w Repozytorium (git commit)
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add docs/
+        git add tests-registry.json || true
+        git add scripts/ || true
+        
+        if git diff --staged --quiet; then
+          echo "Brak nowych zmian w testach z repozytorium BBTP. Wszystko jest aktualne."
+        else
+          git commit -m "🤖 [Bot] Automatyczna synchronizacja i osadzenie nowych testów z repozytorium BBTP"
+          git push
+        fi
