@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.btnAboutCloseFooter) elements.btnAboutCloseFooter.addEventListener('click', () => elements.aboutModal.classList.add('hidden'));
 
     document.getElementById('btn-about-project').addEventListener('click', () => {
-        const url = 'https://github.com/KaucBartosz/Nous';
+        const url = 'https://kaucbartosz.github.io/Nous/';
         if (window.electronAPI && window.electronAPI.openExternal) {
             window.electronAPI.openExternal(url);
         } else {
