@@ -18,14 +18,17 @@ function buildWeb() {
     if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
 
     // Kopiowanie wymaganych plików korzeniowych
-    const filesToCopy = ['index.html', 'style.css', 'logo.png'];
+    const filesToCopy = ['index.html', 'style.css', 'logo.png', 'inject-adapter.js'];
     filesToCopy.forEach(file => {
         if (fs.existsSync(file)) {
             fs.copyFileSync(file, path.join(dest, file));
-        } else {
-            console.warn(` Brak pliku: ${file}`);
         }
     });
+
+    // Kopiowanie samego web-adapter.js jeśl istnieje w root, albo zakładamy że już tam jest
+    if (fs.existsSync('docs/app/web-adapter.js')) {
+        // jest juz na miejscu
+    }
 
     // Kopiowanie kodu źródłowego
     copyFolderSync(path.join(__dirname, 'src'), path.join(dest, 'src'));

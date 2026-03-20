@@ -41,19 +41,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const disableNav = (el, msg) => {
             if (el) {
                 el.style.opacity = '0.5';
-                el.style.pointerEvents = 'none'; // Zapobiega css hover
-                el.parentElement.style.cursor = 'not-allowed';
-                el.parentElement.title = msg;
-                // Przechwytywanie kliknięcia na elemencie nadrzędnym (np. <li>)
-                el.parentElement.addEventListener('click', (e) => {
+                el.style.cursor = 'not-allowed';
+                el.title = msg;
+                // Bezpośrednio zatrzymaj kliknięcie na przycisku
+                el.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
                     import('./modules/dialog.js').then(({ Dialog }) => Dialog.alert(msg, 'info'));
-                }, true);
+                }, true); // Use capture to intercept before anything else
             }
         };
 
-        disableNav(elements.navHistory, "Historia wyników dostępna jest tylko w aplikacji Desktopowej. Z poziomu przeglądarki pobierasz plik po zrealizowanym badaniu.");
+        disableNav(elements.navHistory, "Historia wyników dostępna jest tylko w aplikacji Desktopowej. Z poziomu przeglądarki plik .csv jest generowany od razu po badaniu.");
         disableNav(elements.navUpdates, "Zarządzanie aktualizacjami dotyczy wyłącznie aplikacji Desktopowej.");
         
         // Zablokuj HPM
