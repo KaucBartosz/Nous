@@ -41,6 +41,7 @@
         .gradient-text {
             background: linear-gradient(90deg, #8A2BE2 0%, #4169E1 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .glossy-card {
@@ -85,7 +86,7 @@
             <nav class="hidden md:flex items-center gap-8 font-medium text-sm text-slate-300">
                 <a href="{{ '/' | relative_url }}" class="hover:text-white transition-colors">Start</a>
                 <a href="{{ '/features' | relative_url }}" class="hover:text-white transition-colors font-bold text-white">Przewodnik</a>
-                <a href="{{ '/app/' | relative_url }}" class="hover:text-brand-purple transition-colors font-bold text-brand-blue drop-shadow-[0_0_8px_rgba(65,105,225,0.4)]">Przetestuj</a>
+                <a href="{{ '/app/' | relative_url }}" target="_blank" class="hover:text-brand-purple transition-colors font-bold text-brand-blue drop-shadow-[0_0_8px_rgba(65,105,225,0.4)]">Przetestuj</a>
                 <a href="{{ '/' | relative_url }}#features" class="hover:text-white transition-colors">O funkcjach</a>
                 <a href="{{ '/' | relative_url }}#download" class="hover:text-white transition-colors">Pobierz</a>
                 <a href="https://github.com/KaucBartosz/Nous" target="_blank" class="flex items-center gap-2 hover:text-white transition-colors">

@@ -26,16 +26,27 @@ layout: default
         </p>
 
         <!-- Dynamiczny przycisk pobierania (mechanizm JS + Styling) -->
-        <div class="flex flex-col items-center gap-2">
-            <a id="download-btn-hero" href="https://github.com/KaucBartosz/Nous/releases/latest"
-                class="inline-flex items-center gap-3 bg-white border border-gray-200 text-slate-900 font-semibold py-4 px-10 rounded-full text-[17px] shadow-xl shadow-blue-900/5 hover:bg-gray-50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                <svg class="w-5 h-5 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                </svg>
-                <span id="download-text-btn">Ładowanie instalatora...</span>
-            </a>
+        <div class="flex flex-col items-center gap-4">
+            <div class="flex flex-wrap justify-center gap-4">
+                <a id="download-btn-hero" href="https://github.com/KaucBartosz/Nous/releases/latest"
+                    class="inline-flex items-center gap-3 bg-white border border-gray-200 text-slate-900 font-semibold py-4 px-10 rounded-full text-[17px] shadow-xl shadow-blue-900/5 hover:bg-gray-50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                    <svg class="w-5 h-5 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <span id="download-text-btn">Ładowanie instalatora...</span>
+                </a>
+                <a href="{{ '/app/' | relative_url }}" target="_blank"
+                    class="inline-flex items-center gap-3 bg-white border border-gray-200 text-slate-900 font-semibold py-4 px-10 rounded-full text-[17px] shadow-xl shadow-blue-900/5 hover:bg-gray-50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                    <svg class="w-5 h-5 text-brand-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9-3-9"></path>
+                    </svg>
+                    <span>Przetestuj</span>
+                </a>
+            </div>
             <span id="detected-os" class="text-slate-500 text-sm"></span>
         </div>
         <div class="mt-4">
