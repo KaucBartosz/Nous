@@ -8,3 +8,19 @@ tests/Piorkowski/
 test_mac_hpm/
 HPMinneSystemy/
 test-output.txt
+.codebase-index-cache.pkl
+# Zależności
+node_modules/
+.venv/
+venv/
+env/
+
+# Build i cache
+dist/
+build/
+.next/
+.cache/
+
+# Inne
+*.pkl
+*.json  # Jeśli masz ogromne pliki z danymi testowymi
