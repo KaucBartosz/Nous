@@ -1,0 +1,123 @@
+/* Tagi i Menu Tagowania */
+.tag-btn {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.tag-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tag-btn.active {
+    color: var(--primary, #4caf50) !important;
+    text-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.tag-btn.inactive {
+    color: #444 !important;
+    opacity: 0.5;
+}
+
+.tag-menu-popup {
+    position: absolute;
+    z-index: 9999;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    padding: 12px;
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: inherit;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tag-menu-header {
+    font-size: 13px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+    color: #eee;
+}
+
+.tag-menu-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.tag-chip-edit {
+    background: #333;
+    color: #eee;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.tag-remove {
+    cursor: pointer;
+    color: #888;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+.tag-remove:hover {
+    color: #ff5252;
+}
+
+.tag-menu-add {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.tag-input {
+    flex: 1;
+    background: #111;
+    border: 1px solid #444;
+    color: white;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.tag-input:focus {
+    outline: none;
+    border-color: var(--primary, #4caf50);
+}
+
+/* Chip widoczny na liście */
+.tag-chip {
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--primary, #4caf50);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    margin-right: 4px;
+    display: inline-block;
+}
+
+.list-tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}

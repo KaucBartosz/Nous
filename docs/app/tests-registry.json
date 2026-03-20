@@ -1,0 +1,86 @@
+[
+  {
+    "id": "BystreOczko",
+    "name": "Bystre Oczko",
+    "description": "Test na czas reakcji, polegający na jak najszybszym wciśnięciu sygnalizatora zapalonego na zielono",
+    "version": 1,
+    "path": "tests/BystreOczko/index.html"
+  },
+  {
+    "id": "Corsi",
+    "name": "Bloki Corsiego",
+    "description": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
+    "version": 1,
+    "path": "tests/Corsi/index.html"
+  },
+  {
+    "id": "GoNoGo",
+    "name": "Go/No-Go",
+    "description": "Test typu Go NoGo na liczbach parzystych i nieparzystych.",
+    "version": 1,
+    "path": "tests/GoNoGo/index.html"
+  },
+  {
+    "id": "NWstecz",
+    "name": "N-Wstecz",
+    "description": "Test polega na pamiętaniu liczby która pojawiła się N liczb wcześniej (od 1 do 5)",
+    "version": 1,
+    "path": "tests/NWstecz/index.html"
+  },
+  {
+    "id": "PingPong",
+    "name": "Ping Pong",
+    "description": "Test na koordynacji wzrokowo-ruchowej (oburęcznej).",
+    "version": 1,
+    "path": "tests/PingPong/index.html"
+  },
+  {
+    "id": "Piorkowski",
+    "name": "Piórkowski",
+    "description": "Test oceny koordynacji wzrokowo-ruchowej",
+    "version": 1,
+    "path": "tests/Piorkowski/index.html"
+  },
+  {
+    "id": "Poppel",
+    "name": "Test Pöppla",
+    "description": "Test w stylu tablicy Poppelreutera",
+    "version": 1,
+    "path": "tests/Poppel/index.html"
+  },
+  {
+    "id": "Samochodzik",
+    "name": "Samochodzik",
+    "description": "Test polegający na przejechaniu labiryntu",
+    "version": 1,
+    "path": "tests/Samochodzik/index.html"
+  },
+  {
+    "id": "Semafor",
+    "name": "Semafor",
+    "description": "Test na Semaforze, często spotykany przy badaniach kierowców",
+    "version": 1,
+    "path": "tests/Semafor/index.html"
+  },
+  {
+    "id": "Stop",
+    "name": "Sygnał Stop",
+    "description": "Test na reakcję na pojawienie się znaku STOP",
+    "version": 1,
+    "path": "tests/Stop/index.html"
+  },
+  {
+    "id": "Stroop",
+    "name": "Test Stroopa",
+    "description": "Test w stylu testu Stroop",
+    "version": 1,
+    "path": "tests/Stroop/index.html"
+  },
+  {
+    "id": "Sygnalizacja",
+    "name": "Sygnalizacja",
+    "description": "Test na czas reakcji zmiany światła na skrzyżowaniu",
+    "version": 1,
+    "path": "tests/Sygnalizacja/index.html"
+  }
+]

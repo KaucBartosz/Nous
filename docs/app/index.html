@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com; script-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.gstatic.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://github.com https://*.github.com https://api.github.com https://raw.githubusercontent.com https://www.google.com; frame-src https://www.google.com;">
+    <title>Nous</title>
+    <!-- Czcionki Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="src/styles/tags.css">
+</head>
+
+<body>
+
+    <!-- 1. EKRAN LOGOWANIA -->
+    <div id="login-screen" class="full-screen-center">
+        <div class="login-card">
+            <div class="logo-area">
+                <img src="logo.png" alt="Logo" style="width: 100px; height: 100px; margin-bottom: 10px;">
+                <h1>Nous</h1>
+            </div>
+
+            <input type="email" id="email" placeholder="E-mail badacza">
+            <div class="password-container">
+                <input type="password" id="password" placeholder="Hasło">
+                <button id="btn-toggle-password" class="toggle-password">
+                    <span class="material-icons">visibility</span>
+                </button>
+            </div>
+
+            <button id="btn-login" class="btn primary full-width">Zaloguj się</button>
+            <button id="btn-register" class="btn secondary full-width">Załóż konto</button>
+
+            <div class="divider">lub</div>
+            <button id="btn-guest" class="btn outline full-width">Tryb Offline (Gość)</button>
+
+            <p id="error-msg" class="error-text"></p>
+        </div>
+    </div>
+
+    <!-- 2. DASHBOARD (GŁÓWNY INTERFEJS) -->
+    <div id="dashboard-screen" class="app-layout hidden">
+
+        <!-- Pasek Boczny -->
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="logo.png" alt="Logo" style="width: 100px; height: 100px; margin-right: 15px;">
+                <span>Nous</span>
+            </div>
+
+            <nav>
+                <button id="nav-library" class="nav-item active">
+                    <span class="material-icons">library_books</span> Biblioteka Testów
+                </button>
+                <button id="nav-history" class="nav-item">
+                    <span class="material-icons">history</span> Historia Wyników
+                </button>
+                <button id="nav-updates" class="nav-item">
+                    <span class="material-icons">system_update</span> Aktualizacje
+                    <span class="nav-badge hidden" id="updates-badge">0</span>
+                </button>
+                <button id="nav-demographics" class="nav-item">
+                    <span class="material-icons">assignment_ind</span> Metryczka
+                </button>
+                <button id="nav-demo-creator" class="nav-item">
+                    <span class="material-icons">build</span> Kreator
+                </button>
+
+                <div class="spacer" style="flex: 1;"></div>
+
+                <button id="nav-settings" class="nav-item">
+                    <span class="material-icons">settings</span> Ustawienia
+                </button>
+                <button id="nav-whats-new" class="nav-item">
+                    <span class="material-icons">new_releases</span> Co nowego?
+                </button>
+                <button id="nav-about" class="nav-item">
+                    <span class="material-icons">info</span> O programie
+                </button>
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar-circle">
+                    <span class="material-icons">person</span>
+                </div>
+                <div class="user-details">
+                    <span id="user-email-display">user@example.com</span>
+                    <span id="user-status-display" class="status-badge">...</span>
+                </div>
+                <!-- Sync Toggle -->
+                <div id="sync-toggle-container"
+                    style="display:flex; flex-direction:column; align-items:center; margin-left:15px; justify-content: center;">
+                    <label class="switch" title="Auto-Sync" style="margin-bottom: 4px;">
+                        <input type="checkbox" id="toggle-sync">
+                        <span class="slider round"></span>
+                    </label>
+                    <span id="sync-status-label" style="font-size:10px; color:#888; font-weight: 600;">SYNC</span>
+                </div>
+
+                <button id="btn-logout" class="icon-btn" title="Wyloguj">
+                    <span class="material-icons">logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Główna Treść -->
+        <main class="content-area">
+
+            <!-- WIDOK 1: Biblioteka (Grid) -->
+            <div id="library-view">
+                <div class="library-toolbar">
+                    <input type="text" id="library-search" placeholder="Szukaj testu... (użyj @tag aby filtrować)" class="library-search-input">
+
+                    <div class="view-switcher" style="margin-left: auto;">
+                        <div class="training-mode-container"
+                            style="display: flex; align-items: center; gap: 8px; margin-right: 20px; padding-right: 20px; border-right: 1px solid var(--border);">
+                            <span class="view-switcher-label">Tryb treningowy:</span>
+                            <label class="switch" title="Tryb treningowy">
+                                <input type="checkbox" id="toggle-training-mode">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="material-icons info-icon" id="training-info-icon"
+                                style="font-size: 18px; color: var(--text-muted); cursor: help;"
+                                title="W trybie treningowym wyniki nie są zapisywane ani ocenianie">info</span>
+                        </div>
+
+                        <div class="hpm-mode-container"
+                            style="display: flex; align-items: center; gap: 8px; margin-right: 20px; padding-right: 20px; border-right: 1px solid var(--border);">
+                            <span class="view-switcher-label">Tryb wysokiej precyzji:</span>
+                            <label class="switch" title="Tryb wysokiej precyzji">
+                                <input type="checkbox" id="toggle-hpm">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="material-icons info-icon" id="hpm-info-icon"
+                                style="font-size: 18px; color: var(--text-muted); cursor: help;"
+                                title="Aktywacja trybu zwiększonej precyzji (HPM) wymaga pobrania dodatkowego, specjalistycznego pakietu zasobów.">info</span>
+                        </div>
+                        <span class="view-switcher-label">Widok:</span>
+                        <button id="view-grid" class="view-btn active" title="Siatka kart">
+                            <span class="material-icons">grid_view</span>
+                        </button>
+                        <button id="view-list" class="view-btn" title="Lista">
+                            <span class="material-icons">view_list</span>
+                        </button>
+                        <button id="view-table" class="view-btn" title="Tabela">
+                            <span class="material-icons">table_rows</span>
+                        </button>
+                        <button id="view-compact" class="view-btn" title="Kompaktowe karty">
+                            <span class="material-icons">view_comfy</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="tests-grid" class="grid-container">
+                    <!-- JS wstrzyknie tu kafelki -->
+                </div>
+            </div>
+
+            <!-- WIDOK 2: Historia (Tabela) -->
+            <div id="history-view" class="hidden">
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3>Ostatnie Badania</h3>
+                    <div style="display:flex; gap: 10px;">
+                        <button id="btn-toggle-guest-view" class="btn outline small hidden"
+                            title="Pokaż wyniki zapisane lokalnie w trybie Gościa">
+                            <span class="material-icons">no_accounts</span> Pokaż wyniki Gościa
+                        </button>
+                        <button id="btn-toggle-cloud-view" class="btn outline small hidden"
+                            title="Pokaż moje wyniki zapisane w chmurze">
+                            <span class="material-icons">cloud_queue</span> Pokaż moje wyniki z bazy danych
+                        </button>
+                        <button id="btn-export-csv" class="btn secondary small">
+                            <span class="material-icons">download</span> Pobierz historię wyników w CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="history-actions-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap;">
+                    <div class="format-selector-wrapper">
+                        <div class="download-format-selector" style="margin-bottom: 0;">
+                            <span>Format pobierania plików:</span>
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="dl-format" value="json">
+                                <span>JSON (Pełny)</span>
+                            </label>
+                            <label
+                                style="cursor: pointer; display: flex; align-items: center; gap: 5px; margin-left: 10px;">
+                                <input type="radio" name="dl-format" value="csv" checked>
+                                <span>CSV (Tabela)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="actions-wrapper">
+                        <div id="cloud-actions-container" class="hidden"
+                            style="display:flex; gap:10px; align-items:center;">
+                            <button id="btn-cloud-import-all" class="btn primary small">
+                                <span class="material-icons">input</span> Importuj wszystkie do lokalnej bazy
+                            </button>
+                            <button id="btn-cloud-download-all" class="btn secondary small" style="min-width: 160px;">
+                                <span id="btn-cloud-download-text">
+                                    <span class="material-icons">download</span> Pobierz wszystkie
+                                </span>
+                                <div class="btn-progress" id="btn-cloud-download-progress"></div>
+                            </button>
+                        </div>
+
+                        <div id="guest-actions-container" class="hidden"
+                            style="display:flex; gap:10px; align-items:center;">
+                            <button id="btn-guest-import-all" class="btn primary small">
+                                <span class="material-icons">move_to_inbox</span> Importuj wszystkie wyniki Gościa
+                            </button>
+                            <button id="btn-guest-download-all" class="btn secondary small" style="min-width: 160px;">
+                                <span id="btn-guest-download-text">
+                                    <span class="material-icons">download</span> Pobierz wszystkie
+                                </span>
+                                <div class="btn-progress" id="btn-guest-download-progress"></div>
+                            </button>
+                        </div>
+
+                        <div id="local-actions-container" class="hidden"
+                            style="display:flex; gap:10px; align-items:center;">
+                            <button id="btn-local-download-all" class="btn secondary small" style="min-width: 160px;">
+                                <span id="btn-local-download-text">
+                                    <span class="material-icons">download</span> Pobierz wszystkie wyniki
+                                </span>
+                                <div class="btn-progress" id="btn-local-download-progress"></div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="history-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Test</th>
+                                <th>ID Badanego</th>
+                                <th>Wynik</th>
+                                <th>Status</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS wstrzyknie tu wiersze -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- WIDOK 3: Aktualizacje (Tabela) -->
+            <div id="updates-view" class="hidden">
+
+                <!-- 3a. Sekcja Aktualizacji Programu -->
+                <div class="app-update-container"
+                    style="background: #252526; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #444;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                                <span class="material-icons">cloud_sync</span>
+                                Aktualizacja Programu Nous
+                            </h3>
+                            <p style="color: #aaa; margin: 5px 0 15px 0;">
+                                Obecna wersja: <span id="app-current-version"
+                                    style="color: white; font-weight: bold;">v...</span>
+                            </p>
+                            <div id="app-update-status" style="font-size: 14px; margin-bottom: 15px;">
+                                Sprawdzanie aktualizacji...
+                            </div>
+
+                            <!-- Pasek postępu pobierania aktualizacji -->
+                            <div id="app-update-progress-container" class="hidden"
+                                style="width: 300px; margin-bottom: 10px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: #ccc;">
+                                    <span>Pobieranie...</span>
+                                    <span id="app-update-percent">0%</span>
+                                </div>
+                                <div class="progress-bar-bg" style="height: 6px; background: #444; border-radius: 3px;">
+                                    <div id="app-update-bar"
+                                        style="width: 0%; height: 100%; background: var(--primary-color); border-radius: 3px; transition: width 0.2s;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="app-update-actions">
+                            <!-- Przyciski pojawią się dynamicznie -->
+                            <button id="btn-check-app-update" class="btn secondary small">
+                                <span class="material-icons">refresh</span> Sprawdź ponownie
+                            </button>
+                            <button id="btn-download-app-update" class="btn primary hidden">
+                                <span class="material-icons">download</span> Pobierz Aktualizację
+                            </button>
+                            <button id="btn-install-app-update" class="btn primary hidden">
+                                <span class="material-icons">system_update_alt</span> Zainstaluj i Restartuj
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">Stan Zainstalowanych Testów</h3>
+                    <input type="text" id="updates-search" placeholder="Szukaj..."
+                        style="width: 250px; padding: 8px; background: #252526; border: 1px solid #444; color: white; border-radius: 4px;">
+                </div>
+                <div class="table-container">
+                    <table id="updates-table">
+                        <thead>
+                            <tr>
+                                <th>Nazwa Testu</th>
+                                <th>Wersja Lokalna</th>
+                                <th>Wersja w Chmurze</th>
+                                <th>Status</th>
+                                <th>Akcja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS wstrzyknie tu wiersze -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- WIDOK 4: Metryczka (Formularz) -->
+            <div id="demographics-view" class="hidden">
+                <h3>Dane Uczestnika Badania</h3>
+                <p style="color:#888; margin-bottom:20px;">Wypełnij te dane przed uruchomieniem testu.</p>
+
+                <div class="form-container">
+
+                    <div class="form-group">
+                        <label>Wybierz Szablon Metryczki:</label>
+                        <select id="demo-template-select" style="margin-bottom: 20px;">
+                            <option value="">-- Domyślna (Brak) --</option>
+                            <!-- JS populate -->
+                        </select>
+                    </div>
+
+                    <div id="dynamic-demo-form">
+                        <!-- JS wstrzyknie pola formularza tutaj -->
+                        <p style="color:#ccc; font-style:italic;">Wybierz szablon, aby zobaczyć pola.</p>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <button id="btn-save-demo" class="btn primary">
+                            <span class="material-icons">save</span> Zapisz Dane Sesji
+                        </button>
+                        <button id="btn-clear-demo" class="btn secondary" style="margin-left: 10px;">
+                            <span class="material-icons">clear</span> Wyczyść
+                        </button>
+                        <span id="demo-status" style="margin-left:15px; color:#4caf50; display:none;">Zapisano!</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WIDOK 5: Kreator Metryczek (NOWY) -->
+            <div id="demo-creator-view" class="hidden">
+                <h3>Kreator Szablonów Metryczek</h3>
+                <p style="color:#888; margin-bottom:20px;">Zdefiniuj własne pola, które chcesz zbierać od uczestników.
+                </p>
+
+                <div class="form-container">
+
+                    <div class="form-group">
+                        <label for="creator-template-name">Nazwa Szablonu:</label>
+                        <input type="text" id="creator-template-name" placeholder="np. Badanie Kierowców 2026">
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #444; margin: 20px 0;">
+
+                    <h4>Pola Formularza</h4>
+                    <div id="creator-fields-container">
+                        <!-- Dynamiczna lista pól -->
+                    </div>
+
+                    <button id="btn-add-field" class="btn secondary small" style="margin-top:10px;">
+                        <span class="material-icons">add</span> Dodaj Pole
+                    </button>
+
+                    <div style="margin-top:30px; display:flex; justify-content:space-between;">
+                        <div>
+                            <!-- Placeholder for delete template btn if editing logic added later -->
+                        </div>
+                        <button id="btn-save-template" class="btn primary">
+                            <span class="material-icons">save</span> Zapisz Szablon
+                        </button>
+                    </div>
+                    <span id="creator-status"
+                        style="display:block; margin-top:10px; color:#4caf50; display:none;">Zapisano Szablon!</span>
+                </div>
+
+                <hr style="border:0; border-top:1px solid #444; margin: 30px 0;">
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h4 style="margin:0;">Dostępne Szablony</h4>
+                    <button id="btn-import-template" class="btn secondary small">
+                        <span class="material-icons">upload</span> Importuj z Pliku
+                    </button>
+                </div>
+                <div id="existing-templates-list" class="grid-container"
+                    style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+                    <!-- Cards with templates -->
+                </div>
+            </div>
+
+            <!-- WIDOK 6: Ustawienia -->
+            <div id="settings-view" class="hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <div>
+                        <h3>Ustawienia Wyglądu</h3>
+                        <p style="color:#888; margin: 0;">Dostosuj wygląd aplikacji do własnych preferencji.</p>
+                    </div>
+                </div>
+
+                <div class="form-container" style="max-width: 800px;">
+
+                    <!-- Sekcja Motywu -->
+                    <div class="settings-section">
+                        <h4>Motyw Główny</h4>
+                        <div class="form-group">
+                            <div class="theme-switcher">
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="dark" checked>
+                                    <span class="theme-label">
+                                        <span class="material-icons">dark_mode</span>
+                                        Ciemny
+                                    </span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="light">
+                                    <span class="theme-label">
+                                        <span class="material-icons">light_mode</span>
+                                        Jasny
+                                    </span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="custom">
+                                    <span class="theme-label">
+                                        <span class="material-icons">palette</span>
+                                        Własny
+                                    </span>
+                                </label>
+                            </div>
+                            <p style="font-size: 12px; color: #888; margin-top: 10px;">
+                                <span class="material-icons"
+                                    style="font-size: 12px; vertical-align: text-top;">info</span>
+                                Zmiana motywu przywróci domyślne kolory dla wybranego trybu.
+                            </p>
+
+                            <!-- Theme Management -->
+                            <div id="custom-theme-management"
+                                style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border);">
+                                <label style="font-size: 13px; margin-bottom: 10px; display: block;">Twoje Własne
+                                    Motywy:</label>
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <select id="saved-themes-select" style="flex: 1; margin-bottom: 0;">
+                                        <option value="">-- Domyślny Własny --</option>
+                                    </select>
+                                    <button id="btn-delete-theme" class="btn danger small" title="Usuń wybrany motyw">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 11px; margin-bottom: 5px;">Zapisz obecną konfigurację
+                                            jako:</label>
+                                        <input type="text" id="new-theme-name" placeholder="np. Mój Rubinowy"
+                                            style="margin-bottom: 0; padding: 8px 12px;">
+                                    </div>
+                                    <button id="btn-save-custom-theme" class="btn secondary small">
+                                        <span class="material-icons">save_as</span> Zapisz motyw
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+
+                        <!-- Kolumna Lewa -->
+                        <div>
+                            <!-- Elementy Interaktywne -->
+                            <div class="settings-section">
+                                <h4>Elementy Interaktywne</h4>
+                                <div class="form-group">
+                                    <label>Kolor Główny (Przyciski):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="primary-color-picker">
+                                        <input type="text" id="primary-color-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Hover (Najazd myszką):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="primary-hover-picker">
+                                        <input type="text" id="primary-hover-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ikony -->
+                            <div class="settings-section">
+                                <h4>Ikony</h4>
+                                <div class="form-group">
+                                    <label>Kolor Ikon:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="icon-color-picker">
+                                        <input type="text" id="icon-color-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Aktywnej Ikony:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="icon-active-picker">
+                                        <input type="text" id="icon-active-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kolumna Prawa -->
+                        <div>
+                            <!-- Tekst -->
+                            <div class="settings-section">
+                                <h4>Tekst</h4>
+                                <div class="form-group">
+                                    <label>Główny Kolor Tekstu:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="text-main-picker">
+                                        <input type="text" id="text-main-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Drugorzędny Kolor Tekstu (Muted):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="text-muted-picker">
+                                        <input type="text" id="text-muted-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Nieaktywnych Zakładek:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="text-inactive-tab-picker">
+                                        <input type="text" id="text-inactive-tab-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Nazwy Testów:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="text-test-name-picker">
+                                        <input type="text" id="text-test-name-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Opisu Testów:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="text-test-description-picker">
+                                        <input type="text" id="text-test-description-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Tekstu na Przyciskach:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="button-text-picker">
+                                        <input type="text" id="button-text-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tło i Obramowania -->
+                            <div class="settings-section">
+                                <h4>Tło i Ramki</h4>
+                                <div class="form-group">
+                                    <label>Tło Aplikacji:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="bg-dark-picker">
+                                        <input type="text" id="bg-dark-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tło Paska Bocznego (Sidebar):</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="bg-sidebar-picker">
+                                        <input type="text" id="bg-sidebar-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kolor Obramowań:</label>
+                                    <div class="color-picker-group">
+                                        <input type="color" id="border-color-picker">
+                                        <input type="text" id="border-color-value" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #444; margin: 20px 0;">
+
+                    <!-- Podgląd -->
+                    <div class="settings-section">
+                        <h4>Podgląd Elementów</h4>
+                        <div class="settings-preview">
+                            <div
+                                style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-bottom: 20px;">
+                                <button class="btn primary">Przycisk Główny</button>
+                                <button class="btn secondary">Drugorzędny</button>
+                                <button class="btn outline">Obrys</button>
+                            </div>
+                            <div style="display: flex; gap: 30px; justify-content: center; align-items: center;">
+                                <div style="text-align: center;">
+                                    <span class="material-icons"
+                                        style="font-size: 32px; color: var(--icon-color);">home</span>
+                                    <p style="font-size: 12px; color: var(--text-muted);">Ikona Zwykła</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <span class="material-icons"
+                                        style="font-size: 32px; color: var(--icon-active);">star</span>
+                                    <p style="font-size: 12px; color: var(--text-main);">Ikona Aktywna</p>
+                                </div>
+                            </div>
+                            <p style="margin-top: 15px; color: var(--text-main);">Przykładowy tekst główny.</p>
+                            <p style="color: var(--text-muted); font-size: 14px;">Przykładowy tekst drugorzędny
+                                (opisowy, mniej ważny).</p>
+                        </div>
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #444; margin: 30px 0;">
+
+                    <!-- Akcje -->
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <button id="btn-reset-settings" class="btn secondary">
+                            <span class="material-icons">refresh</span> Przywróć Domyślne dla Motywu
+                        </button>
+                        <button id="btn-save-settings" class="btn primary">
+                            <span class="material-icons">save</span> Zapisz Ustawienia
+                        </button>
+                    </div>
+
+                    <span id="settings-status"
+                        style="display:block; margin-top:10px; color:#4caf50; text-align:center; display:none;">Ustawienia
+                        zapisane!</span>
+                </div>
+            </div>
+            <!-- WIDOK 7: Co nowego? -->
+            <div id="whats-new-view" class="hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <div>
+                        <h3>Co nowego w Nous?</h3>
+                        <p style="color:#888; margin: 0;">Ostatnie zmiany i aktualizacje aplikacji.</p>
+                    </div>
+                    <div style="display:flex; gap: 10px; align-items: center;">
+                        <div class="release-nav"
+                            style="display: flex; gap: 5px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 6px;">
+                            <button id="btn-prev-release" class="btn secondary small" title="Poprzednia wersja"
+                                disabled>
+                                <span class="material-icons">chevron_left</span>
+                            </button>
+                            <span id="release-nav-index"
+                                style="font-size: 12px; color: var(--text-muted); min-width: 40px; text-align: center;">...</span>
+                            <button id="btn-next-release" class="btn secondary small" title="Następna wersja" disabled>
+                                <span class="material-icons">chevron_right</span>
+                            </button>
+                        </div>
+                        <button id="btn-refresh-whats-new" class="btn secondary small">
+                            <span class="material-icons">refresh</span> Odśwież
+                        </button>
+                        <button id="btn-open-github" class="btn primary small">
+                            <span class="material-icons">open_in_new</span> Otwórz GitHub
+                        </button>
+                    </div>
+                </div>
+
+                <div class="whats-new-container">
+                    <div id="whats-new-content" class="markdown-content">
+                        <!-- Treść zostanie załadowana przez JS -->
+                    </div>
+
+                    <div id="whats-new-loading" style="display:none; text-align:center; padding: 40px;">
+                        <span class="material-icons loading-spinner"
+                            style="font-size: 48px; color: var(--primary); display: inline-block;">sync</span>
+                        <p style="margin-top: 15px; color: var(--text-muted);">Ładowanie informacji o zmianach...</p>
+                    </div>
+
+                    <div id="whats-new-error" class="error-message"
+                        style="display:none; text-align:center; padding: 40px; color: #ff5252;">
+                        <span class="material-icons" style="font-size: 48px;">error</span>
+                        <p style="margin-top: 15px;">Nie udało się załadować informacji o zmianach.</p>
+                        <p style="font-size: 14px; color: #888;">Spróbuj ponownie później lub otwórz GitHub ręcznie.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 3. OKNA MODALNE -->
+
+    <!-- Modal: Wyniki -->
+    <div id="results-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Badanie Zakończone</h3>
+                <button id="btn-close-modal" class="close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="normal-results-content">
+                    <div id="modal-extended-results" class="extended-results hidden">
+                        <!-- JS wstrzyknie tu kafelki wyników -->
+                    </div>
+                    <p class="results-hint">Dokładne dane do pobrania w zakładce Historia Wyników</p>
+                </div>
+                <div id="training-results-content" class="hidden" style="text-align: center; padding: 20px 0;">
+                    <p style="font-size: 18px; color: var(--primary); font-weight: 600; margin-bottom: 10px;">Zakończono
+                        test w trybie treningowym</p>
+                    <p style="color: var(--text-muted);">W trybie treningowym żadne dane nie są zapisywane.</p>
+                </div>
+                <div class="status-info" id="modal-upload-info"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-discard" class="btn danger">Odrzuć</button>
+                <button id="btn-upload-cloud" class="btn primary" disabled>Wyślij do
+                    Chmury</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: O Programie -->
+    <div id="about-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="text-align: center; width: 400px;">
+            <div class="modal-header">
+                <h3>O platformie Nous</h3>
+                <button id="btn-close-about" class="close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <img src="logo.png" alt="Logo"
+                    style="width: 140px; height: 140px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <p><strong>Nous</strong></p>
+                <p>Platforma do dystrybucji i przeprowadzania testów psychometrycznych.</p>
+                <hr style="border: 0; border-top: 1px solid #444; margin: 20px 0;">
+                <p style="font-size: 12px; color: #888;">
+                    Praca Inżynierska<br>
+                    Autor: Bartosz Kauc<br>
+                    Uczelnia: Uniwersytet Kazimierza Wielkiego<br>
+                    Rok: 2026/2027
+                </p>
+            </div>
+            <div class="modal-footer" style="justify-content: center; gap: 15px;">
+                <button id="btn-about-project" class="btn secondary">
+                    <span class="material-icons">code</span> Strona projektu
+                </button>
+                <button id="btn-about-close-footer" class="btn primary">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Custom Dialog (Alert/Confirm) -->
+    <div id="custom-dialog-modal" class="modal-overlay hidden" style="z-index: 2000;">
+        <div class="modal-content" style="width: 400px; text-align: center;">
+            <div class="modal-header">
+                <h3 id="custom-dialog-title">Komunikat</h3>
+                <button id="btn-close-custom-dialog" class="close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="custom-dialog-icon" style="margin-bottom: 15px;"></div>
+                <p id="custom-dialog-message">Treść komunikatu...</p>
+            </div>
+            <div class="modal-footer" id="custom-dialog-footer" style="justify-content: center; gap: 15px;">
+                <!-- Buttons injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+</body>
+
+</html>
