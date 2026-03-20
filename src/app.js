@@ -23,6 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Auth Setup
     if (!window.electronAPI) {
         // --- WEB MODE ---
+        // Zablokuj przyciski tagów globalnie przez nadpisanie stylów CSS
+        const webStyles = document.createElement('style');
+        webStyles.innerHTML = `.tag-btn { opacity: 0.3 !important; pointer-events: none !important; }`;
+        document.head.appendChild(webStyles);
+
         // Ostrzeżenie do nagłówka
         const titleDiv = document.querySelector('.header-title');
         if (titleDiv) {

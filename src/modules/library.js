@@ -258,46 +258,49 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
     // 1. Fetch from Cloud if needed
     if (!cachedTests.length || forceRefresh) {
         elements.testsGrid.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
-        try {
-            // Check if online before trying cloud fetch to avoid long timeouts
-            if (!navigator.onLine) {
-                throw new Error("Brak połączenia internetowego (navigator.onLine)");
-            }
+        cachedTests = []; // Clear cache przed pobraniem
+        
+        if (window.electronAPI) {
+            try {
+                // Check if online before trying cloud fetch to avoid long timeouts
+                if (!navigator.onLine) {
+                    throw new Error("Brak połączenia internetowego (navigator.onLine)");
+                }
 
-            // #14 FIX: Wrap Firestore call in a timeout to avoid hanging on slow networks
-            const fetchTimeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout: Firestore nie odpowiada (>8s)')), 8000)
-            );
-            const snap = await Promise.race([getDocs(collection(db, "tests")), fetchTimeout]);
-            cachedTests = []; // Clear cache
+                // #14 FIX: Wrap Firestore call in a timeout to avoid hanging on slow networks
+                const fetchTimeout = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Timeout: Firestore nie odpowiada (>8s)')), 8000)
+                );
+                const snap = await Promise.race([getDocs(collection(db, "tests")), fetchTimeout]);
 
-            if (snap.empty) {
-                elements.testsGrid.innerHTML = '<p>Brak testów w chmurze.</p>';
-                return;
-            }
+                if (snap.empty) {
+                    elements.testsGrid.innerHTML = '<p>Brak testów w chmurze.</p>';
+                    return;
+                }
 
-            snap.forEach(doc => {
-                const t = doc.data();
-                t.id = doc.id;
-                t.local_ver = 0; // Will be updated below
-                t.remote_ver = Number(t.version);
-                cachedTests.push(t);
-            });
+                snap.forEach(doc => {
+                    const t = doc.data();
+                    t.id = doc.id;
+                    t.local_ver = 0; // Will be updated below
+                    t.remote_ver = Number(t.version);
+                    cachedTests.push(t);
+                });
 
-            // Save to local cache for offline usage
-            localStorage.setItem('cached_tests_metadata', JSON.stringify(cachedTests));
+                // Save to local cache for offline usage
+                localStorage.setItem('cached_tests_metadata', JSON.stringify(cachedTests));
 
-        } catch (e) {
-            console.warn("Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):", e);
+            } catch (e) {
+                console.warn("Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):", e);
 
-            // Try to load from local storage cache
-            const saved = localStorage.getItem('cached_tests_metadata');
-            if (saved) {
-                try {
-                    cachedTests = JSON.parse(saved);
-                    console.log("Załadowano listę testów z cache lokalnego.");
-                } catch (jsonErr) {
-                    console.error("Błąd parsowania cache lokalnego:", jsonErr);
+                // Try to load from local storage cache
+                const saved = localStorage.getItem('cached_tests_metadata');
+                if (saved) {
+                    try {
+                        cachedTests = JSON.parse(saved);
+                        console.log("Załadowano listę testów z cache lokalnego.");
+                    } catch (jsonErr) {
+                        console.error("Błąd parsowania cache lokalnego:", jsonErr);
+                    }
                 }
             }
         }
@@ -985,8 +988,14 @@ export async function startTestProcess(url, id, ver, onlyDownload = false, name 
             sessionStorage.setItem('nous_web_current_test_id', id);
             sessionStorage.setItem('nous_web_training_mode', isTrainingMode);
             
-            // Przejście na adres pliku HTML testu
-            window.location.href = testInfo.webPath;
+            // Przejście na adres pliku HTML testu w NOWEJ KARCIE
+            window.open(testInfo.webPath, '_blank');
+            
+            // Odblokowujemy przycisk na liście Launcher'a po otwarciu testu
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<span class="material-icons">play_arrow</span> Uruchom`;
+            }
         } else {
             await Dialog.alert("Ten test nie posiada jeszcze odpowiedniej ścieżki (webPath) w rejestrze Web.", 'error');
             if (btn) {
