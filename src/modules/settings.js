@@ -170,9 +170,6 @@ export function getSettings() {
 }
 
 /**
- * Reset to default settings for current theme
- */
-/**
  * Save custom cache
  */
 function saveCustomCache(settings) {
@@ -223,18 +220,6 @@ export function resetToDefaultsForTheme(theme) {
 }
 
 
-
-/**
- * Convert rgba/complex color to hex for color picker
- */
-function colorToHex(color) {
-    if (!color) return '#000000';
-    if (color.startsWith('#')) return color;
-
-    // For rgba or other complex colors, extract or return a default
-    // This is a simplified version - for full accuracy we'd need to parse rgba
-    return '#000000';
-}
 
 /**
  * XSS Protection - Sanitize string

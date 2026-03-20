@@ -1757,3 +1757,57 @@ input:checked+.slider:before {
         justify-content: center;
     }
 }
+
+/* --- NAV BADGE (Aktualizacje) --- */
+.nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: #f44336;
+    color: #fff;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    margin-left: 6px;
+    vertical-align: middle;
+    animation: badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+}
+
+.nav-badge.hidden {
+    display: none;
+}
+
+@keyframes badge-pop {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+}
+
+/* --- HISTORY PAGINATION --- */
+.history-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 12px 0;
+    margin-top: 8px;
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* --- CLOUD STATUS OK --- */
+.cloud-status-ok {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: #4caf50;
+    font-size: 12px;
+}

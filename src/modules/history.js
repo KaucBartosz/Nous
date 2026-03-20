@@ -2,10 +2,11 @@
 import { getAllResults, claimGuestResult, checkResultExists, saveResult } from './database.js';
 import { db as firebaseDb } from '../firebaseConfig.js';
 import { collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-import { getCurrentUser } from './auth.js';
+import { getCurrentUser, getUserStatus } from './auth.js';
 import { elements } from './ui.js';
 import { syncSingleResult } from './sync.js';
 import { Dialog } from './dialog.js';
+import { flattenObject } from './utils.js';
 
 let isGuestViewActive = false;
 let isCloudViewActive = false;
@@ -13,11 +14,16 @@ let cachedCloudResults = [];
 let lastCloudFetchTime = 0;
 const CLOUD_FETCH_THROTTLE_MS = 2000;
 
+// --- PAGINATION STATE ---
+const PAGE_SIZE = 50;
+let currentPage = 1;
+let currentAllResults = []; // full sorted list for current view
+
 export function initHistoryView() {
     if (elements.btnToggleGuestView) {
         elements.btnToggleGuestView.addEventListener('click', () => {
             isGuestViewActive = !isGuestViewActive;
-            isCloudViewActive = false; // Disable cloud if guest active
+            isCloudViewActive = false;
             updateToggleButtonsState();
             loadHistoryData();
         });
@@ -26,7 +32,7 @@ export function initHistoryView() {
     if (elements.btnToggleCloudView) {
         elements.btnToggleCloudView.addEventListener('click', () => {
             isCloudViewActive = !isCloudViewActive;
-            isGuestViewActive = false; // Disable guest if cloud active
+            isGuestViewActive = false;
             updateToggleButtonsState();
             loadHistoryData();
         });
@@ -45,15 +51,12 @@ export function initHistoryView() {
 }
 
 function updateToggleButtonsState() {
-    // Hide all action containers by default
     elements.cloudActionsContainer?.classList.add('hidden');
     elements.guestActionsContainer?.classList.add('hidden');
     elements.localActionsContainer?.classList.add('hidden');
 
     if (isCloudViewActive) {
         elements.cloudActionsContainer?.classList.remove('hidden');
-
-        // Cloud View Active: reset Guest button, set Cloud button
         if (elements.btnToggleGuestView) {
             elements.btnToggleGuestView.classList.remove('active');
             elements.btnToggleGuestView.innerHTML = '<span class="material-icons">no_accounts</span> Pokaż wyniki Gościa';
@@ -64,8 +67,6 @@ function updateToggleButtonsState() {
         }
     } else if (isGuestViewActive) {
         elements.guestActionsContainer?.classList.remove('hidden');
-
-        // Guest View Active: set Guest button, reset Cloud button
         if (elements.btnToggleGuestView) {
             elements.btnToggleGuestView.classList.add('active');
             elements.btnToggleGuestView.innerHTML = '<span class="material-icons">person</span> Pokaż moje wyniki';
@@ -75,7 +76,6 @@ function updateToggleButtonsState() {
             elements.btnToggleCloudView.innerHTML = '<span class="material-icons">cloud_queue</span> Moje wyniki z bazy';
         }
     } else {
-        // Standard Local View: reset both
         elements.localActionsContainer?.classList.remove('hidden');
         if (elements.btnToggleGuestView) {
             elements.btnToggleGuestView.classList.remove('active');
@@ -93,7 +93,6 @@ export async function loadHistoryData() {
     elements.historyTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
     const user = getCurrentUser();
 
-    // Show toggle button ONLY if user is logged in
     if (elements.btnToggleGuestView) {
         if (user) {
             elements.btnToggleGuestView.classList.remove('hidden');
@@ -101,7 +100,7 @@ export async function loadHistoryData() {
         } else {
             elements.btnToggleGuestView.classList.add('hidden');
             elements.btnToggleCloudView?.classList.add('hidden');
-            isGuestViewActive = false; // Reset to safe state
+            isGuestViewActive = false;
             isCloudViewActive = false;
         }
     }
@@ -110,11 +109,7 @@ export async function loadHistoryData() {
         return loadCloudResults();
     }
 
-    // Determine target UID based on view mode
-    // If Guest View is Active -> Show 'GUEST' data
-    // If Normal View -> Show User's data (or 'GUEST' if actually logged in as guest)
     let targetUid = user ? user.uid : "GUEST";
-
     if (user && isGuestViewActive) {
         targetUid = "GUEST";
     }
@@ -122,173 +117,21 @@ export async function loadHistoryData() {
     try {
         const allResults = await getAllResults();
 
-        // Filter by target UID
         const myResults = allResults
             .filter(r => r.researcher_uid === targetUid)
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Descending
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        elements.historyTableBody.innerHTML = '';
-
-        if (myResults.length === 0) {
-            const msg = isGuestViewActive
-                ? 'Brak wyników w trybie Gościa.'
-                : 'Brak wyników.';
-
-            const tr = document.createElement('tr');
-            const td = document.createElement('td');
-            td.colSpan = 6;
-            td.textContent = msg;
-            tr.appendChild(td);
-            elements.historyTableBody.appendChild(tr);
-            return;
-        }
-
-        // --- SAFE DOM CREATION (No innerHTML) ---
-        myResults.forEach((r, index) => {
-            const resultData = r.wyniki || r.data || {};
-            const score = resultData.czas_reakcji ? `${resultData.czas_reakcji} ms` : (resultData.score || "JSON");
-            const patient_id = r.subject_id || resultData.subject_id || resultData.subjectId || "-";
-
-            const row = document.createElement('tr');
-
-            // 1. Date
-            const tdDate = document.createElement('td');
-            tdDate.textContent = new Date(r.timestamp).toLocaleString();
-            row.appendChild(tdDate);
-
-            // 2. Test ID
-            const tdTestId = document.createElement('td');
-            tdTestId.textContent = r.test_id || r.testId;
-            row.appendChild(tdTestId);
-
-            // 3. Patient ID
-            const tdPatient = document.createElement('td');
-            tdPatient.textContent = patient_id;
-            row.appendChild(tdPatient);
-
-            // 4. Score
-            const tdScore = document.createElement('td');
-            const strongScore = document.createElement('strong');
-            strongScore.textContent = score;
-            tdScore.appendChild(strongScore);
-            row.appendChild(tdScore);
-
-            // 5. Sync Status / Actions
-            const tdStatus = document.createElement('td');
-            tdStatus.style.textAlign = 'center';
-
-            if (isGuestViewActive && user) {
-                // CLAIMS MODE
-                // Show Import Button instead of Sync Status
-                const btnClaim = document.createElement('button');
-                btnClaim.className = 'btn small primary';
-                btnClaim.style.padding = '2px 8px';
-                btnClaim.style.fontSize = '12px';
-                btnClaim.innerHTML = '<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> Przejmij';
-                btnClaim.title = "Przypisz ten wynik do swojego konta";
-
-                btnClaim.onclick = async (e) => {
-                    e.stopPropagation();
-                    await handleClaimResult(r, user.uid);
-                };
-
-                tdStatus.appendChild(btnClaim);
-
-            } else {
-                // NORMAL MODE (Sync Status)
-                const icon = document.createElement('span');
-                icon.className = 'material-icons';
-                icon.style.fontSize = '18px';
-
-                const sync_status = r.sync_status || r.syncStatus;
-
-                if (r.researcher_uid === 'GUEST') {
-                    icon.textContent = 'dns';
-                    icon.style.color = '#888';
-                    icon.title = 'Lokalne (Tryb Gościa)';
-                } else if (sync_status === 'SYNCED') {
-                    icon.textContent = 'cloud_done';
-                    icon.style.color = '#4caf50';
-                    icon.title = 'Zsynchronizowano';
-                } else if (sync_status === 'PENDING') {
-                    // Check permissions dynamically from UI state
-                    const statusEl = document.getElementById('user-status-display');
-                    const userStatus = statusEl ? statusEl.textContent : '';
-                    const canUpload = (userStatus === 'APPROVED' || userStatus === 'ADMIN');
-
-                    if (canUpload) {
-                        icon.textContent = 'cloud_upload';
-                        icon.style.color = '#ff9800';
-                        icon.style.cursor = 'pointer';
-                        icon.title = 'Kliknij, aby wysłać do chmury';
-
-                        icon.onclick = async (e) => {
-                            e.stopPropagation();
-                            // Loading state
-                            icon.textContent = 'sync';
-                            icon.classList.add('spin');
-                            icon.style.color = '#2196f3';
-                            icon.onclick = null; // Disable double click
-
-                            try {
-                                await syncSingleResult(r);
-                                // Success -> Reload handled by event sync-complete
-                            } catch (err) {
-                                icon.classList.remove('spin');
-                                icon.textContent = 'error';
-                                icon.style.color = 'red';
-                                await Dialog.alert("Błąd wysyłania: " + err.message, 'error');
-                                loadHistoryData(); // Restore state
-                            }
-                        };
-                    } else {
-                        icon.textContent = 'cloud_off';
-                        icon.style.color = '#aaa';
-                        icon.title = 'Czeka na wysyłkę (Wymagany status APPROVED)';
-                    }
-                } else {
-                    icon.textContent = 'error';
-                    icon.style.color = 'red';
-                    icon.title = `Status nieznany: ${sync_status}`;
-                }
-                tdStatus.appendChild(icon);
-            }
-            row.appendChild(tdStatus);
-
-            // 6. Action (Download)
-            const tdAction = document.createElement('td');
-            tdAction.style.textAlign = 'center';
-
-            const btn = document.createElement('button');
-            btn.className = 'btn-download-result icon-btn';
-            btn.title = 'Pobierz JSON';
-
-            const btnIcon = document.createElement('span');
-            btnIcon.className = 'material-icons';
-            btnIcon.style.fontSize = '18px';
-            btnIcon.textContent = 'download';
-
-            btn.appendChild(btnIcon);
-
-            // Bind click directly
-            btn.addEventListener('click', () => {
-                downloadSingleResult(r);
-            });
-
-            tdAction.appendChild(btn);
-            row.appendChild(tdAction);
-
-            elements.historyTableBody.appendChild(row);
-        });
+        // Store for pagination
+        currentAllResults = myResults;
+        currentPage = 1;
+        renderHistoryPage();
 
     } catch (e) {
         console.error('Error loading history:', e);
-        // Check if it's a decryption error
         const tr = document.createElement('tr');
         const td = document.createElement('td');
         td.colSpan = 6;
         td.style.color = '#f44336';
-
         if (e.message && e.message.includes('decrypt')) {
             td.textContent = 'Błąd odczytu danych: Problem z deszyfrowaniem. Sprawdź klucz szyfrowania.';
         } else {
@@ -298,6 +141,215 @@ export async function loadHistoryData() {
         elements.historyTableBody.appendChild(tr);
     }
 }
+
+// ===================================================
+// PAGINATION
+// ===================================================
+
+function renderHistoryPage() {
+    elements.historyTableBody.innerHTML = '';
+
+    const myResults = currentAllResults;
+    const user = getCurrentUser();
+    const totalPages = Math.ceil(myResults.length / PAGE_SIZE);
+
+    // Update/create pagination controls
+    updatePaginationControls(myResults.length, totalPages);
+
+    if (myResults.length === 0) {
+        const msg = isGuestViewActive ? 'Brak wyników w trybie Gościa.' : 'Brak wyników.';
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.textContent = msg;
+        tr.appendChild(td);
+        elements.historyTableBody.appendChild(tr);
+        return;
+    }
+
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const pageResults = myResults.slice(startIdx, startIdx + PAGE_SIZE);
+
+    pageResults.forEach((r) => {
+        const resultData = r.wyniki || r.data || {};
+        const score = resultData.czas_reakcji ? `${resultData.czas_reakcji} ms` : (resultData.score || "JSON");
+        const patient_id = r.subject_id || resultData.subject_id || resultData.subjectId || "-";
+
+        const row = document.createElement('tr');
+
+        // 1. Date
+        const tdDate = document.createElement('td');
+        tdDate.textContent = new Date(r.timestamp).toLocaleString();
+        row.appendChild(tdDate);
+
+        // 2. Test ID
+        const tdTestId = document.createElement('td');
+        tdTestId.textContent = r.test_id || r.testId;
+        row.appendChild(tdTestId);
+
+        // 3. Patient ID
+        const tdPatient = document.createElement('td');
+        tdPatient.textContent = patient_id;
+        row.appendChild(tdPatient);
+
+        // 4. Score
+        const tdScore = document.createElement('td');
+        const strongScore = document.createElement('strong');
+        strongScore.textContent = score;
+        tdScore.appendChild(strongScore);
+        row.appendChild(tdScore);
+
+        // 5. Sync Status / Actions
+        const tdStatus = document.createElement('td');
+        tdStatus.style.textAlign = 'center';
+
+        if (isGuestViewActive && user) {
+            // CLAIMS MODE
+            const btnClaim = document.createElement('button');
+            btnClaim.className = 'btn small primary';
+            btnClaim.style.padding = '2px 8px';
+            btnClaim.style.fontSize = '12px';
+            btnClaim.innerHTML = '<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> Przejmij';
+            btnClaim.title = "Przypisz ten wynik do swojego konta";
+            btnClaim.onclick = async (e) => {
+                e.stopPropagation();
+                await handleClaimResult(r, user.uid);
+            };
+            tdStatus.appendChild(btnClaim);
+        } else {
+            // NORMAL MODE (Sync Status)
+            const icon = document.createElement('span');
+            icon.className = 'material-icons';
+            icon.style.fontSize = '18px';
+
+            const sync_status = r.sync_status || r.syncStatus;
+
+            if (r.researcher_uid === 'GUEST') {
+                icon.textContent = 'dns';
+                icon.style.color = '#888';
+                icon.title = 'Lokalne (Tryb Gościa)';
+            } else if (sync_status === 'SYNCED') {
+                icon.textContent = 'cloud_done';
+                icon.style.color = '#4caf50';
+                icon.title = 'Zsynchronizowano';
+            } else if (sync_status === 'PENDING') {
+                // #3 FIX: Use getUserStatus() from module, not from DOM
+                const userStatus = getUserStatus();
+                const canUpload = (userStatus === 'APPROVED' || userStatus === 'ADMIN');
+
+                if (canUpload) {
+                    icon.textContent = 'cloud_upload';
+                    icon.style.color = '#ff9800';
+                    icon.style.cursor = 'pointer';
+                    icon.title = 'Kliknij, aby wysłać do chmury';
+
+                    icon.onclick = async (e) => {
+                        e.stopPropagation();
+                        icon.textContent = 'sync';
+                        icon.classList.add('spin');
+                        icon.style.color = '#2196f3';
+                        icon.onclick = null;
+
+                        try {
+                            await syncSingleResult(r);
+                        } catch (err) {
+                            icon.classList.remove('spin');
+                            icon.textContent = 'error';
+                            icon.style.color = 'red';
+                            await Dialog.alert("Błąd wysyłania: " + err.message, 'error');
+                            loadHistoryData();
+                        }
+                    };
+                } else {
+                    icon.textContent = 'cloud_off';
+                    icon.style.color = '#aaa';
+                    icon.title = 'Czeka na wysyłkę (Wymagany status APPROVED)';
+                }
+            } else {
+                icon.textContent = 'error';
+                icon.style.color = 'red';
+                icon.title = `Status nieznany: ${sync_status}`;
+            }
+            tdStatus.appendChild(icon);
+        }
+        row.appendChild(tdStatus);
+
+        // 6. Action (Download)
+        const tdAction = document.createElement('td');
+        tdAction.style.textAlign = 'center';
+
+        const btn = document.createElement('button');
+        btn.className = 'btn-download-result icon-btn';
+        btn.title = 'Pobierz JSON';
+
+        const btnIcon = document.createElement('span');
+        btnIcon.className = 'material-icons';
+        btnIcon.style.fontSize = '18px';
+        btnIcon.textContent = 'download';
+        btn.appendChild(btnIcon);
+        btn.addEventListener('click', () => downloadSingleResult(r));
+
+        tdAction.appendChild(btn);
+        row.appendChild(tdAction);
+
+        elements.historyTableBody.appendChild(row);
+    });
+}
+
+function updatePaginationControls(totalItems, totalPages) {
+    // Find or create pagination container
+    let paginationContainer = document.getElementById('history-pagination');
+    if (!paginationContainer) {
+        // Create it and insert after table-container
+        paginationContainer = document.createElement('div');
+        paginationContainer.id = 'history-pagination';
+        paginationContainer.className = 'history-pagination';
+        const tableContainer = document.querySelector('#history-view .table-container');
+        if (tableContainer) {
+            tableContainer.insertAdjacentElement('afterend', paginationContainer);
+        }
+    }
+
+    // Hide pagination altogether if only 1 page
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+
+    paginationContainer.style.display = 'flex';
+    paginationContainer.innerHTML = '';
+
+    // Prev button
+    const btnPrev = document.createElement('button');
+    btnPrev.className = 'btn outline small';
+    btnPrev.textContent = '← Poprzednia';
+    btnPrev.disabled = currentPage <= 1;
+    btnPrev.addEventListener('click', () => {
+        if (currentPage > 1) { currentPage--; renderHistoryPage(); }
+    });
+
+    // Page info
+    const pageInfo = document.createElement('span');
+    pageInfo.className = 'pagination-info';
+    pageInfo.textContent = `Strona ${currentPage} z ${totalPages} (${totalItems} wyników)`;
+
+    // Next button
+    const btnNext = document.createElement('button');
+    btnNext.className = 'btn outline small';
+    btnNext.textContent = 'Następna →';
+    btnNext.disabled = currentPage >= totalPages;
+    btnNext.addEventListener('click', () => {
+        if (currentPage < totalPages) { currentPage++; renderHistoryPage(); }
+    });
+
+    paginationContainer.appendChild(btnPrev);
+    paginationContainer.appendChild(pageInfo);
+    paginationContainer.appendChild(btnNext);
+}
+
+// ===================================================
+// CLAIMS / HISTORY HELPERS
+// ===================================================
 
 async function handleClaimResult(result, userUid) {
     const choice = await Dialog.custom(
@@ -314,9 +366,8 @@ async function handleClaimResult(result, userUid) {
     try {
         const keepOriginal = (choice === 'copy');
         await claimGuestResult(result, userUid, keepOriginal);
-
         await Dialog.alert("Wynik został pomyślnie przypisany do Twojego konta!", "success");
-        loadHistoryData(); // Refresh list
+        loadHistoryData();
     } catch (e) {
         await Dialog.alert("Błąd podczas przejmowania wyniku: " + e.message, "error");
     }
@@ -336,16 +387,12 @@ function downloadSingleResult(result) {
 }
 
 function downloadSingleResultAsCSV(result) {
-    // Flatten logic
     const flat = {};
-
-    // Core fields
     flat['Data'] = new Date(result.timestamp).toLocaleString();
     flat['Test ID'] = result.test_id || result.testId;
     flat['ID Badanego'] = result.subject_id || "-";
     flat['Badacz UID'] = result.researcher_uid;
 
-    // Demographics data (if any)
     const demo = result.demographics || {};
     if (demo.data) {
         Object.keys(demo.data).forEach(k => {
@@ -353,20 +400,15 @@ function downloadSingleResultAsCSV(result) {
         });
     }
 
-    // Result data (wyniki or data)
+    // #4 FIX: Use flattenObject from utils.js (no local duplicate)
     const resData = result.wyniki || result.data || {};
     flattenObject(resData, flat, 'Wynik');
-
-    // Create Vertical CSV (Table view)
-    // Column 1: Parametr
-    // Column 2: Wartość
 
     const bom = "\uFEFF";
     let csvContent = bom + "Parametr;Wartość\r\n";
 
     for (const [key, value] of Object.entries(flat)) {
         let valStr = String(value);
-        // Escape semicolons and newlines in text
         if (valStr.includes(';') || valStr.includes('\n')) {
             valStr = `"${valStr.replace(/"/g, '""')}"`;
         }
@@ -378,16 +420,6 @@ function downloadSingleResultAsCSV(result) {
     downloadFile(filename, csvContent, 'text/csv;charset=utf-8;');
 }
 
-function flattenObject(obj, target, prefix) {
-    for (const key in obj) {
-        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-            flattenObject(obj[key], target, `${prefix} - ${key}`);
-        } else {
-            target[`${prefix} - ${key}`] = Array.isArray(obj[key]) ? JSON.stringify(obj[key]) : obj[key];
-        }
-    }
-}
-
 function downloadFile(filename, content, type) {
     const blob = new Blob([content], { type: type });
     const url = URL.createObjectURL(blob);
@@ -397,25 +429,22 @@ function downloadFile(filename, content, type) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-
-    // Revoke URL immediately after click - browser already started download
     setTimeout(() => URL.revokeObjectURL(url), 100);
 }
+
+// ===================================================
+// CLOUD RESULTS
+// ===================================================
 
 async function loadCloudResults() {
     const user = getCurrentUser();
     if (!user) return;
 
-    // --- THROTTLING ---
     const now = Date.now();
     if (now - lastCloudFetchTime < CLOUD_FETCH_THROTTLE_MS) {
-        console.log("Cloud fetch throttled.");
-        // We still Want to show the cached results if they exist, 
-        // but we'll re-render them to update the "Imported" status if needed.
         if (cachedCloudResults.length > 0) {
             return renderCloudResultsTable(cachedCloudResults);
         }
-        // If no cache, just wait.
         return;
     }
     lastCloudFetchTime = now;
@@ -454,40 +483,37 @@ async function loadCloudResults() {
 async function renderCloudResultsTable(results) {
     elements.historyTableBody.innerHTML = '';
 
+    // Hide pagination in cloud view
+    const paginationContainer = document.getElementById('history-pagination');
+    if (paginationContainer) paginationContainer.style.display = 'none';
+
     if (results.length === 0) {
         elements.historyTableBody.innerHTML = '<tr><td colspan="6">Brak wyników w chmurze dla Twojego konta.</td></tr>';
         return;
     }
 
-    // Pre-fetch local results for fast duplicate checking
     const localResults = await getAllResults();
     const localKeys = new Set();
-
     localResults.forEach(r => {
         if (r.firestore_id) localKeys.add(r.firestore_id);
-        // Fallback meta-key
         localKeys.add(`${r.timestamp}_${r.test_id}_${r.subject_id}`);
     });
 
     results.forEach(data => {
         const row = document.createElement('tr');
 
-        // 1. Date
         const tdDate = document.createElement('td');
         tdDate.textContent = new Date(data.timestamp).toLocaleString();
         row.appendChild(tdDate);
 
-        // 2. Test ID
         const tdTestId = document.createElement('td');
         tdTestId.textContent = data.test_id;
         row.appendChild(tdTestId);
 
-        // 3. Patient ID
         const tdPatient = document.createElement('td');
         tdPatient.textContent = data.subject_id || "-";
         row.appendChild(tdPatient);
 
-        // 4. Score
         const tdScore = document.createElement('td');
         const resVal = data.data || {};
         const scoreText = resVal.czas_reakcji ? `${resVal.czas_reakcji} ms` : (resVal.score || "Data");
@@ -496,7 +522,6 @@ async function renderCloudResultsTable(results) {
         tdScore.appendChild(strongScore);
         row.appendChild(tdScore);
 
-        // 5. Actions (Import Status)
         const tdStatus = document.createElement('td');
         tdStatus.style.textAlign = 'center';
 
@@ -505,12 +530,7 @@ async function renderCloudResultsTable(results) {
 
         if (alreadyExists) {
             const statusBox = document.createElement('div');
-            statusBox.style.display = 'flex';
-            statusBox.style.alignItems = 'center';
-            statusBox.style.justifyContent = 'center';
-            statusBox.style.gap = '4px';
-            statusBox.style.color = '#4caf50';
-            statusBox.style.fontSize = '12px';
+            statusBox.className = 'cloud-status-ok';
             statusBox.innerHTML = '<span class="material-icons" style="font-size:16px;">check_circle</span> Wynik już znajduje się na urządzeniu';
             tdStatus.appendChild(statusBox);
         } else {
@@ -525,7 +545,6 @@ async function renderCloudResultsTable(results) {
         }
         row.appendChild(tdStatus);
 
-        // 6. Download
         const tdAction = document.createElement('td');
         tdAction.style.textAlign = 'center';
 
@@ -533,10 +552,7 @@ async function renderCloudResultsTable(results) {
         btnDl.className = 'icon-btn';
         btnDl.innerHTML = '<span class="material-icons" style="font-size:18px;">download</span>';
         btnDl.onclick = () => {
-            const formatted = {
-                ...data,
-                wyniki: data.data // Normalize for downloadSingleResult
-            };
+            const formatted = { ...data, wyniki: data.data };
             downloadSingleResult(formatted);
         };
         tdAction.appendChild(btnDl);
@@ -574,7 +590,7 @@ async function handleImportResult(cloudResult) {
 
         await saveResult(localData, user.uid);
         Dialog.alert("Wynik został zaimportowany!", "success");
-        renderCloudResultsTable(cachedCloudResults); // Refresh view status
+        renderCloudResultsTable(cachedCloudResults);
 
     } catch (e) {
         Dialog.alert("Błąd importu: " + e.message, "error");
@@ -589,7 +605,6 @@ async function handleImportAll() {
     let skipped = 0;
 
     try {
-        // Pre-fetch all local to avoid repeated DB calls in loop
         const localResults = await getAllResults();
         const localKeys = new Set();
         localResults.forEach(r => {
@@ -620,7 +635,7 @@ async function handleImportAll() {
         }
 
         Dialog.alert(`Import zakończony. Dodano: ${count}, Pominięto (duplikaty): ${skipped}`, "success");
-        renderCloudResultsTable(cachedCloudResults); // Refresh view status
+        renderCloudResultsTable(cachedCloudResults);
 
     } catch (e) {
         Dialog.alert("Błąd masowego importu: " + e.message, "error");
@@ -637,7 +652,6 @@ async function handleDownloadAll() {
 
     if (!btn || !btnText || !btnProgress) return;
 
-    // UI state: downloading
     btn.classList.add('downloading');
     btn.disabled = true;
     const originalContent = btnText.innerHTML;
@@ -647,10 +661,9 @@ async function handleDownloadAll() {
     try {
         const timestamp = new Date().getTime();
         const filename = `Paczka_Wynikow_${timestamp}.zip`;
-
-        // Indeterminate or simulated progress if it's very fast.
         btnProgress.style.width = '50%';
 
+        // Downloads ALL cloud results (pagination does not affect this)
         const result = await window.electronAPI.downloadBulkZip({
             results: cachedCloudResults,
             filename: filename,
@@ -659,16 +672,13 @@ async function handleDownloadAll() {
 
         if (result.success) {
             btnProgress.style.width = '100%';
-            setTimeout(() => {
-                Dialog.alert("Archiwum ZIP zostało wygenerowane!", "success");
-            }, 500);
+            setTimeout(() => Dialog.alert("Archiwum ZIP zostało wygenerowane!", "success"), 500);
         } else if (!result.cancelled) {
             Dialog.alert("Błąd podczas generowania ZIP: " + result.error, "error");
         }
     } catch (e) {
         Dialog.alert("Wystąpił nieoczekiwany błąd: " + e.message, "error");
     } finally {
-        // Reset UI state
         setTimeout(() => {
             btn.classList.remove('downloading');
             btn.disabled = false;
@@ -706,16 +716,16 @@ async function handleImportGuestResults() {
         for (const res of guestResults) {
             if (choice === 'move') {
                 res.researcher_uid = user.uid;
-                res.sync_status = 'PENDING'; // Force re-sync to user's cloud
+                res.sync_status = 'PENDING';
                 await saveResult(res, user.uid);
             } else {
                 const newRes = {
                     ...res,
-                    id: Date.now() + Math.random(), // New unique local ID
+                    id: Date.now() + Math.random(),
                     researcher_uid: user.uid,
                     sync_status: 'PENDING'
                 };
-                delete newRes.firestore_id; // Don't copy cloud link
+                delete newRes.firestore_id;
                 await saveResult(newRes, user.uid);
             }
             syncCount++;
@@ -731,6 +741,7 @@ async function handleImportGuestResults() {
 
 async function handleDownloadAllLocal(targetUid) {
     try {
+        // Downloads ALL results for the user (not just current page)
         const allLocal = await getAllResults();
         const results = allLocal.filter(r => r.researcher_uid === targetUid);
 
@@ -757,11 +768,7 @@ async function handleDownloadAllLocal(targetUid) {
         const format = document.querySelector('input[name="dl-format"]:checked').value;
         const filename = `Wyniki_${isGuest ? 'Gosc' : 'Uzytkownik'}_${Date.now()}.zip`;
 
-        const result = await window.electronAPI.downloadBulkZip({
-            results,
-            filename,
-            format
-        });
+        const result = await window.electronAPI.downloadBulkZip({ results, filename, format });
 
         if (result.success) {
             btnProgress.style.width = '100%';
@@ -784,7 +791,6 @@ async function handleDownloadAllLocal(targetUid) {
 function downloadResultsAsCSV(results, filename) {
     if (results.length === 0) return;
 
-    // Use common logic to flatten all results
     const allFlats = results.map(r => {
         const flat = {};
         flat['Data'] = new Date(r.timestamp || r.synced_at).toLocaleString();
@@ -793,26 +799,21 @@ function downloadResultsAsCSV(results, filename) {
         flat['Badacz UID'] = r.researcher_uid;
 
         const demo = r.demographics || {};
-        const dData = demo.data || demo; // Handle different structures
+        const dData = demo.data || demo;
         if (typeof dData === 'object') {
-            Object.keys(dData).forEach(k => {
-                flat[`Metryczka - ${k}`] = dData[k];
-            });
+            Object.keys(dData).forEach(k => { flat[`Metryczka - ${k}`] = dData[k]; });
         }
 
         const resData = r.wyniki || r.data || {};
+        // #4 FIX: Use flattenObject from utils.js
         flattenObject(resData, flat, 'Wynik');
         return flat;
     });
 
-    // Get all unique keys for header
     const allKeys = new Set();
-    allFlats.forEach(f => {
-        Object.keys(f).forEach(k => allKeys.add(k));
-    });
+    allFlats.forEach(f => Object.keys(f).forEach(k => allKeys.add(k)));
     const headerKeys = Array.from(allKeys);
 
-    // Build CSV string
     const bom = "\uFEFF";
     let csvContent = bom + headerKeys.join(';') + "\r\n";
 
@@ -831,29 +832,21 @@ function downloadResultsAsCSV(results, filename) {
 }
 
 export function exportHistoryToCSV() {
-    const bom = "\uFEFF"; // UTF-8 BOM for Excel compatibility
+    const bom = "\uFEFF";
     let csv = bom;
 
     document.querySelectorAll('#history-table tr').forEach(row => {
         const cells = Array.from(row.querySelectorAll('th, td'));
         const rowData = cells.map(cell => {
-            // Remove icon content, only get actual text
             const clone = cell.cloneNode(true);
-            // Remove all Material Icons spans
             clone.querySelectorAll('.material-icons').forEach(icon => icon.remove());
-            // Remove button elements
             clone.querySelectorAll('button').forEach(btn => btn.remove());
-
             let text = clone.textContent.trim();
-
-            // Escape commas and quotes for CSV
             if (text.includes(',') || text.includes('"') || text.includes('\n')) {
                 text = `"${text.replace(/"/g, '""')}"`;
             }
-
             return text;
         });
-
         csv += rowData.join(',') + "\r\n";
     });
 
@@ -863,7 +856,5 @@ export function exportHistoryToCSV() {
     link.href = url;
     link.download = "historia_wynikow.csv";
     link.click();
-
-    // Revoke URL immediately after click
     setTimeout(() => URL.revokeObjectURL(url), 100);
 }

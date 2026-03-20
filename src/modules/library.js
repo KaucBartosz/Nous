@@ -259,7 +259,11 @@ export async function loadTestsList(filterText = '', forceRefresh = false) {
                 throw new Error("Brak połączenia internetowego (navigator.onLine)");
             }
 
-            const snap = await getDocs(collection(db, "tests"));
+            // #14 FIX: Wrap Firestore call in a timeout to avoid hanging on slow networks
+            const fetchTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout: Firestore nie odpowiada (>8s)')), 8000)
+            );
+            const snap = await Promise.race([getDocs(collection(db, "tests")), fetchTimeout]);
             cachedTests = []; // Clear cache
 
             if (snap.empty) {

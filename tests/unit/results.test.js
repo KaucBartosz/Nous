@@ -6,11 +6,15 @@ vi.mock('../../src/modules/auth.js', () => ({
 }));
 
 // Mock UI module
+const mockCloseListener = vi.fn();
+const mockDiscardListener = vi.fn();
+const mockUploadListener = vi.fn();
+
 vi.mock('../../src/modules/ui.js', () => ({
   elements: {
-    btnCloseModal: { addEventListener: vi.fn() },
-    btnDiscard: { addEventListener: vi.fn() },
-    btnUploadCloud: { addEventListener: vi.fn(), textContent: '', disabled: false },
+    btnCloseModal: { addEventListener: mockCloseListener },
+    btnDiscard: { addEventListener: mockDiscardListener, classList: { add: vi.fn(), remove: vi.fn() } },
+    btnUploadCloud: { addEventListener: mockUploadListener, textContent: '', disabled: false },
     modalOverlay: { classList: { add: vi.fn(), remove: vi.fn() } },
     modalHeaderTitle: { textContent: '' },
     normalResultsContent: { classList: { add: vi.fn(), remove: vi.fn() } },
@@ -60,7 +64,7 @@ describe('Results Module', () => {
     vi.clearAllMocks();
     vi.resetModules();
 
-    // Setup DOM elements
+    // Setup DOM elements expected by renderExtendedResults
     document.body.innerHTML = `
       <div id="modal-extended-results"></div>
     `;
@@ -76,216 +80,125 @@ describe('Results Module', () => {
     document.body.innerHTML = '';
   });
 
-  // ==========================================================
-  // initResultsHandler Tests
-  // ==========================================================
-    it('registers onTestResults listener', async () => {
+  describe('initResultsHandler', () => {
+    it('registers onTestResults listener and DOM event listeners', async () => {
       const { initResultsHandler } = await import('../../src/modules/results.js');
-      const { handleTestResults } = await import('../../src/modules/results.js');
-
-      // Mock the onTestResults callback to be called immediately
-      const mockCallback = vi.fn();
-      window.electronAPI.onTestResults = mockCallback;
 
       initResultsHandler();
 
-      // Test data
+      // Verify listeners
+      expect(window.electronAPI.onTestResults).toHaveBeenCalled();
+      expect(mockCloseListener).toHaveBeenCalledWith('click', expect.any(Function));
+      expect(mockDiscardListener).toHaveBeenCalledWith('click', expect.any(Function));
+      // Zapis w systemie (Local -> Cloud)
+      expect(mockUploadListener).toHaveBeenCalledWith('click', expect.any(Function));
+    });
+
+    it('processes generic test results correctly (opens modal)', async () => {
+      const { initResultsHandler } = await import('../../src/modules/results.js');
+      const { elements } = await import('../../src/modules/ui.js');
+      const { getTrainingMode } = await import('../../src/modules/library.js');
+      const { getCurrentUser } = await import('../../src/modules/auth.js');
+      const { getActiveDemographics } = await import('../../src/modules/demographics.js');
+
+      getTrainingMode.mockReturnValue(false);
+      getCurrentUser.mockReturnValue({ uid: 'user-123' });
+      getActiveDemographics.mockReturnValue({ participant_id: 'P001' });
+
+      initResultsHandler();
+
+      // Wyciągnij wyrenderowany callback i wywołaj go
+      const callback = window.electronAPI.onTestResults.mock.calls[0][0];
+      
       const testData = {
         testId: 'test-123',
         subjectId: 'participant',
-        __hpm_context: true,
         ilosc_poprawnych_nacisniec: 10,
-        ilosc_blednych_nacisniec: 2,
-        ogolna_ilosc_nacisniec: 12,
         sredni_czas_reakcji: 350
       };
 
-      // Call the callback immediately with test data
-      mockCallback(testData);
+      callback(testData);
 
-      // Verify that handleTestResults was called with the correct data
-      expect(handleTestResults).toHaveBeenCalledWith(testData);
+      // Verify that modal was configured for normal results
+      expect(elements.modalHeaderTitle.textContent).toBe('Badanie Zakończone');
+      expect(elements.normalResultsContent.classList.remove).toHaveBeenCalledWith('hidden');
+      expect(elements.modalOverlay.classList.remove).toHaveBeenCalledWith('hidden');
+
+      // Verify the DOM was updated with extended results
+      const resultsContainer = document.getElementById('modal-extended-results');
+      expect(resultsContainer.innerHTML).toContain('Poprawne');
+      expect(resultsContainer.innerHTML).toContain('10');
+      expect(resultsContainer.innerHTML).toContain('Śr. RT');
+      expect(resultsContainer.innerHTML).toContain('350 ms');
     });
 
-    it('registers button click listeners', async () => {
+    it('processes training mode test results correctly', async () => {
       const { initResultsHandler } = await import('../../src/modules/results.js');
       const { elements } = await import('../../src/modules/ui.js');
-
-      initResultsHandler();
-
-      // Verify that event listeners were added
-      expect(elements.btnCloseModal.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
-      expect(elements.btnDiscard.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
-      expect(elements.btnUploadCloud.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
-
-      // Verify that the listeners are actually functions
-      const listeners = elements.btnCloseModal.addEventListener.mock.calls;
-      expect(listeners.length).toBeGreaterThan(0);
-      expect(typeof listeners[0][1]).toBe('function');
-    });
-  });
-
-  // ==========================================================
-  // validateTestResults Tests
-  // ==========================================================
-  describe('validateTestResults', () => {
-    it('throws for null input', async () => {
-      const { initResultsHandler } = await import('../../src/modules/results.js');
-      
-      // Trigger results callback with null
-      const callback = window.electronAPI.onTestResults.mock.calls[0]?.[0];
-      
-      // We can't directly test internal function, but we test the behavior
-      expect(true).toBe(true);
-    });
-
-    it('throws for non-object input', async () => {
-      // Validation is internal, tested through integration
-      expect(true).toBe(true);
-    });
-
-    it('sanitizes testId field', async () => {
-      // Validation is internal, tested through integration
-      expect(true).toBe(true);
-    });
-  });
-
-  // ==========================================================
-  // handleTestResults Tests (via module behavior)
-  // ==========================================================
-  describe('handleTestResults', () => {
-    it('creates result package with user data', async () => {
-      const { getCurrentUser } = await import('../../src/modules/auth.js');
-      const { getActiveDemographics } = await import('../../src/modules/demographics.js');
       const { getTrainingMode } = await import('../../src/modules/library.js');
-
-      getCurrentUser.mockReturnValue({ uid: 'user-123', email: 'test@example.com' });
-      getActiveDemographics.mockReturnValue({ participant_id: 'P001' });
-      getTrainingMode.mockReturnValue(false);
-
-      const { initResultsHandler } = await import('../../src/modules/results.js');
-      initResultsHandler();
-
-      // Test passes if no error thrown
-      expect(true).toBe(true);
-    });
-
-    it('uses GUEST when no user', async () => {
-      const { getCurrentUser } = await import('../../src/modules/auth.js');
-      const { getActiveDemographics } = await import('../../src/modules/demographics.js');
-
-      getCurrentUser.mockReturnValue(null);
-      getActiveDemographics.mockReturnValue(null);
-
-      const { initResultsHandler } = await import('../../src/modules/results.js');
-      initResultsHandler();
-
-      expect(true).toBe(true);
-    });
-
-    it('uses participant_id from demographics', async () => {
-      const { getCurrentUser } = await import('../../src/modules/auth.js');
-      const { getActiveDemographics } = await import('../../src/modules/demographics.js');
-
-      getCurrentUser.mockReturnValue({ uid: 'user-123' });
-      getActiveDemographics.mockReturnValue({ participant_id: 'PARTICIPANT-001' });
-
-      const { initResultsHandler } = await import('../../src/modules/results.js');
-      initResultsHandler();
-
-      expect(true).toBe(true);
-    });
-  });
-
-  // ==========================================================
-  // saveResultToSystem Tests
-  // ==========================================================
-  describe('saveResultToSystem', () => {
-    it('saves result to database', async () => {
-      const { getCurrentUser } = await import('../../src/modules/auth.js');
-      const { saveResult } = await import('../../src/modules/database.js');
-      const { getTrainingMode } = await import('../../src/modules/library.js');
-      const { getActiveDemographics } = await import('../../src/modules/demographics.js');
-
-      getCurrentUser.mockReturnValue({ uid: 'user-123' });
-      getTrainingMode.mockReturnValue(false);
-      getActiveDemographics.mockReturnValue(null);
-      saveResult.mockResolvedValue('result-id');
-
-      const { initResultsHandler } = await import('../../src/modules/results.js');
-      const { syncNow } = await import('../../src/modules/sync.js');
-
-      initResultsHandler();
-
-      // Test passes if no error
-      expect(saveResult).toBeDefined();
-    });
-
-    it('syncs after save', async () => {
-      const { getCurrentUser } = await import('../../src/modules/auth.js');
-      const { saveResult } = await import('../../src/modules/database.js');
-      const { syncNow } = await import('../../src/modules/sync.js');
-      const { getTrainingMode } = await import('../../src/modules/library.js');
-
-      getCurrentUser.mockReturnValue({ uid: 'user-123' });
-      getTrainingMode.mockReturnValue(false);
-      saveResult.mockResolvedValue('result-id');
-
-      const { initResultsHandler } = await import('../../src/modules/results.js');
-      initResultsHandler();
-
-      // Test passes if no error
-      expect(syncNow).toBeDefined();
-    });
-
-    it('shows error on save failure', async () => {
-      const { getCurrentUser } = await import('../../src/modules/auth.js');
-      const { saveResult } = await import('../../src/modules/database.js');
-      const { getTrainingMode } = await import('../../src/modules/library.js');
-
-      getCurrentUser.mockReturnValue({ uid: 'user-123' });
-      getTrainingMode.mockReturnValue(false);
-      saveResult.mockRejectedValue(new Error('Database error'));
-
-      const { initResultsHandler } = await import('../../src/modules/results.js');
-      initResultsHandler();
-
-      expect(true).toBe(true);
-    });
-  });
-
-  // ==========================================================
-  // Training Mode Tests
-  // ==========================================================
-  describe('Training Mode', () => {
-    it('does not save training results', async () => {
-      const { getTrainingMode } = await import('../../src/modules/library.js');
-      const { saveResult } = await import('../../src/modules/database.js');
 
       getTrainingMode.mockReturnValue(true);
-      saveResult.mockResolvedValue('result-id');
 
-      const { initResultsHandler } = await import('../../src/modules/results.js');
       initResultsHandler();
+      const callback = window.electronAPI.onTestResults.mock.calls[0][0];
+      
+      callback({ testId: 'test-training' });
 
-      // Training mode should skip saving
-      expect(true).toBe(true);
+      // Verify modal setup for training
+      expect(elements.modalHeaderTitle.textContent).toContain('Tryb treningowy');
+      expect(elements.trainingResultsContent.classList.remove).toHaveBeenCalledWith('hidden');
+      expect(elements.normalResultsContent.classList.add).toHaveBeenCalledWith('hidden');
+      expect(elements.btnUploadCloud.textContent).toBe('Zamknij');
+    });
+
+    it('displays error via Dialog on invalid results data', async () => {
+      const { initResultsHandler } = await import('../../src/modules/results.js');
+      const { Dialog } = await import('../../src/modules/dialog.js');
+
+      initResultsHandler();
+      const callback = window.electronAPI.onTestResults.mock.calls[0][0];
+      
+      // Wywołanie z pusym nagłówkiem (nie obiekt)
+      callback(null);
+
+      // Ponieważ jest try-catch i w środku dynamiczny import, poczekajmy tick event loopa
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(Dialog.alert).toHaveBeenCalledWith(expect.stringContaining('Wyniki testu muszą być obiektem'), 'error');
     });
   });
 
-  // ==========================================================
-  // renderExtendedResults Tests
-  // ==========================================================
-  describe('renderExtendedResults', () => {
-    it('renders result fields', async () => {
+  describe('saveResultToSystem Action', () => {
+    it('saves results to IndexedDB and triggers sync', async () => {
       const { initResultsHandler } = await import('../../src/modules/results.js');
+      const { saveResult } = await import('../../src/modules/database.js');
+      const { syncNow } = await import('../../src/modules/sync.js');
+      const { loadTestsList, getTrainingMode } = await import('../../src/modules/library.js');
+      const { getActiveDemographics } = await import('../../src/modules/demographics.js');
+      const { getCurrentUser } = await import('../../src/modules/auth.js');
 
-      document.body.innerHTML = '<div id="modal-extended-results"></div>';
+      getTrainingMode.mockReturnValue(false);
+      getActiveDemographics.mockReturnValue(null);
+      getCurrentUser.mockReturnValue({ uid: 'test-user-id' });
+      saveResult.mockResolvedValue('test-id-123');
 
       initResultsHandler();
 
-      const container = document.getElementById('modal-extended-results');
-      expect(container).toBeDefined();
+      // Symulacja przyjścia wyników
+      const onTestResultsCb = window.electronAPI.onTestResults.mock.calls[0][0];
+      onTestResultsCb({ testId: 'test-123', subjectId: '123' });
+
+      // Szukamy funkcji przypisanej do przycisku Zapisz w chmurze
+      const saveActionCb = mockUploadListener.mock.calls[0][1];
+      
+      // Clear mocks to only track save action results
+      vi.clearAllMocks();
+      
+      await saveActionCb();
+
+      expect(saveResult).toHaveBeenCalled();
+      expect(loadTestsList).toHaveBeenCalled();
+      expect(syncNow).toHaveBeenCalled();
     });
   });
 });

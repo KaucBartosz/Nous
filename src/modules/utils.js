@@ -98,3 +98,43 @@ export function invalidateLocalVersionsCache() {
     localVersionsCache = null;
     lastFetchTime = 0;
 }
+
+// ==========================================================
+// FLATTEN OBJECT (Shared helper)
+// ==========================================================
+
+/**
+ * Spłaszcza zagnieżdżony obiekt do jednopoziomowego słownika.
+ * Używane przy eksporcie CSV wyników.
+ * @param {Object} obj - Obiekt do spłaszczenia
+ * @param {Object} target - Obiekt docelowy (modyfikowany in-place)
+ * @param {string} prefix - Prefiks dla kluczy
+ */
+export function flattenObject(obj, target, prefix) {
+    for (const key in obj) {
+        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+            flattenObject(obj[key], target, `${prefix} - ${key}`);
+        } else {
+            target[`${prefix} - ${key}`] = Array.isArray(obj[key]) ? JSON.stringify(obj[key]) : obj[key];
+        }
+    }
+}
+
+// ==========================================================
+// UPDATES BADGE
+// ==========================================================
+
+/**
+ * Aktualizuje licznik badge'a na zakładce "Aktualizacje".
+ * @param {number} count - Całkowita liczba dostępnych aktualizacji do wyświetlenia
+ */
+export function updateUpdatesBadge(count) {
+    const badge = document.getElementById('updates-badge');
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}

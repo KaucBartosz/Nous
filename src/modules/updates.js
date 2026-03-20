@@ -4,7 +4,7 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/f
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
 import { Dialog } from './dialog.js';
-import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache } from './utils.js';
+import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache, updateUpdatesBadge } from './utils.js';
 
 let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
@@ -87,6 +87,10 @@ export async function loadUpdatesData(filterText = '') {
 
         // 2. Sort (using shared utility)
         tests = sortByInstallStatus(tests);
+
+        // #12: Update badge count with number of tests needing update
+        const updatesCount = tests.filter(t => t.local_ver > 0 && t.local_ver < t.remote_ver).length;
+        updateUpdatesBadge(updatesCount);
 
         if (tests.length === 0) {
             elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak wyników wyszukiwania.</td></tr>';

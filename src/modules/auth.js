@@ -9,41 +9,34 @@ import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/f
 import { updateAuthUI, showLoginScreen, showError } from './ui.js';
 import { enforceSyncPolicy } from './sync.js';
 
+// Prywatna zmienna statusu — bezpieczna alternatywa dla odczytywania z DOM
+let _currentUserStatus = "UNKNOWN";
+
 export function initAuth(onLoginSuccess) {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const status = userDoc.exists() ? userDoc.data().status : "ERROR";
+            _currentUserStatus = status;
             updateAuthUI(user.email, status);
             enforceSyncPolicy(status);
             if (onLoginSuccess) onLoginSuccess();
         } else {
+            _currentUserStatus = "UNKNOWN";
             showLoginScreen();
         }
     });
-
-
 }
 
 /**
- * Login user with email and password, protected by reCAPTCHA Enterprise
+ * Login user with email and password
  * @param {string} email 
  * @param {string} password 
  */
 export async function login(email, password) {
     try {
-        showError("Weryfikacja reCAPTCHA...");
-
-        // Get reCAPTCHA token
-        const recaptchaToken = await getRecaptchaToken('LOGIN');
-
         showError("Logowanie...");
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-        // Optional: Send token to backend for verification
-        // In production, you should verify the token server-side
-        console.log('Login successful with reCAPTCHA token:', recaptchaToken.substring(0, 20) + '...');
-
+        await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         console.error('Login error:', error);
         if (error.code === 'auth/invalid-credential') {
@@ -57,7 +50,7 @@ export async function login(email, password) {
 }
 
 /**
- * Register new user with email and password, protected by reCAPTCHA Enterprise
+ * Register new user with email and password
  * @param {string} email 
  * @param {string} password 
  */
@@ -68,11 +61,6 @@ export async function register(email, password) {
     }
 
     try {
-        showError("Weryfikacja reCAPTCHA...");
-
-        // Get reCAPTCHA token
-        const recaptchaToken = await getRecaptchaToken('REGISTER');
-
         showError("Tworzenie konta...");
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, "users", userCred.user.uid), {
@@ -80,10 +68,6 @@ export async function register(email, password) {
             status: "PENDING",
             createdAt: new Date().toISOString()
         });
-
-        // Optional: Send token to backend for verification
-        console.log('Registration successful with reCAPTCHA token:', recaptchaToken.substring(0, 20) + '...');
-
         showError("Konto utworzone!");
     } catch (error) {
         console.error('Registration error:', error);
@@ -102,6 +86,7 @@ export function logout() {
 }
 
 export function loginGuest() {
+    _currentUserStatus = "GUEST";
     updateAuthUI(null, "GUEST");
 }
 
@@ -109,35 +94,11 @@ export function getCurrentUser() {
     return auth.currentUser;
 }
 
-export function getUserStatus() {
-    const statusEl = document.getElementById('user-status-display');
-    return statusEl ? statusEl.textContent.replace(/[()]/g, '') : "UNKNOWN";
-}
-
 /**
- * Get reCAPTCHA Enterprise token for a specific action
- * @param {string} action - The action name (e.g., 'LOGIN', 'REGISTER')
- * @returns {Promise<string>} reCAPTCHA token
+ * Zwraca aktualny status użytkownika z bezpiecznej zmiennej modułu.
+ * Nie czyta z DOM, więc nie jest podatna na manipulację przez konsolę.
+ * @returns {string} Status użytkownika ('APPROVED', 'PENDING', 'GUEST', 'UNKNOWN', etc.)
  */
-async function getRecaptchaToken(action) {
-    return new Promise((resolve, reject) => {
-        if (typeof grecaptcha === 'undefined' || !grecaptcha.enterprise) {
-            console.warn('reCAPTCHA not loaded, proceeding without token');
-            resolve('');
-            return;
-        }
-
-        grecaptcha.enterprise.ready(async () => {
-            try {
-                const token = await grecaptcha.enterprise.execute(
-                    '6LcGbmAsAAAAANONNS0csIA_MB5ePSLplsbuob6R',
-                    { action: action }
-                );
-                resolve(token);
-            } catch (error) {
-                console.error('reCAPTCHA error:', error);
-                reject(new Error('Błąd weryfikacji reCAPTCHA'));
-            }
-        });
-    });
+export function getUserStatus() {
+    return _currentUserStatus;
 }
