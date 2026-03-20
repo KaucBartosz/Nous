@@ -250,7 +250,11 @@ function updateViewButtonStates() {
     });
 }
 
-export async function loadTestsList(filterText = '', forceRefresh = false) {
+export async function loadTestsList(filterText = null, forceRefresh = false) {
+    if (filterText === null) {
+        const searchInput = document.getElementById('library-search');
+        filterText = searchInput ? searchInput.value : '';
+    }
     // 1. Fetch from Cloud if needed
     if (!cachedTests.length || forceRefresh) {
         elements.testsGrid.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';

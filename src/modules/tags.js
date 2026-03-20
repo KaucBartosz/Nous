@@ -5,6 +5,8 @@ import { getCurrentUser, getUserStatus } from './auth.js';
  * Zwraca klucz localStorage specyficzny dla aktualnego użytkownika.
  * @returns {string}
  */
+let activeCloseHandler = null;
+
 function getStorageKey() {
     const user = getCurrentUser();
     const status = getUserStatus();
@@ -61,7 +63,7 @@ export function addTagsToTest(testId, tagsInput) {
     
     const newTags = tagsInput.split(',')
         .map(t => t.trim().toLowerCase())
-        .filter(t => t.length > 0);
+        .filter(t => t.length > 0 && t.length <= 25); // Limit 25 znaków
         
     if (newTags.length === 0) return;
     
@@ -204,22 +206,32 @@ export function openTagMenu(testId, testName, anchorElement, onUpdate) {
     popup.style.top = `${top}px`;
     popup.style.left = `${left}px`;
     
+    // Fit to bottom boundary (flip up if needed)
+    document.body.appendChild(popup);
+    const popupRect = popup.getBoundingClientRect();
+    if (popupRect.bottom > window.innerHeight) {
+        top = rect.top + window.scrollY - popupRect.height - 5;
+        if (top < 0) top = 5; // Fallback
+        popup.style.top = `${top}px`;
+    }
+
     // Close on click outside
     setTimeout(() => {
-        const closeHandler = (e) => {
-            // Re-check if popup still exists in DOM
+        activeCloseHandler = (e) => {
             const currentPopup = document.getElementById('active-tag-menu');
             if (!currentPopup) {
-                document.removeEventListener('click', closeHandler);
+                if (activeCloseHandler) {
+                    document.removeEventListener('click', activeCloseHandler);
+                    activeCloseHandler = null;
+                }
                 return;
             }
 
             if (!currentPopup.contains(e.target) && e.target !== anchorElement) {
                 removeExistingMenu();
-                document.removeEventListener('click', closeHandler);
             }
         };
-        document.addEventListener('click', closeHandler);
+        document.addEventListener('click', activeCloseHandler);
     }, 10);
     
     input.focus();
@@ -245,20 +257,33 @@ function renderTagList(container, testId, tags, onUpdate) {
     tags.forEach(tag => {
         const chip = document.createElement('span');
         chip.className = 'tag-chip-edit';
-        chip.innerHTML = `${tag} <span class="tag-remove">✕</span>`;
         
-        chip.querySelector('.tag-remove').onclick = (e) => {
+        const tagNameSpan = document.createElement('span');
+        tagNameSpan.textContent = tag;
+        chip.appendChild(tagNameSpan);
+        
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'tag-remove';
+        removeSpan.textContent = ' ✕';
+        removeSpan.onclick = (e) => {
             e.stopPropagation(); // Zapobiegaj zamykaniu menu
             const updated = removeTagFromTest(testId, tag);
             renderTagList(container, testId, updated, onUpdate);
             if (onUpdate) onUpdate(updated);
         };
         
+        chip.appendChild(removeSpan);
         container.appendChild(chip);
     });
 }
 
 function removeExistingMenu() {
     const existing = document.getElementById('active-tag-menu');
-    if (existing) existing.remove();
+    if (existing) {
+        existing.remove();
+        if (activeCloseHandler) {
+            document.removeEventListener('click', activeCloseHandler);
+            activeCloseHandler = null;
+        }
+    }
 }
