@@ -413,54 +413,18 @@ function renderTests(testsSource, filterText) {
 
     // 1. Filter
     if (filterText) {
-        const lower = filterText.toLowerCase();
-        
-        // Wyodrębnij tagi (@tag) i tekst wyszukiwania
-        const words = lower.split(/\s+/).filter(w => w.length > 0);
-        const tagFilters = []; // { tag: string, operator: 'AND'|'OR' }
-        const textFilters = [];
-        
-        let currentOperator = 'AND';
-        
-        for (let i = 0; i < words.length; i++) {
-            const word = words[i];
-            if (word === 'and') {
-                currentOperator = 'AND';
-            } else if (word === 'or') {
-                currentOperator = 'OR';
-            } else if (word.startsWith('@')) {
-                tagFilters.push({ tag: word.substring(1), operator: currentOperator });
-                // Reset operatora do domyślnego dla kolejnych tagów (chyba że jawnie podano inny)
-                currentOperator = 'AND'; 
-            } else {
-                textFilters.push(word);
-            }
-        }
+        const { textFilters, tagGroups } = Tags.parseTagSearchQuery(filterText);
 
         tests = tests.filter(t => {
             // Filtr tekstowy (nazwa)
             const nameMatch = textFilters.length === 0 || textFilters.every(word => (t.name || '').toLowerCase().includes(word));
             if (!nameMatch) return false;
             
-            if (tagFilters.length === 0) return true;
+            if (tagGroups.length === 0) return true;
             
-            // Logika tagów
-            const testTags = Tags.getTagsForTest(t.id).map(tag => tag.toLowerCase());
-            
-            // Pierwszy tag ustala bazową wartość
-            let match = testTags.includes(tagFilters[0].tag);
-            
-            // Kolejne tagi łączone operatorami
-            for (let i = 1; i < tagFilters.length; i++) {
-                const currentTagMatch = testTags.includes(tagFilters[i].tag);
-                if (tagFilters[i].operator === 'OR') {
-                    match = match || currentTagMatch;
-                } else {
-                    match = match && currentTagMatch;
-                }
-            }
-            
-            return match;
+            // Logika tagów (AND > OR)
+            const testTags = Tags.getTagsForTest(t.id);
+            return Tags.matchesTagGroups(testTags, tagGroups);
         });
     }
 
@@ -523,6 +487,7 @@ function renderGridView(tests) {
         tagBtn.className = 'material-icons tag-btn';
         tagBtn.textContent = 'menu_book';
         tagBtn.title = 'Zarządzaj tagami';
+        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
         const currentTags = Tags.getTagsForTest(test_id);
         tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
         
@@ -629,16 +594,13 @@ function renderListView(tests) {
         tagBtn.style.fontSize = '20px';
         tagBtn.textContent = 'menu_book';
         tagBtn.title = 'Zarządzaj tagami';
+        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
         const currentTags = Tags.getTagsForTest(test_id);
         tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
 
         const tagContainer = document.createElement('div');
         tagContainer.className = 'list-tag-container';
-        tagContainer.style.display = 'flex';
-        tagContainer.style.flexWrap = 'wrap';
-        tagContainer.style.gap = '4px';
-        tagContainer.style.marginTop = '2px';
-
+        
         const renderChips = (tags) => {
             tagContainer.innerHTML = '';
             tags.forEach(tag => {
@@ -808,6 +770,7 @@ function renderTableView(tests) {
         tagBtn.style.marginLeft = '8px';
         tagBtn.textContent = 'menu_book';
         tagBtn.title = 'Zarządzaj tagami';
+        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
         const currentTags = Tags.getTagsForTest(test_id);
         tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
 
@@ -892,6 +855,7 @@ function renderCompactView(tests) {
         tagBtn.style.marginLeft = 'auto';
         tagBtn.textContent = 'menu_book';
         tagBtn.title = 'Zarządzaj tagami';
+        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
         const currentTags = Tags.getTagsForTest(test_id);
         tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
 

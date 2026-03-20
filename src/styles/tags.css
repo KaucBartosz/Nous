@@ -114,3 +114,10 @@
     margin-right: 4px;
     display: inline-block;
 }
+
+.list-tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}

@@ -165,6 +165,7 @@ export function openTagMenu(testId, testName, anchorElement, onUpdate) {
     const addBtn = document.createElement('button');
     addBtn.className = 'btn primary small';
     addBtn.textContent = 'Dodaj';
+    addBtn.setAttribute('aria-label', 'Dodaj wpisane tagi');
     
     const performAdd = () => {
         const val = input.value.trim();
@@ -265,6 +266,8 @@ function renderTagList(container, testId, tags, onUpdate) {
         const removeSpan = document.createElement('span');
         removeSpan.className = 'tag-remove';
         removeSpan.textContent = ' ✕';
+        removeSpan.setAttribute('aria-label', `Usuń tag ${tag}`);
+        removeSpan.setAttribute('role', 'button');
         removeSpan.onclick = (e) => {
             e.stopPropagation(); // Zapobiegaj zamykaniu menu
             const updated = removeTagFromTest(testId, tag);
@@ -286,4 +289,72 @@ function removeExistingMenu() {
             activeCloseHandler = null;
         }
     }
+}
+
+/**
+ * Parsuje zapytanie tekstowe na strukturę filtrów tagów i tekstu.
+ * Obsługuje precedencję: AND ma wyższy priorytet niż OR.
+ * @param {string} filterText 
+ * @returns {Object} { textFilters: string[], tagGroups: string[][] }
+ */
+export function parseTagSearchQuery(filterText) {
+    const lower = filterText.toLowerCase();
+    const words = lower.split(/\s+/).filter(w => w.length > 0);
+    
+    const textFilters = [];
+    const tagFilters = []; // Elementy: string lub operator
+    
+    let currentOp = 'AND';
+    for (const word of words) {
+        if (word === 'and') {
+            currentOp = 'AND';
+        } else if (word === 'or') {
+            currentOp = 'OR';
+        } else if (word.startsWith('@')) {
+            tagFilters.push({ tag: word.substring(1), op: currentOp });
+            currentOp = 'AND'; // Domyślnie AND dla kolejnego
+        } else {
+            textFilters.push(word);
+        }
+    }
+
+    if (tagFilters.length === 0) return { textFilters, tagGroups: [] };
+
+    // Implementacja precedencji: AND > OR
+    // Grupowanie tagów połączonych za pomocą AND. 
+    // Wynikowe grupy są połączone operatorem OR.
+    // Przykład: @a OR @b @c OR @d -> [[@a], [@b, @c], [@d]]
+    const tagGroups = [];
+    let currentGroup = [tagFilters[0].tag];
+
+    for (let i = 1; i < tagFilters.length; i++) {
+        const item = tagFilters[i];
+        if (item.op === 'OR') {
+            tagGroups.push(currentGroup);
+            currentGroup = [item.tag];
+        } else {
+            currentGroup.push(item.tag);
+        }
+    }
+    tagGroups.push(currentGroup);
+
+    return { textFilters, tagGroups };
+}
+
+/**
+ * Sprawdza czy dany test (jego tagi) pasuje do sparsowanych grup tagów.
+ * @param {string[]} testTags 
+ * @param {string[][]} tagGroups 
+ * @returns {boolean}
+ */
+export function matchesTagGroups(testTags, tagGroups) {
+    if (tagGroups.length === 0) return true;
+    
+    const lowerTestTags = testTags.map(t => t.toLowerCase());
+    
+    // OR między grupami
+    return tagGroups.some(group => {
+        // AND wewnątrz grupy
+        return group.every(tag => lowerTestTags.includes(tag));
+    });
 }
