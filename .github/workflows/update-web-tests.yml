@@ -10,6 +10,8 @@ on:
 jobs:
   sync_and_deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - name: Pobieranie repozytorium Nous
@@ -33,8 +35,8 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add docs/
-        git add tests-registry.json || true
-        git add scripts/ || true
+        git add tests-registry.json 2>/dev/null || true
+        git add scripts/ 2>/dev/null || true
         
         if git diff --staged --quiet; then
           echo "Brak nowych zmian w testach z repozytorium BBTP. Wszystko jest aktualne."
