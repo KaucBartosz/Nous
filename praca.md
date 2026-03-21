@@ -1,4 +1,4 @@
-# Zakładany Plan Pracy
+# 1. Zakładany Plan Pracy
 
 ## Temat pracy inżynierskiej
 
@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Cel i zakres projektu
+## 1.1 Cel i zakres projektu
 
 Celem projektu jest zaprojektowanie i implementacja wieloplatformowej aplikacji desktopowej służącej do zarządzania i uruchamiania testów psychometrycznych. Aplikacja dostarcza środowisko, w którym niezależnie opracowane testy można instalować, uruchamiać, a ich wyniki — zbierać, przechowywać lokalnie i synchronizować z bazą danych w chmurze.
 
@@ -20,7 +20,7 @@ Projekt zakłada realizację następujących celów:
 
 ---
 
-## 2. Stos technologiczny
+## 1.2. Stos technologiczny
 
 | Warstwa | Technologia |
 |---|---|
@@ -40,7 +40,7 @@ Projekt zakłada realizację następujących celów:
 
 ---
 
-## 3. Planowane etapy pracy
+## 1.3. Planowane etapy pracy
 
 ### Etap 1 — Analiza wymagań i projektowanie architektury
 
@@ -250,7 +250,7 @@ Konfiguracja `electron-builder` zapewni:
 
 ---
 
-## 4. Struktura katalogów projektu
+## 1.4. Struktura katalogów projektu
 
 ```
 Nous/
@@ -291,7 +291,7 @@ Nous/
 
 ---
 
-## 5. Harmonogram realizacji
+## 1.5. Harmonogram realizacji
 
 | Etap | Zakres prac |
 |---|---|
@@ -307,7 +307,7 @@ Nous/
 
 ---
 
-## 6. Spodziewane wyniki
+## 1.6. Spodziewane wyniki
 
 Po realizacji wszystkich etapów system będzie spełniał następujące wymagania:
 
@@ -318,3 +318,24 @@ Po realizacji wszystkich etapów system będzie spełniał następujące wymagan
 - Wersja przeglądarkowa umożliwia przeprowadzenie badania bez instalacji aplicacji.
 - Automatyczny system aktualizacji informuje użytkownika o nowych wersjach launchera i testów.
 - Pokrycie kodu testami jednostkowymi jest mierzalne i raportowane przy każdym push.
+
+# 2. Oswiadczenie odnośnie wykorzystania GenAI przy tworzeniu pracy
+
+Użycie GenAI zostało ograniczone do roli wspierającej zamiast roli wiodącej.
+Użycie GenAI w takich miejscach jak: 
+- Logika działania 
+- Kod programu (z wyjątkami wyjaśnionymi poniżej)
+- Pomysł na pracę
+
+Zostało ograniczone do roli konsultanta. Oznacza to, że GenAI wspierało proces szukania rozwiązań, sposobów implementacji i szukania błędów. Gdzie kod programu był tworzony ręcznie przy inspiracji z instniejących ogólnodostępnych źródeł, rozwiązań i technik.
+
+Gdzie GenAI było wykorzystane:
+- Wygenerowanie plików graficzych: logo.png
+- Stylizacja: pliki .html oraz .css
+- Tworzenie testów jednostkowych
+
+Uzasadnienie użycia:
+- Posłużyłem się GenAI w celu zapewniania jak nalepszej jakości warstwy wizualnej aplikacji oraz przy tworzeniu testów jednostkowych w celu utrwalenia już osiągniętej funkcjonalności programu.
+
+# 3. Praktyczne wykorzystanie programu 
+- 21.03.2026 Wykorzystanie programu przy badaniach psychometrycznych prowadzone przez "Studenckie Koło Naukowe Psychologii Transportu"
