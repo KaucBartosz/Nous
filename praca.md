@@ -338,4 +338,4 @@ Uzasadnienie użycia:
 - Posłużyłem się GenAI w celu zapewniania jak nalepszej jakości warstwy wizualnej aplikacji oraz przy tworzeniu testów jednostkowych w celu utrwalenia już osiągniętej funkcjonalności programu.
 
 # 3. Praktyczne wykorzystanie programu 
-- 21.03.2026 Wykorzystanie programu przy badaniach psychometrycznych prowadzone przez "Studenckie Koło Naukowe Psychologii Transportu"
+- 21.03.2026 Wykorzystanie programu przy badaniach psychometrycznych prowadzonych przez "Studenckie Koło Naukowe Psychologii Transportu"
