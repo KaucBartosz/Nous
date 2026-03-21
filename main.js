@@ -164,8 +164,22 @@ ipcMain.on('download-and-run', (event, taskData) => {
                 sender.send('test-status', 'BŁĄD: Tylko HTTPS!');
                 return;
             }
-            const allowedDomains = ['github.com', 'raw.githubusercontent.com', 'objects.githubusercontent.com'];
-            if (!allowedDomains.some(d => parsedUrl.hostname.endsWith(d))) {
+            // --- SECURITY CHECK: OWNER ALLOWLIST ---
+            // Dozwolone są wyłącznie repozytoria właściciela KaucBartosz.
+            // objects.githubusercontent.com to CDN GitHub Releases – nie ma tam ścieżki /owner/.
+            const allowedOwner = 'KaucBartosz';
+            const cdnDomain = 'objects.githubusercontent.com';
+            const allowedRepoDomains = ['github.com', 'raw.githubusercontent.com'];
+
+            if (parsedUrl.hostname === cdnDomain) {
+                // CDN - dozwolony bez walidacji ścieżki (hasze URL)
+            } else if (allowedRepoDomains.some(d => parsedUrl.hostname.endsWith(d))) {
+                // Sprawdź, czy ścieżka zaczyna się od /KaucBartosz/
+                if (!parsedUrl.pathname.startsWith(`/${allowedOwner}/`)) {
+                    sender.send('test-status', `BŁĄD: Dozwolone są wyłącznie repozytoria ${allowedOwner}!`);
+                    return;
+                }
+            } else {
                 sender.send('test-status', 'BŁĄD: Niedozwolona domena!');
                 return;
             }
