@@ -2,7 +2,30 @@
 
 ## Temat pracy inżynierskiej
 
-**Nous – Desktopowa platforma do przeprowadzania testów psychometrycznych z synchronizacją wyników do chmury**
+**Nous – Desktopowa platforma do przeprowadzania testów psychometrycznych z opcjonalną synchronizacją wyników do chmury**
+
+---
+
+## Spis treści
+
+- [1. Zakładany Plan Pracy](#1-zakładany-plan-pracy)
+  - [1.1 Cel i zakres projektu](#11-cel-i-zakres-projektu)
+  - [1.2 Stos technologiczny](#12-stos-technologiczny)
+  - [1.3 Planowane etapy pracy](#13-planowane-etapy-pracy)
+    - [Etap 1 — Analiza wymagań](#etap-1--analiza-wymagań-i-projektowanie-architektury)
+    - [Etap 2 — Implementacja jądra](#etap-2--implementacja-jądra-aplikacji-proces-główny)
+    - [Etap 3 — Moduły frontendu](#etap-3--implementacja-interfejsu-użytkownika-i-modułów-frontendu)
+    - [Etap 4 — Bezpieczeństwo](#etap-4--bezpieczeństwo-danych-wynikowych)
+    - [Etap 5 — Tryb HPM](#etap-5--tryb-wysokiej-precyzji-hpm)
+    - [Etap 6 — Wersja web](#etap-6--wersja-przeglądarkowa)
+    - [Etap 7 — Strona projektu](#etap-7--strona-informacyjna-projektu)
+    - [Etap 8 — Testowanie](#etap-8--testowanie)
+    - [Etap 9 — CI/CD](#etap-9--cicd-i-publikacja)
+  - [1.4 Struktura katalogów](#14-struktura-katalogów-projektu)
+  - [1.5 Harmonogram realizacji](#15-harmonogram-realizacji)
+  - [1.6 Spodziewane wyniki](#16-spodziewane-wyniki)
+- [2. Oświadczenie dot. GenAI](#2-oswiadczenie-odnośnie-wykorzystania-genai-przy-tworzeniu-pracy)
+- [3. Praktyczne wykorzystanie programu](#3-praktyczne-wykorzystanie-programu)
 
 ---
 
@@ -29,7 +52,7 @@ Projekt zakłada realizację następujących celów:
 | Baza danych chmurowa | Firebase Firestore |
 | Uwierzytelnianie | Firebase Authentication |
 | Lokalna baza danych | IndexedDB (przez bibliotekę `idb`) |
-| Szyfrowanie | AES-GCM (Web Crypto API) + HMAC-SHA256 (`crypto` Node.js) |
+| Szyfrowanie | AES-GCM 256-bit (Web Crypto API) + HMAC-SHA256 (`crypto` Node.js) + PBKDF2 (KDF z PIN) |
 | Zarządzanie kluczami | Electron `safeStorage` |
 | Tryb HPM | Python / PsychoPy (osadzony interpreter) |
 | Testowanie jednostkowe | Vitest + happy-dom + fake-indexeddb |
@@ -88,7 +111,7 @@ Centralne miejsce przechowywania referencji do elementów DOM (`elements`) oraz 
 
 #### `src/modules/auth.js`
 
-Obsługa logowania, rejestracji i wylogowania przez Firebase Authentication. Wdrożenie trybu gościa (bez konta), który umożliwia korzystanie z aplikacji bez rejestracji.
+Obsługa logowania, rejestracji i wylogowania przez Firebase Authentication. Wdrożenie trybu gościa (bez konta), który umożliwia korzystanie z aplikacji bez rejestracji. Przy wylogowaniu automatyczne czyszczenie lokalnego klucza E2E z `safeStorage`. Integracja z modułem `e2e.js` — po zalogowaniu użytkownika ze statusem APPROVED/ADMIN wymagana weryfikacja PIN-em lub automatyczne odblokowanie klucza z lokalnego magazynu.
 
 #### `src/modules/library.js`
 
@@ -100,7 +123,11 @@ Warstwa dostępu do lokalnej bazy IndexedDB (przez bibliotekę `idb`). Przechowy
 
 #### `src/modules/cryptoService.js`
 
-Serwis szyfrowania oparty o Web Crypto API. Implementacja szyfrowania AES-GCM danych wynikowych przed zapisem do bazy chmurowej. Klucz dostarczany przez proces główny przez bezpieczny kanał IPC.
+Dwuwarstwowy serwis szyfrowania oparty o Web Crypto API:
+
+- **Warstwa 1 — Szyfrowanie lokalne (Data at Rest):** Szyfrowanie AES-GCM wyników w IndexedDB kluczem 256-bitowym dostarczanym przez proces główny (Electron `safeStorage`). Każdy rekord posiada unikalne IV.
+- **Warstwa 2 — Szyfrowanie chmurowe E2E (Zero-Knowledge):** Niezależny klucz AES-GCM 256-bitowy, generowany losowo przy pierwszym użyciu i chroniony 6-cyfrowym PIN-em użytkownika. PIN służy wyłącznie do owinięcia (wrap) klucza głównego algorytmem PBKDF2 (200 000 iteracji SHA-256). Zaszyfrowany klucz przechowywany jest w kolekcji Firestore `user_keys`. Serwer nigdy nie ma dostępu do klucza w jawnej postaci (architektura zero-knowledge). Klucz po odszyfrowaniu PIN-em jest bezpiecznie zapamiętywany lokalnie w `safeStorage`, co pozwala uniknąć ponownego wprowadzania PIN-u przy każdym uruchomieniu.
+- **Kod odzyskiwania:** Surowy klucz E2E (64 znaki hex) prezentowany użytkownikowi jako kod zapasowy, umożliwiający reset PIN-u bez utraty danych.
 
 #### `src/modules/results.js`
 
@@ -114,13 +141,17 @@ Wyświetlanie ankiet demograficznych opartych na szablonach. Zbieranie danych uc
 
 Kreator szablonów ankiet demograficznych z graficznym interfejsem. Obsługa typów pól: tekst, liczba, lista rozwijana, checkboxy, radio, data. Import i export szablonów do pliku JSON.
 
+#### `src/modules/e2e.js`
+
+Kontroler przepływu szyfrowania End-to-End. Zarządza modalnymi oknami tworzenia i wprowadzania PIN-u, resetowania PIN-u kodem odzyskiwania oraz wyświetlania klucza zapasowego. Integruje się z `cryptoService.js` i Firebase Firestore (`user_keys`). Wykorzystuje `safeStorage` Electrona do zapamiętywania odszyfrowanego klucza na danym urządzeniu.
+
 #### `src/modules/history.js`
 
-Widok historii wyników. Przeglądanie, filtrowanie i eksport zebranych wyników do pliku CSV.
+Widok historii wyników. Przeglądanie, filtrowanie i eksport wyników do CSV. Przy pobieraniu wyników z chmury (Firestore) — automatyczne deszyfrowanie w locie kluczem E2E z pamięci RAM, z wsteczną kompatybilnością dla zapisów nieszyfrowanych (flaga `is_encrypted`).
 
 #### `src/modules/sync.js`
 
-Usługa synchronizacji wyników do Firestore. Obsługa trybu offline — dane są kolejkowane lokalnie i synchronizowane po odzyskaniu połączenia. Toggle automatycznej synchronizacji z persistencją w `localStorage`.
+Usługa synchronizacji wyników do Firestore. Przed wysłaniem wyniki szyfrowane są kluczem chmurowym E2E (AES-GCM), a dane wrażliwe (metryczka) są ukrywane wewnątrz szyfrogramu. Obsługa trybu offline — dane kolejkowane lokalnie i synchronizowane po odzyskaniu połączenia. Toggle automatycznej synchronizacji z persistencją w `localStorage`.
 
 #### `src/modules/settings.js`
 
@@ -154,7 +185,8 @@ Realizacja wymagań bezpieczeństwa jest kluczowym elementem systemu, gdyż apli
 
 **Planowane mechanizmy:**
 
-- **Szyfrowanie wyników** — dane wynikowe przed zapisem do Firestore szyfrowane są algorytmem AES-GCM kluczem 256-bitowym zarządzanym przez `safeStorage`. Każdy rekord posiada unikalne IV (Initialization Vector).
+- **Szyfrowanie wyników (lokalne)** — dane wynikowe w IndexedDB szyfrowane są algorytmem AES-GCM kluczem 256-bitowym zarządzanym przez `safeStorage`. Każdy rekord posiada unikalne IV (Initialization Vector).
+- **Szyfrowanie E2E w modelu Zero-Knowledge** — klucz chmurowy AES-GCM 256-bit generowany losowo, owijany (wrapped) kluczem pochodnym z 6-cyfrowego PIN-u użytkownika (PBKDF2, 200 000 iteracji, SHA-256). Serwer Firebase przechowuje wyłącznie zaszyfrowaną wersję klucza — nigdy nie ma dostępu do danych w postaci jawnej. Klucz jest przechowywany lokalnie w Electron `safeStorage` po pierwszym odszyfrowaniu.
 - **Integralność plików lokalnych** — każdy wynik zapisywany na dysk jest podpisany HMAC-SHA256. Umożliwia to weryfikację, czy plik nie był modyfikowany od chwili zapisu.
 - **Walidacja pobieranych paczek** — przed rozpakowaniem paczki ZIP sprawdzane są ścieżki wszystkich wpisów w celu wykrycia ataków ZIP Slip. URL musi spełniać jednocześnie dwa warunki: (1) protokół HTTPS, (2) hostname to `github.com` lub `raw.githubusercontent.com` **i** ścieżka zaczyna się od `/KaucBartosz/`. Jedynym wyjątkiem jest `objects.githubusercontent.com` (CDN GitHub Releases), który używa haszowanych URL niezawierających nazwy właściciela. Dzięki temu uniemożliwione jest wskazanie jako źródło zasobów spoza repozytorium autora.
 - **Walidacja ID testów** — identyfikatory testów walidowane są wyrażeniem regularnym `[a-zA-Z0-9_-]+` przed użyciem jako ścieżka systemu plików.
@@ -266,6 +298,7 @@ Nous/
 │       ├── appUpdater.js
 │       ├── auth.js
 │       ├── cryptoService.js
+│       ├── e2e.js
 │       ├── database.js
 │       ├── demoCreator.js
 │       ├── demographics.js
@@ -322,20 +355,24 @@ Po realizacji wszystkich etapów system będzie spełniał następujące wymagan
 # 2. Oswiadczenie odnośnie wykorzystania GenAI przy tworzeniu pracy
 
 Użycie GenAI zostało ograniczone do roli wspierającej zamiast roli wiodącej.
-Użycie GenAI w takich miejscach jak: 
-- Logika działania 
+Użycie GenAI w takich miejscach jak:
+
+- Logika działania
 - Kod programu (z wyjątkami wyjaśnionymi poniżej)
 - Pomysł na pracę
 
 Zostało ograniczone do roli konsultanta. Oznacza to, że GenAI wspierało proces szukania rozwiązań, sposobów implementacji i szukania błędów. Gdzie kod programu był tworzony ręcznie przy inspiracji z instniejących ogólnodostępnych źródeł, rozwiązań i technik.
 
 Gdzie GenAI było wykorzystane:
+
 - Wygenerowanie plików graficzych: logo.png
 - Stylizacja: pliki .html oraz .css
 - Tworzenie testów jednostkowych
 
 Uzasadnienie użycia:
+
 - Posłużyłem się GenAI w celu zapewniania jak nalepszej jakości warstwy wizualnej aplikacji oraz przy tworzeniu testów jednostkowych w celu utrwalenia już osiągniętej funkcjonalności programu.
 
-# 3. Praktyczne wykorzystanie programu 
+# 3. Praktyczne wykorzystanie programu
+
 - 21.03.2026 Wykorzystanie programu przy badaniach psychometrycznych prowadzonych przez "Studenckie Koło Naukowe Psychologii Transportu"

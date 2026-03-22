@@ -146,17 +146,41 @@ export async function syncNow() {
     window.dispatchEvent(new Event('sync-complete'));
 }
 
+import { hasCloudKey, encryptCloudData } from './cryptoService.js';
+
 /**
  * Wewnętrzna funkcja wysyłająca pojedyńczy rekord (bez obsługi UI globalnego sync).
  * Wyrzuca błąd w przypadku niepowodzenia.
  */
 async function syncSingleResultInternal(record) {
+    let finalData = record.wyniki || record.data;
+    let finalDemographics = record.demographics;
+    let isEncrypted = false;
+    let iv = null;
+
+    // Szyfruj logiką chmurową E2E jeśli klucz jest dostępny (a powinien zawsze być dla zalogowanego)
+    if (hasCloudKey()) {
+        const payloadToEncrypt = {
+            data: finalData,
+            demographics: finalDemographics
+        };
+        const encrypted = await encryptCloudData(payloadToEncrypt);
+        finalData = encrypted.payload;
+        finalDemographics = null; // Ukrywamy dane wrażliwe (są wewnątrz szyfrogramu)
+        iv = encrypted.iv;
+        isEncrypted = true;
+    } else {
+        console.warn("Wysyłanie nieszyfrowanych danych! Brak klucza chmurowego.");
+    }
+
     const docRef = await addDoc(collection(db, "results"), {
         researcher_uid: record.researcher_uid,
         test_id: record.test_id || record.testId,
         subject_id: record.subject_id,
-        demographics: record.demographics,
-        data: record.wyniki || record.data,
+        demographics: finalDemographics,
+        data: finalData,
+        iv: iv,
+        is_encrypted: isEncrypted,
         timestamp: record.timestamp,
         synced_at: new Date().toISOString()
     });

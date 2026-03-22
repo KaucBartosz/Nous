@@ -8,6 +8,7 @@ import {
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { updateAuthUI, showLoginScreen, showError } from './ui.js';
 import { enforceSyncPolicy } from './sync.js';
+import { verifyE2E } from './e2e.js';
 
 // Prywatna zmienna statusu — bezpieczna alternatywa dla odczytywania z DOM
 let _currentUserStatus = "UNKNOWN";
@@ -18,9 +19,20 @@ export function initAuth(onLoginSuccess) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const status = userDoc.exists() ? userDoc.data().status : "ERROR";
             _currentUserStatus = status;
-            updateAuthUI(user.email, status);
-            enforceSyncPolicy(status);
-            if (onLoginSuccess) onLoginSuccess();
+
+            const executeAppStart = () => {
+                updateAuthUI(user.email, status);
+                enforceSyncPolicy(status);
+                if (onLoginSuccess) onLoginSuccess();
+            };
+
+            if (status === 'APPROVED' || status === 'ADMIN') {
+                // Jesli to badacz lub admin, musi odblokowac lub utworzyc klucz E2E
+                verifyE2E(user, executeAppStart);
+            } else {
+                // Goscia, Pending lub Error puszczamy bez pinu (brak praw chmury/brak klucza)
+                executeAppStart();
+            }
         } else {
             _currentUserStatus = "UNKNOWN";
             showLoginScreen();
@@ -81,7 +93,10 @@ export async function register(email, password) {
     }
 }
 
-export function logout() {
+export async function logout() {
+    if (window.electronAPI && window.electronAPI.clearE2EKey) {
+        await window.electronAPI.clearE2EKey();
+    }
     signOut(auth).then(() => location.reload());
 }
 

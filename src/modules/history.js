@@ -7,6 +7,7 @@ import { elements } from './ui.js';
 import { syncSingleResult } from './sync.js';
 import { Dialog } from './dialog.js';
 import { flattenObject } from './utils.js';
+import { decryptCloudData, hasCloudKey } from './cryptoService.js';
 
 let isGuestViewActive = false;
 let isCloudViewActive = false;
@@ -460,11 +461,28 @@ async function loadCloudResults() {
 
         const snap = await getDocs(q);
         cachedCloudResults = [];
-        snap.forEach(doc => {
-            const data = doc.data();
-            data.firestore_id = doc.id;
+        for (const docSnap of snap.docs) {
+            const data = docSnap.data();
+            data.firestore_id = docSnap.id;
+
+            if (data.is_encrypted && data.iv) {
+                if (!hasCloudKey()) {
+                    data.data = { score: "Zaszyfrowane (Brak Klucza Chmury)" };
+                } else {
+                    try {
+                        const decrypted = await decryptCloudData(data.data, data.iv);
+                        data.data = decrypted.data;
+                        data.demographics = decrypted.demographics;
+                        data.is_encrypted = false; // Po odszyfrowaniu w RAM zachowuje się jak zwykły obiekt
+                    } catch (e) {
+                         console.error("Failed to decrypt cloud result:", e);
+                         data.data = { score: "Błąd Deszyfracji" };
+                    }
+                }
+            }
+
             cachedCloudResults.push(data);
-        });
+        }
 
         await renderCloudResultsTable(cachedCloudResults);
 

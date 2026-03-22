@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // 4. SZYFROWANIE
     getEncryptionKey: () => ipcRenderer.invoke('get-encryption-key'),
+    getE2EKey: () => ipcRenderer.invoke('get-e2e-key'),
+    setE2EKey: (key) => ipcRenderer.invoke('set-e2e-key', key),
+    clearE2EKey: () => ipcRenderer.invoke('clear-e2e-key'),
 
     // 5. ZDARZENIA INSTALACJI
     onTestInstalled: (callback) => ipcRenderer.on('test-installed', (event, data) => callback(data)),

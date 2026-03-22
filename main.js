@@ -538,6 +538,56 @@ ipcMain.handle('get-encryption-key', async () => {
     return getOrGenerateMasterKey();
 });
 
+// --- E2E KEY STORAGE (CLOUD MAC KEYS) ---
+let _e2eKeyFilePath = null;
+function getE2EKeyFilePath() {
+    if (!_e2eKeyFilePath) {
+        _e2eKeyFilePath = path.join(getUserDataPath(), 'e2e_key.enc');
+    }
+    return _e2eKeyFilePath;
+}
+
+ipcMain.handle('set-e2e-key', async (event, hexKey) => {
+    try {
+        if (!safeStorage.isEncryptionAvailable()) return false;
+        const encryptedKey = safeStorage.encryptString(hexKey);
+        fs.writeFileSync(getE2EKeyFilePath(), encryptedKey);
+        console.log("E2E Key securely written to disk via safeStorage.");
+        return true;
+    } catch (e) {
+        console.error("Set E2E Key Error:", e);
+        return false;
+    }
+});
+
+ipcMain.handle('get-e2e-key', async () => {
+    try {
+        if (!safeStorage.isEncryptionAvailable()) return null;
+        if (fs.existsSync(getE2EKeyFilePath())) {
+            const encryptedKey = fs.readFileSync(getE2EKeyFilePath());
+            console.log("E2E Key loaded from safeStorage.");
+            return safeStorage.decryptString(encryptedKey);
+        }
+    } catch (e) {
+        console.error("Get E2E Key Error:", e);
+        return null; // Corrupted or unreadable
+    }
+    return null;
+});
+
+ipcMain.handle('clear-e2e-key', async () => {
+    try {
+        if (fs.existsSync(getE2EKeyFilePath())) {
+            fs.unlinkSync(getE2EKeyFilePath());
+            console.log("E2E Key cleared from safeStorage.");
+        }
+        return true;
+    } catch (e) {
+        console.error("Clear E2E Key Error:", e);
+        return false;
+    }
+});
+
 ipcMain.handle('is-test-running', async () => {
     return isTestRunning();
 });
