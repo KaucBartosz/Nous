@@ -63,18 +63,18 @@
     "path": "tests/Semafor/index.html"
   },
   {
-    "id": "Sygnalizacja",
-    "name": "Sygnalizacja",
-    "description": "Test na czas reakcji zmiany światła na skrzyżowaniu",
-    "version": 1,
-    "path": "tests/Sygnalizacja/index.html"
-  },
-  {
     "id": "Stop",
     "name": "Sygnał Stop",
     "description": "Test na reakcję na pojawienie się znaku STOP",
     "version": 1,
     "path": "tests/Stop/index.html"
+  },
+  {
+    "id": "Sygnalizacja",
+    "name": "Sygnalizacja",
+    "description": "Test na czas reakcji zmiany światła na skrzyżowaniu",
+    "version": 1,
+    "path": "tests/Sygnalizacja/index.html"
   },
   {
     "id": "Poppel",

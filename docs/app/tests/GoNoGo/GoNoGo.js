@@ -1257,13 +1257,13 @@ async function quitPsychoJS(message, isCompleted) {
           }
         }
 
+        wszystkieNacisniecia++;
+        if (wasCorrect) {
+          poprawneNacisniecia++;
+        } else {
+          bledneNacisniecia++;
+        }
         if (pressed) {
-          wszystkieNacisniecia++;
-          if (wasCorrect) {
-            poprawneNacisniecia++;
-          } else {
-            bledneNacisniecia++;
-          }
           if (typeof currentRT === 'number' && currentRT >= 0) {
             sumRT += currentRT;
             validRTCount++;
