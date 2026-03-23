@@ -778,6 +778,97 @@
         </div>
     </div>
 
+    <!-- Modal: PIN Setup / E2E -->
+    <div id="pin-setup-modal" class="modal-overlay hidden" style="z-index: 3000;">
+        <div class="modal-content" style="width: 450px; text-align: center;">
+            <div class="modal-header">
+                <h3>Szyfrowanie End-to-End</h3>
+            </div>
+            <div class="modal-body">
+                <span class="material-icons" style="font-size: 48px; color: #4caf50; margin-bottom: 15px;">lock</span>
+                <p>Witaj! Wygląda na to, że logujesz się po raz pierwszy lub na nowym urządzeniu.</p>
+                <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">
+                    Ustaw 6-cyfrowy PIN Medyczny. Będzie on chronił Twój klucz szyfrujący w chmurze, zapewniając absolutną poufność wyników badań.
+                </p>
+                <div class="form-group">
+                    <input type="password" id="pin-setup-input" placeholder="Wpisz 6 cyfr" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                </div>
+                <p id="pin-setup-error" class="error-text" style="color:red; margin-top: 10px;"></p>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button id="btn-save-pin" class="btn primary">Zapisz PIN i Utwórz Klucz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: PIN Enter -->
+    <div id="pin-enter-modal" class="modal-overlay hidden" style="z-index: 3000;">
+        <div class="modal-content" style="width: 400px; text-align: center;">
+            <div class="modal-header">
+                <h3>Odblokuj Bazę Wyników</h3>
+            </div>
+            <div class="modal-body">
+                <span class="material-icons" style="font-size: 48px; color: #ff9800; margin-bottom: 15px;">vpn_key</span>
+                <p>Podaj swój kod PIN, aby odszyfrować historię badań z chmury.</p>
+                <div class="form-group">
+                    <input type="password" id="pin-enter-input" placeholder="• • • • • •" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                </div>
+                <p id="pin-enter-error" class="error-text" style="color:red; margin-top: 10px;"></p>
+                <a href="#" id="link-forgot-pin" style="font-size: 12px; color: #2196f3; text-decoration: none; display: inline-block; margin-top: 15px;">Zapomniałem PIN-u (Użyj kodu odzyskiwania)</a>
+            </div>
+            <div class="modal-footer" style="justify-content: center; gap: 10px;">
+                <button id="btn-cancel-pin" class="btn outline hidden">Anuluj</button>
+                <button id="btn-submit-pin" class="btn primary">Odblokuj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: PIN Recovery -->
+    <div id="pin-recovery-modal" class="modal-overlay hidden" style="z-index: 3000;">
+        <div class="modal-content" style="width: 450px; text-align: center;">
+            <div class="modal-header">
+                <h3>Odzyskiwanie Dostępu</h3>
+                <button id="btn-close-recovery-modal" class="close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <span class="material-icons" style="font-size: 48px; color: #ff5252; margin-bottom: 15px;">health_and_safety</span>
+                <p>Wklej swój 24-znakowy Kod Ratunkowy, aby zresetować PIN.</p>
+                <div class="form-group">
+                    <input type="text" id="recovery-code-input" placeholder="xxxx-xxxx-xxxx-xxxx-xxxx-xxxx" style="text-align: center; font-size: 16px; width: 100%; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                </div>
+                <p style="margin-top:20px;">Nowy 6-cyfrowy PIN:</p>
+                <div class="form-group">
+                    <input type="password" id="new-pin-input" placeholder="Wpisz 6 cyfr" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                </div>
+                <p id="pin-recovery-error" class="error-text" style="color:red; margin-top: 10px;"></p>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button id="btn-submit-recovery" class="btn primary">Odzyskaj Klucz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Recovery Key Display -->
+    <div id="recovery-key-modal" class="modal-overlay hidden" style="z-index: 3100;">
+        <div class="modal-content" style="width: 500px; text-align: center;">
+            <div class="modal-header">
+                <h3 style="color: #f44336;">Zapisz Kod Odzyskiwania!</h3>
+            </div>
+            <div class="modal-body">
+                <p style="font-weight: bold; margin-bottom: 10px;">To jest Twój jedyny ratunek w przypadku zapomnienia PIN-u.</p>
+                <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">
+                    Skopiuj poniższy kod i przechowuj go w bardzo bezpiecznym miejscu (np. w menedżerze haseł). Jeśli zapomnisz PIN-u i zgubisz ten kod, bezpowrotnie stracisz dostęp do chmury wyników.
+                </p>
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid #444; margin-bottom: 15px; user-select: text;">
+                    <code id="recovery-key-display" style="font-size: 16px; color: #4caf50; word-break: break-all; font-family: monospace; letter-spacing: 1px;"></code>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button id="btn-understood-recovery" class="btn primary">Skopiowałem i rozumiem</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./src/app.js"></script>
 </body>
 
