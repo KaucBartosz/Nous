@@ -1,5 +1,6 @@
 
-import { getAllResults, claimGuestResult, checkResultExists, saveResult } from './database.js';
+import { getAllResults, claimGuestResult, checkResultExists, saveResult, deleteResults } from './database.js';
+let selectedResultIds = new Set();
 import { db as firebaseDb } from '../firebaseConfig.js';
 import { collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { getCurrentUser, getUserStatus } from './auth.js';
@@ -21,6 +22,23 @@ let currentPage = 1;
 let currentAllResults = []; // full sorted list for current view
 
 export function initHistoryView() {
+    document.getElementById('selectAllHistory')?.addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        const checkboxes = document.querySelectorAll('.result-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = checked;
+            if (checked) {
+                selectedResultIds.add(cb.dataset.id);
+            } else {
+                selectedResultIds.delete(cb.dataset.id);
+            }
+        });
+        updateDownloadButtonState();
+    });
+
+    document.getElementById('btn-local-delete-selected')?.addEventListener('click', handleDeleteSelected);
+    document.getElementById('btn-guest-delete-selected')?.addEventListener('click', handleDeleteSelected);
+
     if (elements.btnToggleGuestView) {
         elements.btnToggleGuestView.addEventListener('click', () => {
             isGuestViewActive = !isGuestViewActive;
@@ -52,6 +70,11 @@ export function initHistoryView() {
 }
 
 function updateToggleButtonsState() {
+    selectedResultIds.clear();
+    const selectAll = document.getElementById('selectAllHistory');
+    if (selectAll) selectAll.checked = false;
+    updateDownloadButtonState();
+
     elements.cloudActionsContainer?.classList.add('hidden');
     elements.guestActionsContainer?.classList.add('hidden');
     elements.localActionsContainer?.classList.add('hidden');
@@ -144,11 +167,80 @@ export async function loadHistoryData() {
 }
 
 // ===================================================
+// SELECTION & DELETION
+// ===================================================
+
+function updateDownloadButtonState() {
+    const count = selectedResultIds.size;
+    const btnTextLocal = document.getElementById('btn-local-download-text');
+    const btnTextGuest = document.getElementById('btn-guest-download-text');
+    const btnTextCloud = document.getElementById('btn-cloud-download-text');
+    
+    if (btnTextLocal) btnTextLocal.innerHTML = count > 0 ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})` : `<span class="material-icons">download</span> Pobierz wszystkie wyniki`;
+    if (btnTextGuest) btnTextGuest.innerHTML = count > 0 ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})` : `<span class="material-icons">download</span> Pobierz wszystkie`;
+    if (btnTextCloud) btnTextCloud.innerHTML = count > 0 ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})` : `<span class="material-icons">download</span> Pobierz wszystkie`;
+
+    const btnLocalDelete = document.getElementById('btn-local-delete-selected');
+    const btnGuestDelete = document.getElementById('btn-guest-delete-selected');
+    
+    if (btnLocalDelete) {
+        if (count > 0 && !isCloudViewActive && !isGuestViewActive) btnLocalDelete.classList.remove('hidden');
+        else btnLocalDelete.classList.add('hidden');
+    }
+    
+    if (btnGuestDelete) {
+        if (count > 0 && isGuestViewActive) btnGuestDelete.classList.remove('hidden');
+        else btnGuestDelete.classList.add('hidden');
+    }
+}
+
+function handleCheckboxChange(e) {
+    const id = e.target.dataset.id;
+    if (e.target.checked) {
+        selectedResultIds.add(id);
+    } else {
+        selectedResultIds.delete(id);
+        const selectAll = document.getElementById('selectAllHistory');
+        if (selectAll) selectAll.checked = false;
+    }
+    updateDownloadButtonState();
+}
+
+async function handleDeleteSelected() {
+    if (selectedResultIds.size === 0) return;
+    
+    const count = selectedResultIds.size;
+    const choice = await Dialog.custom(
+        `Czy na pewno chcesz usunąć ${count} wyników testów z historii? Jest to proces nieodwracalny.`,
+        [
+            { label: "Tak, usuń", value: true, class: "btn danger" },
+            { label: "Anuluj", value: false, class: "btn outline" }
+        ]
+    );
+    
+    if (!choice) return;
+    
+    try {
+        await deleteResults(Array.from(selectedResultIds));
+        await Dialog.alert("Wyniki zostały pomyślnie usunięte.", "success");
+        selectedResultIds.clear();
+        const selectAll = document.getElementById('selectAllHistory');
+        if (selectAll) selectAll.checked = false;
+        updateDownloadButtonState();
+        loadHistoryData();
+    } catch (e) {
+        await Dialog.alert("Błąd podczas usuwania: " + e.message, "error");
+    }
+}
+
+// ===================================================
 // PAGINATION
 // ===================================================
 
 function renderHistoryPage() {
     elements.historyTableBody.innerHTML = '';
+    const selectAll = document.getElementById('selectAllHistory');
+    if (selectAll) selectAll.checked = false;
 
     const myResults = currentAllResults;
     const user = getCurrentUser();
@@ -161,7 +253,7 @@ function renderHistoryPage() {
         const msg = isGuestViewActive ? 'Brak wyników w trybie Gościa.' : 'Brak wyników.';
         const tr = document.createElement('tr');
         const td = document.createElement('td');
-        td.colSpan = 6;
+        td.colSpan = 7;
         td.textContent = msg;
         tr.appendChild(td);
         elements.historyTableBody.appendChild(tr);
@@ -177,6 +269,18 @@ function renderHistoryPage() {
         const patient_id = r.subject_id || resultData.subject_id || resultData.subjectId || "-";
 
         const row = document.createElement('tr');
+
+        // Checkbox
+        const tdCheckbox = document.createElement('td');
+        tdCheckbox.style.textAlign = 'center';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'result-checkbox';
+        cb.dataset.id = r.id || r.firestore_id;
+        cb.checked = selectedResultIds.has(cb.dataset.id);
+        cb.addEventListener('change', handleCheckboxChange);
+        tdCheckbox.appendChild(cb);
+        row.appendChild(tdCheckbox);
 
         // 1. Date
         const tdDate = document.createElement('td');
@@ -500,13 +604,15 @@ async function loadCloudResults() {
 
 async function renderCloudResultsTable(results) {
     elements.historyTableBody.innerHTML = '';
+    const selectAll = document.getElementById('selectAllHistory');
+    if (selectAll) selectAll.checked = false;
 
     // Hide pagination in cloud view
     const paginationContainer = document.getElementById('history-pagination');
     if (paginationContainer) paginationContainer.style.display = 'none';
 
     if (results.length === 0) {
-        elements.historyTableBody.innerHTML = '<tr><td colspan="6">Brak wyników w chmurze dla Twojego konta.</td></tr>';
+        elements.historyTableBody.innerHTML = '<tr><td colspan="7">Brak wyników w chmurze dla Twojego konta.</td></tr>';
         return;
     }
 
@@ -519,6 +625,17 @@ async function renderCloudResultsTable(results) {
 
     results.forEach(data => {
         const row = document.createElement('tr');
+
+        const tdCheckbox = document.createElement('td');
+        tdCheckbox.style.textAlign = 'center';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'result-checkbox';
+        cb.dataset.id = data.firestore_id || data.id;
+        cb.checked = selectedResultIds.has(cb.dataset.id);
+        cb.addEventListener('change', handleCheckboxChange);
+        tdCheckbox.appendChild(cb);
+        row.appendChild(tdCheckbox);
 
         const tdDate = document.createElement('td');
         tdDate.textContent = new Date(data.timestamp).toLocaleString();
@@ -681,9 +798,14 @@ async function handleDownloadAll() {
         const filename = `Paczka_Wynikow_${timestamp}.zip`;
         btnProgress.style.width = '50%';
 
-        // Downloads ALL cloud results (pagination does not affect this)
+        let resultsToDownload = cachedCloudResults;
+        if (selectedResultIds.size > 0) {
+            resultsToDownload = cachedCloudResults.filter(r => selectedResultIds.has(r.firestore_id) || selectedResultIds.has(r.id));
+        }
+
+        // Downloads selected or ALL cloud results (pagination does not affect this)
         const result = await window.electronAPI.downloadBulkZip({
-            results: cachedCloudResults,
+            results: resultsToDownload,
             filename: filename,
             format: format
         });
@@ -761,7 +883,11 @@ async function handleDownloadAllLocal(targetUid) {
     try {
         // Downloads ALL results for the user (not just current page)
         const allLocal = await getAllResults();
-        const results = allLocal.filter(r => r.researcher_uid === targetUid);
+        let results = allLocal.filter(r => r.researcher_uid === targetUid);
+
+        if (selectedResultIds.size > 0) {
+            results = results.filter(r => selectedResultIds.has(r.id) || selectedResultIds.has(r.firestore_id));
+        }
 
         if (results.length === 0) {
             Dialog.alert("Brak wyników do pobrania.", "info");

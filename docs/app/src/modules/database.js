@@ -258,6 +258,23 @@ export async function deleteResult(id) {
     }
 }
 
+export async function deleteResults(ids) {
+    try {
+        const db = await initDB();
+        const tx = db.transaction('results', 'readwrite');
+        const store = tx.objectStore('results');
+        
+        for (const id of ids) {
+            await store.delete(id);
+        }
+        
+        await tx.done;
+    } catch (error) {
+        console.error('Error deleting multiple results:', error);
+        throw new Error(`Nie udało się usunąć wyników: ${error.message}`);
+    }
+}
+
 /**
  * Checks if a result already exists in the local database.
  */
