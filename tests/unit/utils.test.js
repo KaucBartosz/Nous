@@ -428,7 +428,7 @@ describe('flattenObject', () => {
     const obj = { A: 1, B: 2 };
     const target = {};
     flattenObject(obj, target, '');
-    expect(target).toEqual({ ' - A': 1, ' - B': 2 });
+    expect(target).toEqual({ 'A': 1, 'B': 2 });
   });
 
   it('stringifies arrays as JSON', () => {

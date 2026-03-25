@@ -26,20 +26,23 @@ This project utilizes several MCP servers to extend agent capabilities:
 
 ## Filesystem MCP
 Provides restricted access to the host filesystem.
-- **Allowed Roots**: `c:\Users\HARDPC\Desktop\BBTP`, `c:\Users\HARDPC\Desktop\Nous`
+- **Allowed Roots**: `c:\Users\Bartosz\Desktop\BBTP`, `c:\Users\Bartosz\Desktop\Nous`
 - **Usage**: Use for cross-project file operations within allowed paths.
 
-## Upstash Context7 MCP
+## Context7 MCP
 Retrieves live documentation and code examples.
-- **Usage**: Use for library/API research (`upstash_context7_mcp.get_documentation`).
+- **Usage**: Use for library/API research. Always resolve library ID first with `resolve-library-id`, then call `query-docs`.
+- **When to use**: When you need up-to-date docs for an external library (e.g. Firebase, React, Node.js).
 
 ## Sequential Thinking MCP
 Enables structured, step-by-step reasoning for complex tasks.
-- **Usage**: Use for architectural planning and deep debugging (`sequentialthinking.sequential_thinking`).
+- **Usage**: Use `sequential_thinking` for architectural planning, multi-step debugging, and complex refactoring decisions.
+- **When to use**: Before making non-trivial design decisions or when a problem requires more than 2 reasoning steps.
 
 ## Memory MCP
-Persistent graph-based knowledge storage.
-- **Usage**: Store and retrieve entities/relationships to maintain context across sessions (`memory.create_entities`, `memory.search_nodes`).
+Persistent graph-based knowledge storage across sessions.
+- **Usage**: Store entities/relationships with `create_entities` / `create_relations`. Retrieve with `search_nodes` or `read_graph`.
+- **When to use**: Store key architectural decisions, recurring patterns, or user preferences. Retrieve at conversation start to restore context.
 
 <!-- gitnexus:start -->
 
@@ -191,5 +194,39 @@ This project uses Code Index MCP for intelligent code indexing and search. Use t
 - **File watcher** monitors changes and refreshes index automatically
 - **Smart processing** batches rapid changes to prevent excessive rebuilds
 - No manual intervention needed - cache and indexing are managed automatically
+
+## Token-Saving Workflow — MANDATORY
+
+To minimize token consumption, EVERY agent MUST follow these rules strictly:
+
+### At Conversation Start
+- Call `build_deep_index` ONCE at the beginning of every new conversation before doing any code work.
+- This loads the full symbol index into memory so subsequent lookups are fast and cheap.
+
+### When Thinking / Planning / Exploring a File
+- Use `get_file_summary` instead of reading the full file.
+- `get_file_summary` returns line count, functions, imports, and complexity — enough to plan without loading the entire source.
+- Only read the full file with `read_file` / `view_file` when you need implementation details not present in the summary.
+
+### When Analyzing a Specific Function or Class
+- Use `get_symbol_body` to fetch only the body of that symbol.
+- Never read the whole file just to inspect one function.
+- Example: `get_symbol_body(file_path="src/modules/history.js", symbol_name="deleteSelected")`
+
+### After Every Code Change
+- Call `refresh_index` immediately after editing any file.
+- This keeps the shallow index consistent with the current state of the filesystem.
+- Do NOT skip this step — a stale index leads to incorrect search results and wasted tokens on re-reads.
+
+### Summary Table
+
+| Situation | Tool to use |
+|-----------|-------------|
+| Conversation start | `build_deep_index` |
+| Exploring a file / planning | `get_file_summary` |
+| Inspecting a function/method | `get_symbol_body` |
+| After editing any file | `refresh_index` |
+| Searching by concept | `search_code_advanced` |
+| Finding files by pattern | `find_files` |
 
 <!-- gitnexus:end -->
