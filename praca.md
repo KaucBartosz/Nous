@@ -1,7 +1,6 @@
 ---
-title: "Nous – Desktopowa platforma do przeprowadzania testów psychometrycznych z opcjonalną synchronizacją wyników do chmury"
+title: "Projekt i implementacja platformy desktopowej do dystrybucji i przeprowadzania testów psychologicznych z systemem progresywnej autoryzacji i synchronizacji wyników w chmurze"
 author: "Bartosz Kauc"
-date: "2026-03-26"
 lang: pl-PL
 toc: true
 toc-title: "Spis treści"
@@ -15,7 +14,7 @@ header-includes:
 
 ## Temat pracy inżynierskiej
 
-**Nous – Desktopowa platforma do przeprowadzania testów psychometrycznych z opcjonalną synchronizacją wyników do chmury**
+**Projekt i implementacja platformy desktopowej do dystrybucji i przeprowadzania testów psychologicznych z systemem progresywnej autoryzacji i synchronizacji wyników w chmurze**
 
 ---
 
