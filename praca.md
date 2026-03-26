@@ -1,4 +1,17 @@
-# 1. Zakładany Plan Pracy
+---
+title: "Nous – Desktopowa platforma do przeprowadzania testów psychometrycznych z opcjonalną synchronizacją wyników do chmury"
+author: "Bartosz Kauc"
+date: "2026-03-26"
+lang: pl-PL
+toc: true
+toc-title: "Spis treści"
+numbersections: true
+geometry: margin=2.5cm
+header-includes:
+  - \usepackage{indentfirst}
+---
+
+# Zakładany Plan Pracy
 
 ## Temat pracy inżynierskiej
 
@@ -6,29 +19,7 @@
 
 ---
 
-## Spis treści
-
-- [1. Zakładany Plan Pracy](#1-zakładany-plan-pracy)
-  - [1.1 Cel i zakres projektu](#11-cel-i-zakres-projektu)
-  - [1.2 Stos technologiczny](#12-stos-technologiczny)
-  - [1.3 Etapy realizacji pracy](#13-etapy-realizacji-pracy)
-    - [Etap 1 — Analiza wymagań](#etap-1--analiza-wymagań-i-projektowanie-architektury)
-    - [Etap 2 — Implementacja jądra](#etap-2--implementacja-jądra-aplikacji-proces-główny)
-    - [Etap 3 — Moduły frontendu](#etap-3--implementacja-interfejsu-użytkownika-i-modułów-frontendu)
-    - [Etap 4 — Bezpieczeństwo](#etap-4--bezpieczeństwo-danych-wynikowych)
-    - [Etap 5 — Tryb HPM](#etap-5--tryb-wysokiej-precyzji-hpm)
-    - [Etap 6 — Wersja web](#etap-6--wersja-przeglądarkowa)
-    - [Etap 7 — Strona projektu](#etap-7--strona-informacyjna-projektu)
-    - [Etap 8 — Testowanie](#etap-8--testowanie)
-    - [Etap 9 — CI/CD](#etap-9--cicd-i-publikacja)
-  - [1.4 Struktura katalogów](#14-struktura-katalogów-projektu)
-  - [1.5 Spodziewane wyniki](#15-spodziewane-wyniki)
-  - [1.6 Wnioski i praktyczne wykorzystanie](#16-wnioski-i-praktyczne-wykorzystanie)
-- [2. Oświadczenie dot. GenAI](#2-oswiadczenie-odnośnie-wykorzystania-genai-przy-tworzeniu-pracy)
-
----
-
-## 1.1 Cel i zakres projektu
+## Cel i zakres projektu
 
 <!-- TODO: Wstęp akademicki — uzupełnić kontekst naukowy/społeczny:
      - Dlaczego testy psychometryczne wymagają dedykowanej platformy?
@@ -48,7 +39,7 @@ Projekt zrealizował następujące cele:
 
 ---
 
-## 1.2. Stos technologiczny
+## Stos technologiczny
 
 | Warstwa | Technologia |
 |---|---|
@@ -68,7 +59,7 @@ Projekt zrealizował następujące cele:
 
 ---
 
-## 1.3. Etapy realizacji pracy
+## Etapy realizacji pracy
 
 ### Etap 1 — Analiza wymagań i projektowanie architektury
 
@@ -223,49 +214,49 @@ Konfiguracja `electron-builder` zapewniła:
 
 ---
 
-## 1.4. Struktura katalogów projektu
+## Struktura katalogów projektu
 
 ```
 Nous/
-├── main.js               # Proces główny Electron (IPC, pobieranie, HPM, szyfrowanie)
-├── preload.js            # API wystawione rendererowi okna głównego
-├── preload_test.js       # API wystawione oknu testowemu
-├── index.html            # Główny plik HTML aplikacji
-├── style.css             # Globalny arkusz stylów
-├── src/
-│   ├── app.js            # Punkt wejścia frontendu, inicjalizacja modułów
-│   ├── firebaseConfig.js # Konfiguracja Firebase SDK
-│   └── modules/          # Moduły biznesowe
-│       ├── appUpdater.js
-│       ├── auth.js
-│       ├── cryptoService.js
-│       ├── e2e.js
-│       ├── database.js
-│       ├── demoCreator.js
-│       ├── demographics.js
-│       ├── dialog.js
-│       ├── history.js
-│       ├── library.js
-│       ├── recaptcha.js
-│       ├── results.js
-│       ├── settings.js
-│       ├── sync.js
-│       ├── tags.js
-│       ├── ui.js
-│       ├── updates.js
-│       ├── utils.js
-│       └── whatsNew.js
-├── tests/
-│   ├── unit/             # Testy jednostkowe Vitest
-│   └── e2e/              # Testy E2E Playwright
-├── docs/                 # Strona GitHub Pages (Jekyll)
-├── .github/workflows/    # Potoki CI/CD
-└── package.json          # Konfiguracja projektu i electron-builder
+|-- main.js               # Proces główny Electron (IPC, pobieranie, HPM, szyfrowanie)
+|-- preload.js            # API wystawione rendererowi okna głównego
+|-- preload_test.js       # API wystawione oknu testowemu
+|-- index.html            # Główny plik HTML aplikacji
+|-- style.css             # Globalny arkusz stylów
+|-- src/
+|   |-- app.js            # Punkt wejścia frontendu, inicjalizacja modułów
+|   |-- firebaseConfig.js # Konfiguracja Firebase SDK
+|   +-- modules/          # Moduły biznesowe
+|       |-- appUpdater.js
+|       |-- auth.js
+|       |-- cryptoService.js
+|       |-- e2e.js
+|       |-- database.js
+|       |-- demoCreator.js
+|       |-- demographics.js
+|       |-- dialog.js
+|       |-- history.js
+|       |-- library.js
+|       |-- recaptcha.js
+|       |-- results.js
+|       |-- settings.js
+|       |-- sync.js
+|       |-- tags.js
+|       |-- ui.js
+|       |-- updates.js
+|       |-- utils.js
+|       +-- whatsNew.js
+|-- tests/
+|   |-- unit/             # Testy jednostkowe Vitest
+|   +-- e2e/              # Testy E2E Playwright
+|-- docs/                 # Strona GitHub Pages (Jekyll)
+|-- .github/workflows/    # Potoki CI/CD
++-- package.json          # Konfiguracja projektu i electron-builder
 ```
 
 ---
 
-## 1.5. Spodziewane wyniki
+## Spodziewane wyniki
 
 Po realizacji wszystkich etapów system spełnia następujące wymagania:
 
@@ -279,7 +270,7 @@ Po realizacji wszystkich etapów system spełnia następujące wymagania:
 
 ---
 
-## 1.6. Wnioski i praktyczne wykorzystanie
+## Wnioski i praktyczne wykorzystanie
 
 <!-- TODO: Rozbudować tę sekcję w miarę dalszego użytkowania aplikacji -->
 
@@ -291,7 +282,7 @@ Planowane są kolejne współprace z jednostkami naukowymi i kołami studenckimi
 
 ---
 
-# 2. Oswiadczenie odnośnie wykorzystania GenAI przy tworzeniu pracy
+# Oswiadczenie odnośnie wykorzystania GenAI przy tworzeniu pracy
 
 Użycie GenAI zostało ograniczone do roli wspierającej zamiast roli wiodącej.
 Użycie GenAI w takich miejscach jak:
