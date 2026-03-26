@@ -13,18 +13,25 @@
  */
 export function sortByInstallStatus(tests) {
     return tests.sort((a, b) => {
-        const aUpdate = a.local_ver > 0 && a.local_ver < a.remote_ver;
-        const bUpdate = b.local_ver > 0 && b.local_ver < b.remote_ver;
+        // Status weights for sorting:
+        // 1 - Needs update (installed & outdated)
+        // 2 - Installed & current
+        // 3 - Not installed
+        const getStatusWeight = (test) => {
+            if (test.local_ver > 0) {
+                return test.local_ver < test.remote_ver ? 1 : 2;
+            }
+            return 3;
+        };
 
-        if (aUpdate && !bUpdate) return -1;
-        if (!aUpdate && bUpdate) return 1;
+        const weightA = getStatusWeight(a);
+        const weightB = getStatusWeight(b);
 
-        const aInstalled = a.local_ver > 0;
-        const bInstalled = b.local_ver > 0;
+        if (weightA !== weightB) {
+            return weightA - weightB;
+        }
 
-        if (aInstalled && !bInstalled) return -1;
-        if (!aInstalled && bInstalled) return 1;
-
+        // Within the same group, sort alphabetically by name
         return (a.name || '').localeCompare(b.name || '');
     });
 }
@@ -138,12 +145,15 @@ export function invalidateLocalVersionsCache() {
  * @param {Object} target - Obiekt docelowy (modyfikowany in-place)
  * @param {string} prefix - Prefiks dla kluczy
  */
-export function flattenObject(obj, target, prefix) {
-    for (const key in obj) {
-        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-            flattenObject(obj[key], target, `${prefix} - ${key}`);
+export function flattenObject(obj, target, prefix = '') {
+    for (const [key, value] of Object.entries(obj)) {
+        // Oblicz nowy klucz, jeśli prefix jest pusty to nie dodawaj separatora na początku
+        const newKey = prefix ? `${prefix} - ${key}` : key;
+        
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            flattenObject(value, target, newKey);
         } else {
-            target[`${prefix} - ${key}`] = Array.isArray(obj[key]) ? JSON.stringify(obj[key]) : obj[key];
+            target[newKey] = Array.isArray(value) ? JSON.stringify(value) : value;
         }
     }
 }
@@ -165,4 +175,80 @@ export function updateUpdatesBadge(count) {
     } else {
         badge.classList.add('hidden');
     }
+}
+
+// ==========================================================
+// NEW COMMON UTILITIES
+// ==========================================================
+
+/**
+ * Formats a Date object to a consistent display string.
+ * @param {Date|string|number} date - The date to format.
+ * @param {boolean} includeTime - Whether to include the time in the output.
+ * @returns {string} - The formatted date string.
+ */
+export function formatDate(date, includeTime = true) {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        ...(includeTime && {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        })
+    };
+    
+    return d.toLocaleString(undefined, options);
+}
+
+/**
+ * Copies text to the clipboard and handles success/error.
+ * @param {string} text - The text to copy.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+export async function copyToClipboard(text) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } else {
+            // Fallback for older browsers or insecure contexts
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return successful;
+            } catch (err) {
+                document.body.removeChild(textArea);
+                console.error("Fallback copy to clipboard failed", err);
+                return false;
+            }
+        }
+    } catch (err) {
+        console.error("Failed to copy to clipboard", err);
+        return false;
+    }
+}
+
+/**
+ * Validates an ID against allowed characters (alphanumeric, dash, underscore).
+ * @param {string} id - The ID to validate.
+ * @returns {boolean}
+ */
+export function isValidId(id) {
+    if (!id || typeof id !== 'string') return false;
+    return /^[a-zA-Z0-9_-]+$/.test(id);
 }
