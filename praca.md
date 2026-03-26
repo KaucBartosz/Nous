@@ -11,7 +11,7 @@
 - [1. Zakładany Plan Pracy](#1-zakładany-plan-pracy)
   - [1.1 Cel i zakres projektu](#11-cel-i-zakres-projektu)
   - [1.2 Stos technologiczny](#12-stos-technologiczny)
-  - [1.3 Planowane etapy pracy](#13-planowane-etapy-pracy)
+  - [1.3 Etapy realizacji pracy](#13-etapy-realizacji-pracy)
     - [Etap 1 — Analiza wymagań](#etap-1--analiza-wymagań-i-projektowanie-architektury)
     - [Etap 2 — Implementacja jądra](#etap-2--implementacja-jądra-aplikacji-proces-główny)
     - [Etap 3 — Moduły frontendu](#etap-3--implementacja-interfejsu-użytkownika-i-modułów-frontendu)
@@ -22,18 +22,23 @@
     - [Etap 8 — Testowanie](#etap-8--testowanie)
     - [Etap 9 — CI/CD](#etap-9--cicd-i-publikacja)
   - [1.4 Struktura katalogów](#14-struktura-katalogów-projektu)
-  - [1.5 Harmonogram realizacji](#15-harmonogram-realizacji)
-  - [1.6 Spodziewane wyniki](#16-spodziewane-wyniki)
+  - [1.5 Spodziewane wyniki](#15-spodziewane-wyniki)
+  - [1.6 Wnioski i praktyczne wykorzystanie](#16-wnioski-i-praktyczne-wykorzystanie)
 - [2. Oświadczenie dot. GenAI](#2-oswiadczenie-odnośnie-wykorzystania-genai-przy-tworzeniu-pracy)
-- [3. Praktyczne wykorzystanie programu](#3-praktyczne-wykorzystanie-programu)
 
 ---
 
 ## 1.1 Cel i zakres projektu
 
-Celem projektu jest zaprojektowanie i implementacja wieloplatformowej aplikacji desktopowej służącej do zarządzania i uruchamiania testów psychometrycznych. Aplikacja dostarcza środowisko, w którym niezależnie opracowane testy można instalować, uruchamiać, a ich wyniki — zbierać, przechowywać lokalnie i synchronizować z bazą danych w chmurze.
+<!-- TODO: Wstęp akademicki — uzupełnić kontekst naukowy/społeczny:
+     - Dlaczego testy psychometryczne wymagają dedykowanej platformy?
+     - Jaki problem rozwiązuje Nous (fragmentacja narzędzi, brak bezpieczeństwa danych, bariery instalacji)?
+     - Co jest nowatorskie w zastosowanym podejściu?
+-->
 
-Projekt zakłada realizację następujących celów:
+Celem projektu było zaprojektowanie i implementacja wieloplatformowej aplikacji desktopowej służącej do zarządzania i uruchamiania testów psychometrycznych. Aplikacja dostarcza środowisko, w którym niezależnie opracowane testy można instalować, uruchamiać, a ich wyniki — zbierać, przechowywać lokalnie i synchronizować z bazą danych w chmurze.
+
+Projekt zrealizował następujące cele:
 
 - Stworzenie wyizolowanego, bezpiecznego środowiska uruchomieniowego dla testów (zarówno webowych, jak i natywnych Python/PsychoPy).
 - Umożliwienie badaczom zarządzania zestawem testów z poziomu jednego interfejsu graficznego.
@@ -63,119 +68,56 @@ Projekt zakłada realizację następujących celów:
 
 ---
 
-## 1.3. Planowane etapy pracy
+## 1.3. Etapy realizacji pracy
 
 ### Etap 1 — Analiza wymagań i projektowanie architektury
 
-Na pierwszym etapie przeprowadzona zostanie analiza wymagań funkcjonalnych i niefunkcjonalnych systemu. Zdefiniowane zostaną przypadki użycia:
+Na pierwszym etapie przeprowadzona została analiza wymagań funkcjonalnych i niefunkcjonalnych systemu. Zdefiniowane zostały przypadki użycia:
 
 - badacz pobiera test z biblioteki chmurowej i go uruchamia,
 - uczestnik wypełnia ankietę demograficzną przed badaniem,
 - wyniki badania są zapisywane lokalnie, podpisywane i opcjonalnie synchronizowane z Firestore.
 
-Podjęta zostanie decyzja o wyborze Electrona jako frameworka, uzasadniona koniecznością dostępu do systemu plików (zapis wyników, instalacja testów), możliwością integracji z interpreterem Python oraz wsparciem dla wielu platform. Zaprojektowana zostanie modułowa architektura aplikacji z wyraźnym podziałem na procesy: główny (`main.js`) oraz renderer (`src/`).
+Podjęta została decyzja o wyborze Electrona jako frameworka, uzasadniona koniecznością dostępu do systemu plików (zapis wyników, instalacja testów), możliwością integracji z interpreterem Python oraz wsparciem dla wielu platform. Zaprojektowana została modułowa architektura aplikacji z wyraźnym podziałem na procesy: główny (`main.js`) oraz renderer (`src/`).
 
-Zdefiniowane zostaną wymagania bezpieczeństwa: szyfrowanie wyników, walidacja źródeł pobieranych paczek ZIP, ochrona przed atakami ZIP Slip.
+Zdefiniowane zostały wymagania bezpieczeństwa: szyfrowanie wyników, walidacja źródeł pobieranych paczek ZIP, ochrona przed atakami ZIP Slip.
 
 ---
 
 ### Etap 2 — Implementacja jądra aplikacji (proces główny)
 
-Zaimplementowany zostanie plik `main.js` odpowiedzialny za zarządzanie cyklem życia aplikacji Electron oraz komunikację IPC między procesem głównym a rendererem.
+Zaimplementowany został plik `main.js` odpowiedzialny za zarządzanie cyklem życia aplikacji Electron oraz komunikację IPC między procesem głównym a rendererem.
 
-**Planowane funkcjonalności:**
+**Zrealizowane funkcjonalności:**
 
 - **Tworzenie okna głównego:** Konfiguracja `BrowserWindow` z włączoną izolacją kontekstu i wyłączoną integracją Node.js w rendererze (bezpieczeństwo).
 - **Pobieranie testów:** Obsługa kanału IPC `download-and-run`, implementacja kolejki pobierania (`downloadQueue`), obsługa przekierowań HTTP, rozpakowanie ZIP z walidacją ścieżek (ochrona przed ZIP Slip), zapis `meta.json`.
-- **Uruchamianie testów JS:** Otwieranie testu w osobnym oknie pelnoekranowym (`openTestWindow`) z dedykowanym `preload_test.js`.
+- **Uruchamianie testów JS:** Otwieranie testu w osobnym oknie pełnoekranowym (`openTestWindow`) z dedykowanym `preload_test.js`.
 - **Uruchamianie testów Python (HPM):** Spawning procesu Pythona z osadzonego środowiska (`runPythonTestIfPossible`), obsługa wyników przez IPC.
 - **Zarządzanie kluczem szyfrowania:** Generowanie i przechowywanie 256-bitowego klucza AES przy użyciu `safeStorage` Electrona; klucz nie jest nigdy przechowywany w postaci jawnej.
-- **Podpisywanie HMAC:** Każdy zapisany wynik badania zostaje podpisany kluczem HMAC-SHA256 (wygenerowanym z klucza głównego), co umożliwia weryfikację integralności danych.
+- **Podpisywanie HMAC:** Każdy zapisany wynik badania został podpisany kluczem HMAC-SHA256 (wygenerowanym z klucza głównego), co umożliwia weryfikację integralności danych.
 - **Lokalny zapis wyników:** Wyniki zapisywane są do pliku `.json` w folderze danych użytkownika (`app.getPath('userData')`).
 - **Skanowanie biblioteki lokalnej:** Kanał IPC `get-local-versions` skanuje folder `tests_library`, odczytuje wersje z `meta.json` i informuje renderer o stanie instalacji.
 - **Aktualizacja aplikacji:** Integracja `electron-updater` pobierającego nowe wersje launchera z GitHub Releases.
 
-Zostanie zapewniona kompatybilność ze wszystkimi obsługiwanymi platformami (Windows, macOS, Linux), w tym obsługa różnych ścieżek danych na każdym z systemów.
+Zapewniona została kompatybilność ze wszystkimi obsługiwanymi platformami (Windows, macOS, Linux), w tym obsługa różnych ścieżek danych na każdym z systemów.
 
 ---
 
 ### Etap 3 — Implementacja interfejsu użytkownika i modułów frontendu
 
-Cała logika warstwy prezentacji zostanie podzielona na moduły ES importowane przez główny punkt wejścia `src/app.js`.
+Cała logika warstwy prezentacji została podzielona na moduły ES importowane przez główny punkt wejścia `src/app.js`. Aplikacja dostarcza użytkownikowi następujące możliwości:
 
-**Planowane moduły:**
+- **Przeglądanie i zarządzanie biblioteką testów** — wyszukiwanie, filtrowanie i tagowanie testów synchronizowanych z chmurą w czterech trybach widoku.
+- **Uruchamianie testów** — uruchamianie testów webowych i Python w izolowanym środowisku pełnoekranowym.
+- **Zbieranie danych demograficznych** — konfigurowalny kreator ankiet demograficznych wypełnianych przed każdym badaniem.
+- **Historia wyników** — przeglądanie, filtrowanie i eksport wyników do CSV z automatycznym deszyfrowaniem wyników chmurowych.
+- **Synchronizacja z chmurą** — szyfrowane przesyłanie wyników do Firestore z obsługą trybu offline.
+- **Zarządzanie szyfrowaniem E2E** — interfejs do tworzenia i zarządzania kluczem End-to-End chronionym PIN-em użytkownika.
+- **Ustawienia aplikacji** — personalizacja motywu, koloru akcentu i rozmiaru czcionki.
+- **Aktualizacje** — informowanie użytkownika o nowych wersjach launchera i możliwość ich instalacji.
 
-#### `src/modules/ui.js`
-
-Centralne miejsce przechowywania referencji do elementów DOM (`elements`) oraz funkcji przełączania widoków (`switchView`). Umożliwia leniwe ładowanie widoków bez przeładowania strony.
-
-#### `src/modules/auth.js`
-
-Obsługa logowania, rejestracji i wylogowania przez Firebase Authentication. Wdrożenie trybu gościa (bez konta), który umożliwia korzystanie z aplikacji bez rejestracji. Przy wylogowaniu automatyczne czyszczenie lokalnego klucza E2E z `safeStorage`. Integracja z modułem `e2e.js` — po zalogowaniu użytkownika ze statusem APPROVED/ADMIN wymagana weryfikacja PIN-em lub automatyczne odblokowanie klucza z lokalnego magazynu.
-
-#### `src/modules/library.js`
-
-Główny widok biblioteki testów. Pobieranie listy testów z kolekcji Firestore `tests`, cache'owanie metadanych w `localStorage`, wyświetlanie testów w czterech trybach widoku (siatka, lista, tabela, kompaktowy). Obsługa wyszukiwania z debouncingiem, tagowania testów przez `tags.js`, aktualizacji postępu pobierania w czasie rzeczywistym.
-
-#### `src/modules/database.js`
-
-Warstwa dostępu do lokalnej bazy IndexedDB (przez bibliotekę `idb`). Przechowywanie wyników badań, szablonów ankiet i historii synchronizacji.
-
-#### `src/modules/cryptoService.js`
-
-Dwuwarstwowy serwis szyfrowania oparty o Web Crypto API:
-
-- **Warstwa 1 — Szyfrowanie lokalne (Data at Rest):** Szyfrowanie AES-GCM wyników w IndexedDB kluczem 256-bitowym dostarczanym przez proces główny (Electron `safeStorage`). Każdy rekord posiada unikalne IV.
-- **Warstwa 2 — Szyfrowanie chmurowe E2E (Zero-Knowledge):** Niezależny klucz AES-GCM 256-bitowy, generowany losowo przy pierwszym użyciu i chroniony 6-cyfrowym PIN-em użytkownika. PIN służy wyłącznie do owinięcia (wrap) klucza głównego algorytmem PBKDF2 (200 000 iteracji SHA-256). Zaszyfrowany klucz przechowywany jest w kolekcji Firestore `user_keys`. Serwer nigdy nie ma dostępu do klucza w jawnej postaci (architektura zero-knowledge). Klucz po odszyfrowaniu PIN-em jest bezpiecznie zapamiętywany lokalnie w `safeStorage`, co pozwala uniknąć ponownego wprowadzania PIN-u przy każdym uruchomieniu.
-- **Kod odzyskiwania:** Surowy klucz E2E (64 znaki hex) prezentowany użytkownikowi jako kod zapasowy, umożliwiający reset PIN-u bez utraty danych.
-
-#### `src/modules/results.js`
-
-Odbiór wyników badania od okna testowego (IPC `test-results-forwarded`), inicjacja wyświetlenia ankiety demograficznej, zapis do IndexedDB, opcjonalny eksport CSV i synchronizacja z Firestore.
-
-#### `src/modules/demographics.js`
-
-Wyświetlanie ankiet demograficznych opartych na szablonach. Zbieranie danych uczestnika przed każdym badaniem.
-
-#### `src/modules/demoCreator.js`
-
-Kreator szablonów ankiet demograficznych z graficznym interfejsem. Obsługa typów pól: tekst, liczba, lista rozwijana, checkboxy, radio, data. Import i export szablonów do pliku JSON.
-
-#### `src/modules/e2e.js`
-
-Kontroler przepływu szyfrowania End-to-End. Zarządza modalnymi oknami tworzenia i wprowadzania PIN-u, resetowania PIN-u kodem odzyskiwania oraz wyświetlania klucza zapasowego. Integruje się z `cryptoService.js` i Firebase Firestore (`user_keys`). Wykorzystuje `safeStorage` Electrona do zapamiętywania odszyfrowanego klucza na danym urządzeniu.
-
-#### `src/modules/history.js`
-
-Widok historii wyników. Przeglądanie, filtrowanie i eksport wyników do CSV. Przy pobieraniu wyników z chmury (Firestore) — automatyczne deszyfrowanie w locie kluczem E2E z pamięci RAM, z wsteczną kompatybilnością dla zapisów nieszyfrowanych (flaga `is_encrypted`).
-
-#### `src/modules/sync.js`
-
-Usługa synchronizacji wyników do Firestore. Przed wysłaniem wyniki szyfrowane są kluczem chmurowym E2E (AES-GCM), a dane wrażliwe (metryczka) są ukrywane wewnątrz szyfrogramu. Obsługa trybu offline — dane kolejkowane lokalnie i synchronizowane po odzyskaniu połączenia. Toggle automatycznej synchronizacji z persistencją w `localStorage`.
-
-#### `src/modules/settings.js`
-
-Ustawienia aplikacji: motyw (dark/light/user), kolor akcentu, rozmiar czcionki. Zapisywane w `localStorage` i aplikowane przy starcie.
-
-#### `src/modules/appUpdater.js`
-
-Frontend do obsługi aktualizacji launchera. Sprawdzanie dostępności nowej wersji, wyświetlanie powiadomienia, pobieranie i instalacja aktualizacji.
-
-#### `src/modules/whatsNew.js`
-
-Wyświetlanie historii zmian i nowości w aplikacji. Po przez wyświetlanie plików readme.md z repozytorium projektu na GitHub.
-
-#### `src/modules/dialog.js`
-
-Globalny system okienek dialogowych (alert, confirm) niezależny od natywnych `window.alert` — umożliwia spójny wygląd na wszystkich platformach.
-
-#### `src/modules/utils.js`
-
-Funkcje pomocnicze: `debounce`, `escapeHtml`, `sortByInstallStatus`, `getLocalVersionsCached`, `flattenObject` (do spłaszczania hierarchicznych wyników na potrzeby CSV).
-
-#### `src/modules/tags.js`
-
-System tagowania testów. Przechowywanie tagów w `localStorage`, menu zarządzania tagami, parser zapytań wyszukiwania z obsługą tagów.
+Szczegółowy opis implementacji poszczególnych modułów zawarty jest w rozdziale poświęconym implementacji.
 
 ---
 
@@ -183,23 +125,22 @@ System tagowania testów. Przechowywanie tagów w `localStorage`, menu zarządza
 
 Realizacja wymagań bezpieczeństwa jest kluczowym elementem systemu, gdyż aplikacja operuje na danych z badań naukowych.
 
-**Planowane mechanizmy:**
+**Zrealizowane mechanizmy:**
 
 - **Szyfrowanie wyników (lokalne)** — dane wynikowe w IndexedDB szyfrowane są algorytmem AES-GCM kluczem 256-bitowym zarządzanym przez `safeStorage`. Każdy rekord posiada unikalne IV (Initialization Vector).
 - **Szyfrowanie E2E w modelu Zero-Knowledge** — klucz chmurowy AES-GCM 256-bit generowany losowo, owijany (wrapped) kluczem pochodnym z 6-cyfrowego PIN-u użytkownika (PBKDF2, 200 000 iteracji, SHA-256). Serwer Firebase przechowuje wyłącznie zaszyfrowaną wersję klucza — nigdy nie ma dostępu do danych w postaci jawnej. Klucz jest przechowywany lokalnie w Electron `safeStorage` po pierwszym odszyfrowaniu.
 - **Integralność plików lokalnych** — każdy wynik zapisywany na dysk jest podpisany HMAC-SHA256. Umożliwia to weryfikację, czy plik nie był modyfikowany od chwili zapisu.
 - **Walidacja pobieranych paczek** — przed rozpakowaniem paczki ZIP sprawdzane są ścieżki wszystkich wpisów w celu wykrycia ataków ZIP Slip. URL musi spełniać jednocześnie dwa warunki: (1) protokół HTTPS, (2) hostname to `github.com` lub `raw.githubusercontent.com` **i** ścieżka zaczyna się od `/KaucBartosz/`. Jedynym wyjątkiem jest `objects.githubusercontent.com` (CDN GitHub Releases), który używa haszowanych URL niezawierających nazwy właściciela. Dzięki temu uniemożliwione jest wskazanie jako źródło zasobów spoza repozytorium autora.
 - **Walidacja ID testów** — identyfikatory testów walidowane są wyrażeniem regularnym `[a-zA-Z0-9_-]+` przed użyciem jako ścieżka systemu plików.
-- **Izolacja kontekstu** — okna tesów uruchamiane są z wyłączoną integracją Node.js i włączoną izolacją kontekstu; komunikacja wyłącznie przez preload API.
+- **Izolacja kontekstu** — okna testów uruchamiane są z wyłączoną integracją Node.js i włączoną izolacją kontekstu; komunikacja wyłącznie przez preload API.
 
 ---
 
 ### Etap 5 — Tryb wysokiej precyzji (HPM)
 
-Wiele testów psychometrycznych wymaga dokładności pomiaru czasu rzędu pojedynczych milisekund, której web renderer nie jest w stanie zapewnić. Aby temu zaradzić, zdefiniowany zostanie Tryb Wysokiej Precyzji (HPM — High Precision Mode).
-Pozwoli on również na uruchamianie testów napisanych w języku Python, co pozwoli na korzystanie z zewnętrznej aparatury badawczej.
+Wiele testów psychometrycznych wymaga dokładności pomiaru czasu rzędu pojedynczych milisekund, której web renderer nie jest w stanie zapewnić. Aby temu zaradzić, zdefiniowany i zaimplementowany został Tryb Wysokiej Precyzji (HPM — High Precision Mode). Pozwolił on również na uruchamianie testów napisanych w języku Python, co umożliwia korzystanie z zewnętrznej aparatury badawczej.
 
-**Planowany sposób realizacji:**
+**Zrealizowane elementy:**
 
 - Pobieranie i instalacja osadzonego środowiska Python (ok. 300 MB) jako jednorazowej operacji.
 - Wykrycie obecności pliku `main.py` w folderze testu.
@@ -212,9 +153,9 @@ Pozwoli on również na uruchamianie testów napisanych w języku Python, co poz
 
 ### Etap 6 — Wersja przeglądarkowa
 
-Aplikacja zostanie przygotowana do uruchomienia bezpośrednio w przeglądarce internetowej (bez instalacji) z zachowaniem możliwie dużej funkcjonalności.
+Aplikacja została przygotowana do uruchomienia bezpośrednio w przeglądarce internetowej (bez instalacji) z zachowaniem możliwie dużej funkcjonalności.
 
-**Planowane ograniczenia wersji przeglądarkowej:**
+**Ograniczenia wersji przeglądarkowej:**
 
 - Brak dostępu do systemu plików — wyniki eksportowane natychmiast jako plik CSV.
 - Brak widoku historii i aktualizacji (nie dotyczy wersji web).
@@ -227,9 +168,9 @@ Aplikacja zostanie przygotowana do uruchomienia bezpośrednio w przeglądarce in
 
 ### Etap 7 — Strona informacyjna projektu
 
-Stworzona zostanie strona informacyjna projektu hostowana na GitHub Pages, zbudowana z użyciem generatora stron statycznych Jekyll.
+Stworzona została strona informacyjna projektu hostowana na GitHub Pages, zbudowana z użyciem generatora stron statycznych Jekyll.
 
-**Planowana zawartość:**
+**Zawartość strony:**
 
 - Strona główna z opisem projektu i przyciskiem pobierania najnowszej wersji.
 - Strona funkcjonalności z opisem możliwości platformy.
@@ -239,11 +180,11 @@ Stworzona zostanie strona informacyjna projektu hostowana na GitHub Pages, zbudo
 
 ### Etap 8 — Testowanie
 
-Weryfikacja poprawności implementacji zostanie przeprowadzona na dwóch poziomach.
+Weryfikacja poprawności implementacji została przeprowadzona na dwóch poziomach.
 
 #### Testy jednostkowe (Vitest)
 
-Testy obejmą następujące moduły:
+Testy objęły następujące moduły:
 
 | Plik testowy | Testowany moduł |
 |---|---|
@@ -261,19 +202,19 @@ Testy obejmą następujące moduły:
 
 #### Testy End-to-End (Playwright)
 
-Testy E2E uruchomią rzeczywistą aplikację Electron i będą symulować działania użytkownika: logowanie, nawigację, pobieranie testu, wyświetlanie wyników.
+Testy E2E uruchomiły rzeczywistą aplikację Electron i symulowały działania użytkownika: logowanie, nawigację, pobieranie testu, wyświetlanie wyników.
 
 ---
 
 ### Etap 9 — CI/CD i publikacja
 
-Wdrożony zostanie potok GitHub Actions realizujący następujące zadania:
+Wdrożony został potok GitHub Actions realizujący następujące zadania:
 
 - **`release.yml`** — Automatyczne budowanie instalatorów (`.exe` dla Windows, `.AppImage` dla Linux, `.dmg` dla macOS) po opublikowaniu nowego Release na GitHub i wgranie ich jako artefaktów wydania, co umożliwia automatyczne aktualizacje przez `electron-updater`.
 - **`update-web-tests.yml`** — Automatyczne pobieranie aktualnych wersji testów z ich repozytoriów i commit do gałęzi, zapewnienie aktualności wersji przeglądarkowej.
 - **`hpm-packs.yml`** — Budowanie i publikowanie paczek silnika HPM.
 
-Konfiguracja `electron-builder` zapewni:
+Konfiguracja `electron-builder` zapewniła:
 
 - Tworzenie instalatora NSIS (Windows) z możliwością wyboru katalogu instalacji.
 - Tworzenie pakietu DMG (macOS).
@@ -324,33 +265,31 @@ Nous/
 
 ---
 
-## 1.5. Harmonogram realizacji
+## 1.5. Spodziewane wyniki
 
-| Etap | Zakres prac |
-|---|---|
-| 1 | Analiza wymagań, wybór technologii, projekt architektury |
-| 2 | Implementacja procesu głównego Electron (IPC, pobieranie, bezpieczeństwo) |
-| 3 | Implementacja modułów frontendu (UI, biblioteka, baza danych, wyniki) |
-| 4 | Mechanizmy bezpieczeństwa danych (szyfrowanie AES-GCM, HMAC, walidacja ZIP) |
-| 5 | Tryb HPM (integracja Python/PsychoPy) |
-| 6 | Wersja przeglądarkowa (adaptacja ograniczeń środowiska web) |
-| 7 | Strona informacyjna projektu (Jekyll / GitHub Pages) |
-| 8 | Testowanie (Vitest — testy jednostkowe, Playwright — testy E2E) |
-| 9 | CI/CD, pakowanie i publikacja wydań (GitHub Actions, electron-builder) |
-
----
-
-## 1.6. Spodziewane wyniki
-
-Po realizacji wszystkich etapów system będzie spełniał następujące wymagania:
+Po realizacji wszystkich etapów system spełnia następujące wymagania:
 
 - Aplikacja instaluje się i działa na systemach Windows, macOS i Linux.
 - Badacz może przeglądać i zarządzać biblioteką testów synchronizowaną z chmurą.
 - Każdy test uruchamiany jest w izolowanym, pełnoekranowym środowisku.
 - Wyniki badania są szyfrowane i podpisane kryptograficznie, zapewniając poufność i integralność danych.
-- Wersja przeglądarkowa umożliwia przeprowadzenie badania bez instalacji aplicacji.
+- Wersja przeglądarkowa umożliwia przeprowadzenie badania bez instalacji aplikacji.
 - Automatyczny system aktualizacji informuje użytkownika o nowych wersjach launchera i testów.
 - Pokrycie kodu testami jednostkowymi jest mierzalne i raportowane przy każdym push.
+
+---
+
+## 1.6. Wnioski i praktyczne wykorzystanie
+
+<!-- TODO: Rozbudować tę sekcję w miarę dalszego użytkowania aplikacji -->
+
+Aplikacja Nous została oddana do praktycznego użytku. Poniżej zestawiono dotychczasowe przypadki jej zastosowania:
+
+- **21.03.2026** — Wykorzystanie programu przy badaniach psychometrycznych prowadzonych przez „Studenckie Koło Naukowe Psychologii Transportu".
+
+Planowane są kolejne współprace z jednostkami naukowymi i kołami studenckimi, co pozwoli na dalszą weryfikację przydatności platformy w środowisku akademickim.
+
+---
 
 # 2. Oswiadczenie odnośnie wykorzystania GenAI przy tworzeniu pracy
 
@@ -361,18 +300,14 @@ Użycie GenAI w takich miejscach jak:
 - Kod programu (z wyjątkami wyjaśnionymi poniżej)
 - Pomysł na pracę
 
-Zostało ograniczone do roli konsultanta. Oznacza to, że GenAI wspierało proces szukania rozwiązań, sposobów implementacji i szukania błędów. Gdzie kod programu był tworzony ręcznie przy inspiracji z instniejących ogólnodostępnych źródeł, rozwiązań i technik.
+Zostało ograniczone do roli konsultanta. Oznacza to, że GenAI wspierało proces szukania rozwiązań, sposobów implementacji i szukania błędów. Kod programu był tworzony ręcznie przy inspiracji z istniejących ogólnodostępnych źródeł, rozwiązań i technik.
 
 Gdzie GenAI było wykorzystane:
 
-- Wygenerowanie plików graficzych: logo.png
+- Wygenerowanie plików graficznych: logo.png
 - Stylizacja: pliki .html oraz .css
 - Tworzenie testów jednostkowych
 
 Uzasadnienie użycia:
 
-- Posłużyłem się GenAI w celu zapewniania jak nalepszej jakości warstwy wizualnej aplikacji oraz przy tworzeniu testów jednostkowych w celu utrwalenia już osiągniętej funkcjonalności programu.
-
-# 3. Praktyczne wykorzystanie programu
-
-- 21.03.2026 Wykorzystanie programu przy badaniach psychometrycznych prowadzonych przez "Studenckie Koło Naukowe Psychologii Transportu"
+- Posłużyłem się GenAI w celu zapewnienia jak najlepszej jakości warstwy wizualnej aplikacji oraz przy tworzeniu testów jednostkowych w celu utrwalenia już osiągniętej funkcjonalności programu.
