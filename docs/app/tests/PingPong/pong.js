@@ -19,16 +19,17 @@ let expInfo = {
 // Game configuration
 const TEST_DURATION = 120; // 2 minutes in seconds
 const DIFFICULTY_SETTINGS = {
-    'Easy': { baseSpeed: 0.005, paddleHeight: 0.25 },
-    'Normal': { baseSpeed: 0.0096, paddleHeight: 0.20 },  // 20% faster: 0.008 * 1.2
-    'Hard': { baseSpeed: 0.0096, paddleHeight: 0.18 }     // 20% faster: 0.008 * 1.2
+    'Easy':     { baseSpeed: 0.005,  paddleHeight: 0.25 },
+    'Normal':   { baseSpeed: 0.0096, paddleHeight: 0.20 },
+    'Hard':     { baseSpeed: 0.0096, paddleHeight: 0.18 },
+    'Survival': { baseSpeed: 0.0096, paddleHeight: 0.18 }  // Jeden błąd = koniec, bez limitu czasu
 };
 
 // Game state
 let gameState = {
     difficulty: 'Normal',
     baseSpeed: 0.008,
-    maxSpeedMultiplier: 4,           // x4 max speed
+    maxSpeedMultiplier: 4,           // x4 max speed (not used in Survival)
     speedIncreaseInterval: 1.5,      // Faster: every 1.5 seconds instead of 2
     speedIncreaseAmount: 0.2,        // Faster: 0.2 instead of 0.1 per increase
     leftWallHits: 0,
@@ -36,7 +37,9 @@ let gameState = {
     totalWallHits: 0,
     speedMultiplier: 1,
     speedChanges: 0,
-    maxSpeedReached: 1
+    maxSpeedReached: 1,
+    survivalTime: 0,                 // Czas przeżycia w trybie Survival
+    paddleHits: 0                    // Liczba odbić paletką
 };
 
 // Game objects
@@ -144,7 +147,7 @@ async function experimentInit() {
         text: 'PING PONG - Test Koordynacji\n\n' +
               'Twoim zadaniem jest odbijanie piłki za pomocą dwóch paletek.\n\n' +
               'LEWA PALETKA: klawisze W (góra) i S (dół)\n' +
-              'PRAWA PALETKA: strzałki góra i dół\n\n' +
+              'PRAWA PALETKA: strzałki góra i dół lub klawisze O (góra) i L (dół)\n\n' +
               'Test trwa 2 minuty. Odbijaj piłkę jak najdłużej!\n\n' +
               'Naciśnij SPACJĘ, aby wybrać poziom trudności\n' +
               'ESC - wyjście bez zapisu',
@@ -166,8 +169,9 @@ async function experimentInit() {
         text: 'WYBIERZ POZIOM TRUDNOŚCI\n\n' +
               '1 - ŁATWY (wolniejsza piłka, większe paletki)\n' +
               '2 - NORMALNY (standardowa prędkość)\n' +
-              '3 - TRUDNY (prędkość rośnie z czasem)\n\n' +
-              'Naciśnij 1, 2 lub 3',
+              '3 - TRUDNY (prędkość rośnie z czasem)\n' +
+              '4 - PRZETRWANIE (jeden błąd = koniec, bez limitu czasu)\n\n' +
+              'Naciśnij 1, 2, 3 lub 4',
         font: 'Arial',
         units: undefined,
         pos: [0, 0], draggable: false, height: 0.04, wrapWidth: undefined, ori: 0.0,
@@ -374,7 +378,7 @@ function difficultyRoutineEachFrame() {
         }
         
         if (difficultyKey.status === PsychoJS.Status.STARTED) {
-            let theseKeys = difficultyKey.getKeys({ keyList: ['1', '2', '3'], waitRelease: false });
+            let theseKeys = difficultyKey.getKeys({ keyList: ['1', '2', '3', '4'], waitRelease: false });
             _difficultyKey_allKeys = _difficultyKey_allKeys.concat(theseKeys);
             if (_difficultyKey_allKeys.length > 0) {
                 difficultyKey.keys = _difficultyKey_allKeys[_difficultyKey_allKeys.length - 1].name;
@@ -388,6 +392,8 @@ function difficultyRoutineEachFrame() {
                     gameState.difficulty = 'Normal';
                 } else if (difficultyKey.keys === '3') {
                     gameState.difficulty = 'Hard';
+                } else if (difficultyKey.keys === '4') {
+                    gameState.difficulty = 'Survival';
                 }
                 continueRoutine = false;
             }
@@ -459,6 +465,8 @@ function gameRoutineBegin(snapshot) {
         gameState.totalWallHits = 0;
         gameState.speedChanges = 0;
         gameState.maxSpeedReached = 1;
+        gameState.survivalTime = 0;
+        gameState.paddleHits = 0;
         
         // Create left paddle
         leftPaddle = new visual.Rect({
@@ -580,8 +588,8 @@ function gameRoutineEachFrame() {
             return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
         }
         
-        // Check if 2 minutes have passed
-        if (t >= TEST_DURATION) {
+        // Check if 2 minutes have passed (not applicable in Survival mode)
+        if (t >= TEST_DURATION && gameState.difficulty !== 'Survival') {
             continueRoutine = false;
             routineForceEnded = true;
             return Scheduler.Event.NEXT;
@@ -603,11 +611,11 @@ function gameRoutineEachFrame() {
             leftPaddle.setPos([leftPos[0], Math.max(leftPos[1] - paddleSpeed, -0.5 + paddleHalfHeight)]);
         }
         
-        // Right paddle (Arrow keys)
-        if (keysPressed['ArrowUp']) {
+        // Right paddle (Arrow keys or O/L)
+        if (keysPressed['ArrowUp'] || keysPressed['o'] || keysPressed['O']) {
             rightPaddle.setPos([rightPos[0], Math.min(rightPos[1] + paddleSpeed, 0.5 - paddleHalfHeight)]);
         }
-        if (keysPressed['ArrowDown']) {
+        if (keysPressed['ArrowDown'] || keysPressed['l'] || keysPressed['L']) {
             rightPaddle.setPos([rightPos[0], Math.max(rightPos[1] - paddleSpeed, -0.5 + paddleHalfHeight)]);
         }
         
@@ -648,7 +656,8 @@ function gameRoutineEachFrame() {
             let hitPosition = (ballPos[1] - leftPos[1]) / paddleHalfHeight;
             ballVelocity.y += hitPosition * 0.003;
             
-            // Record paddle hit for hard mode speed reset
+            // Record paddle hit
+            gameState.paddleHits++;
             if (gameState.difficulty === 'Hard') {
                 gameState.speedMultiplier = 1;
                 lastPaddleHitTime = t;
@@ -670,7 +679,8 @@ function gameRoutineEachFrame() {
             let hitPosition = (ballPos[1] - rightPos[1]) / paddleHalfHeight;
             ballVelocity.y += hitPosition * 0.003;
             
-            // Record paddle hit for hard mode speed reset
+            // Record paddle hit
+            gameState.paddleHits++;
             if (gameState.difficulty === 'Hard') {
                 gameState.speedMultiplier = 1;
                 lastPaddleHitTime = t;
@@ -684,6 +694,14 @@ function gameRoutineEachFrame() {
         if (ballPos[0] - ballRadius <= -0.5) {
             gameState.leftWallHits++;
             gameState.totalWallHits++;
+            
+            if (gameState.difficulty === 'Survival') {
+                // Jeden błąd = koniec testu
+                gameState.survivalTime = t;
+                continueRoutine = false;
+                routineForceEnded = true;
+                return Scheduler.Event.NEXT;
+            }
             
             // Reset speed for hard mode
             if (gameState.difficulty === 'Hard') {
@@ -699,6 +717,14 @@ function gameRoutineEachFrame() {
             gameState.rightWallHits++;
             gameState.totalWallHits++;
             
+            if (gameState.difficulty === 'Survival') {
+                // Jeden błąd = koniec testu
+                gameState.survivalTime = t;
+                continueRoutine = false;
+                routineForceEnded = true;
+                return Scheduler.Event.NEXT;
+            }
+            
             // Reset speed for hard mode
             if (gameState.difficulty === 'Hard') {
                 gameState.speedMultiplier = 1;
@@ -708,7 +734,7 @@ function gameRoutineEachFrame() {
             resetBall();
         }
         
-        // Hard mode: increase speed over time without paddle hit
+        // Hard mode: increase speed over time without paddle hit (capped at x4)
         if (gameState.difficulty === 'Hard') {
             let timeSinceHit = t - lastPaddleHitTime;
             if (timeSinceHit >= gameState.speedIncreaseInterval && gameState.speedMultiplier < gameState.maxSpeedMultiplier) {
@@ -723,10 +749,25 @@ function gameRoutineEachFrame() {
             }
         }
         
+        // Survival mode: increase speed over time WITHOUT any cap
+        if (gameState.difficulty === 'Survival') {
+            let survivalInterval = 3.0; // Wolniejszy przyrost czasu w survivalu
+            let survivalAmount = 0.1;   // Mniejszy skok prędkości
+            
+            let timeSinceHit = t - lastPaddleHitTime;
+            if (timeSinceHit >= survivalInterval) {
+                gameState.speedMultiplier += survivalAmount;
+                gameState.speedChanges++;
+                gameState.maxSpeedReached = Math.max(gameState.maxSpeedReached, gameState.speedMultiplier);
+                lastPaddleHitTime = t;
+                updateBallSpeed();
+            }
+        }
+        
         // Update timer display
-        let remainingTime = TEST_DURATION - t;
-        let minutes = Math.floor(remainingTime / 60);
-        let seconds = Math.floor(remainingTime % 60);
+        let displayTime = gameState.difficulty === 'Survival' ? t : (TEST_DURATION - t);
+        let minutes = Math.floor(displayTime / 60);
+        let seconds = Math.floor(displayTime % 60);
         let timerString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         timerText.setText(timerString);
         
@@ -779,11 +820,23 @@ function resultsRoutineBegin(snapshot) {
         resultsClock.reset();
         routineTimer.reset();
         
-        resultsText.setText('KONIEC TESTU\n\n' +
-              `Lewa strona: ${gameState.leftWallHits} uderzeń\n` +
-              `Prawa strona: ${gameState.rightWallHits} uderzeń\n` +
-              `Razem: ${gameState.totalWallHits} uderzeń\n\n` +
-              'Naciśnij SPACJĘ, aby zakończyć');
+        let resultsStr;
+        if (gameState.difficulty === 'Survival') {
+            let survMins = Math.floor(gameState.survivalTime / 60);
+            let survSecs = Math.floor(gameState.survivalTime % 60);
+            let survStr = `${survMins.toString().padStart(2, '0')}:${survSecs.toString().padStart(2, '0')}`;
+            resultsStr = 'KONIEC TESTU – TRYB PRZETRWANIA\n\n' +
+                `Czas przeżycia: ${survStr}\n` +
+                `Odbicia paletką: ${gameState.paddleHits}\n\n` +
+                'Naciśnij SPACJĘ, aby zakończyć';
+        } else {
+            resultsStr = 'KONIEC TESTU\n\n' +
+                `Lewa strona: ${gameState.leftWallHits} uderzeń\n` +
+                `Prawa strona: ${gameState.rightWallHits} uderzeń\n` +
+                `Razem: ${gameState.totalWallHits} uderzeń\n\n` +
+                'Naciśnij SPACJĘ, aby zakończyć';
+        }
+        resultsText.setText(resultsStr);
         
         resultsKey.keys = undefined;
         resultsKey.rt = undefined;
@@ -882,19 +935,24 @@ async function quitPsychoJS(message, isCompleted) {
 
     if (typeof window.electronTest !== 'undefined') {
         if (isCompleted) {
+            let isSurvival = gameState.difficulty === 'Survival';
             let results = {
                 testId: expInfo['expName'],
                 subjectId: expInfo['participant'],
                 timestamp: new Date().toISOString(),
-                ilosc_poprawnych_nacisniec: 0,
+                ilosc_poprawnych_nacisniec: isSurvival ? gameState.paddleHits : 0,
                 ilosc_blednych_nacisniec: 0,
-                ogolna_ilosc_nacisniec: gameState.totalWallHits,
-                score: `Poziom: ${gameState.difficulty} | Lewa: ${gameState.leftWallHits} | Prawa: ${gameState.rightWallHits} | Razem: ${gameState.totalWallHits}`,
+                ogolna_ilosc_nacisniec: isSurvival ? gameState.paddleHits : gameState.totalWallHits,
+                score: isSurvival
+                    ? `Poziom: Przetrwanie | Czas: ${gameState.survivalTime.toFixed(1)}s | Odbicia: ${gameState.paddleHits}`
+                    : `Poziom: ${gameState.difficulty} | Lewa: ${gameState.leftWallHits} | Prawa: ${gameState.rightWallHits} | Razem: ${gameState.totalWallHits}`,
                 statystyki: {
                     poziom_trudnosci: gameState.difficulty,
                     lewa_ilosc_uderzen: gameState.leftWallHits,
                     prawa_ilosc_uderzen: gameState.rightWallHits,
-                    czas_trwania: '2 min',
+                    czas_trwania: isSurvival ? `${gameState.survivalTime.toFixed(1)}s` : '2 min',
+                    czas_przezycia_sek: isSurvival ? Math.round(gameState.survivalTime) : null,
+                    odbicia_paletka: gameState.paddleHits,
                     maksymalna_predkosc: gameState.maxSpeedReached.toFixed(2),
                     ilosc_predkosciowych_zmian: gameState.speedChanges
                 }

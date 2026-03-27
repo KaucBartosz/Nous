@@ -174,7 +174,7 @@ async function experimentInit() {
     name: `hintText_${i}`,
     text: h.label,
     font: 'Arial',
-    pos: [h.x, -0.42],
+    pos: [h.x, 0.42],
     height: 0.035,
     color: new util.Color(h.color),
     depth: -3.0 - i,

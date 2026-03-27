@@ -73,15 +73,17 @@ psychoJS.start({
   expInfo: expInfo,
   resources: [
     // resources:
-    { 'name': 'resources/tlo.png', 'path': 'resources/tlo.png' },
-    { 'name': 'resources/car.png', 'path': 'resources/car.png' },
-    { 'name': 'resources/stop.png', 'path': 'resources/stop.png' },
-    { 'name': 'tlo.png', 'path': 'resources/tlo.png' },
-    { 'name': 'stop.png', 'path': 'resources/stop.png' },
-  ]
-});
-
-psychoJS.experimentLogger.setLevel(core.Logger.ServerLevel.INFO);
+      { 'name': 'resources/tlo.png', 'path': 'resources/tlo.png' },
+      { 'name': 'resources/car.png', 'path': 'resources/car.png' },
+      { 'name': 'resources/stop.png', 'path': 'resources/stop.png' },
+      { 'name': 'tlo.png', 'path': 'resources/tlo.png' },
+      { 'name': 'stop.png', 'path': 'resources/stop.png' },
+      { 'name': 'resources/jelonek.png', 'path': 'resources/jelonek.png' },
+      { 'name': 'resources/drzewo.png', 'path': 'resources/drzewo.png' }
+    ]
+  });
+  
+  psychoJS.experimentLogger.setLevel(core.Logger.ServerLevel.INFO);
 
 
 var currentLoop;
@@ -121,6 +123,8 @@ var driveClock;
 var tlo;
 var car;
 var stopSign;
+var jelonek;
+var drzewo;
 var mouse;
 var globalClock;
 var routineTimer;
@@ -181,6 +185,32 @@ async function experimentInit() {
     color: new util.Color([1, 1, 1]), opacity: undefined,
     flipHoriz: false, flipVert: false,
     texRes: 128.0, interpolate: true, depth: -2.0
+  });
+  jelonek = new visual.ImageStim({
+    win: psychoJS.window,
+    name: 'jelonek', units: undefined,
+    image: 'resources/jelonek.png', mask: undefined,
+    anchor: 'center',
+    ori: 0.0,
+    pos: [0, 0],
+    draggable: false,
+    size: [0.15, 0.15],
+    color: new util.Color([1, 1, 1]), opacity: undefined,
+    flipHoriz: false, flipVert: false,
+    texRes: 128.0, interpolate: true, depth: -1.5
+  });
+  drzewo = new visual.ImageStim({
+    win: psychoJS.window,
+    name: 'drzewo', units: undefined,
+    image: 'resources/drzewo.png', mask: undefined,
+    anchor: 'center',
+    ori: 0.0,
+    pos: [0, 0],
+    draggable: false,
+    size: [0.2, 0.3],
+    color: new util.Color([1, 1, 1]), opacity: undefined,
+    flipHoriz: false, flipVert: false,
+    texRes: 128.0, interpolate: true, depth: -1.5
   });
   mouse = new core.Mouse({
     win: psychoJS.window,
@@ -458,6 +488,10 @@ var car_start_x;
 var car_y;
 var car_speed;
 var car_direction;
+var anim_start_time;
+var anim_pause_time;
+var anim_is_paused;
+var distraction_speed;
 var driveMaxDuration;
 var driveComponents;
 function driveRoutineBegin(snapshot) {
@@ -507,12 +541,25 @@ function driveRoutineBegin(snapshot) {
     correct = 0;
     isFalstart = false;
 
-    // Samochód stoi w miejscu (5% w prawo od środka ekranu)
+    // Samochód stoi w miejscu początkowym, ustawiamy parametry animacji
     car.setPos([0.25, -0.3]);
+    anim_start_time = globalClock.getTime();
+    anim_pause_time = 0;
+    anim_is_paused = false;
+
+    // Distractions setup (losowa strona, górna 1/3 ekranu)
+    let side1 = Math.random() < 0.5 ? -1 : 1;
+    let side2 = Math.random() < 0.5 ? -1 : 1;
+    jelonek.setPos([side1 * (0.78 + Math.random() * 0.1), -0.1]);
+    drzewo.setPos([side2 * (0.78 + Math.random() * 0.1), -0.1]);
+    distraction_speed = 0.5 + Math.random() * 0.5; // units per second
+
     // Reset dotyku na początku próby
     window._touchJustStarted = false;
     window._touchPsychoX = null;
     window._touchPsychoY = null;
+    window._prevMousePressed = true; // Zapobiega uznaniu trzymanego przycisku za nowy klik na początku próby
+    psychoJS.eventManager.clearEvents();
 
     psychoJS.experiment.addData('drive.started', globalClock.getTime());
     driveMaxDuration = null
@@ -521,6 +568,8 @@ function driveRoutineBegin(snapshot) {
     driveComponents.push(tlo);
     driveComponents.push(car);
     driveComponents.push(stopSign);
+    driveComponents.push(jelonek);
+    driveComponents.push(drzewo);
     driveComponents.push(mouse);
 
     for (const thisComponent of driveComponents)
@@ -582,9 +631,22 @@ function driveRoutineEachFrame() {
       stopSign.setAutoDraw(true);
     }
 
-
     // if stopSign is active this frame...
     if (stopSign.status === PsychoJS.Status.STARTED) {
+    }
+
+    // *jelonek* updates
+    if (t >= 0.0 && jelonek.status === PsychoJS.Status.NOT_STARTED) {
+      jelonek.tStart = t;
+      jelonek.frameNStart = frameN;
+      jelonek.setAutoDraw(true);
+    }
+
+    // *drzewo* updates
+    if (t >= 0.0 && drzewo.status === PsychoJS.Status.NOT_STARTED) {
+      drzewo.tStart = t;
+      drzewo.frameNStart = frameN;
+      drzewo.setAutoDraw(true);
     }
 
     // *mouse* updates
@@ -627,8 +689,34 @@ function driveRoutineEachFrame() {
       let hy = (Array.isArray(size) ? size[1] : size) / 2;
       return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
     }
-    // Samochód stoi w miejscu (5% w prawo od środka ekranu)
-    car.setPos([0.25, -0.3]);
+    
+    // Update car animation, stop for 2s if stopVisible
+    let current_global_time = globalClock.getTime();
+    
+    let anim_time = current_global_time - anim_start_time;
+    if (anim_is_paused) {
+       anim_time = anim_pause_time - anim_start_time; // zamrożenie czasu
+    }
+    
+    let car_y_offset = Math.sin(anim_time * Math.PI * 0.8) * 0.05; // zwolnione o 20%, 5% amplitudy
+    car.setPos([0.25, -0.3 + car_y_offset]);
+
+    // Move distractions
+    if (!anim_is_paused) {
+        let dt = frameDur || (1.0 / 60.0);
+        let pos_j = jelonek.pos || jelonek._pos;
+        jelonek.setPos([pos_j[0], pos_j[1] - distraction_speed * dt]);
+        if (pos_j[1] < -0.6) {
+             let side1 = Math.random() < 0.5 ? -1 : 1;
+             jelonek.setPos([side1 * (0.78 + Math.random() * 0.1), -0.1]);
+        }
+        let pos_d = drzewo.pos || drzewo._pos;
+        drzewo.setPos([pos_d[0], pos_d[1] - distraction_speed * dt]);
+        if (pos_d[1] < -0.6) {
+             let side2 = Math.random() < 0.5 ? -1 : 1;
+             drzewo.setPos([side2 * (0.78 + Math.random() * 0.1), -0.1]);
+        }
+    }
 
     // --- pojawienie się STOP ---
     if (!stop_visible && t >= stopOnset) {
@@ -639,12 +727,16 @@ function driveRoutineEachFrame() {
 
     // --- klik (mysz) w auto LUB znak STOP po pojawieniu się STOP ---
     let buttons = mouse.getPressed();
-    if (stop_visible && !responded && (buttons[0] || buttons[1] || buttons[2])) {
+    let mouse_just_pressed = (buttons[0] || buttons[1] || buttons[2]) && !window._prevMousePressed;
+    window._prevMousePressed = (buttons[0] || buttons[1] || buttons[2]);
+
+    if (stop_visible && !responded && mouse_just_pressed) {
       if (mouse.isPressedIn(car) || mouse.isPressedIn(stopSign)) {
         responded = true;
         rt = stopClock.getTime();
         correct = 1;
-        continueRoutine = false;
+        anim_is_paused = true;
+        anim_pause_time = current_global_time;
       }
     }
 
@@ -654,15 +746,15 @@ function driveRoutineEachFrame() {
       responded = true;
       rt = stopClock.getTime();
       correct = 1;
-      continueRoutine = false;
+      anim_is_paused = true;
+      anim_pause_time = current_global_time;
     }
 
     // --- REAKCJA PRZED ZNAKIEM STOP (Falstart) ---
     if (!stop_visible && !responded) {
-      let buttons_down = mouse.getPressed();
       let touch_down = window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas;
 
-      if (buttons_down[0] || buttons_down[1] || buttons_down[2] || keys.length > 0 || touch_down) {
+      if (mouse_just_pressed || keys.length > 0 || touch_down) {
         responded = true;
         correct = 0;
         isFalstart = true;
@@ -682,7 +774,8 @@ function driveRoutineEachFrame() {
         responded = true;
         rt = stopClock.getTime();
         correct = 1;
-        continueRoutine = false;
+        anim_is_paused = true;
+        anim_pause_time = current_global_time;
       }
       window._touchJustStarted = false;
       window._touchPsychoX = null;
@@ -693,8 +786,13 @@ function driveRoutineEachFrame() {
       window._touchPsychoY = null;
     }
 
+    // --- zakończenie próby po zatrzymaniu animacji na 1s ---
+    if (anim_is_paused && (current_global_time - anim_pause_time >= 1.0)) {
+        continueRoutine = false;
+    }
+
     // --- limit czasu 5 s od pojawienia się STOP ---
-    if (stop_visible && stopClock && stopClock.getTime() >= 5.0) {
+    if (stop_visible && stopClock && stopClock.getTime() >= 5.0 && !responded) {
       continueRoutine = false;
     }
 

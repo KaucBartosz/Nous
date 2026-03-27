@@ -28,7 +28,7 @@ const psychoJS = new PsychoJS({
 // open window:
 psychoJS.openWindow({
   fullscr: true,
-  color: new util.Color([0, 0, 0]),
+  color: new util.Color('black'),
   units: 'height',
   waitBlanking: true,
   backgroundImage: '',
@@ -128,7 +128,7 @@ async function experimentInit() {
   instrText = new visual.TextStim({
     win: psychoJS.window,
     name: 'instrText',
-    text: 'Za chwilę na ekranie będą pojawiać się kolejno cyfry. Twoim zadaniem jest wcisnąć SPACJĘ, gdy pokazywana cyfra będzie PARZYSTA i powstrzymać się od reakcji, gdy cyfra będzie NIEPARZYSTA. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
+    text: 'Za chwilę na ekranie będą pojawiać się kolejno cyfry. Twoim zadaniem jest wcisnąć SPACJĘ, gdy pokazywana cyfra będzie PARZYSTA (0, 2, 4, 6, 8) i powstrzymać się od reakcji, gdy cyfra będzie NIEPARZYSTA (1, 3, 5, 7, 9). Aby rozpocząć zadanie, wciśnij SPACJĘ.',
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,

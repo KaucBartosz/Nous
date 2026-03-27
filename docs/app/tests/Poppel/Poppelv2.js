@@ -200,6 +200,9 @@ var target_appearances = 0;
 var clicked_records = [];
 var last_change_time = 0;
 var target_change_flash_time = -1; // for visual flash on target change
+var gamePhase = 'RUNNING'; // 'RUNNING' | 'DRAINING'
+var drainedCount = 0;
+var drainMode = 'CHANGE'; // 'CHANGE' | 'END'
 
 // Clocks / components
 var trialsClock, trialClock, frameClock;
@@ -513,6 +516,9 @@ function trialsRoutineBegin() {
     clicked_records = [];
     last_change_time = 0;
     target_change_flash_time = -1;
+    gamePhase = 'RUNNING';
+    drainedCount = 0;
+    drainMode = 'CHANGE';
     _prevMouseButtons = [false, false, false];
 
     // Layout calculations
@@ -572,6 +578,7 @@ function trialsRoutineBegin() {
       stim.imgName = cleanName;
       stim.clicked = false;
       stim.counted = false;
+      stim.drained = false;
       stim.setOpacity(1.0);
 
       bottom_stims.push(stim);
@@ -676,24 +683,38 @@ function trialsRoutineEachFrame() {
       }
 
       if (newX > (window._X_START + window._WRAP_DISTANCE)) {
-        // Track missed targets: target figure that scrolled off without being clicked
-        if (!stim.clicked && stim.counted && targets.includes(stim.imgName)) {
+        // Track missed targets (only if not already drained)
+        if (!stim.drained && !stim.clicked && stim.counted && targets.includes(stim.imgName)) {
           missed_targets++;
         }
 
-        newX -= window._WRAP_DISTANCE;
+        if (gamePhase === 'DRAINING') {
+          if (!stim.drained) {
+            stim.setOpacity(0.0);
+            stim.imgName = '__blank__';
+            stim.clicked = true;
+            stim.counted = true;
+            stim.drained = true;
+            drainedCount++;
+          }
+          // Park far off-screen so it won't re-wrap during drain
+          newX = -10.0;
+        } else {
+          newX -= window._WRAP_DISTANCE;
 
-        let nextImg = bottom_sequence.length > 0
-          ? bottom_sequence.shift()
-          : activePool[Math.floor(Math.random() * activePool.length)];
+          let nextImg = bottom_sequence.length > 0
+            ? bottom_sequence.shift()
+            : activePool[Math.floor(Math.random() * activePool.length)];
 
-        let cleanName = nextImg.split('/').pop().split('\\').pop();
+          let cleanName = nextImg.split('/').pop().split('\\').pop();
 
-        stim.setImage(IMAGE_PATH + nextImg);
-        stim.imgName = cleanName;
-        stim.clicked = false;
-        stim.counted = false;
-        stim.setOpacity(1.0);
+          stim.setImage(IMAGE_PATH + nextImg);
+          stim.imgName = cleanName;
+          stim.clicked = false;
+          stim.counted = false;
+          stim.drained = false;
+          stim.setOpacity(1.0);
+        }
       }
 
       stim.setPos([newX, stim.pos[1]]);
@@ -701,6 +722,52 @@ function trialsRoutineEachFrame() {
 
       if (stim.opacity > 0) {
         stim.draw();
+      }
+    }
+
+    // --- CHECK DRAIN COMPLETION ---
+    if (gamePhase === 'DRAINING' && drainedCount >= bottom_stims.length) {
+      if (drainMode === 'END') {
+        // Test ends cleanly after screen is empty
+        continueRoutine = false;
+      } else {
+        // All figures drained – now change targets
+        targets = safeSample(activePool, N_TARGETS);
+        for (let j = 0; j < top_stims.length; j++) {
+          top_stims[j].setImage(IMAGE_PATH + targets[j]);
+          top_stims[j].imgName = targets[j];
+        }
+        target_change_flash_time = elapsed;
+        last_change_time = elapsed;
+
+        // Rebuild sequence for remaining duration
+        let remaining = Math.max(chosenDuration - elapsed + 10, 60);
+        bottom_sequence = makeSequenceWithTargetRatio(
+          activePool, targets,
+          Math.ceil(activeSpeed / window._X_STEP * remaining) + N_PER_ROW * 2
+        );
+
+        // Re-spawn all stims from off-screen left
+        for (let i = 0; i < bottom_stims.length; i++) {
+          let col = i % N_PER_ROW;
+          let row = Math.floor(i / N_PER_ROW);
+          let standardX = window._X_START + (col * window._X_STEP);
+          let spawnX = standardX - 1.8;
+          let y = (row === 0) ? ROW1_Y : ROW2_Y;
+          let nextImg = bottom_sequence.shift();
+          let cleanName = nextImg.split('/').pop().split('\\').pop();
+          bottom_stims[i].setImage(IMAGE_PATH + nextImg);
+          bottom_stims[i].imgName = cleanName;
+          bottom_stims[i].clicked = false;
+          bottom_stims[i].counted = false;
+          bottom_stims[i].drained = false;
+          bottom_stims[i].setOpacity(1.0);
+          bottom_stims[i].setPos([spawnX, y]);
+          prev_x[i] = spawnX;
+        }
+
+        drainedCount = 0;
+        gamePhase = 'RUNNING';
       }
     }
 
@@ -717,47 +784,33 @@ function trialsRoutineEachFrame() {
       highlightRect.setOpacity(0.0);
     }
 
-    // --- TARGET CHANGE every 20s ---
-    if (elapsed - last_change_time >= TARGET_CHANGE_INTERVAL && elapsed > 1) {
-      let newTargets = safeSample(activePool, N_TARGETS);
-      targets = newTargets;
-      for (let j = 0; j < top_stims.length; j++) {
-        top_stims[j].setImage(IMAGE_PATH + targets[j]);
-        top_stims[j].imgName = targets[j];
+    // --- ENTER DRAINING when target change time arrives ---
+    if (gamePhase === 'RUNNING' && elapsed - last_change_time >= TARGET_CHANGE_INTERVAL && elapsed > 1) {
+      gamePhase = 'DRAINING';
+      drainMode = 'CHANGE';
+      drainedCount = 0;
+      for (let stim of bottom_stims) {
+        stim.drained = false;
       }
-      // Inject target-heavy batch into sequence
-      let injection = makeSequenceWithTargetRatio(activePool, targets, 20);
-      bottom_sequence = injection.concat(bottom_sequence);
-
-      // Replace off-screen (left side) figures with new targets immediately
-      for (let i = 0; i < bottom_stims.length; i++) {
-        let stim = bottom_stims[i];
-        if (stim.pos[0] < window._APPEAR_X && !stim.clicked) {
-          let newImg = targets[Math.floor(Math.random() * targets.length)];
-          stim.setImage(IMAGE_PATH + newImg);
-          stim.imgName = newImg;
-          stim.clicked = false;
-          stim.counted = false;
-          stim.setOpacity(1.0);
-        }
-      }
-
-      // Visual flash
-      target_change_flash_time = elapsed;
-
-      last_change_time = elapsed;
+      bottom_sequence = []; // clear – nothing new spawns during drain
     }
 
-    // Replenish sequence if running low
-    if (bottom_sequence.length < 30) {
+    // Replenish sequence if running low (only during RUNNING phase)
+    if (gamePhase === 'RUNNING' && bottom_sequence.length < 30) {
       bottom_sequence = bottom_sequence.concat(
         makeSequenceWithTargetRatio(activePool, targets, 40)
       );
     }
 
-    // --- END TRIAL after chosen duration ---
-    if (elapsed >= chosenDuration) {
-      continueRoutine = false;
+    // --- END TRIAL after chosen duration – drain first ---
+    if (elapsed >= chosenDuration && gamePhase === 'RUNNING') {
+      gamePhase = 'DRAINING';
+      drainMode = 'END';
+      drainedCount = 0;
+      for (let stim of bottom_stims) {
+        stim.drained = false;
+      }
+      bottom_sequence = [];
     }
 
     // *mouse* updates (PsychoJS boilerplate)

@@ -123,7 +123,7 @@ async function experimentInit() {
     text: 'Za chwilę zobaczysz planszę z lampkami. Twoim zadaniem będzie, za pomocą MYSZY, wskazać tę lampkę, która znajduje się na przecięciu prostych dwóch lampek zapalonych na zielono. Staraj się klikać najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
     font: 'Arial',
     units: undefined,
-    pos: [0, 0], draggable: false, height: 0.05, wrapWidth: 1.8, ori: 0.0,
+    pos: [0, 0], draggable: false, height: 0.05, wrapWidth: 1.2, ori: 0.0,
     languageStyle: 'LTR',
     color: new util.Color('white'), opacity: undefined,
     depth: 0.0
