@@ -12,6 +12,7 @@ import { initSyncService, setAutoSync, getAutoSyncState } from './modules/sync.j
 import { initSettings } from './modules/settings.js';
 import { initAppUpdater } from './modules/appUpdater.js';
 import { initWhatsNew, loadWhatsNewView } from './modules/whatsNew.js';
+import { renderParticipantsList } from './modules/participants.js';
 
 // --- INITIALIZATION ---
 
@@ -62,6 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.btnLogout) elements.btnLogout.style.display = 'none';
         if (elements.syncToggleContainer) elements.syncToggleContainer.style.display = 'none';
         
+        // Ukryj Kartotekę Badanych w wersji WEB (funkcja tylko dla aplikacji Desktop)
+        const participantsPanel = document.querySelector('.participants-panel');
+        if (participantsPanel) participantsPanel.style.display = 'none';
+        const btnSaveRegistry = document.getElementById('btn-save-to-registry');
+        if (btnSaveRegistry) btnSaveRegistry.style.display = 'none';
+        
         // Zablokuj HPM
         if (elements.toggleHPM) {
             elements.toggleHPM.disabled = true;
@@ -99,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.navLibrary.addEventListener('click', () => switchView('library', { onLibrary: loadTestsList }));
     elements.navHistory.addEventListener('click', () => switchView('history', { onHistory: loadHistoryData }));
     elements.navUpdates.addEventListener('click', () => switchView('updates', { onUpdates: loadUpdatesData }));
-    elements.navDemographics.addEventListener('click', () => switchView('demographics'));
+    elements.navDemographics.addEventListener('click', () => switchView('demographics', { onDemographics: renderParticipantsList }));
     elements.navDemoCreator.addEventListener('click', () => switchView('creator', { onCreator: refreshTemplatesList }));
     elements.navWhatsNew.addEventListener('click', () => switchView('whatsNew', { onWhatsNew: loadWhatsNewView }));
     elements.navSettings.addEventListener('click', () => switchView('settings'));
