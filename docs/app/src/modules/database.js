@@ -4,7 +4,7 @@ import { initCrypto, encryptData, decryptData } from './cryptoService.js';
 import { Dialog } from './dialog.js';
 
 const DB_NAME = 'NousDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let isCryptoReady = false;
 let cryptoWarningShown = false; // Zapobiega wielokrotnemu pokazywaniu ostrzeżenia
@@ -70,6 +70,12 @@ export async function initDB() {
                 // 2. TEMPLATES STORE
                 if (!db.objectStoreNames.contains('demographicsTemplates')) {
                     db.createObjectStore('demographicsTemplates', { keyPath: 'id' });
+                }
+
+                // 3. PARTICIPANTS STORE (Kartoteka Badanych)
+                if (!db.objectStoreNames.contains('participants')) {
+                    const participantsStore = db.createObjectStore('participants', { keyPath: 'id' });
+                    participantsStore.createIndex('researcher_uid', 'researcher_uid');
                 }
             },
         });
@@ -368,5 +374,59 @@ export async function deleteTemplate(id) {
     } catch (error) {
         console.error('Error deleting template:', error);
         throw new Error(`Nie udało się usunąć szablonu: ${error.message}`);
+    }
+}
+
+// --- PARTICIPANTS (Kartoteka Badanych - NOT ENCRYPTED intentionally) ---
+// Participant profiles are config/metadata, not sensitive result data.
+
+export async function saveParticipant(participant, researcherUid) {
+    try {
+        const db = await initDB();
+        const id = participant.id || crypto.randomUUID();
+        const now = new Date().toISOString();
+        const record = {
+            ...participant,
+            id,
+            researcher_uid: researcherUid,
+            created_at: participant.created_at || now,
+            updated_at: now
+        };
+        await db.put('participants', record);
+        return id;
+    } catch (error) {
+        console.error('Error saving participant:', error);
+        throw new Error(`Nie udało się zapisać badanego: ${error.message}`);
+    }
+}
+
+export async function getAllParticipants(researcherUid) {
+    try {
+        const db = await initDB();
+        const allParticipants = await db.getAllFromIndex('participants', 'researcher_uid', researcherUid);
+        return allParticipants.sort((a, b) => a.display_name.localeCompare(b.display_name, 'pl'));
+    } catch (error) {
+        console.error('Error getting participants:', error);
+        return [];
+    }
+}
+
+export async function getParticipant(id) {
+    try {
+        const db = await initDB();
+        return db.get('participants', id);
+    } catch (error) {
+        console.error('Error getting participant:', error);
+        throw new Error(`Nie udało się pobrać badanego: ${error.message}`);
+    }
+}
+
+export async function deleteParticipant(id) {
+    try {
+        const db = await initDB();
+        await db.delete('participants', id);
+    } catch (error) {
+        console.error('Error deleting participant:', error);
+        throw new Error(`Nie udało się usunąć badanego: ${error.message}`);
     }
 }

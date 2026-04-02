@@ -1811,3 +1811,157 @@ input:checked+.slider:before {
     color: #4caf50;
     font-size: 12px;
 }
+
+/* --- KARTOTEKA BADANYCH (Participants Panel) --- */
+.participants-panel {
+    background: rgba(55, 113, 200, 0.05);
+    border: 1px solid rgba(55, 113, 200, 0.25);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+}
+
+.participants-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.participants-panel-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.participants-search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+}
+
+.participants-search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-main);
+    font-size: 13px;
+    width: 200px;
+    padding: 0;
+    margin: 0;
+}
+
+.participants-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.participants-list::-webkit-scrollbar {
+    width: 4px;
+}
+.participants-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.participants-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+}
+
+.participants-empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+    margin: 6px 0;
+    padding: 8px;
+    text-align: center;
+}
+
+.participant-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    transition: border-color 0.2s, background 0.2s;
+    gap: 10px;
+}
+
+.participant-card:hover {
+    border-color: var(--primary);
+    background: rgba(55, 113, 200, 0.08);
+}
+
+.participant-card-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.participant-icon {
+    font-size: 20px !important;
+    color: var(--primary);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.participant-card-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.participant-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.participant-template {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.participant-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+[data-theme="light"] .participants-panel {
+    background: rgba(55, 113, 200, 0.04);
+    border-color: rgba(55, 113, 200, 0.3);
+}
+
+[data-theme="light"] .participant-card {
+    background: rgba(0,0,0,0.02);
+}
+
+[data-theme="light"] .participants-search-wrapper {
+    background: rgba(0,0,0,0.04);
+}

@@ -337,7 +337,26 @@
 
             <!-- WIDOK 4: Metryczka (Formularz) -->
             <div id="demographics-view" class="hidden">
-                <h3>Dane Uczestnika Badania</h3>
+
+                <!-- Panel: Kartoteka Badanych -->
+                <div class="participants-panel">
+                    <div class="participants-panel-header">
+                        <h4 class="participants-panel-title">
+                            <span class="material-icons" style="font-size:18px; vertical-align:middle; margin-right:6px;">people</span>
+                            Kartoteka Badanych
+                        </h4>
+                        <div class="participants-search-wrapper">
+                            <span class="material-icons" style="font-size:16px; color:var(--text-muted);">search</span>
+                            <input type="text" id="participants-search" placeholder="Szukaj badanego..." class="participants-search-input">
+                        </div>
+                    </div>
+                    <div id="participants-list" class="participants-list">
+                        <!-- JS wstrzyknie tu karty badanych -->
+                        <p class="participants-empty">Brak zapisanych badanych. Wypełnij metryczkę i kliknij <strong>Zapisz do Kartoteki</strong>.</p>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 24px;">Dane Uczestnika Badania</h3>
                 <p style="color:#888; margin-bottom:20px;">Wypełnij te dane przed uruchomieniem testu.</p>
 
                 <div class="form-container">
@@ -355,14 +374,17 @@
                         <p style="color:#ccc; font-style:italic;">Wybierz szablon, aby zobaczyć pola.</p>
                     </div>
 
-                    <div style="margin-top:20px;">
+                    <div style="margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
                         <button id="btn-save-demo" class="btn primary">
                             <span class="material-icons">save</span> Zapisz Dane Sesji
                         </button>
-                        <button id="btn-clear-demo" class="btn secondary" style="margin-left: 10px;">
+                        <button id="btn-save-to-registry" class="btn secondary">
+                            <span class="material-icons">person_add</span> Zapisz do Kartoteki
+                        </button>
+                        <button id="btn-clear-demo" class="btn outline">
                             <span class="material-icons">clear</span> Wyczyść
                         </button>
-                        <span id="demo-status" style="margin-left:15px; color:#4caf50; display:none;">Zapisano!</span>
+                        <span id="demo-status" style="margin-left:5px; color:#4caf50; display:none;">Zapisano!</span>
                     </div>
                 </div>
             </div>

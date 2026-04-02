@@ -1,6 +1,7 @@
 import { getAllTemplates, getTemplate } from './database.js';
 import { elements } from './ui.js';
 import { Dialog } from './dialog.js';
+import { initParticipantsPanel, registerFillFormCallback, saveCurrentAsParticipant, renderParticipantsList } from './participants.js';
 
 let activeDemographics = null;
 let currentTemplateId = null;
@@ -20,6 +21,8 @@ export async function initDemographics() {
         const val = e.target.value;
         localStorage.setItem('activeTemplateId', val);
         await renderDynamicForm(val);
+        // Refresh participants list so template names update if needed
+        renderParticipantsList();
     });
 
     // Populate data if exists
@@ -35,6 +38,24 @@ export async function initDemographics() {
     if (btnClear) {
         btnClear.addEventListener('click', clearDemographics);
     }
+
+    // Bind "Save to Registry" button
+    const btnSaveToRegistry = document.getElementById('btn-save-to-registry');
+    if (btnSaveToRegistry) {
+        btnSaveToRegistry.addEventListener('click', async () => {
+            if (!activeDemographics) {
+                await Dialog.alert('Najpierw zapisz dane sesji (kliknij "Zapisz Dane Sesji").', 'warning');
+                return;
+            }
+            await saveCurrentAsParticipant(activeDemographics);
+        });
+    }
+
+    // Register fill-form callback so participants.js can populate form
+    registerFillFormCallback(fillFormFromParticipant);
+
+    // Initialize participants panel (list + search)
+    initParticipantsPanel();
 }
 
 export async function refreshTemplatesDropdown() {
@@ -308,7 +329,9 @@ export function loadSavedDemographics() {
     }
 }
 
-export async function saveDemographicsFromForm() {
+export async function saveDemographicsFromForm(forceOverwrite = false) {
+    const isForce = forceOverwrite === true; // Handle Event object from addEventListener
+    
     if (!currentTemplateId) {
         await Dialog.alert("Wybierz szablon przed zapisaniem!", 'warning');
         return;
@@ -369,12 +392,7 @@ export async function saveDemographicsFromForm() {
         return;
     }
 
-    // Check for overwrite if data exists for this template
-    if (activeDemographics && activeDemographics.templateId === currentTemplateId) {
-        const confirmOverwrite = await Dialog.confirm("Masz już zapisane dane dla tego szablonu. Czy chcesz je nadpisać?");
-        if (!confirmOverwrite) return;
-    }
-
+    // Removed overwrite confirmation dialog per user request
     activeDemographics = {
         templateId: currentTemplateId,
         participant_id: data['Identyfikator'] || data['Kod'] || "ID_" + Date.now(), // Fallback
@@ -429,5 +447,56 @@ export async function clearDemographics() {
         await renderDynamicForm(currentTemplateId);
 
         await Dialog.alert("Dane zostały wyczyszczone.", 'info');
+    }
+}
+
+/**
+ * Fills the demographics form with data from a participant profile.
+ * Called by participants.js via the registered callback.
+ * @param {Object} participant - { templateId, data }
+ */
+async function fillFormFromParticipant(participant) {
+    if (!participant || !participant.templateId) return;
+
+    // Switch template if needed
+    const select = document.getElementById('demo-template-select');
+    if (select && select.value !== participant.templateId) {
+        select.value = participant.templateId;
+        localStorage.setItem('activeTemplateId', participant.templateId);
+        await renderDynamicForm(participant.templateId);
+    }
+
+    // Fill fields
+    const inputs = document.querySelectorAll('.demo-dynamic-field');
+    inputs.forEach(input => {
+        const label = input.dataset.label;
+        const val = participant.data ? participant.data[label] : undefined;
+        if (val === undefined) return;
+
+        if (input.dataset.type === 'checkbox') {
+            if (input.dataset.checkboxGroup === 'true') {
+                const selectedOpts = Array.isArray(val) ? val : (typeof val === 'string' ? val.split(',').map(s => s.trim()) : []);
+                input.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = selectedOpts.includes(cb.value);
+                });
+            } else {
+                input.checked = !!val;
+            }
+        } else if (input.dataset.type === 'radio') {
+            input.querySelectorAll('input[type="radio"]').forEach(r => {
+                r.checked = (r.value === val);
+            });
+        } else {
+            input.value = val;
+        }
+    });
+    // Save form data automatically as "Active Session Data" without prompting
+    await saveDemographicsFromForm(true);
+
+    const statusSpan = document.getElementById('demo-status');
+    if (statusSpan) {
+        statusSpan.style.display = 'inline';
+        statusSpan.textContent = `Wczytano i Zapisano sesję: ${participant.display_name}`;
+        setTimeout(() => { statusSpan.style.display = 'none'; }, 3000);
     }
 }
