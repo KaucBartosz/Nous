@@ -62,6 +62,59 @@ export const Dialog = {
     },
 
     /**
+     * Show an input prompt dialog.
+     * @param {string} message - Label above the input
+     * @param {string} [defaultValue=''] - Pre-filled default value
+     * @returns {Promise<string|null>} - Entered string or null if cancelled
+     */
+    prompt(message, defaultValue = '') {
+        this.init();
+        return new Promise((resolve) => {
+            this.titleEl.textContent = 'Wprowadź dane';
+            this.messageEl.textContent = message;
+            this.iconEl.innerHTML = `<span class="material-icons" style="font-size: 48px; color: #3771c8;">edit</span>`;
+
+            // Create input
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = defaultValue;
+            input.style.cssText = 'width:100%; margin-top:12px; padding:8px 12px; background:var(--bg-input, #2a2a2e); border:1px solid var(--border, #444); border-radius:6px; color:var(--text-main, #fff); font-size:14px; box-sizing:border-box;';
+            this.messageEl.after(input);
+
+            this.footerEl.innerHTML = '';
+
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'btn outline';
+            btnCancel.textContent = 'Anuluj';
+            btnCancel.addEventListener('click', () => {
+                input.remove();
+                this.close(null);
+            });
+
+            const btnOk = document.createElement('button');
+            btnOk.className = 'btn primary';
+            btnOk.textContent = 'OK';
+            btnOk.addEventListener('click', () => {
+                const val = input.value.trim();
+                input.remove();
+                this.close(val || null);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') btnOk.click();
+                if (e.key === 'Escape') btnCancel.click();
+            });
+
+            this.footerEl.appendChild(btnCancel);
+            this.footerEl.appendChild(btnOk);
+
+            this.resolvePromise = resolve;
+            this.show();
+            setTimeout(() => input.focus(), 50);
+        });
+    },
+
+    /**
      * Show a custom dialog with specific buttons.
      * @param {string} message 
      * @param {Array<{label: string, value: any, class: string}>} buttons 
