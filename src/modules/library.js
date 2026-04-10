@@ -5,6 +5,7 @@ import { elements } from './ui.js';
 import { Dialog } from './dialog.js';
 import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache, escapeHtml } from './utils.js';
 import * as Tags from './tags.js';
+import { getSettings } from './settings.js';
 
 let cachedTests = [];
 let isSearchBound = false;
@@ -350,8 +351,13 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
     Object.keys(localVersions).forEach(testId => {
         if (testId === '__scannedDir') return; // Skip debug field
 
+        const local = localVersions[testId];
+        const isLocalDev = local.isLocalDev || false;
+        
+        // Skip local tests if the setting is disabled
+        if (isLocalDev && !getSettings().showLocalTests) return;
+
         if (!cachedTests.find(t => t.id === testId)) {
-            const local = localVersions[testId];
             if (local.version >= 0) {
                 cachedTests.push({
                     id: testId,
