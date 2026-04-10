@@ -12,6 +12,7 @@ let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracj
 let currentViewMode = 'grid'; // 'grid', 'list', 'table', 'compact'
 let isTrainingMode = false;
 let isHpmEnabled = false;
+let isLoading = false; // Flaga zapobiegająca współbieżnym wywołaniom loadTestsList (race condition → duplikaty)
 
 export function getTrainingMode() {
     return isTrainingMode;
@@ -186,12 +187,12 @@ export function initViewSwitcher() {
                         }
                     }
 
-                    const confirm = await Dialog.confirm(
+                    const confirmed = await Dialog.confirm(
                         "Tryb Wysokiej Precyzji (HPM) zapewnia najwyższą dokładność pomiaru parametrów czasowych poprzez natywne wykonywanie testów. Aktywacja tego trybu wymaga jednorazowego pobrania specjalistycznego pakietu zasobów (ok. 300MB). Czy chcesz kontynuować?" + linuxNote,
                         'info'
                     );
 
-                    if (confirm) {
+                    if (confirmed) {
                         isHpmEnabled = true;
                         localStorage.setItem('hpmEnabled', 'true');
                         statusLabel.textContent = 'Pobieranie...';
@@ -251,58 +252,76 @@ function updateViewButtonStates() {
 }
 
 export async function loadTestsList(filterText = null, forceRefresh = false) {
+    // Guard: jeśli już trwa ładowanie, zignoruj nowe wywołanie (zapobiega race condition i podwójnemu wyświetlaniu)
+    if (isLoading) {
+        console.log('[Library] loadTestsList: zignorowano wywołanie – trwa już ładowanie.');
+        return;
+    }
+
     if (filterText === null) {
         const searchInput = document.getElementById('library-search');
         filterText = searchInput ? searchInput.value : '';
     }
+
     // 1. Fetch from Cloud if needed
     if (!cachedTests.length || forceRefresh) {
+        isLoading = true;
         elements.testsGrid.innerHTML = '<p style="color:#888;">Ładowanie biblioteki...</p>';
         cachedTests = []; // Clear cache przed pobraniem
-        
-        if (window.electronAPI) {
-            try {
+
+        try {
+            if (window.electronAPI) {
                 // Check if online before trying cloud fetch to avoid long timeouts
                 if (!navigator.onLine) {
                     throw new Error("Brak połączenia internetowego (navigator.onLine)");
                 }
 
                 // #14 FIX: Wrap Firestore call in a timeout to avoid hanging on slow networks
-                const fetchTimeout = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Timeout: Firestore nie odpowiada (>8s)')), 8000)
-                );
-                const snap = await Promise.race([getDocs(collection(db, "tests")), fetchTimeout]);
+                let timeoutId;
+                const fetchTimeout = new Promise((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error('Timeout: Firestore nie odpowiada (>8s)')), 8000);
+                });
+
+                let snap;
+                try {
+                    snap = await Promise.race([getDocs(collection(db, "tests")), fetchTimeout]);
+                    clearTimeout(timeoutId); // Anuluj timer po udanym fetch
+                } catch (e) {
+                    clearTimeout(timeoutId);
+                    throw e; // Re-throw do zewnętrznego catch
+                }
 
                 if (snap.empty) {
                     elements.testsGrid.innerHTML = '<p>Brak testów w chmurze.</p>';
-                    return;
+                    return; // finally zresetuje isLoading
                 }
 
                 snap.forEach(doc => {
                     const t = doc.data();
                     t.id = doc.id;
                     t.local_ver = 0; // Will be updated below
-                    t.remote_ver = Number(t.version);
+                    t.remote_ver = Number(t.version) || 0; // Zabezpieczenie przed NaN gdy brak pola
                     cachedTests.push(t);
                 });
 
                 // Save to local cache for offline usage
                 localStorage.setItem('cached_tests_metadata', JSON.stringify(cachedTests));
+            }
+        } catch (e) {
+            console.warn("Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):", e);
 
-            } catch (e) {
-                console.warn("Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):", e);
-
-                // Try to load from local storage cache
-                const saved = localStorage.getItem('cached_tests_metadata');
-                if (saved) {
-                    try {
-                        cachedTests = JSON.parse(saved);
-                        console.log("Załadowano listę testów z cache lokalnego.");
-                    } catch (jsonErr) {
-                        console.error("Błąd parsowania cache lokalnego:", jsonErr);
-                    }
+            // Try to load from local storage cache
+            const saved = localStorage.getItem('cached_tests_metadata');
+            if (saved) {
+                try {
+                    cachedTests = JSON.parse(saved);
+                    console.log("Załadowano listę testów z cache lokalnego.");
+                } catch (jsonErr) {
+                    console.error("Błąd parsowania cache lokalnego:", jsonErr);
                 }
             }
+        } finally {
+            isLoading = false; // Zawsze resetuj flagę, niezależnie od ścieżki wykonania
         }
     }
 
@@ -323,8 +342,11 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
         }
     });
 
-    // 3. Backfill tests from disk that are missing from metadata 
-    // This allows showing already downloaded tests even if they are not in the cloud/cache list
+    // 3. Backfill tests from disk that are missing from metadata
+    // This allows showing already downloaded tests even if they are not in the cloud/cache list.
+    // Najpierw usuń poprzednie backfille, żeby uniknąć duplikatów przy kolejnych wywołaniach.
+    cachedTests = cachedTests.filter(t => !t._isBackfill);
+
     Object.keys(localVersions).forEach(testId => {
         if (testId === '__scannedDir') return; // Skip debug field
 
@@ -340,7 +362,8 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
                     remote_ver: Number(local.version || 0),
                     hasPython: local.hasPython,
                     isLocalDev: local.isLocalDev || false,
-                    download_url: ''
+                    download_url: '',
+                    _isBackfill: true // Marker do czyszczenia przy kolejnym wywołaniu
                 });
             }
         }
@@ -372,7 +395,8 @@ function getTestStatus(t) {
             btnText: 'Uruchom (Dev)',
             btnClass: 'secondary',
             statusText: 'Lokalny',
-            versionParam: local_ver
+            versionParam: local_ver,
+            isDownloadOnly: false
         };
     }
 
@@ -384,7 +408,8 @@ function getTestStatus(t) {
             btnText: 'Pobierz',
             btnClass: 'primary',
             statusText: 'Nie pobrano',
-            versionParam: remote_ver
+            versionParam: remote_ver,
+            isDownloadOnly: true
         };
     } else if (local_ver < remote_ver) {
         return {
@@ -394,7 +419,8 @@ function getTestStatus(t) {
             btnText: 'Uruchom',
             btnClass: 'outline',
             statusText: 'Aktualizacja dostępna',
-            versionParam: local_ver
+            versionParam: local_ver,
+            isDownloadOnly: false
         };
     } else {
         return {
@@ -404,7 +430,8 @@ function getTestStatus(t) {
             btnText: 'Uruchom',
             btnClass: 'primary',
             statusText: 'Zainstalowano',
-            versionParam: local_ver
+            versionParam: local_ver,
+            isDownloadOnly: false
         };
     }
 }
@@ -457,6 +484,47 @@ function renderTests(testsSource, filterText) {
     }
 }
 
+/**
+ * Tworzy przycisk tagowania testu — wspólny dla wszystkich widoków.
+ * @param {string} test_id
+ * @param {string} testName
+ * @param {Object} opts
+ * @param {string}   [opts.fontSize='24px']
+ * @param {string}   [opts.marginLeft=null]
+ * @param {Function} [opts.onUpdate=null]  - dodatkowy callback po aktualizacji tagów
+ */
+function createTagBtn(test_id, testName, { fontSize = '24px', marginLeft = null, onUpdate = null } = {}) {
+    const tagBtn = document.createElement('span');
+    tagBtn.className = 'material-icons tag-btn';
+    tagBtn.textContent = 'menu_book';
+    tagBtn.title = 'Zarządzaj tagami';
+    tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${testName}`);
+    tagBtn.style.fontSize = fontSize;
+    if (marginLeft !== null) tagBtn.style.marginLeft = marginLeft;
+
+    const currentTags = Tags.getTagsForTest(test_id);
+    tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
+
+    tagBtn.onclick = (e) => {
+        e.stopPropagation();
+        Tags.openTagMenu(test_id, testName, tagBtn, (updatedTags) => {
+            tagBtn.className = 'material-icons tag-btn';
+            tagBtn.style.fontSize = fontSize;
+            if (marginLeft !== null) tagBtn.style.marginLeft = marginLeft;
+            tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
+
+            if (onUpdate) onUpdate(updatedTags);
+
+            const searchInput = document.getElementById('library-search');
+            if (searchInput && searchInput.value) {
+                renderTests(cachedTests, searchInput.value);
+            }
+        });
+    };
+
+    return tagBtn;
+}
+
 function renderGridView(tests) {
     elements.testsGrid.className = 'grid-container';
 
@@ -486,27 +554,7 @@ function renderGridView(tests) {
         statusIcon.title = status.iconTitle;
         statusIcon.textContent = status.iconName;
 
-        const tagBtn = document.createElement('span');
-        tagBtn.className = 'material-icons tag-btn';
-        tagBtn.textContent = 'menu_book';
-        tagBtn.title = 'Zarządzaj tagami';
-        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
-        const currentTags = Tags.getTagsForTest(test_id);
-        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
-        
-        tagBtn.onclick = (e) => {
-            e.stopPropagation();
-            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
-                tagBtn.className = 'material-icons tag-btn';
-                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
-                
-                // Jeśli jest aktywny filtr, odśwież całą listę
-                const searchInput = document.getElementById('library-search');
-                if (searchInput && searchInput.value) {
-                    renderTests(cachedTests, searchInput.value);
-                }
-            });
-        };
+        const tagBtn = createTagBtn(test_id, t.name);
 
         iconsDiv.appendChild(assignmentIcon);
         iconsDiv.appendChild(statusIcon);
@@ -561,8 +609,7 @@ function renderGridView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, status.isDownloadOnly, t.name, t.description, t.isLocalDev);
         });
     });
 }
@@ -592,18 +639,9 @@ function renderListView(tests) {
         statusIcon.title = status.iconTitle;
         statusIcon.textContent = status.iconName;
 
-        const tagBtn = document.createElement('span');
-        tagBtn.className = 'material-icons tag-btn';
-        tagBtn.style.fontSize = '20px';
-        tagBtn.textContent = 'menu_book';
-        tagBtn.title = 'Zarządzaj tagami';
-        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
-        const currentTags = Tags.getTagsForTest(test_id);
-        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
-
         const tagContainer = document.createElement('div');
         tagContainer.className = 'list-tag-container';
-        
+
         const renderChips = (tags) => {
             tagContainer.innerHTML = '';
             tags.forEach(tag => {
@@ -613,23 +651,12 @@ function renderListView(tests) {
                 tagContainer.appendChild(chip);
             });
         };
-        renderChips(currentTags);
+        renderChips(Tags.getTagsForTest(test_id));
 
-        tagBtn.onclick = (e) => {
-            e.stopPropagation();
-            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
-                tagBtn.className = 'material-icons tag-btn';
-                tagBtn.style.fontSize = '20px';
-                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
-                renderChips(updatedTags);
-
-                // Jeśli jest aktywny filtr, odśwież całą listę
-                const searchInput = document.getElementById('library-search');
-                if (searchInput && searchInput.value) {
-                    renderTests(cachedTests, searchInput.value);
-                }
-            });
-        };
+        const tagBtn = createTagBtn(test_id, t.name, {
+            fontSize: '20px',
+            onUpdate: renderChips
+        });
 
         iconDiv.appendChild(assignmentIcon);
         iconDiv.appendChild(statusIcon);
@@ -700,8 +727,7 @@ function renderListView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, status.isDownloadOnly, t.name, t.description, t.isLocalDev);
         });
     });
 }
@@ -767,31 +793,10 @@ function renderTableView(tests) {
         statusText.style.color = status.iconColor;
         statusText.textContent = status.statusText;
 
-        const tagBtn = document.createElement('span');
-        tagBtn.className = 'material-icons tag-btn';
-        tagBtn.style.fontSize = '18px';
-        tagBtn.style.marginLeft = '8px';
-        tagBtn.textContent = 'menu_book';
-        tagBtn.title = 'Zarządzaj tagami';
-        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
-        const currentTags = Tags.getTagsForTest(test_id);
-        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
-
-        tagBtn.onclick = (e) => {
-            e.stopPropagation();
-            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
-                tagBtn.className = 'material-icons tag-btn';
-                tagBtn.style.fontSize = '18px';
-                tagBtn.style.marginLeft = '8px';
-                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
-
-                // Jeśli jest aktywny filtr, odśwież całą listę
-                const searchInput = document.getElementById('library-search');
-                if (searchInput && searchInput.value) {
-                    renderTests(cachedTests, searchInput.value);
-                }
-            });
-        };
+        const tagBtn = createTagBtn(test_id, t.name, {
+            fontSize: '18px',
+            marginLeft: '8px'
+        });
 
         statusDiv.appendChild(statusIcon);
         statusDiv.appendChild(statusText);
@@ -823,8 +828,7 @@ function renderTableView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, status.isDownloadOnly, t.name, t.description, t.isLocalDev);
         });
     });
 
@@ -852,31 +856,10 @@ function renderCompactView(tests) {
         statusIcon.title = status.iconTitle;
         statusIcon.textContent = status.iconName;
 
-        const tagBtn = document.createElement('span');
-        tagBtn.className = 'material-icons tag-btn';
-        tagBtn.style.fontSize = '18px';
-        tagBtn.style.marginLeft = 'auto';
-        tagBtn.textContent = 'menu_book';
-        tagBtn.title = 'Zarządzaj tagami';
-        tagBtn.setAttribute('aria-label', `Zarządzaj tagami dla testu ${t.name}`);
-        const currentTags = Tags.getTagsForTest(test_id);
-        tagBtn.classList.add(currentTags.length > 0 ? 'active' : 'inactive');
-
-        tagBtn.onclick = (e) => {
-            e.stopPropagation();
-            Tags.openTagMenu(test_id, t.name, tagBtn, (updatedTags) => {
-                tagBtn.className = 'material-icons tag-btn';
-                tagBtn.style.fontSize = '18px';
-                tagBtn.style.marginLeft = 'auto';
-                tagBtn.classList.add(updatedTags.length > 0 ? 'active' : 'inactive');
-
-                // Jeśli jest aktywny filtr, odśwież całą listę
-                const searchInput = document.getElementById('library-search');
-                if (searchInput && searchInput.value) {
-                    renderTests(cachedTests, searchInput.value);
-                }
-            });
-        };
+        const tagBtn = createTagBtn(test_id, t.name, {
+            fontSize: '18px',
+            marginLeft: 'auto'
+        });
 
         headerDiv.appendChild(statusIcon);
         headerDiv.appendChild(tagBtn);
@@ -926,8 +909,7 @@ function renderCompactView(tests) {
 
         // Bind click event
         button.addEventListener('click', () => {
-            const onlyDownload = (status.btnText === 'Pobierz');
-            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, onlyDownload, t.name, t.description, t.isLocalDev);
+            startTestProcess(t.download_url || t.downloadUrl, test_id, status.versionParam, status.isDownloadOnly, t.name, t.description, t.isLocalDev);
         });
     });
 }
@@ -952,21 +934,30 @@ export async function startTestProcess(url, id, ver, onlyDownload = false, name 
         }
 
         if (isLocalDev) {
-            const confirm = await Dialog.confirm(
+            const confirmed = await Dialog.confirm(
                 "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
                 "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
                 "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
                 "Czy na pewno chcesz kontynuować?",
                 'warning'
             );
-            if (!confirm) {
+            if (!confirmed) {
                 // Reset button state
                 loadTestsList();
                 return;
             }
         }
 
-        window.electronAPI.downloadAndRun(url, id, ver, onlyDownload, isHpmEnabled, isTrainingMode, name, description, isLocalDev);
+        try {
+            window.electronAPI.downloadAndRun(url, id, ver, onlyDownload, isHpmEnabled, isTrainingMode, name, description, isLocalDev);
+        } catch (err) {
+            console.error('Błąd uruchamiania testu:', err);
+            Dialog.alert('Wystąpił błąd podczas uruchamiania testu.', 'error');
+            if (btn) {
+                btn.disabled = false;
+                loadTestsList();
+            }
+        }
     } else {
         // --- WERSJA PRZEGLĄDARKOWA ---
         if (onlyDownload) {
