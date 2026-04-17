@@ -1,7 +1,7 @@
 [
   {
     "id": "Corsi",
-    "name": "Bloki Corsiego",
+    "name": "Corsiego",
     "description": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
     "version": 1,
     "path": "tests/Corsi/index.html"
@@ -28,13 +28,6 @@
     "path": "tests/GoNoGo/index.html"
   },
   {
-    "id": "Kaczki",
-    "name": "Kaczki",
-    "description": "Zaimportowano z repozytorium BBTP (Kaczki)",
-    "version": 1,
-    "path": "tests/Kaczki/index.html"
-  },
-  {
     "id": "NWstecz",
     "name": "N-Wstecz",
     "description": "Test polega na pamiętaniu liczby która pojawiła się N liczb wcześniej (od 1 do 5)",
@@ -47,13 +40,6 @@
     "description": "Test na koordynacji wzrokowo-ruchowej (oburęcznej).",
     "version": 1,
     "path": "tests/PingPong/index.html"
-  },
-  {
-    "id": "Piorkowski",
-    "name": "Piórkowski",
-    "description": "Test oceny koordynacji wzrokowo-ruchowej",
-    "version": 1,
-    "path": "tests/Piorkowski/index.html"
   },
   {
     "id": "Samochodzik",
@@ -82,13 +68,6 @@
     "description": "Test na czas reakcji zmiany światła na skrzyżowaniu",
     "version": 1,
     "path": "tests/Sygnalizacja/index.html"
-  },
-  {
-    "id": "Poppel",
-    "name": "Test Pöppla",
-    "description": "Test w stylu tablicy Poppelreutera",
-    "version": 1,
-    "path": "tests/Poppel/index.html"
   },
   {
     "id": "Stroop",
