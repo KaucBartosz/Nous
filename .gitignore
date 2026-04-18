@@ -24,3 +24,4 @@ build/
 # Inne
 *.pkl
 *.json  # Jeśli masz ogromne pliki z danymi testowymi.dual-graph/
+kartaPracyDyplomowej.pdf
