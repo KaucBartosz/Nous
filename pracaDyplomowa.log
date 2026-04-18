@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.2) (preloaded format=pdflatex 2026.4.10)  18 APR 2026 10:38
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.2) (preloaded format=pdflatex 2026.4.10)  18 APR 2026 12:26
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -945,45 +945,29 @@ Rozdzia\l  6.
 Rozdzia\l  7.
 [10
 
-] [11
-
-] [12
-
-]
-Dodatek A.
-[13
-
-]
-Dodatek B.
-[14
-
-]
-Dodatek C.
-[15
-
 ] (pracaDyplomowa.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
 Package rerunfilecheck Info: File `pracaDyplomowa.out' has not changed.
-(rerunfilecheck)             Checksum: 3875370ED76206BBD7ABCDA9764C7E39;8319.
+(rerunfilecheck)             Checksum: 2B83B7A295ABC061D694320052DD57F8;7620.
 Package logreq Info: Writing requests to 'pracaDyplomowa.run.xml'.
 \openout1 = `pracaDyplomowa.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 26029 strings out of 467867
- 453011 string characters out of 5417850
- 1354115 words of memory out of 5000000
- 54468 multiletter control sequences out of 15000+600000
- 671952 words of font info for 99 fonts, out of 8000000 for 9000
+ 26001 strings out of 467867
+ 452696 string characters out of 5417850
+ 1353973 words of memory out of 5000000
+ 54458 multiletter control sequences out of 15000+600000
+ 671770 words of font info for 97 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,8n,79p,732b,2243s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/HARDPC/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx12.pfb><C:/Users/HARDPC/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr12.pfb><C:/Users/HARDPC/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmri12.pfb>
-Output written on pracaDyplomowa.pdf (16 pages, 131599 bytes).
+Output written on pracaDyplomowa.pdf (11 pages, 121276 bytes).
 PDF statistics:
- 336 PDF objects out of 1000 (max. 8388607)
- 68 named destinations out of 1000 (max. 500000)
- 26977 words of extra memory for PDF output out of 29859 (max. 10000000)
+ 283 PDF objects out of 1000 (max. 8388607)
+ 54 named destinations out of 1000 (max. 500000)
+ 26937 words of extra memory for PDF output out of 29859 (max. 10000000)
 

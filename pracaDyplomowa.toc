@@ -38,8 +38,3 @@
 \contentsline {section}{\numberline {7.1}Wnioski}{10}{section.7.1}%
 \contentsline {section}{\numberline {7.2}Ocena realizacji celów}{10}{section.7.2}%
 \contentsline {section}{\numberline {7.3}Dalsze możliwości rozwoju}{10}{section.7.3}%
-\contentsline {chapter}{Bibliografia}{11}{chapter*.3}%
-\contentsline {chapter}{Spis skrótów}{12}{chapter*.4}%
-\contentsline {chapter}{\numberline {A}Karta pracy dyplomowej}{13}{appendix.A}%
-\contentsline {chapter}{\numberline {B}Instrukcja uruchomienia systemu}{14}{appendix.B}%
-\contentsline {chapter}{\numberline {C}Zrzuty ekranu}{15}{appendix.C}%

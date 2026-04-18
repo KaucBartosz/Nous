@@ -1,11 +1,11 @@
 # Fdb version 4
-["biber pracaDyplomowa"] 1776500996.09318 "pracaDyplomowa.bcf" "pracaDyplomowa.bbl" "pracaDyplomowa" 1776501506.62831 0
-  "pracaDyplomowa.bcf" 1776501506 108052 6699d3067442e2801997e18a0840e792 "pdflatex"
+["biber pracaDyplomowa"] 1776500996.09318 "pracaDyplomowa.bcf" "pracaDyplomowa.bbl" "pracaDyplomowa" 1776508012.5257 0
+  "pracaDyplomowa.bcf" 1776508012 108052 6699d3067442e2801997e18a0840e792 "pdflatex"
   (generated)
   "pracaDyplomowa.bbl"
   "pracaDyplomowa.blg"
   (rewritten before read)
-["pdflatex"] 1776501505.315 "c:/Users/HARDPC/Desktop/Nous/pracaDyplomowa.tex" "pracaDyplomowa.pdf" "pracaDyplomowa" 1776501506.62885 0
+["pdflatex"] 1776508011.36667 "c:/Users/HARDPC/Desktop/Nous/pracaDyplomowa.tex" "pracaDyplomowa.pdf" "pracaDyplomowa" 1776508012.52624 0
   "C:/Users/HARDPC/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1776500107 82507 a9eef8696c92627b87e9975edea03b2a ""
   "C:/Users/HARDPC/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1775855971 13334333 b63817a85c7beb90399be9ca95ad4fb4 ""
   "C:/Users/HARDPC/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ec.enc" 1256929440 2375 baa924870cfb487815765f9094cf3728 ""
@@ -137,13 +137,13 @@
   "C:/Users/HARDPC/AppData/Local/Programs/MiKTeX/tex/latex/tools/longtable.sty" 1761901070 16014 dfa4b4d4e04a78a3f05a90c19711737a ""
   "C:/Users/HARDPC/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/HARDPC/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/HARDPC/Desktop/Nous/pracaDyplomowa.tex" 1776501503 23007 57f03bd255f986bf22fd5067e53d95ca ""
-  "pracaDyplomowa.aux" 1776501506 10233 21d92978bbafbfae9d079bfd057e63bf "pdflatex"
+  "c:/Users/HARDPC/Desktop/Nous/pracaDyplomowa.tex" 1776508006 20510 9c0c9447690df942cc51da0909e7fe32 ""
+  "pracaDyplomowa.aux" 1776508012 9237 a82391687068173d0cec955e8baf508a "pdflatex"
   "pracaDyplomowa.bbl" 1776500997 0 d41d8cd98f00b204e9800998ecf8427e "biber pracaDyplomowa"
-  "pracaDyplomowa.out" 1776501506 8319 3875370ed76206bbd7abcda9764c7e39 "pdflatex"
-  "pracaDyplomowa.run.xml" 1776501506 2293 461336d1b63f6286954068e7af9d1748 "pdflatex"
-  "pracaDyplomowa.tex" 1776501503 23007 57f03bd255f986bf22fd5067e53d95ca ""
-  "pracaDyplomowa.toc" 1776501506 3789 548565c3cece8b4cb7271ad7430e9a19 "pdflatex"
+  "pracaDyplomowa.out" 1776508012 7620 2b83b7a295abc061d694320052dd57f8 "pdflatex"
+  "pracaDyplomowa.run.xml" 1776508012 2293 461336d1b63f6286954068e7af9d1748 "pdflatex"
+  "pracaDyplomowa.tex" 1776508006 20510 9c0c9447690df942cc51da0909e7fe32 ""
+  "pracaDyplomowa.toc" 1776508012 3437 9636a026f7ee9ed38327695f6c6c67e4 "pdflatex"
   (generated)
   "pracaDyplomowa.aux"
   "pracaDyplomowa.bcf"
