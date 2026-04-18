@@ -1,17 +1,17 @@
 [
   {
-    "id": "Corsi",
-    "name": "Corsiego",
-    "description": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
-    "version": 1,
-    "path": "tests/Corsi/index.html"
-  },
-  {
     "id": "BystreOczko",
     "name": "Bystre Oczko",
     "description": "Test na czas reakcji, polegający na jak najszybszym wciśnięciu sygnalizatora zapalonego na zielono",
     "version": 1,
     "path": "tests/BystreOczko/index.html"
+  },
+  {
+    "id": "Corsi",
+    "name": "Corsiego",
+    "description": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
+    "version": 1,
+    "path": "tests/Corsi/index.html"
   },
   {
     "id": "FabrykaFigur",
