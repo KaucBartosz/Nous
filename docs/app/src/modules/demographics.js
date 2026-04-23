@@ -5,6 +5,7 @@ import { initParticipantsPanel, registerFillFormCallback, saveCurrentAsParticipa
 
 let activeDemographics = null;
 let currentTemplateId = null;
+let _loadedParticipantDisplayName = null; // Name from Kartoteka Badanych
 
 export async function initDemographics() {
     await refreshTemplatesDropdown();
@@ -395,7 +396,7 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
     // Removed overwrite confirmation dialog per user request
     activeDemographics = {
         templateId: currentTemplateId,
-        participant_id: data['Identyfikator'] || data['Kod'] || "ID_" + Date.now(), // Fallback
+        participant_id: _loadedParticipantDisplayName || data['Identyfikator'] || data['Kod'] || "ID_" + Date.now(), // Kartoteka name has priority
         data: data,
         filled_at: new Date().toISOString()
     };
@@ -441,6 +442,7 @@ export async function clearDemographics() {
     const confirmed = await Dialog.confirm("Czy na pewno chcesz usunąć zapisane dane uczestnika?");
     if (confirmed) {
         activeDemographics = null;
+        _loadedParticipantDisplayName = null;
         localStorage.removeItem('activeDemographics');
 
         // Reload form to clear values
@@ -457,6 +459,9 @@ export async function clearDemographics() {
  */
 async function fillFormFromParticipant(participant) {
     if (!participant || !participant.templateId) return;
+
+    // Store the Kartoteka display_name so it becomes the participant_id in results
+    _loadedParticipantDisplayName = participant.display_name || null;
 
     // Switch template if needed
     const select = document.getElementById('demo-template-select');
