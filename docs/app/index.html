@@ -6,11 +6,8 @@
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com; script-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.gstatic.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://github.com https://*.github.com https://api.github.com https://raw.githubusercontent.com https://www.google.com; frame-src https://www.google.com;">
     <title>Nous</title>
-    <!-- Czcionki Google -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Czcionki Lokalne -->
+    <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="src/styles/tags.css">
 </head>
@@ -114,7 +111,8 @@
             <!-- WIDOK 1: Biblioteka (Grid) -->
             <div id="library-view">
                 <div class="library-toolbar">
-                    <input type="text" id="library-search" placeholder="Szukaj testu... (użyj @tag aby filtrować)" class="library-search-input">
+                    <input type="text" id="library-search" placeholder="Szukaj testu... (użyj @tag aby filtrować)"
+                        class="library-search-input">
 
                     <div class="view-switcher" style="margin-left: auto;">
                         <div class="training-mode-container"
@@ -222,7 +220,8 @@
                                 </span>
                                 <div class="btn-progress" id="btn-guest-download-progress"></div>
                             </button>
-                            <button id="btn-guest-delete-selected" class="btn danger small hidden" style="min-width: 140px;" title="Usuń zaznaczone wyniki lokalnie">
+                            <button id="btn-guest-delete-selected" class="btn danger small hidden"
+                                style="min-width: 140px;" title="Usuń zaznaczone wyniki lokalnie">
                                 <span class="material-icons">delete</span> Usuń zaznaczone
                             </button>
                         </div>
@@ -235,7 +234,8 @@
                                 </span>
                                 <div class="btn-progress" id="btn-local-download-progress"></div>
                             </button>
-                            <button id="btn-local-delete-selected" class="btn danger small hidden" style="min-width: 140px;" title="Usuń zaznaczone wyniki lokalnie">
+                            <button id="btn-local-delete-selected" class="btn danger small hidden"
+                                style="min-width: 140px;" title="Usuń zaznaczone wyniki lokalnie">
                                 <span class="material-icons">delete</span> Usuń zaznaczone
                             </button>
                         </div>
@@ -245,7 +245,8 @@
                     <table id="history-table">
                         <thead>
                             <tr>
-                                <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllHistory"></th>
+                                <th style="width: 40px; text-align: center;"><input type="checkbox"
+                                        id="selectAllHistory"></th>
                                 <th>Data</th>
                                 <th>Test</th>
                                 <th>ID Badanego</th>
@@ -342,17 +343,21 @@
                 <div class="participants-panel">
                     <div class="participants-panel-header">
                         <h4 class="participants-panel-title">
-                            <span class="material-icons" style="font-size:18px; vertical-align:middle; margin-right:6px;">people</span>
+                            <span class="material-icons"
+                                style="font-size:18px; vertical-align:middle; margin-right:6px;">people</span>
                             Kartoteka Badanych
                         </h4>
                         <div class="participants-search-wrapper">
                             <span class="material-icons" style="font-size:16px; color:var(--text-muted);">search</span>
-                            <input type="text" id="participants-search" placeholder="Szukaj badanego..." class="participants-search-input">
+                            <input type="text" id="participants-search" placeholder="Szukaj badanego..."
+                                class="participants-search-input">
                         </div>
                     </div>
                     <div id="participants-list" class="participants-list">
                         <!-- JS wstrzyknie tu karty badanych -->
-                        <p class="participants-empty">Brak zapisanych badanych. Wypełnij metryczkę i kliknij <strong>Zapisz do Kartoteki</strong>.</p>
+                        <p class="participants-empty">Brak zapisanych badanych. Wypełnij metryczkę i kliknij
+                            <strong>Zapisz do Kartoteki</strong>.
+                        </p>
                     </div>
                 </div>
 
@@ -634,6 +639,25 @@
 
                     <hr style="border:0; border-top:1px solid #444; margin: 20px 0;">
 
+                    <!-- Biblioteka Testów -->
+                    <div class="settings-section">
+                        <h4>Biblioteka Testów</h4>
+                        <div class="form-group" style="display: flex; align-items: center; gap: 15px;">
+                            <label class="switch" title="Pokaż testy lokalne">
+                                <input type="checkbox" id="show-local-tests-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <span>Pokaż testy lokalne</span>
+                        </div>
+                        <p style="font-size: 12px; color: #888; margin-top: 10px;">
+                            Obecna lokalizacja testów:<br>
+                            <code id="local-tests-path"
+                                style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); display: inline-block; margin-top: 5px;">Wczytywanie...</code>
+                        </p>
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #444; margin: 20px 0;">
+
                     <!-- Podgląd -->
                     <div class="settings-section">
                         <h4>Podgląd Elementów</h4>
@@ -817,10 +841,12 @@
                 <span class="material-icons" style="font-size: 48px; color: #4caf50; margin-bottom: 15px;">lock</span>
                 <p>Witaj! Wygląda na to, że logujesz się po raz pierwszy lub na nowym urządzeniu.</p>
                 <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">
-                    Ustaw 6-cyfrowy PIN Medyczny. Będzie on chronił Twój klucz szyfrujący w chmurze, zapewniając absolutną poufność wyników badań.
+                    Ustaw 6-cyfrowy PIN Medyczny. Będzie on chronił Twój klucz szyfrujący w chmurze, zapewniając
+                    absolutną poufność wyników badań.
                 </p>
                 <div class="form-group">
-                    <input type="password" id="pin-setup-input" placeholder="Wpisz 6 cyfr" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                    <input type="password" id="pin-setup-input" placeholder="Wpisz 6 cyfr" maxlength="6"
+                        style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
                 </div>
                 <p id="pin-setup-error" class="error-text" style="color:red; margin-top: 10px;"></p>
             </div>
@@ -837,13 +863,17 @@
                 <h3>Odblokuj Bazę Wyników</h3>
             </div>
             <div class="modal-body">
-                <span class="material-icons" style="font-size: 48px; color: #ff9800; margin-bottom: 15px;">vpn_key</span>
+                <span class="material-icons"
+                    style="font-size: 48px; color: #ff9800; margin-bottom: 15px;">vpn_key</span>
                 <p>Podaj swój kod PIN, aby odszyfrować historię badań z chmury.</p>
                 <div class="form-group">
-                    <input type="password" id="pin-enter-input" placeholder="• • • • • •" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                    <input type="password" id="pin-enter-input" placeholder="• • • • • •" maxlength="6"
+                        style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
                 </div>
                 <p id="pin-enter-error" class="error-text" style="color:red; margin-top: 10px;"></p>
-                <a href="#" id="link-forgot-pin" style="font-size: 12px; color: #2196f3; text-decoration: none; display: inline-block; margin-top: 15px;">Zapomniałem PIN-u (Użyj kodu odzyskiwania)</a>
+                <a href="#" id="link-forgot-pin"
+                    style="font-size: 12px; color: #2196f3; text-decoration: none; display: inline-block; margin-top: 15px;">Zapomniałem
+                    PIN-u (Użyj kodu odzyskiwania)</a>
             </div>
             <div class="modal-footer" style="justify-content: center; gap: 10px;">
                 <button id="btn-cancel-pin" class="btn outline hidden">Anuluj</button>
@@ -860,14 +890,17 @@
                 <button id="btn-close-recovery-modal" class="close-x">&times;</button>
             </div>
             <div class="modal-body">
-                <span class="material-icons" style="font-size: 48px; color: #ff5252; margin-bottom: 15px;">health_and_safety</span>
+                <span class="material-icons"
+                    style="font-size: 48px; color: #ff5252; margin-bottom: 15px;">health_and_safety</span>
                 <p>Wklej swój 24-znakowy Kod Ratunkowy, aby zresetować PIN.</p>
                 <div class="form-group">
-                    <input type="text" id="recovery-code-input" placeholder="xxxx-xxxx-xxxx-xxxx-xxxx-xxxx" style="text-align: center; font-size: 16px; width: 100%; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                    <input type="text" id="recovery-code-input" placeholder="xxxx-xxxx-xxxx-xxxx-xxxx-xxxx"
+                        style="text-align: center; font-size: 16px; width: 100%; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
                 </div>
                 <p style="margin-top:20px;">Nowy 6-cyfrowy PIN:</p>
                 <div class="form-group">
-                    <input type="password" id="new-pin-input" placeholder="Wpisz 6 cyfr" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
+                    <input type="password" id="new-pin-input" placeholder="Wpisz 6 cyfr" maxlength="6"
+                        style="text-align: center; font-size: 24px; letter-spacing: 5px; width: 200px; margin: 0 auto; background: #252526; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;">
                 </div>
                 <p id="pin-recovery-error" class="error-text" style="color:red; margin-top: 10px;"></p>
             </div>
@@ -884,12 +917,16 @@
                 <h3 style="color: #f44336;">Zapisz Kod Odzyskiwania!</h3>
             </div>
             <div class="modal-body">
-                <p style="font-weight: bold; margin-bottom: 10px;">To jest Twój jedyny ratunek w przypadku zapomnienia PIN-u.</p>
+                <p style="font-weight: bold; margin-bottom: 10px;">To jest Twój jedyny ratunek w przypadku zapomnienia
+                    PIN-u.</p>
                 <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">
-                    Skopiuj poniższy kod i przechowuj go w bardzo bezpiecznym miejscu (np. w menedżerze haseł). Jeśli zapomnisz PIN-u i zgubisz ten kod, bezpowrotnie stracisz dostęp do chmury wyników.
+                    Skopiuj poniższy kod i przechowuj go w bardzo bezpiecznym miejscu (np. w menedżerze haseł). Jeśli
+                    zapomnisz PIN-u i zgubisz ten kod, bezpowrotnie stracisz dostęp do chmury wyników.
                 </p>
-                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid #444; margin-bottom: 15px; user-select: text;">
-                    <code id="recovery-key-display" style="font-size: 16px; color: #4caf50; word-break: break-all; font-family: monospace; letter-spacing: 1px;"></code>
+                <div
+                    style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid #444; margin-bottom: 15px; user-select: text;">
+                    <code id="recovery-key-display"
+                        style="font-size: 16px; color: #4caf50; word-break: break-all; font-family: monospace; letter-spacing: 1px;"></code>
                 </div>
             </div>
             <div class="modal-footer" style="justify-content: center;">

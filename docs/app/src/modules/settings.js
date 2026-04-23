@@ -7,6 +7,7 @@ const SAVED_THEMES_KEY = 'nous-app-saved-themes';
 // Default settings for DARK theme
 const DEFAULT_DARK_SETTINGS = {
     theme: 'dark',
+    showLocalTests: false,
     // Interactive Elements
     primaryColor: '#4f8cf2',
     primaryHover: '#6ea1f7',
@@ -31,6 +32,7 @@ const DEFAULT_DARK_SETTINGS = {
 // Default settings for LIGHT theme
 const DEFAULT_LIGHT_SETTINGS = {
     theme: 'light',
+    showLocalTests: false,
     // Interactive Elements
     primaryColor: '#1d4ed8',
     primaryHover: '#1e40af',
@@ -303,6 +305,10 @@ export function initSettings() {
         buttonTextPicker: document.getElementById('button-text-picker'),
         buttonTextValue: document.getElementById('button-text-value'),
 
+        // Local Tests Filter
+        showLocalTestsToggle: document.getElementById('show-local-tests-toggle'),
+        localTestsPathStr: document.getElementById('local-tests-path'),
+
         // Icons
         iconColorPicker: document.getElementById('icon-color-picker'),
         iconColorValue: document.getElementById('icon-color-value'),
@@ -386,6 +392,9 @@ export function initSettings() {
         if (elements.buttonTextPicker) {
             elements.buttonTextPicker.value = settings.buttonText || '#ffffff';
             elements.buttonTextValue.value = settings.buttonText || '#ffffff';
+        }
+        if (elements.showLocalTestsToggle) {
+            elements.showLocalTestsToggle.checked = settings.showLocalTests === true;
         }
         if (elements.iconColorPicker) {
             elements.iconColorPicker.value = settings.iconColor;
@@ -562,6 +571,21 @@ export function initSettings() {
                 elements.status.style.display = 'none';
                 elements.status.textContent = 'Ustawienia zapisane!';
             }, 3000);
+        });
+    }
+
+    if (elements.showLocalTestsToggle) {
+        elements.showLocalTestsToggle.addEventListener('change', (e) => {
+            currentSettings.showLocalTests = e.target.checked;
+        });
+    }
+
+    if (window.electronAPI && elements.localTestsPathStr) {
+        window.electronAPI.getLocalVersions().then(localVersions => {
+            elements.localTestsPathStr.textContent = localVersions.__scannedDir || 'Nieznana lokalizacja';
+        }).catch(err => {
+            console.error("Błąd pobierania ścieżki:", err);
+            elements.localTestsPathStr.textContent = 'Błąd pobierania ścieżki';
         });
     }
 

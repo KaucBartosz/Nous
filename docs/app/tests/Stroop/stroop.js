@@ -376,8 +376,8 @@ function trialRoutineEachFrame() {
       }
     }
 
-    // --- Limit czasu: 10 s od pojawienia się słowa (= 10.5 s od startu) ---
-    if (t_trial >= 10.5 && continueRoutine_trial) {
+    // --- Limit czasu: 5 s od pojawienia się słowa (= 5.5 s od startu) ---
+    if (t_trial >= 5.5 && continueRoutine_trial) {
       psychoJS.experiment.addData('trial_n', trials_data.length + 1);
       psychoJS.experiment.addData('word', currentWord);
       psychoJS.experiment.addData('color', currentColor);

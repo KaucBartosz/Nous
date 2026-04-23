@@ -1,12 +1,5 @@
 [
   {
-    "id": "Corsi",
-    "name": "Bloki Corsiego",
-    "description": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
-    "version": 1,
-    "path": "tests/Corsi/index.html"
-  },
-  {
     "id": "BystreOczko",
     "name": "Bystre Oczko",
     "description": "Test na czas reakcji, polegający na jak najszybszym wciśnięciu sygnalizatora zapalonego na zielono",
@@ -14,18 +7,25 @@
     "path": "tests/BystreOczko/index.html"
   },
   {
+    "id": "Corsi",
+    "name": "Corsiego",
+    "description": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
+    "version": 1,
+    "path": "tests/Corsi/index.html"
+  },
+  {
+    "id": "FabrykaFigur",
+    "name": "FabrykaFigur",
+    "description": "Zaimportowano z repozytorium BBTP (FabrykaFigur)",
+    "version": 1,
+    "path": "tests/FabrykaFigur/index.html"
+  },
+  {
     "id": "GoNoGo",
     "name": "Go/No-Go",
     "description": "Test typu Go NoGo na liczbach parzystych i nieparzystych.",
     "version": 1,
     "path": "tests/GoNoGo/index.html"
-  },
-  {
-    "id": "Kaczki",
-    "name": "Kaczki",
-    "description": "Zaimportowano z repozytorium BBTP (Kaczki)",
-    "version": 1,
-    "path": "tests/Kaczki/index.html"
   },
   {
     "id": "NWstecz",
@@ -40,13 +40,6 @@
     "description": "Test na koordynacji wzrokowo-ruchowej (oburęcznej).",
     "version": 1,
     "path": "tests/PingPong/index.html"
-  },
-  {
-    "id": "Piorkowski",
-    "name": "Piórkowski",
-    "description": "Test oceny koordynacji wzrokowo-ruchowej",
-    "version": 1,
-    "path": "tests/Piorkowski/index.html"
   },
   {
     "id": "Samochodzik",
@@ -77,17 +70,17 @@
     "path": "tests/Sygnalizacja/index.html"
   },
   {
-    "id": "Poppel",
-    "name": "Test Pöppla",
-    "description": "Test w stylu tablicy Poppelreutera",
-    "version": 1,
-    "path": "tests/Poppel/index.html"
-  },
-  {
     "id": "Stroop",
     "name": "Test Stroopa",
     "description": "Test w stylu testu Stroop",
     "version": 1,
     "path": "tests/Stroop/index.html"
+  },
+  {
+    "id": "ZlapSygnal",
+    "name": "ZlapSygnal",
+    "description": "Zaimportowano z repozytorium BBTP (ZlapSygnal)",
+    "version": 1,
+    "path": "tests/ZlapSygnal/index.html"
   }
 ]

@@ -127,7 +127,7 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Za chwilę na ekranie pojawią się sygnalizacje świetlne. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na tę z sygnalizacji, w której światło zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
+    text: 'Za chwilę na ekranie pojawią się sygnalizacje świetlne. \nTwoim zadaniem jest, za pomocą MYSZY, kliknąć na tę z sygnalizacji, w której światło zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz.\n\nGdy sygnalizacje zgasną, umieść kursor myszki na małym czerwonym kwadracie na środku ekranu, aby rozpocząć kolejną rundę.\n\nAby rozpocząć zadanie, wciśnij SPACJĘ.',
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,
@@ -184,6 +184,16 @@ async function experimentInit() {
     window.lights.push(rowStims);
   }
 
+  window.centerSquare = new visual.Rect({
+    win: psychoJS.window,
+    name: 'centerSquare',
+    size: [0.05, 0.05],
+    pos: [0, 0],
+    fillColor: new util.Color('red'),
+    lineColor: new util.Color('red'),
+    opacity: 1
+  });
+
   // Inicjalizacja zmiennych stanu
   window.clicked_row = null;
   window.clicked_col = null;
@@ -207,34 +217,7 @@ async function experimentInit() {
   globalClock = new util.Clock();  // to track the time since experiment started
   routineTimer = new util.CountdownTimer();  // to track time remaining of each (non-slip) routine
 
-  // --- EKRAN DOTYKOWY: konwersja touch -> PsychoJS "height" units ---
-  window._touchJustStarted = false;
-  window._touchPsychoX = null;
-  window._touchPsychoY = null;
-  window._touchCanvas = null;
-  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
-  if (canvas) {
-    window._touchCanvas = canvas;
-    function touchToPsycho(clientX, clientY) {
-      let r = canvas.getBoundingClientRect();
-      let aspect = r.width / r.height;
-      return {
-        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
-        y: 1 - 2 * (clientY - r.top) / r.height
-      };
-    }
-    canvas.addEventListener('touchstart', function (e) {
-      e.preventDefault();
-      if (e.touches.length > 0) {
-        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
-        window._touchJustStarted = true;
-        window._touchPsychoX = p.x;
-        window._touchPsychoY = p.y;
-      }
-    }, { passive: false });
-    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
-    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
-  }
+  // --- EKRAN DOTYKOWY USUNIĘTY NA ŻYCZENIE ---
 
   return Scheduler.Event.NEXT;
 }
@@ -542,6 +525,9 @@ function trialRoutineBegin(snapshot) {
     window.rt = null;
     window.correct = 0;
 
+    window.waitingForCenter = false;
+    window.centerSquare.setAutoDraw(false);
+
     // Przywrócenie czerwonego koloru wszystkim światłom
     for (let r = 0; r < window.ROWS; r++) {
       for (let c = 0; c < window.COLS; c++) {
@@ -603,7 +589,7 @@ function trialRoutineEachFrame() {
       }
     }
 
-    // 3. Obsługa kliknięcia (mysz) lub dotknięcia (ekran dotykowy)
+    // 3. Obsługa kliknięcia (mysz)
     let buttons = mouse.getPressed();
     let isPressedNow = (buttons[0] || buttons[1] || buttons[2]);
     let isNewClick = isPressedNow && !window.prevMouseState;
@@ -656,41 +642,19 @@ function trialRoutineEachFrame() {
         if (window.responded) break;
       }
     }
-    // Ekran dotykowy: traktuj dotknięcie jak kliknięcie
-    if (window.green_is_on && !window.responded && window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas) {
-      for (let r = 0; r < window.ROWS; r++) {
-        for (let c = 0; c < window.COLS; c++) {
-          if (pointInStim(window._touchPsychoX, window._touchPsychoY, window.lights[r][c])) {
-            window.responded = true;
-            window.clicked_row = r;
-            window.clicked_col = c;
-            window.rt = window.rtClock.getTime();
-            window.correct = (r === window.target_row && c === window.target_col) ? 1 : 0;
-
-            // Unified reaction: all lights to syg.png
-            for (let rr = 0; rr < window.ROWS; rr++) {
-              for (let cc = 0; cc < window.COLS; cc++) {
-                window.lights[rr][cc].setImage('resources/syg.png');
-              }
-            }
-            window.feedbackClock.reset();
-            break;
-          }
-        }
-        if (window.responded) break;
-      }
-      window._touchJustStarted = false;
-      window._touchPsychoX = null;
-      window._touchPsychoY = null;
-    } else if (window._touchJustStarted) {
-      window._touchJustStarted = false;
-      window._touchPsychoX = null;
-      window._touchPsychoY = null;
-    }
 
     // 4. Koniec próby po odpowiednim czasie feedbacku
-    if (window.responded && window.feedbackClock.getTime() >= window.feedbackTime) {
-      continueRoutine = false;
+    if (window.responded && !window.waitingForCenter && window.feedbackClock.getTime() >= window.feedbackTime) {
+      window.waitingForCenter = true;
+      window.centerSquare.setAutoDraw(true);
+    }
+
+    if (window.waitingForCenter) {
+      let mousePos = mouse.getPos();
+      if (pointInStim(mousePos[0], mousePos[1], window.centerSquare)) {
+        window.centerSquare.setAutoDraw(false);
+        continueRoutine = false;
+      }
     }
     // *mouse* updates
     if (t >= 0.0 && mouse.status === PsychoJS.Status.NOT_STARTED) {

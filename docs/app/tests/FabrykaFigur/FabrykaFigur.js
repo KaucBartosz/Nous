@@ -1,5 +1,5 @@
 /*****************
- * Poppelv2 *
+ * FabrykaFigur *
  *****************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
@@ -10,7 +10,7 @@ const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
 
 // ================= SESSION INFO =================
-let expName = 'Poppelv2';
+let expName = 'FabrykaFigur';
 let expInfo = {
   'participant': `${util.pad(Number.parseFloat(util.randint(0, 999999)).toFixed(0), 6)}`,
   'session': '001',
@@ -102,7 +102,7 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Trudny', shapes: 5, colors: 5, speedMult: 1.35 },
 };
 
-const DURATION_OPTIONS = [40, 120, 300];
+const DURATION_OPTIONS = [40, 180, 300];
 const TARGET_CHANGE_INTERVAL = 20; // seconds
 const TARGET_RATIO = 0.4; // 40% minimum good figures
 const N_TARGETS = 2;
@@ -436,7 +436,7 @@ function durationRoutineBegin() {
       win: psychoJS.window,
       text: 'Wybierz czas trwania testu:\n\n'
         + '1 – 40 sekund\n'
-        + '2 – 120 sekund\n'
+        + '2 – 180 sekund\n'
         + '3 – 300 sekund\n\n'
         + 'Naciśnij 1, 2 lub 3.',
       font: 'Arial',
@@ -946,7 +946,7 @@ async function quitPsychoJS(message, isCompleted) {
       let diffLabel = chosenDifficulty ? DIFFICULTY_CONFIG[chosenDifficulty].label : 'nieznany';
 
       window.electronTest.sendResults({
-        testId: expInfo['expName'] || 'Poppelv2',
+        testId: expInfo['expName'] || 'FabrykaFigur',
         subjectId: expInfo['participant'],
         timestamp: new Date().toISOString(),
 
