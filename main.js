@@ -612,9 +612,13 @@ function openTestWindow(htmlPath) {
         }
     });
 
-    // Poprawka dla Linux Mint: wymuszanie trybu pełnoekranowego po załadowaniu okna
+    // Poprawka dla Linux Mint: wymuszanie trybu pełnoekranowego z opóźnieniem
     activeTestWindow.once('ready-to-show', () => {
-        activeTestWindow.setFullScreen(true);
+        setTimeout(() => {
+            if (activeTestWindow && !activeTestWindow.isDestroyed()) {
+                activeTestWindow.setFullScreen(true);
+            }
+        }, 300);
     });
 
     activeTestWindow.loadFile(htmlPath);
