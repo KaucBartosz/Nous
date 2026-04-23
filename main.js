@@ -595,15 +595,29 @@ ipcMain.handle('is-test-running', async () => {
 function openTestWindow(htmlPath) {
     if (isTestRunning()) return;
 
+    const isLinux = process.platform === 'linux';
+
+    // Na Linuksie (szczególnie Cinnamon/Mint): 
+    // - parent blokuje fullscreen w niektórych WM
+    // - fullscreen w konstruktorze jest ignorowany przez Cinnamona
+    // - okno musi być najpierw zmapowane (widoczne), zanim WM zaakceptuje fullscreen
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.size;
+
     activeTestWindow = new BrowserWindow({
-        width: 1024,
-        height: 768,
-        parent: mainWindow,
+        width: isLinux ? width : 1024,
+        height: isLinux ? height : 768,
+        x: isLinux ? 0 : undefined,
+        y: isLinux ? 0 : undefined,
+        show: !isLinux,              // Na Linuksie: ukryj, pokażemy ręcznie
+        parent: isLinux ? undefined : mainWindow,  // Na Linuksie: bez parent (Cinnamon blokuje FS dla child windows)
         title: "Badanie w toku...",
 
         // --- PEŁNY EKRAN ---
-        fullscreen: true,       // Odpala na cały ekran
-        autoHideMenuBar: true,  // Ukrywa menu
+        fullscreen: !isLinux,        // Na Linuksie nie ustawiamy w konstruktorze
+        fullscreenable: true,
+        autoHideMenuBar: true,
 
         webPreferences: {
             nodeIntegration: false,
@@ -612,14 +626,27 @@ function openTestWindow(htmlPath) {
         }
     });
 
-    // Poprawka dla Linux Mint: wymuszanie trybu pełnoekranowego z opóźnieniem
-    activeTestWindow.once('ready-to-show', () => {
-        setTimeout(() => {
-            if (activeTestWindow && !activeTestWindow.isDestroyed()) {
-                activeTestWindow.setFullScreen(true);
-            }
-        }, 300);
-    });
+    if (isLinux) {
+        // Linux/Cinnamon: pokaż okno → poczekaj aż WM je zmapuje → dopiero wtedy fullscreen
+        activeTestWindow.once('ready-to-show', () => {
+            activeTestWindow.show();
+            activeTestWindow.maximize();
+
+            setTimeout(() => {
+                if (activeTestWindow && !activeTestWindow.isDestroyed()) {
+                    activeTestWindow.setFullScreen(true);
+
+                    // Fallback: jeśli po kolejnych 500ms nadal nie jest fullscreen, zostaje zmaksymalizowane
+                    setTimeout(() => {
+                        if (activeTestWindow && !activeTestWindow.isDestroyed() && !activeTestWindow.isFullScreen()) {
+                            console.log('[FullScreen] Natywny fullscreen nie zadziałał — fallback: maximize');
+                            activeTestWindow.maximize();
+                        }
+                    }, 500);
+                }
+            }, 500);
+        });
+    }
 
     activeTestWindow.loadFile(htmlPath);
 
