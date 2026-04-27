@@ -28,6 +28,13 @@
     "path": "tests/GoNoGo/index.html"
   },
   {
+    "id": "GoNoGoBiegacze",
+    "name": "GoNoGoBiegacze",
+    "description": "Zaimportowano z repozytorium BBTP (GoNoGoBiegacze)",
+    "version": 1,
+    "path": "tests/GoNoGoBiegacze/index.html"
+  },
+  {
     "id": "NWstecz",
     "name": "N-Wstecz",
     "description": "Test polega na pamiętaniu liczby która pojawiła się N liczb wcześniej (od 1 do 5)",
