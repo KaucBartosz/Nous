@@ -249,7 +249,7 @@ function selectionRoutineEachFrame() {
 
     // ESC
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     if (!continueRoutine_sel) return Scheduler.Event.NEXT;
@@ -390,7 +390,7 @@ function trialRoutineEachFrame() {
 
     // ESC
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     if (!continueRoutine_trial) return Scheduler.Event.NEXT;

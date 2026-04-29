@@ -83,7 +83,7 @@ function welcomeRoutine() {
             lastSelectionKey = null;
             return Scheduler.Event.NEXT;
         }
-        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Wyjście', false);
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Wyjście', true);
         return Scheduler.Event.FLIP_REPEAT;
     };
 }
@@ -110,7 +110,7 @@ function difficultyRoutine() {
             return Scheduler.Event.NEXT;
         }
 
-        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Wyjście', false);
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Wyjście', true);
         return Scheduler.Event.FLIP_REPEAT;
     };
 }
@@ -194,7 +194,7 @@ function gameRoutine() {
             return Scheduler.Event.NEXT;
         }
 
-        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Przerwano', false);
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Przerwano', true);
 
         // System mrożenia po kolizji
         if (freezeTimer > 0) {

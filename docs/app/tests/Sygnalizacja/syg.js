@@ -324,7 +324,7 @@ function welcomeRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     // check if the Routine should terminate
@@ -641,7 +641,7 @@ function trialRoutineEachFrame() {
     }
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     // check if the Routine should terminate

@@ -204,7 +204,7 @@ function welcomeRoutineEachFrame(snapshot) {
     if (welcomeKeys.status === PsychoJS.Status.STARTED) {
       let k = welcomeKeys.getKeys({ keyList: ['space', 'escape'], waitRelease: false });
       if (k.length > 0) {
-        if (k[0].name === 'escape') return quitPsychoJS('Escape', false);
+        if (k[0].name === 'escape') return quitPsychoJS('Escape', true);
         continueRoutine = false;
       }
     }

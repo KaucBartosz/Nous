@@ -326,7 +326,7 @@ function welcomeRoutineEachFrame() {
     }
 
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     if (!continueRoutine) {
@@ -395,7 +395,7 @@ function difficultyRoutineEachFrame() {
     }
 
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     if (!continueRoutine) {
@@ -473,7 +473,7 @@ function durationRoutineEachFrame() {
     }
 
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     if (!continueRoutine) {
@@ -823,7 +823,7 @@ function trialsRoutineEachFrame() {
 
     // ESC check
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
     }
 
     if (!continueRoutine) {
