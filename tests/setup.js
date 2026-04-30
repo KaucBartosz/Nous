@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 // ==========================================================
 // Web Crypto API Mock with real encryption support
@@ -7,12 +7,16 @@ const cryptoKeys = new Map();
 
 const mockCrypto = {
   subtle: {
-    importKey: vi.fn(async (format, keyData, algorithm, extractable, keyUsages) => {
-      const keyId = Array.from(new Uint8Array(keyData)).map(b => b.toString(16).padStart(2, '0')).join('');
-      const key = { id: keyId, data: keyData, usages: keyUsages };
-      cryptoKeys.set(keyId, key);
-      return key;
-    }),
+    importKey: vi.fn(
+      async (format, keyData, algorithm, extractable, keyUsages) => {
+        const keyId = Array.from(new Uint8Array(keyData))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        const key = { id: keyId, data: keyData, usages: keyUsages };
+        cryptoKeys.set(keyId, key);
+        return key;
+      },
+    ),
 
     encrypt: vi.fn(async (algorithm, key, data) => {
       // Simple XOR-based mock encryption for testing
@@ -22,7 +26,8 @@ const mockCrypto = {
       const result = new Uint8Array(dataBytes.length);
 
       for (let i = 0; i < dataBytes.length; i++) {
-        result[i] = dataBytes[i] ^ keyBytes[i % keyBytes.length] ^ iv[i % iv.length];
+        result[i] =
+          dataBytes[i] ^ keyBytes[i % keyBytes.length] ^ iv[i % iv.length];
       }
 
       return result.buffer;
@@ -36,7 +41,8 @@ const mockCrypto = {
       const result = new Uint8Array(dataBytes.length);
 
       for (let i = 0; i < dataBytes.length; i++) {
-        result[i] = dataBytes[i] ^ keyBytes[i % keyBytes.length] ^ iv[i % iv.length];
+        result[i] =
+          dataBytes[i] ^ keyBytes[i % keyBytes.length] ^ iv[i % iv.length];
       }
 
       return result.buffer;
@@ -46,7 +52,19 @@ const mockCrypto = {
     deriveKey: vi.fn(),
     sign: vi.fn(),
     verify: vi.fn(),
-    digest: vi.fn()
+    digest: vi.fn(async (algorithm, data) => {
+      // Simple mock digest — returns deterministic hash based on input bytes
+      const bytes = new Uint8Array(data);
+      const result = new Uint8Array(32);
+      for (let i = 0; i < bytes.length; i++) {
+        result[i % 32] ^= bytes[i];
+      }
+      // Make it deterministic but non-trivial
+      for (let i = 0; i < 32; i++) {
+        result[i] = (result[i] * 31 + i * 7) & 0xff;
+      }
+      return result.buffer;
+    }),
   },
 
   getRandomValues: (arr) => {
@@ -56,17 +74,18 @@ const mockCrypto = {
     return arr;
   },
 
-  randomUUID: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  })
+  randomUUID: () =>
+    "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    }),
 };
 
-Object.defineProperty(global, 'crypto', {
+Object.defineProperty(global, "crypto", {
   value: mockCrypto,
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // ==========================================================
@@ -74,7 +93,7 @@ Object.defineProperty(global, 'crypto', {
 // ==========================================================
 global.window = global.window || {};
 global.window.electronAPI = {
-  getEncryptionKey: vi.fn(() => '0'.repeat(64)),
+  getEncryptionKey: vi.fn(() => "0".repeat(64)),
   getLocalVersions: vi.fn(() => ({})),
   deleteTest: vi.fn(),
   downloadAndRun: vi.fn(),
@@ -89,13 +108,13 @@ global.window.electronAPI = {
   checkHpmUpdate: vi.fn(() => ({ hasUpdate: false })),
   downloadHpmEngine: vi.fn(),
   isLinux: false,
-  getLinuxDistro: vi.fn(() => ({ family: 'other' }))
+  getLinuxDistro: vi.fn(() => ({ family: "other" })),
 };
 
 // ==========================================================
 // Mock btoa/atob for Node.js environment
 // ==========================================================
-if (typeof global.btoa === 'undefined') {
-  global.btoa = (str) => Buffer.from(str, 'binary').toString('base64');
-  global.atob = (str) => Buffer.from(str, 'base64').toString('binary');
+if (typeof global.btoa === "undefined") {
+  global.btoa = (str) => Buffer.from(str, "binary").toString("base64");
+  global.atob = (str) => Buffer.from(str, "base64").toString("binary");
 }

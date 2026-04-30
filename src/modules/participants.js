@@ -1,7 +1,11 @@
 // src/modules/participants.js
-import { saveParticipant, getAllParticipants, deleteParticipant } from './database.js';
-import { getCurrentUser } from './auth.js';
-import { Dialog } from './dialog.js';
+import {
+  saveParticipant,
+  getAllParticipants,
+  deleteParticipant,
+} from "./database.js";
+import { getResearcherUid } from "./auth.js";
+import { Dialog } from "./dialog.js";
 
 // Callback to fill the demographics form — set by demographics.js
 let _fillFormCallback = null;
@@ -11,15 +15,7 @@ let _fillFormCallback = null;
  * @param {Function} cb - (participant) => void
  */
 export function registerFillFormCallback(cb) {
-    _fillFormCallback = cb;
-}
-
-/**
- * Returns the researcher UID for the currently logged-in user (or GUEST).
- */
-function getResearcherUid() {
-    const user = getCurrentUser();
-    return user ? user.uid : 'GUEST';
+  _fillFormCallback = cb;
 }
 
 /**
@@ -27,55 +23,57 @@ function getResearcherUid() {
  * Binds the search input and the refresh function.
  */
 export function initParticipantsPanel() {
-    const searchInput = document.getElementById('participants-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            renderParticipantsList(searchInput.value.trim().toLowerCase());
-        });
-    }
-    renderParticipantsList();
+  const searchInput = document.getElementById("participants-search");
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      renderParticipantsList(searchInput.value.trim().toLowerCase());
+    });
+  }
+  renderParticipantsList();
 }
 
 /**
  * Renders the list of participants for the current researcher.
  * @param {string} [filter=''] - Optional text filter applied to display_name.
  */
-export async function renderParticipantsList(filter = '') {
-    const container = document.getElementById('participants-list');
-    if (!container) return;
+export async function renderParticipantsList(filter = "") {
+  const container = document.getElementById("participants-list");
+  if (!container) return;
 
-    const uid = getResearcherUid();
-    const all = await getAllParticipants(uid);
+  const uid = getResearcherUid();
+  const all = await getAllParticipants(uid);
 
-    const filtered = filter
-        ? all.filter(p => p.display_name.toLowerCase().includes(filter))
-        : all;
+  const filtered = filter
+    ? all.filter((p) => p.display_name.toLowerCase().includes(filter))
+    : all;
 
-    container.innerHTML = '';
+  container.innerHTML = "";
 
-    if (filtered.length === 0) {
-        container.innerHTML = '<p class="participants-empty">Brak zapisanych badanych. Wypełnij metryczkę i kliknij <strong>Zapisz do Kartoteki</strong>.</p>';
-        return;
-    }
+  if (filtered.length === 0) {
+    container.innerHTML =
+      '<p class="participants-empty">Brak zapisanych badanych. Wypełnij metryczkę i kliknij <strong>Zapisz do Kartoteki</strong>.</p>';
+    return;
+  }
 
-    // We need template names — fetch templates lazily (cheap, just IDs)
-    // Map templateId -> templateName from the select options (already rendered)
-    const templateSelect = document.getElementById('demo-template-select');
-    const templateNameMap = {};
-    if (templateSelect) {
-        Array.from(templateSelect.options).forEach(opt => {
-            if (opt.value) templateNameMap[opt.value] = opt.textContent;
-        });
-    }
+  // We need template names — fetch templates lazily (cheap, just IDs)
+  // Map templateId -> templateName from the select options (already rendered)
+  const templateSelect = document.getElementById("demo-template-select");
+  const templateNameMap = {};
+  if (templateSelect) {
+    Array.from(templateSelect.options).forEach((opt) => {
+      if (opt.value) templateNameMap[opt.value] = opt.textContent;
+    });
+  }
 
-    filtered.forEach(participant => {
-        const templateName = templateNameMap[participant.templateId] || 'Nieznany szablon';
+  filtered.forEach((participant) => {
+    const templateName =
+      templateNameMap[participant.templateId] || "Nieznany szablon";
 
-        const card = document.createElement('div');
-        card.className = 'participant-card';
-        card.dataset.id = participant.id;
+    const card = document.createElement("div");
+    card.className = "participant-card";
+    card.dataset.id = participant.id;
 
-        card.innerHTML = `
+    card.innerHTML = `
             <div class="participant-card-info">
                 <span class="material-icons participant-icon">person</span>
                 <div class="participant-card-text">
@@ -93,16 +91,20 @@ export async function renderParticipantsList(filter = '') {
             </div>
         `;
 
-        card.querySelector('.btn-load-participant').addEventListener('click', () => {
-            loadParticipantToForm(participant);
-        });
+    card
+      .querySelector(".btn-load-participant")
+      .addEventListener("click", () => {
+        loadParticipantToForm(participant);
+      });
 
-        card.querySelector('.btn-delete-participant').addEventListener('click', async () => {
-            await handleDeleteParticipant(participant);
-        });
+    card
+      .querySelector(".btn-delete-participant")
+      .addEventListener("click", async () => {
+        await handleDeleteParticipant(participant);
+      });
 
-        container.appendChild(card);
-    });
+    container.appendChild(card);
+  });
 }
 
 /**
@@ -110,11 +112,11 @@ export async function renderParticipantsList(filter = '') {
  * @param {Object} participant
  */
 function loadParticipantToForm(participant) {
-    if (!_fillFormCallback) {
-        console.warn('[Participants] fillFormCallback not registered.');
-        return;
-    }
-    _fillFormCallback(participant);
+  if (!_fillFormCallback) {
+    console.warn("[Participants] fillFormCallback not registered.");
+    return;
+  }
+  _fillFormCallback(participant);
 }
 
 /**
@@ -123,35 +125,41 @@ function loadParticipantToForm(participant) {
  * @param {Object} demographicsData - { templateId, participant_id, data }
  */
 export async function saveCurrentAsParticipant(demographicsData) {
-    if (!demographicsData || !demographicsData.templateId) {
-        await Dialog.alert('Wybierz szablon i wypełnij metryczkę przed zapisem do kartoteki.', 'warning');
-        return;
-    }
-
-    // Ask user for a display name
-    const displayName = await Dialog.prompt(
-        'Podaj nazwę profilu badanego (np. imię i nazwisko lub kod):',
-        ''
+  if (!demographicsData || !demographicsData.templateId) {
+    await Dialog.alert(
+      "Wybierz szablon i wypełnij metryczkę przed zapisem do kartoteki.",
+      "warning",
     );
+    return;
+  }
 
-    if (!displayName || !displayName.trim()) return; // User cancelled or empty
+  // Ask user for a display name
+  const displayName = await Dialog.prompt(
+    "Podaj nazwę profilu badanego (np. imię i nazwisko lub kod):",
+    "",
+  );
 
-    const uid = getResearcherUid();
+  if (!displayName || !displayName.trim()) return; // User cancelled or empty
 
-    const participant = {
-        display_name: displayName.trim(),
-        templateId: demographicsData.templateId,
-        participant_id: demographicsData.participant_id,
-        data: demographicsData.data,
-    };
+  const uid = getResearcherUid();
 
-    try {
-        await saveParticipant(participant, uid);
-        await Dialog.alert(`Profil "${displayName.trim()}" został zapisany do kartoteki.`, 'success');
-        await renderParticipantsList();
-    } catch (e) {
-        await Dialog.alert('Błąd zapisu do kartoteki: ' + e.message, 'error');
-    }
+  const participant = {
+    display_name: displayName.trim(),
+    templateId: demographicsData.templateId,
+    participant_id: demographicsData.participant_id,
+    data: demographicsData.data,
+  };
+
+  try {
+    await saveParticipant(participant, uid);
+    await Dialog.alert(
+      `Profil "${displayName.trim()}" został zapisany do kartoteki.`,
+      "success",
+    );
+    await renderParticipantsList();
+  } catch (e) {
+    await Dialog.alert("Błąd zapisu do kartoteki: " + e.message, "error");
+  }
 }
 
 /**
@@ -159,26 +167,26 @@ export async function saveCurrentAsParticipant(demographicsData) {
  * @param {Object} participant
  */
 async function handleDeleteParticipant(participant) {
-    const confirmed = await Dialog.confirm(
-        `Czy na pewno chcesz usunąć profil "${participant.display_name}" z kartoteki?\n\nStare wyniki badań NIE zostaną usunięte.`
-    );
-    if (!confirmed) return;
+  const confirmed = await Dialog.confirm(
+    `Czy na pewno chcesz usunąć profil "${participant.display_name}" z kartoteki?\n\nStare wyniki badań NIE zostaną usunięte.`,
+  );
+  if (!confirmed) return;
 
-    try {
-        await deleteParticipant(participant.id);
-        await renderParticipantsList();
-    } catch (e) {
-        await Dialog.alert('Błąd usuwania: ' + e.message, 'error');
-    }
+  try {
+    await deleteParticipant(participant.id);
+    await renderParticipantsList();
+  } catch (e) {
+    await Dialog.alert("Błąd usuwania: " + e.message, "error");
+  }
 }
 
 /**
  * Minimal HTML escape helper (avoids importing entire utils.js for this).
  */
 function escapeHtml(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
