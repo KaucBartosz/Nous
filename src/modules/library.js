@@ -210,11 +210,11 @@ export function initViewSwitcher() {
             const distro = await window.electronAPI.getLinuxDistro();
             if (distro.family === "rhel") {
               linuxNote =
-                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>Fedora/RHEL</strong> (${distro.id || "linux"}).` +
+                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>${escapeHtml(distro.id || "linux")}</strong>.` +
                 ` Jeśli wystąpią błędy graficzne: <code>sudo dnf install SDL2 mesa-libGL alsa-lib</code></small>`;
             } else {
               linuxNote =
-                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>Debian/Ubuntu</strong> (${distro.id || "linux"}).` +
+                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>${escapeHtml(distro.id || "linux")}</strong>.` +
                 ` Jeśli wystąpią błędy graficzne: <code>sudo apt-get install libsdl2-2.0-0 libgl1 libasound2</code></small>`;
             }
           }

@@ -405,17 +405,19 @@ export function initSettings() {
             elements.iconActiveValue.value = settings.iconActive;
         }
         if (elements.bgDarkPicker) {
-            elements.bgDarkPicker.value = settings.bgDark.startsWith('#') ? settings.bgDark : '#0f111a';
-            elements.bgDarkValue.value = settings.bgDark;
+          const bgDark = typeof settings.bgDark === 'string' ? settings.bgDark : '#0f111a';
+          elements.bgDarkPicker.value = bgDark.startsWith('#') ? bgDark : '#0f111a';
+          elements.bgDarkValue.value = bgDark;
         }
         if (elements.bgSidebarPicker) {
-            elements.bgSidebarPicker.value = settings.bgSidebar.startsWith('#') ? settings.bgSidebar : '#1a1c26';
-            elements.bgSidebarValue.value = settings.bgSidebar;
+          const bgSidebar = typeof settings.bgSidebar === 'string' ? settings.bgSidebar : '#1a1c26';
+          elements.bgSidebarPicker.value = bgSidebar.startsWith('#') ? bgSidebar : '#1a1c26';
+          elements.bgSidebarValue.value = bgSidebar;
         }
         if (elements.borderColorPicker) {
-            const borderHex = settings.borderColor.startsWith('#') ? settings.borderColor : '#ffffff';
-            elements.borderColorPicker.value = borderHex;
-            elements.borderColorValue.value = settings.borderColor;
+          const borderHex = typeof settings.borderColor === 'string' ? settings.borderColor : '#ffffff';
+          elements.borderColorPicker.value = borderHex.startsWith('#') ? borderHex : '#ffffff';
+          elements.borderColorValue.value = borderHex;
         }
 
         elements.themeRadios.forEach(radio => {

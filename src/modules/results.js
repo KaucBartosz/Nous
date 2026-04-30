@@ -18,14 +18,8 @@ function validateTestResults(raw) {
     throw new Error("Wyniki testu muszą być obiektem");
   }
 
-  // Sanityzacja pól tekstowych przed dalszym przetwarzaniem
-  const sanitized = { ...raw };
-  if (sanitized.testId)
-    sanitized.testId = String(sanitized.testId).replace(/[<>]/g, "");
-  if (sanitized.subjectId)
-    sanitized.subjectId = String(sanitized.subjectId).replace(/[<>]/g, "");
-
-  return sanitized;
+  // Data is stored raw; sanitization happens at render time via textContent/escapeHtml
+  return { ...raw };
 }
 
 export function initResultsHandler() {

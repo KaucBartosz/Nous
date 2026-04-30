@@ -9,7 +9,13 @@ import { getPendingResults, markAsSynced } from "./database.js";
 import { getCurrentUser, getUserStatus } from "./auth.js";
 import { Dialog } from "./dialog.js";
 
-let isAutoSyncEnabled = localStorage.getItem("autoSync") === "true"; // Default false
+let isAutoSyncEnabled = (() => {
+  try {
+    return localStorage.getItem("autoSync") === "true";
+  } catch {
+    return false;
+  }
+})(); // Default false
 let isSyncing = false; // Flaga statusu synchronizacji
 
 export function initSyncService() {

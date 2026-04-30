@@ -560,9 +560,10 @@ async function handleClaimResult(result, userUid) {
 }
 
 function downloadSingleResult(result) {
-  const format = document.querySelector(
+  const formatEl = document.querySelector(
     'input[name="dl-format"]:checked',
-  ).value;
+  );
+  const format = formatEl ? formatEl.value : 'json';
 
   if (format === "csv") {
     downloadSingleResultAsCSV(result);
@@ -875,10 +876,11 @@ async function handleImportAll() {
 async function handleDownloadAll() {
   if (cachedCloudResults.length === 0) return;
 
-  const format = document.querySelector(
-    'input[name="dl-format"]:checked',
-  ).value;
-  const btn = elements.btnCloudDownloadAll;
+    const formatEl = document.querySelector(
+      'input[name="dl-format"]:checked',
+    );
+    const format = formatEl ? formatEl.value : 'json';
+    const btn = elements.btnCloudDownloadAll;
   const btnText = document.getElementById("btn-cloud-download-text");
   const btnProgress = document.getElementById("btn-cloud-download-progress");
 
@@ -965,7 +967,7 @@ async function handleImportGuestResults() {
       } else {
         const newRes = {
           ...res,
-          id: Date.now() + Math.random(),
+          id: crypto.randomUUID(),
           researcher_uid: user.uid,
           sync_status: "PENDING",
         };
@@ -1021,9 +1023,10 @@ async function handleDownloadAllLocal(targetUid) {
       '<span class="material-icons spin" style="font-size:16px;">sync</span> Pobieranie...';
     btnProgress.style.width = "30%";
 
-    const format = document.querySelector(
+    const formatEl = document.querySelector(
       'input[name="dl-format"]:checked',
-    ).value;
+    );
+    const format = formatEl ? formatEl.value : 'json';
     const filename = `Wyniki_${isGuest ? "Gosc" : "Uzytkownik"}_${Date.now()}.zip`;
 
     const result = await window.electronAPI.downloadBulkZip({

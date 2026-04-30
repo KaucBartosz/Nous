@@ -181,7 +181,8 @@ export async function logout() {
   if (window.electronAPI && window.electronAPI.clearE2EKey) {
     await window.electronAPI.clearE2EKey();
   }
-  signOut(auth).then(() => location.reload());
+  await signOut(auth);
+  location.reload();
 }
 
 // ─── Konta Lokalne ───────────────────────────────────────────────────────────

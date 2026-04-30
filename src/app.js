@@ -18,6 +18,7 @@ import {
   getUserStatus,
   changeLocalPassword,
 } from "./modules/auth.js";
+import { initE2E } from "./modules/e2e.js";
 import { loadLocalAccountsAdmin } from "./modules/localAccountsAdmin.js";
 import { loadTestsList, initViewSwitcher } from "./modules/library.js";
 
@@ -145,6 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
     switchView("library", { onLibrary: loadTestsList });
   } else {
     // --- DESKTOP MODE ---
+    initE2E();
     initAuth(() => {
       onAppStart();
     });

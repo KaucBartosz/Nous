@@ -241,12 +241,53 @@ function convertMarkdownToHTML(markdown) {
         return line + '<br>';
     }).join('\n');
 
-    // Strip dangerous attributes (on*, javascript:, etc)
-    html = html.replace(/ on\w+="[^"]*"/g, '');
-    html = html.replace(/ on\w+='[^']*'/g, '');
-    html = html.replace(/javascript:/gi, 'no-script:');
+    // Strip dangerous tags and attributes
+    html = sanitizeHTML(html);
 
     return html;
+}
+
+/**
+ * Sanitizes HTML produced by the Markdown converter.
+ * Removes dangerous tags (script, iframe, etc.) and attributes (on*, javascript:).
+ */
+function sanitizeHTML(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    // Remove dangerous elements entirely
+    const dangerous = div.querySelectorAll('script, iframe, object, embed, form, svg, math, link, style, meta, base');
+    dangerous.forEach(el => el.remove());
+
+    // Sanitize all remaining elements
+    div.querySelectorAll('*').forEach(el => {
+        for (const attr of [...el.attributes]) {
+            const name = attr.name.toLowerCase();
+            const value = attr.value;
+
+            // Remove event handlers
+            if (name.startsWith('on')) {
+                el.removeAttribute(attr.name);
+                continue;
+            }
+
+            // Block javascript:, data:, vbscript: in href/src
+            if (name === 'href' || name === 'src' || name === 'action' || name === 'formaction') {
+                if (/^\s*(javascript|data|vbscript):/i.test(value)) {
+                    el.removeAttribute(attr.name);
+                    continue;
+                }
+                // Only allow https/http for img src
+                if (name === 'src' && el.tagName.toLowerCase() === 'img') {
+                    if (!/^\s*(https?:\/\/|\/)/i.test(value) && !value.startsWith('data:image/')) {
+                        el.removeAttribute(attr.name);
+                    }
+                }
+            }
+        }
+    });
+
+    return div.innerHTML;
 }
 
 function showErrorState() {
