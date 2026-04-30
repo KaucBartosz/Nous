@@ -3,7 +3,7 @@ name: Build/Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -31,16 +31,16 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          # Node 22 jest wymagany przez nowsze wersje Electrona i narzędzia do rebuilda modułów natywnych.
-          # Użycie starszej wersji (np. 20) powoduje błędy EBADENGINE przy budowaniu na macOS.
-          node-version: 22
-          cache: 'npm'
+          # Użyj najnowszej wersji LTS Node.js (24.x) dla stabilności i długiego wsparcia.
+          # Node 22 może nie być wspierany w najnowszych narzędziach/ Electronie.
+          node-version: 24.x
+          cache: "npm"
 
       - name: Install Dependencies
         run: npm ci
 
       # --- WAŻNE: Używamy 'runner.os' w warunkach 'if' ---
-      # Dzięki temu kroki budowania NIE zostaną pominięte, jeśli GitHub zmieni wersję 
+      # Dzięki temu kroki budowania NIE zostaną pominięte, jeśli GitHub zmieni wersję
       # obrazu pod etykietą 'macos-latest' lub 'windows-latest'.
 
       - name: Build Windows
