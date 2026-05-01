@@ -1,5 +1,5 @@
 // src/modules/tags.js
-import { getCurrentUser, getUserStatus } from './auth.js';
+import { getCurrentUser, getUserStatus, getResearcherUid } from "./auth.js";
 
 /**
  * Zwraca klucz localStorage specyficzny dla aktualnego użytkownika.
@@ -8,15 +8,21 @@ import { getCurrentUser, getUserStatus } from './auth.js';
 let activeCloseHandler = null;
 
 function getStorageKey() {
-    const user = getCurrentUser();
-    const status = getUserStatus();
-    
-    if (user && user.uid) {
-        return `test_tags_${user.uid}`;
-    } else if (status === 'GUEST') {
-        return 'test_tags_guest';
-    }
-    return 'test_tags_anonymous';
+  const user = getCurrentUser();
+  const status = getUserStatus();
+
+  if (user && user.uid) {
+    // Konto Firebase — klucz po UID
+    return `test_tags_${user.uid}`;
+  } else if (status === "LOCAL") {
+    // Konto lokalne — klucz po researcher UID (LOCAL::username)
+    // Zamieniamy '::' na '__' bo localStorage nie lubi niestandardowych znaków w kluczach
+    const uid = getResearcherUid().replace("::", "__");
+    return `test_tags_${uid}`;
+  } else if (status === "GUEST") {
+    return "test_tags_guest";
+  }
+  return "test_tags_anonymous";
 }
 
 /**
@@ -24,79 +30,82 @@ function getStorageKey() {
  * @returns {Object} { testId: [tags] }
  */
 function getAllTags() {
-    const key = getStorageKey();
-    const data = localStorage.getItem(key);
-    try {
-        return data ? JSON.parse(data) : {};
-    } catch (e) {
-        console.error("Error parsing tags from localStorage", e);
-        return {};
-    }
+  const key = getStorageKey();
+  const data = localStorage.getItem(key);
+  try {
+    return data ? JSON.parse(data) : {};
+  } catch (e) {
+    console.error("Error parsing tags from localStorage", e);
+    return {};
+  }
 }
 
 /**
  * Zapisuje wszystkie tagi do localStorage.
- * @param {Object} allTags 
+ * @param {Object} allTags
  */
 function saveAllTags(allTags) {
-    const key = getStorageKey();
-    localStorage.setItem(key, JSON.stringify(allTags));
+  const key = getStorageKey();
+  localStorage.setItem(key, JSON.stringify(allTags));
 }
 
 /**
  * Pobiera listę tagów dla konkretnego testu.
- * @param {string} testId 
+ * @param {string} testId
  * @returns {string[]}
  */
 export function getTagsForTest(testId) {
-    const all = getAllTags();
-    return all[testId] || [];
+  const all = getAllTags();
+  return all[testId] || [];
 }
 
 /**
  * Dodaje tagi do testu (obsługuje wiele tagów po przecinku).
- * @param {string} testId 
- * @param {string} tagsInput 
+ * @param {string} testId
+ * @param {string} tagsInput
  */
 export function addTagsToTest(testId, tagsInput) {
-    if (!tagsInput) return;
-    
-    const newTags = tagsInput.split(',')
-        .map(t => t.trim().toLowerCase())
-        .filter(t => t.length > 0 && t.length <= 25); // Limit 25 znaków
-        
-    if (newTags.length === 0) return;
-    
-    const all = getAllTags();
-    const currentTags = all[testId] || [];
-    
-    // Unikalne dodawanie
-    const updatedTags = [...new Set([...currentTags, ...newTags])];
-    all[testId] = updatedTags;
-    
-    saveAllTags(all);
-    return updatedTags;
+  if (!tagsInput) return;
+
+  const newTags = tagsInput
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length > 0 && t.length <= 25); // Limit 25 znaków
+
+  if (newTags.length === 0) return;
+
+  const all = getAllTags();
+  const currentTags = all[testId] || [];
+
+  // Unikalne dodawanie
+  const updatedTags = [...new Set([...currentTags, ...newTags])];
+  all[testId] = updatedTags;
+
+  saveAllTags(all);
+  return updatedTags;
 }
 
 /**
  * Usuwa konkretny tag z testu.
- * @param {string} testId 
- * @param {string} tagToRemove 
+ * @param {string} testId
+ * @param {string} tagToRemove
  */
 export function removeTagFromTest(testId, tagToRemove) {
-    const all = getAllTags();
-    const currentTags = all[testId] || [];
-    
-    const updatedTags = currentTags.filter(t => t !== tagToRemove.toLowerCase());
-    
-    if (updatedTags.length === 0) {
-        delete all[testId];
-    } else {
-        all[testId] = updatedTags;
-    }
-    
-    saveAllTags(all);
-    return updatedTags;
+  const all = getAllTags();
+  const currentTags = all[testId] || [];
+
+  const updatedTags = currentTags.filter(
+    (t) => t !== tagToRemove.toLowerCase(),
+  );
+
+  if (updatedTags.length === 0) {
+    delete all[testId];
+  } else {
+    all[testId] = updatedTags;
+  }
+
+  saveAllTags(all);
+  return updatedTags;
 }
 
 /**
@@ -104,257 +113,258 @@ export function removeTagFromTest(testId, tagToRemove) {
  * @returns {string[]}
  */
 export function getAllUsedTags() {
-    const all = getAllTags();
-    const tagsSet = new Set();
-    
-    Object.values(all).forEach(tags => {
-        tags.forEach(t => tagsSet.add(t));
-    });
-    
-    return Array.from(tagsSet).sort();
+  const all = getAllTags();
+  const tagsSet = new Set();
+
+  Object.values(all).forEach((tags) => {
+    tags.forEach((t) => tagsSet.add(t));
+  });
+
+  return Array.from(tagsSet).sort();
 }
 
 /**
  * Otwiera menu tagowania (floating popup).
- * @param {string} testId 
+ * @param {string} testId
  * @param {string} testName
- * @param {HTMLElement} anchorElement 
+ * @param {HTMLElement} anchorElement
  * @param {Function} onUpdate - callback wywoływany po zmianie tagów
  */
 export function openTagMenu(testId, testName, anchorElement, onUpdate) {
-    // Usuń istniejące menu jeśli jest
-    removeExistingMenu();
-    
-    const tags = getTagsForTest(testId);
-    
-    const popup = document.createElement('div');
-    popup.className = 'tag-menu-popup';
-    popup.id = 'active-tag-menu';
-    
-    // Header
-    const header = document.createElement('div');
-    header.className = 'tag-menu-header';
-    header.innerHTML = `<strong>Tagi: ${testName}</strong>`;
-    popup.appendChild(header);
-    
-    // Tags list
-    const list = document.createElement('div');
-    list.className = 'tag-menu-list';
-    renderTagList(list, testId, tags, onUpdate);
-    popup.appendChild(list);
-    
-    // 1. Datalist for autocomplete
-    let datalist = document.getElementById('tag-suggestions');
-    if (!datalist) {
-        datalist = document.createElement('datalist');
-        datalist.id = 'tag-suggestions';
-        document.body.appendChild(datalist);
-    }
-    updateDatalist(datalist);
+  // Usuń istniejące menu jeśli jest
+  removeExistingMenu();
 
-    // Add input
-    const addContainer = document.createElement('div');
-    addContainer.className = 'tag-menu-add';
-    
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'Dodaj tagi (po przecinku)...';
-    input.className = 'tag-input';
-    input.setAttribute('list', 'tag-suggestions');
-    
-    const addBtn = document.createElement('button');
-    addBtn.className = 'btn primary small';
-    addBtn.textContent = 'Dodaj';
-    addBtn.setAttribute('aria-label', 'Dodaj wpisane tagi');
-    
-    const performAdd = () => {
-        const val = input.value.trim();
-        if (val) {
-            addTagsToTest(testId, val);
-            input.value = '';
-            const updated = getTagsForTest(testId);
-            renderTagList(list, testId, updated, onUpdate);
-            if (onUpdate) onUpdate(updated);
-            updateDatalist(datalist); // Update suggestions after add
-        }
-    };
-    
-    addBtn.onclick = performAdd;
-    input.onkeydown = (e) => { 
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            performAdd(); 
-        }
-    };
-    
-    addContainer.appendChild(input);
-    addContainer.appendChild(addBtn);
-    popup.appendChild(addContainer);
-    
-    // Position popup
-    document.body.appendChild(popup);
-    const rect = anchorElement.getBoundingClientRect();
-    
-    // Basic positioning (below element)
-    let top = rect.bottom + window.scrollY + 5;
-    let left = rect.left + window.scrollX;
-    
-    // Boundary check
-    if (left + 250 > window.innerWidth) {
-        left = window.innerWidth - 260;
+  const tags = getTagsForTest(testId);
+
+  const popup = document.createElement("div");
+  popup.className = "tag-menu-popup";
+  popup.id = "active-tag-menu";
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "tag-menu-header";
+  header.innerHTML = `<strong>Tagi: ${testName}</strong>`;
+  popup.appendChild(header);
+
+  // Tags list
+  const list = document.createElement("div");
+  list.className = "tag-menu-list";
+  renderTagList(list, testId, tags, onUpdate);
+  popup.appendChild(list);
+
+  // 1. Datalist for autocomplete
+  let datalist = document.getElementById("tag-suggestions");
+  if (!datalist) {
+    datalist = document.createElement("datalist");
+    datalist.id = "tag-suggestions";
+    document.body.appendChild(datalist);
+  }
+  updateDatalist(datalist);
+
+  // Add input
+  const addContainer = document.createElement("div");
+  addContainer.className = "tag-menu-add";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Dodaj tagi (po przecinku)...";
+  input.className = "tag-input";
+  input.setAttribute("list", "tag-suggestions");
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn primary small";
+  addBtn.textContent = "Dodaj";
+  addBtn.setAttribute("aria-label", "Dodaj wpisane tagi");
+
+  const performAdd = () => {
+    const val = input.value.trim();
+    if (val) {
+      addTagsToTest(testId, val);
+      input.value = "";
+      const updated = getTagsForTest(testId);
+      renderTagList(list, testId, updated, onUpdate);
+      if (onUpdate) onUpdate(updated);
+      updateDatalist(datalist); // Update suggestions after add
     }
-    
+  };
+
+  addBtn.onclick = performAdd;
+  input.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      performAdd();
+    }
+  };
+
+  addContainer.appendChild(input);
+  addContainer.appendChild(addBtn);
+  popup.appendChild(addContainer);
+
+  // Position popup
+  document.body.appendChild(popup);
+  const rect = anchorElement.getBoundingClientRect();
+
+  // Basic positioning (below element)
+  let top = rect.bottom + window.scrollY + 5;
+  let left = rect.left + window.scrollX;
+
+  // Boundary check
+  if (left + 250 > window.innerWidth) {
+    left = window.innerWidth - 260;
+  }
+
+  popup.style.top = `${top}px`;
+  popup.style.left = `${left}px`;
+
+  // Fit to bottom boundary (flip up if needed)
+  document.body.appendChild(popup);
+  const popupRect = popup.getBoundingClientRect();
+  if (popupRect.bottom > window.innerHeight) {
+    top = rect.top + window.scrollY - popupRect.height - 5;
+    if (top < 0) top = 5; // Fallback
     popup.style.top = `${top}px`;
-    popup.style.left = `${left}px`;
-    
-    // Fit to bottom boundary (flip up if needed)
-    document.body.appendChild(popup);
-    const popupRect = popup.getBoundingClientRect();
-    if (popupRect.bottom > window.innerHeight) {
-        top = rect.top + window.scrollY - popupRect.height - 5;
-        if (top < 0) top = 5; // Fallback
-        popup.style.top = `${top}px`;
-    }
+  }
 
-    // Close on click outside
-    setTimeout(() => {
-        activeCloseHandler = (e) => {
-            const currentPopup = document.getElementById('active-tag-menu');
-            if (!currentPopup) {
-                if (activeCloseHandler) {
-                    document.removeEventListener('click', activeCloseHandler);
-                    activeCloseHandler = null;
-                }
-                return;
-            }
+  // Close on click outside
+  setTimeout(() => {
+    activeCloseHandler = (e) => {
+      const currentPopup = document.getElementById("active-tag-menu");
+      if (!currentPopup) {
+        if (activeCloseHandler) {
+          document.removeEventListener("click", activeCloseHandler);
+          activeCloseHandler = null;
+        }
+        return;
+      }
 
-            if (!currentPopup.contains(e.target) && e.target !== anchorElement) {
-                removeExistingMenu();
-            }
-        };
-        document.addEventListener('click', activeCloseHandler);
-    }, 10);
-    
-    input.focus();
+      if (!currentPopup.contains(e.target) && e.target !== anchorElement) {
+        removeExistingMenu();
+      }
+    };
+    document.addEventListener("click", activeCloseHandler);
+  }, 10);
+
+  input.focus();
 }
 
 function updateDatalist(datalist) {
-    const allUsed = getAllUsedTags();
-    datalist.innerHTML = '';
-    allUsed.forEach(tag => {
-        const option = document.createElement('option');
-        option.value = tag;
-        datalist.appendChild(option);
-    });
+  const allUsed = getAllUsedTags();
+  datalist.innerHTML = "";
+  allUsed.forEach((tag) => {
+    const option = document.createElement("option");
+    option.value = tag;
+    datalist.appendChild(option);
+  });
 }
 
 function renderTagList(container, testId, tags, onUpdate) {
-    container.innerHTML = '';
-    if (tags.length === 0) {
-        container.innerHTML = '<p style="color:#888; font-size:12px; margin: 10px 0;">Brak tagów.</p>';
-        return;
-    }
-    
-    tags.forEach(tag => {
-        const chip = document.createElement('span');
-        chip.className = 'tag-chip-edit';
-        
-        const tagNameSpan = document.createElement('span');
-        tagNameSpan.textContent = tag;
-        chip.appendChild(tagNameSpan);
-        
-        const removeSpan = document.createElement('span');
-        removeSpan.className = 'tag-remove';
-        removeSpan.textContent = ' ✕';
-        removeSpan.setAttribute('aria-label', `Usuń tag ${tag}`);
-        removeSpan.setAttribute('role', 'button');
-        removeSpan.onclick = (e) => {
-            e.stopPropagation(); // Zapobiegaj zamykaniu menu
-            const updated = removeTagFromTest(testId, tag);
-            renderTagList(container, testId, updated, onUpdate);
-            if (onUpdate) onUpdate(updated);
-        };
-        
-        chip.appendChild(removeSpan);
-        container.appendChild(chip);
-    });
+  container.innerHTML = "";
+  if (tags.length === 0) {
+    container.innerHTML =
+      '<p style="color:#888; font-size:12px; margin: 10px 0;">Brak tagów.</p>';
+    return;
+  }
+
+  tags.forEach((tag) => {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip-edit";
+
+    const tagNameSpan = document.createElement("span");
+    tagNameSpan.textContent = tag;
+    chip.appendChild(tagNameSpan);
+
+    const removeSpan = document.createElement("span");
+    removeSpan.className = "tag-remove";
+    removeSpan.textContent = " ✕";
+    removeSpan.setAttribute("aria-label", `Usuń tag ${tag}`);
+    removeSpan.setAttribute("role", "button");
+    removeSpan.onclick = (e) => {
+      e.stopPropagation(); // Zapobiegaj zamykaniu menu
+      const updated = removeTagFromTest(testId, tag);
+      renderTagList(container, testId, updated, onUpdate);
+      if (onUpdate) onUpdate(updated);
+    };
+
+    chip.appendChild(removeSpan);
+    container.appendChild(chip);
+  });
 }
 
 function removeExistingMenu() {
-    const existing = document.getElementById('active-tag-menu');
-    if (existing) {
-        existing.remove();
-        if (activeCloseHandler) {
-            document.removeEventListener('click', activeCloseHandler);
-            activeCloseHandler = null;
-        }
+  const existing = document.getElementById("active-tag-menu");
+  if (existing) {
+    existing.remove();
+    if (activeCloseHandler) {
+      document.removeEventListener("click", activeCloseHandler);
+      activeCloseHandler = null;
     }
+  }
 }
 
 /**
  * Parsuje zapytanie tekstowe na strukturę filtrów tagów i tekstu.
  * Obsługuje precedencję: AND ma wyższy priorytet niż OR.
- * @param {string} filterText 
+ * @param {string} filterText
  * @returns {Object} { textFilters: string[], tagGroups: string[][] }
  */
 export function parseTagSearchQuery(filterText) {
-    const lower = filterText.toLowerCase();
-    const words = lower.split(/\s+/).filter(w => w.length > 0);
-    
-    const textFilters = [];
-    const tagFilters = []; // Elementy: string lub operator
-    
-    let currentOp = 'AND';
-    for (const word of words) {
-        if (word === 'and') {
-            currentOp = 'AND';
-        } else if (word === 'or') {
-            currentOp = 'OR';
-        } else if (word.startsWith('@')) {
-            tagFilters.push({ tag: word.substring(1), op: currentOp });
-            currentOp = 'AND'; // Domyślnie AND dla kolejnego
-        } else {
-            textFilters.push(word);
-        }
+  const lower = filterText.toLowerCase();
+  const words = lower.split(/\s+/).filter((w) => w.length > 0);
+
+  const textFilters = [];
+  const tagFilters = []; // Elementy: string lub operator
+
+  let currentOp = "AND";
+  for (const word of words) {
+    if (word === "and") {
+      currentOp = "AND";
+    } else if (word === "or") {
+      currentOp = "OR";
+    } else if (word.startsWith("@")) {
+      tagFilters.push({ tag: word.substring(1), op: currentOp });
+      currentOp = "AND"; // Domyślnie AND dla kolejnego
+    } else {
+      textFilters.push(word);
     }
+  }
 
-    if (tagFilters.length === 0) return { textFilters, tagGroups: [] };
+  if (tagFilters.length === 0) return { textFilters, tagGroups: [] };
 
-    // Implementacja precedencji: AND > OR
-    // Grupowanie tagów połączonych za pomocą AND. 
-    // Wynikowe grupy są połączone operatorem OR.
-    // Przykład: @a OR @b @c OR @d -> [[@a], [@b, @c], [@d]]
-    const tagGroups = [];
-    let currentGroup = [tagFilters[0].tag];
+  // Implementacja precedencji: AND > OR
+  // Grupowanie tagów połączonych za pomocą AND.
+  // Wynikowe grupy są połączone operatorem OR.
+  // Przykład: @a OR @b @c OR @d -> [[@a], [@b, @c], [@d]]
+  const tagGroups = [];
+  let currentGroup = [tagFilters[0].tag];
 
-    for (let i = 1; i < tagFilters.length; i++) {
-        const item = tagFilters[i];
-        if (item.op === 'OR') {
-            tagGroups.push(currentGroup);
-            currentGroup = [item.tag];
-        } else {
-            currentGroup.push(item.tag);
-        }
+  for (let i = 1; i < tagFilters.length; i++) {
+    const item = tagFilters[i];
+    if (item.op === "OR") {
+      tagGroups.push(currentGroup);
+      currentGroup = [item.tag];
+    } else {
+      currentGroup.push(item.tag);
     }
-    tagGroups.push(currentGroup);
+  }
+  tagGroups.push(currentGroup);
 
-    return { textFilters, tagGroups };
+  return { textFilters, tagGroups };
 }
 
 /**
  * Sprawdza czy dany test (jego tagi) pasuje do sparsowanych grup tagów.
- * @param {string[]} testTags 
- * @param {string[][]} tagGroups 
+ * @param {string[]} testTags
+ * @param {string[][]} tagGroups
  * @returns {boolean}
  */
 export function matchesTagGroups(testTags, tagGroups) {
-    if (tagGroups.length === 0) return true;
-    
-    const lowerTestTags = testTags.map(t => t.toLowerCase());
-    
-    // OR między grupami
-    return tagGroups.some(group => {
-        // AND wewnątrz grupy
-        return group.every(tag => lowerTestTags.includes(tag));
-    });
+  if (tagGroups.length === 0) return true;
+
+  const lowerTestTags = testTags.map((t) => t.toLowerCase());
+
+  // OR między grupami
+  return tagGroups.some((group) => {
+    // AND wewnątrz grupy
+    return group.every((tag) => lowerTestTags.includes(tag));
+  });
 }
