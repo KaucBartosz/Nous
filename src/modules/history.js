@@ -27,6 +27,11 @@ let cachedCloudResults = [];
 let lastCloudFetchTime = 0;
 const CLOUD_FETCH_THROTTLE_MS = 2000;
 
+// --- FILTER STATE ---
+let activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
+let filterValuesCache = { date: [], test_id: [], subject_id: [], status: [] };
+let openFilterDropdown = null;
+
 // --- PAGINATION STATE ---
 const PAGE_SIZE = 50;
 let currentPage = 1;
@@ -91,9 +96,311 @@ export function initHistoryView() {
     };
 
   updateToggleButtonsState();
+
+  // Filter button click handlers
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.filterType;
+      if (openFilterDropdown && openFilterDropdown.dataset.filterType === type) {
+        closeFilterDropdown();
+      } else {
+        openFilterDropdownFor(type, btn);
+      }
+    });
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (openFilterDropdown && !e.target.closest('.filter-dropdown') && !e.target.closest('.filter-btn')) {
+      closeFilterDropdown();
+    }
+  });
+
+  // Close dropdown on scroll (fixed position doesn't track button)
+  document.addEventListener('scroll', () => {
+    closeFilterDropdown();
+  }, { capture: true });
+
+  // Clear all filters button
+  if (elements.btnClearAllFilters) {
+    elements.btnClearAllFilters.addEventListener('click', clearAllFilters);
+  }
+}
+
+function clearAllFilters() {
+  activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
+  closeFilterDropdown();
+  updateFilterBadges();
+  currentPage = 1;
+  selectedResultIds.clear();
+  const selectAll = document.getElementById('selectAllHistory');
+  if (selectAll) selectAll.checked = false;
+  updateDownloadButtonState();
+  renderHistoryPage();
+}
+
+function updateClearFiltersBar() {
+  const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
+  const bar = document.getElementById('active-filters-bar');
+  if (bar) {
+    bar.classList.toggle('hidden', !hasFilters);
+  }
+}
+
+function closeFilterDropdown() {
+  if (openFilterDropdown) {
+    openFilterDropdown.remove();
+    openFilterDropdown = null;
+  }
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+}
+
+function openFilterDropdownFor(type, btn) {
+  closeFilterDropdown();
+  btn.classList.add('active');
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'filter-dropdown';
+  dropdown.dataset.filterType = type;
+
+  const label = btn.closest('th').querySelector('span').textContent;
+  dropdown.innerHTML = `
+    <div class="filter-dropdown-header">
+      <span>${label}</span>
+      <div class="filter-dropdown-actions">
+        <button class="filter-select-all">Zaznacz wszystko</button>
+        <button class="filter-deselect-all">Wyczyść</button>
+      </div>
+    </div>
+    <div class="filter-dropdown-body"></div>
+  `;
+
+  const body = dropdown.querySelector('.filter-dropdown-body');
+  const values = buildFilterValues(type);
+  renderFilterOptions(body, type, values);
+
+  // Attach to document.body with fixed positioning
+  document.body.appendChild(dropdown);
+
+  const rect = btn.getBoundingClientRect();
+  dropdown.style.top = `${rect.bottom + 6}px`;
+  dropdown.style.left = `${rect.left}px`;
+
+  // Ensure dropdown doesn't go off-screen right edge
+  const dropdownWidth = 220;
+  if (rect.left + dropdownWidth > window.innerWidth) {
+    dropdown.style.left = `${window.innerWidth - dropdownWidth - 10}px`;
+  }
+
+  openFilterDropdown = dropdown;
+
+  // Bind select all / deselect all
+  dropdown.querySelector('.filter-select-all').addEventListener('click', () => {
+    const cbAll = dropdown.querySelectorAll('.filter-option input[type="checkbox"]');
+    cbAll.forEach(cb => { if (!cb.disabled) cb.checked = true; });
+    applyFilters();
+  });
+
+  dropdown.querySelector('.filter-deselect-all').addEventListener('click', () => {
+    const cbAll = dropdown.querySelectorAll('.filter-option input[type="checkbox"]');
+    cbAll.forEach(cb => { if (!cb.disabled) cb.checked = false; });
+    applyFilters();
+  });
+}
+
+function buildFilterValues(type) {
+  const results = currentAllResults;
+  if (type === 'date') {
+    // Build hierarchy: year -> month -> day
+    const tree = {};
+    results.forEach(r => {
+      const d = new Date(r.timestamp);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+      const dateStr = `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
+      const monthName = d.toLocaleString('pl-PL', { month: 'long' });
+      if (!tree[year]) tree[year] = {};
+      if (!tree[year][month]) tree[year][month] = { name: monthName, days: {} };
+      if (!tree[year][month].days[day]) tree[year][month].days[day] = { label: dateStr, count: 0 };
+      tree[year][month].days[day].count++;
+    });
+    return tree;
+  }
+  if (type === 'test_id') {
+    const counts = {};
+    results.forEach(r => {
+      const val = r.test_id || r.testId || 'Nieznany';
+      counts[val] = (counts[val] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+  }
+  if (type === 'subject_id') {
+    const counts = {};
+    results.forEach(r => {
+      const val = r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany';
+      counts[val] = (counts[val] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+  }
+  if (type === 'status') {
+    const counts = {};
+    results.forEach(r => {
+      let label = 'Lokalne';
+      const sync_status = r.sync_status || r.syncStatus;
+      if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) {
+        label = 'Konto lokalne';
+      } else if (sync_status === 'LOCAL') {
+        label = 'Konto lokalne';
+      } else if (r.researcher_uid === 'GUEST') {
+        label = 'Tryb Gościa';
+      } else if (sync_status === 'SYNCED') {
+        label = 'Zsynchronizowano';
+      } else if (sync_status === 'PENDING') {
+        label = 'Oczekuje';
+      }
+      counts[label] = (counts[label] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+  }
+  return [];
+}
+
+function renderFilterOptions(body, type, values) {
+  body.innerHTML = '';
+  if (type === 'date') {
+    // Hierarchical rendering
+    const activeDates = activeFilters.date;
+    const years = Object.keys(values).sort((a, b) => b - a);
+    years.forEach(year => {
+      // Year option
+      const yearDiv = document.createElement('div');
+      yearDiv.className = 'filter-option filter-date-year';
+      const yearCb = document.createElement('input');
+      yearCb.type = 'checkbox';
+      yearCb.value = `year:${year}`;
+      yearCb.checked = Object.keys(values[year]).every(m =>
+        Object.keys(values[year][m].days).every(d => activeDates.has(`day:${year}:${m}:${d}`))
+      );
+      yearDiv.appendChild(yearCb);
+      yearDiv.appendChild(document.createTextNode(year));
+      yearCb.addEventListener('change', () => {
+        // Toggle all months and days for this year
+        const allDaysForYear = [];
+        Object.keys(values[year]).forEach(m => {
+          Object.keys(values[year][m].days).forEach(d => {
+            allDaysForYear.push(`day:${year}:${m}:${d}`);
+          });
+        });
+        if (yearCb.checked) {
+          allDaysForYear.forEach(k => activeFilters.date.add(k));
+        } else {
+          allDaysForYear.forEach(k => activeFilters.date.delete(k));
+        }
+        applyFilters();
+        // Re-render to update parent checkboxes
+        closeFilterDropdown();
+        openFilterDropdownFor('date', document.querySelector('.filter-btn[data-filter-type="date"]'));
+      });
+      body.appendChild(yearDiv);
+
+      // Months
+      const months = Object.keys(values[year]).sort((a, b) => b - a);
+      months.forEach(month => {
+        const monthData = values[year][month];
+        const monthDiv = document.createElement('div');
+        monthDiv.className = 'filter-option filter-date-month';
+        const monthCb = document.createElement('input');
+        monthCb.type = 'checkbox';
+        monthCb.value = `month:${year}:${month}`;
+        monthCb.checked = Object.keys(monthData.days).every(d => activeDates.has(`day:${year}:${month}:${d}`));
+        monthDiv.appendChild(monthCb);
+        monthDiv.appendChild(document.createTextNode(monthData.name));
+        monthCb.addEventListener('change', () => {
+          const allDaysForMonth = Object.keys(monthData.days).map(d => `day:${year}:${month}:${d}`);
+          if (monthCb.checked) {
+            allDaysForMonth.forEach(k => activeFilters.date.add(k));
+          } else {
+            allDaysForMonth.forEach(k => activeFilters.date.delete(k));
+          }
+          applyFilters();
+          closeFilterDropdown();
+          openFilterDropdownFor('date', document.querySelector('.filter-btn[data-filter-type="date"]'));
+        });
+        body.appendChild(monthDiv);
+
+        // Days
+        const days = Object.keys(monthData.days).sort((a, b) => b - a);
+        days.forEach(day => {
+          const dayData = monthData.days[day];
+          const dayDiv = document.createElement('div');
+          dayDiv.className = 'filter-option filter-date-day';
+          const dayCb = document.createElement('input');
+          dayCb.type = 'checkbox';
+          dayCb.value = `day:${year}:${month}:${day}`;
+          dayCb.checked = activeDates.has(dayCb.value);
+          dayDiv.appendChild(dayCb);
+          dayDiv.appendChild(document.createTextNode(dayData.label));
+          const countSpan = document.createElement('span');
+          countSpan.className = 'filter-count';
+          countSpan.textContent = dayData.count;
+          dayDiv.appendChild(countSpan);
+          dayCb.addEventListener('change', () => {
+            if (dayCb.checked) {
+              activeFilters.date.add(dayCb.value);
+            } else {
+              activeFilters.date.delete(dayCb.value);
+            }
+            applyFilters();
+            closeFilterDropdown();
+            openFilterDropdownFor('date', document.querySelector('.filter-btn[data-filter-type="date"]'));
+          });
+          body.appendChild(dayDiv);
+        });
+      });
+    });
+  } else {
+    // Flat list for test_id, subject_id, status
+    const activeSet = activeFilters[type];
+    values.forEach(([value, count]) => {
+      const opt = document.createElement('div');
+      opt.className = 'filter-option';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = value;
+      cb.checked = activeSet.has(value);
+      opt.appendChild(cb);
+      const label = document.createElement('span');
+      label.textContent = value;
+      label.style.flex = '1';
+      label.style.overflow = 'hidden';
+      label.style.textOverflow = 'ellipsis';
+      opt.appendChild(label);
+      const countSpan = document.createElement('span');
+      countSpan.className = 'filter-count';
+      countSpan.textContent = count;
+      opt.appendChild(countSpan);
+      cb.addEventListener('change', () => {
+        if (cb.checked) {
+          activeSet.add(value);
+        } else {
+          activeSet.delete(value);
+        }
+        applyFilters();
+        updateFilterBadges();
+      });
+      body.appendChild(opt);
+    });
+  }
 }
 
 function updateToggleButtonsState() {
+  // Reset filters when switching views
+  activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
+  closeFilterDropdown();
+  updateFilterBadges();
+
   selectedResultIds.clear();
   const selectAll = document.getElementById("selectAllHistory");
   if (selectAll) selectAll.checked = false;
@@ -184,6 +491,9 @@ export async function loadHistoryData() {
     // Store for pagination
     currentAllResults = myResults;
     currentPage = 1;
+    // Reset filters on data reload
+    activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
+    updateFilterBadges();
     renderHistoryPage();
   } catch (e) {
     console.error("Error loading history:", e);
@@ -208,6 +518,8 @@ export async function loadHistoryData() {
 
 function updateDownloadButtonState() {
   const count = selectedResultIds.size;
+  const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
+  const filteredCount = getFilteredResults().length;
   const btnTextLocal = document.getElementById("btn-local-download-text");
   const btnTextGuest = document.getElementById("btn-guest-download-text");
   const btnTextCloud = document.getElementById("btn-cloud-download-text");
@@ -216,12 +528,16 @@ function updateDownloadButtonState() {
     btnTextLocal.innerHTML =
       count > 0
         ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})`
-        : `<span class="material-icons">download</span> Pobierz wszystkie wyniki`;
+        : hasFilters
+          ? `<span class="material-icons">download</span> Pobierz przefiltrowane (${filteredCount})`
+          : `<span class="material-icons">download</span> Pobierz wszystkie wyniki`;
   if (btnTextGuest)
     btnTextGuest.innerHTML =
       count > 0
         ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})`
-        : `<span class="material-icons">download</span> Pobierz wszystkie`;
+        : hasFilters
+          ? `<span class="material-icons">download</span> Pobierz przefiltrowane (${filteredCount})`
+          : `<span class="material-icons">download</span> Pobierz wszystkie`;
   if (btnTextCloud)
     btnTextCloud.innerHTML =
       count > 0
@@ -284,6 +600,101 @@ async function handleDeleteSelected() {
 }
 
 // ===================================================
+// FILTERING
+// ===================================================
+
+function applyFilters() {
+  currentPage = 1;
+  selectedResultIds.clear();
+  const selectAll = document.getElementById('selectAllHistory');
+  if (selectAll) selectAll.checked = false;
+  updateDownloadButtonState();
+  renderHistoryPage();
+}
+
+function getFilteredResults() {
+  const results = currentAllResults;
+  const hasActiveFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
+  if (!hasActiveFilters) return results;
+
+  return results.filter(r => {
+    // Date filter
+    if (activeFilters.date.size > 0) {
+      const d = new Date(r.timestamp);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+      const dayKey = `day:${year}:${month}:${day}`;
+      if (!activeFilters.date.has(dayKey)) return false;
+    }
+
+    // Test ID filter
+    if (activeFilters.test_id.size > 0) {
+      const testId = r.test_id || r.testId || 'Nieznany';
+      if (!activeFilters.test_id.has(testId)) return false;
+    }
+
+    // Subject ID filter
+    if (activeFilters.subject_id.size > 0) {
+      const subjectId = r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany';
+      if (!activeFilters.subject_id.has(subjectId)) return false;
+    }
+
+    // Status filter
+    if (activeFilters.status.size > 0) {
+      let statusLabel = 'Lokalne';
+      const sync_status = r.sync_status || r.syncStatus;
+      if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) {
+        statusLabel = 'Konto lokalne';
+      } else if (sync_status === 'LOCAL') {
+        statusLabel = 'Konto lokalne';
+      } else if (r.researcher_uid === 'GUEST') {
+        statusLabel = 'Tryb Gościa';
+      } else if (sync_status === 'SYNCED') {
+        statusLabel = 'Zsynchronizowano';
+      } else if (sync_status === 'PENDING') {
+        statusLabel = 'Oczekuje';
+      }
+      if (!activeFilters.status.has(statusLabel)) return false;
+    }
+
+    return true;
+  });
+}
+
+function updateFilterBadges() {
+  const total = activeFilters.date.size + activeFilters.test_id.size + activeFilters.subject_id.size + activeFilters.status.size;
+  updateClearFiltersBar();
+  // Show total badge or per-column badges
+  document.querySelectorAll('.filterable-header').forEach(th => {
+    const col = th.dataset.filterColumn;
+    const badge = th.querySelector('.filter-badge');
+    if (!badge) return;
+    if (col === 'date') {
+      const count = activeFilters.date.size;
+      badge.textContent = count;
+      badge.classList.toggle('hidden', count === 0);
+      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
+    } else if (col === 'test') {
+      const count = activeFilters.test_id.size;
+      badge.textContent = count;
+      badge.classList.toggle('hidden', count === 0);
+      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
+    } else if (col === 'subject') {
+      const count = activeFilters.subject_id.size;
+      badge.textContent = count;
+      badge.classList.toggle('hidden', count === 0);
+      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
+    } else if (col === 'status') {
+      const count = activeFilters.status.size;
+      badge.textContent = count;
+      badge.classList.toggle('hidden', count === 0);
+      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
+    }
+  });
+}
+
+// ===================================================
 // PAGINATION
 // ===================================================
 
@@ -292,18 +703,22 @@ function renderHistoryPage() {
   const selectAll = document.getElementById("selectAllHistory");
   if (selectAll) selectAll.checked = false;
 
-  const myResults = currentAllResults;
+  const filteredResults = getFilteredResults();
   const user = getCurrentUser();
   const researcherUid = getResearcherUid();
-  const totalPages = Math.ceil(myResults.length / PAGE_SIZE);
+  const totalPages = Math.ceil(filteredResults.length / PAGE_SIZE);
 
   // Update/create pagination controls
-  updatePaginationControls(myResults.length, totalPages);
+  updatePaginationControls(filteredResults.length, totalPages);
 
-  if (myResults.length === 0) {
-    const msg = isGuestViewActive
+  if (filteredResults.length === 0) {
+    const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
+    let msg = isGuestViewActive
       ? "Brak wyników w trybie Gościa."
       : "Brak wyników.";
+    if (hasFilters) {
+      msg = "Brak wyników pasujących do aktywnych filtrów.";
+    }
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = 7;
@@ -314,7 +729,7 @@ function renderHistoryPage() {
   }
 
   const startIdx = (currentPage - 1) * PAGE_SIZE;
-  const pageResults = myResults.slice(startIdx, startIdx + PAGE_SIZE);
+  const pageResults = filteredResults.slice(startIdx, startIdx + PAGE_SIZE);
 
   pageResults.forEach((r) => {
     const resultData = r.wyniki || r.data || {};
@@ -989,9 +1404,54 @@ async function handleImportGuestResults() {
 
 async function handleDownloadAllLocal(targetUid) {
   try {
+    const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
+
     // Downloads ALL results for the user (not just current page)
     const allLocal = await getAllResults();
     let results = allLocal.filter((r) => r.researcher_uid === targetUid);
+
+    // Apply filters if active
+    if (hasFilters) {
+      results = results.filter(r => {
+        // Date filter
+        if (activeFilters.date.size > 0) {
+          const d = new Date(r.timestamp);
+          const year = d.getFullYear();
+          const month = d.getMonth();
+          const day = d.getDate();
+          const dayKey = `day:${year}:${month}:${day}`;
+          if (!activeFilters.date.has(dayKey)) return false;
+        }
+        // Test ID filter
+        if (activeFilters.test_id.size > 0) {
+          const testId = r.test_id || r.testId || 'Nieznany';
+          if (!activeFilters.test_id.has(testId)) return false;
+        }
+        // Subject ID filter
+        if (activeFilters.subject_id.size > 0) {
+          const subjectId = r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany';
+          if (!activeFilters.subject_id.has(subjectId)) return false;
+        }
+        // Status filter
+        if (activeFilters.status.size > 0) {
+          let statusLabel = 'Lokalne';
+          const sync_status = r.sync_status || r.syncStatus;
+          if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) {
+            statusLabel = 'Konto lokalne';
+          } else if (sync_status === 'LOCAL') {
+            statusLabel = 'Konto lokalne';
+          } else if (r.researcher_uid === 'GUEST') {
+            statusLabel = 'Tryb Gościa';
+          } else if (sync_status === 'SYNCED') {
+            statusLabel = 'Zsynchronizowano';
+          } else if (sync_status === 'PENDING') {
+            statusLabel = 'Oczekuje';
+          }
+          if (!activeFilters.status.has(statusLabel)) return false;
+        }
+        return true;
+      });
+    }
 
     if (selectedResultIds.size > 0) {
       results = results.filter(

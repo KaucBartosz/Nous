@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -97,6 +97,7 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            devTools: false,
             preload: path.join(__dirname, 'preload.js')
         }
     });
@@ -622,6 +623,7 @@ function openTestWindow(htmlPath) {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            devTools: false,
             preload: path.join(__dirname, 'preload_test.js')
         }
     });
@@ -806,7 +808,19 @@ ipcMain.handle('download-bulk-zip', async (event, { results, filename, format })
     }
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
+    createWindow();
+
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        const { key, control, shift } = input;
+        if (key === 'F12' ||
+            key === 'F5' && control ||
+            (control && shift && (key === 'I' || key === 'i' || key === 'J' || key === 'j' || key === 'C' || key === 'c'))) {
+            event.preventDefault();
+        }
+    });
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

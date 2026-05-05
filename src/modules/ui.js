@@ -76,6 +76,9 @@ function getElementsLazy() {
     localActionsContainer: document.getElementById("local-actions-container"),
     btnLocalDownloadAll: document.getElementById("btn-local-download-all"),
 
+    // History filters
+    btnClearAllFilters: document.getElementById("btn-clear-all-filters"),
+
     // Sync Toggle
     toggleSync: document.getElementById("toggle-sync"),
     syncToggleContainer: document.getElementById("sync-toggle-container"),

@@ -434,24 +434,10 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
   // Removed overwrite confirmation dialog per user request
   activeDemographics = {
     templateId: currentTemplateId,
-    participant_id:
-      _loadedParticipantDisplayName ||
-      data["Identyfikator"] ||
-      data["Kod"] ||
-      "ID_" + Date.now(), // Kartoteka name has priority
+    participant_id: _loadedParticipantDisplayName || "ID_" + Date.now(),
     data: data,
     filled_at: new Date().toISOString(),
   };
-
-  // Try to find a logical ID for the system
-  const keys = Object.keys(data).map((k) => k.toLowerCase());
-  const idKey = keys.find(
-    (k) => k.includes("id") || k.includes("kod") || k.includes("ident"),
-  );
-  if (idKey) {
-    const realKey = Object.keys(data).find((k) => k.toLowerCase() === idKey);
-    activeDemographics.participant_id = data[realKey];
-  }
 
   localStorage.setItem(
     getDemoStorageKeys().demographics,
