@@ -91,8 +91,7 @@ export function initHistoryView() {
   if (elements.btnLocalDownloadAll)
     elements.btnLocalDownloadAll.onclick = () => {
       const uid = getResearcherUid();
-      // Pobieranie dostępne dla kont Firebase i LOCAL, nie dla GUEST
-      if (uid !== "GUEST") handleDownloadAllLocal(uid);
+      handleDownloadAllLocal(uid);
     };
 
   updateToggleButtonsState();
@@ -1466,7 +1465,17 @@ async function handleDownloadAllLocal(targetUid) {
     }
 
     const isGuest = targetUid === "GUEST";
-    const prefix = isGuest ? "guest" : "local";
+
+    // Wybierz prefix na podstawie WIDOCZNEGO kontenera, nie typu użytkownika
+    // GUEST widzi local-actions-container, nie guest-actions-container
+    let prefix;
+    if (!elements.cloudActionsContainer?.classList.contains("hidden")) {
+      prefix = "cloud";
+    } else if (!elements.guestActionsContainer?.classList.contains("hidden")) {
+      prefix = "guest";
+    } else {
+      prefix = "local";
+    }
 
     const btn = document.getElementById(`btn-${prefix}-download-all`);
     const btnText = document.getElementById(`btn-${prefix}-download-text`);

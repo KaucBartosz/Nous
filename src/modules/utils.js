@@ -145,13 +145,17 @@ export function invalidateLocalVersionsCache() {
  * @param {Object} target - Obiekt docelowy (modyfikowany in-place)
  * @param {string} prefix - Prefiks dla kluczy
  */
-export function flattenObject(obj, target, prefix = '') {
+export function flattenObject(obj, target, prefix = '', visited = new WeakSet()) {
+    if (obj === null || typeof obj !== 'object') return;
+    if (visited.has(obj)) return; // circular ref guard
+    visited.add(obj);
+    
     for (const [key, value] of Object.entries(obj)) {
         // Oblicz nowy klucz, jeśli prefix jest pusty to nie dodawaj separatora na początku
         const newKey = prefix ? `${prefix} - ${key}` : key;
         
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            flattenObject(value, target, newKey);
+            flattenObject(value, target, newKey, visited);
         } else {
             target[newKey] = Array.isArray(value) ? JSON.stringify(value) : value;
         }

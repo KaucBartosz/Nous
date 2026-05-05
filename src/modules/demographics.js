@@ -434,7 +434,7 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
   // Removed overwrite confirmation dialog per user request
   activeDemographics = {
     templateId: currentTemplateId,
-    participant_id: _loadedParticipantDisplayName || "ID_" + Date.now(),
+    participant_id: _loadedParticipantDisplayName || `ID_${crypto.randomUUID().slice(0, 8)}`,
     data: data,
     filled_at: new Date().toISOString(),
   };

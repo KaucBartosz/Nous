@@ -163,6 +163,7 @@ function updateSaveButtonState(isTraining) {
 
 async function saveResultToSystem() {
   if (!currentResultPackage) return;
+  if (elements.btnUploadCloud.disabled) return;
 
   if (currentResultPackage.isTraining) {
     elements.modalOverlay.classList.add("hidden");
@@ -171,6 +172,7 @@ async function saveResultToSystem() {
   }
 
   try {
+    elements.btnUploadCloud.disabled = true;
     elements.btnUploadCloud.textContent = "Zapisywanie...";
 
     // Get current user ID for verification (works for Firebase, Local, and Guest)
@@ -184,9 +186,11 @@ async function saveResultToSystem() {
     loadTestsList();
 
     // 2. Próba synchronizacji (fire & forget)
-    syncNow();
+    syncNow().catch(err => console.error("Sync after save failed:", err));
   } catch (e) {
     await Dialog.alert("Błąd zapisu bazy: " + e.message, "error");
     elements.btnUploadCloud.textContent = "Błąd";
+  } finally {
+    elements.btnUploadCloud.disabled = false;
   }
 }
