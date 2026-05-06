@@ -2201,3 +2201,222 @@ input:checked + .slider:before {
     gap: 8px;
     flex-shrink: 0;
 }
+
+/* --- HISTORY TABLE FILTERS (Excel-style) --- */
+.filterable-header {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+.filterable-header:hover {
+    background-color: rgba(79, 140, 242, 0.08);
+}
+
+.filter-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: 4px;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    transition: background 0.15s;
+}
+
+.filter-btn:hover {
+    background: rgba(79, 140, 242, 0.2);
+}
+
+.filter-btn.active {
+    background: rgba(79, 140, 242, 0.25);
+}
+
+.filter-icon {
+    font-size: 14px !important;
+    color: var(--text-muted);
+}
+
+.filter-btn.active .filter-icon {
+    color: var(--primary);
+}
+
+.filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 700;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.filter-dropdown {
+    position: fixed;
+    z-index: 100000;
+    background: #2d2d3d;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    min-width: 220px;
+    max-height: 320px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+[data-theme="light"] .filter-dropdown {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.filter-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.filter-dropdown-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.filter-dropdown-actions button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.filter-dropdown-actions button:hover {
+    background: rgba(79, 140, 242, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.filter-dropdown-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 4px 0;
+}
+
+.filter-dropdown-body::-webkit-scrollbar {
+    width: 5px;
+}
+
+.filter-dropdown-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.filter-dropdown-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-size: 13px;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filter-option:hover {
+    background: rgba(79, 140, 242, 0.08);
+}
+
+.filter-option input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--primary);
+}
+
+.filter-option .filter-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+/* Date hierarchy indentation */
+.filter-option.filter-date-year {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.filter-option.filter-date-month {
+    padding-left: 28px;
+    font-weight: 500;
+}
+
+.filter-option.filter-date-day {
+    padding-left: 44px;
+}
+
+/* Clear all filters button */
+.clear-all-filters-btn {
+    display: none;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.clear-all-filters-btn:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.clear-all-filters-btn.visible {
+    display: block;
+}
+
+/* --- Active Filters Bar --- */
+#active-filters-bar {
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px;
+    background: rgba(79, 140, 242, 0.06);
+    border: 1px solid rgba(79, 140, 242, 0.15);
+    border-radius: 6px;
+    display: inline-flex;
+}
+
+[data-theme="light"] #active-filters-bar {
+    background: rgba(29, 78, 216, 0.05);
+    border-color: rgba(29, 78, 216, 0.15);
+}

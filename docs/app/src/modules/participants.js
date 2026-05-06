@@ -44,7 +44,7 @@ export async function renderParticipantsList(filter = "") {
   const all = await getAllParticipants(uid);
 
   const filtered = filter
-    ? all.filter((p) => p.display_name.toLowerCase().includes(filter))
+    ? all.filter((p) => (p.display_name || "").toLowerCase().includes(filter))
     : all;
 
   container.innerHTML = "";

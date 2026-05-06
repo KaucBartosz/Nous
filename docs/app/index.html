@@ -267,7 +267,7 @@
                             id="sync-status-label"
                             style="
                                 font-size: 10px;
-                                color: #888;
+                                color: var(--text-muted);
                                 font-weight: 600;
                             "
                             >SYNC</span
@@ -639,6 +639,31 @@
                             </div>
                         </div>
                     </div>
+
+                    <div
+                        id="active-filters-bar"
+                        class="hidden"
+                        style="
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            margin-bottom: 10px;
+                        "
+                    >
+                        <span style="font-size: 12px; color: var(--text-muted)"
+                            >Aktywne filtry:</span
+                        >
+                        <button
+                            id="btn-clear-all-filters"
+                            class="btn outline small"
+                        >
+                            <span class="material-icons" style="font-size: 15px"
+                                >filter_alt_off</span
+                            >
+                            Wyczyść filtry
+                        </button>
+                    </div>
+
                     <div class="table-container">
                         <table id="history-table">
                             <thead>
@@ -649,11 +674,83 @@
                                             id="selectAllHistory"
                                         />
                                     </th>
-                                    <th>Data</th>
-                                    <th>Test</th>
-                                    <th>ID Badanego</th>
+                                    <th
+                                        class="filterable-header"
+                                        data-filter-column="date"
+                                    >
+                                        <span>Data</span>
+                                        <button
+                                            class="filter-btn"
+                                            data-filter-type="date"
+                                            title="Filtruj wg daty"
+                                        >
+                                            <span
+                                                class="material-icons filter-icon"
+                                                >filter_list</span
+                                            >
+                                        </button>
+                                        <span class="filter-badge hidden"
+                                            >0</span
+                                        >
+                                    </th>
+                                    <th
+                                        class="filterable-header"
+                                        data-filter-column="test"
+                                    >
+                                        <span>Test</span>
+                                        <button
+                                            class="filter-btn"
+                                            data-filter-type="test_id"
+                                            title="Filtruj wg testu"
+                                        >
+                                            <span
+                                                class="material-icons filter-icon"
+                                                >filter_list</span
+                                            >
+                                        </button>
+                                        <span class="filter-badge hidden"
+                                            >0</span
+                                        >
+                                    </th>
+                                    <th
+                                        class="filterable-header"
+                                        data-filter-column="subject"
+                                    >
+                                        <span>ID Badanego</span>
+                                        <button
+                                            class="filter-btn"
+                                            data-filter-type="subject_id"
+                                            title="Filtruj wg badanego"
+                                        >
+                                            <span
+                                                class="material-icons filter-icon"
+                                                >filter_list</span
+                                            >
+                                        </button>
+                                        <span class="filter-badge hidden"
+                                            >0</span
+                                        >
+                                    </th>
                                     <th>Wynik</th>
-                                    <th>Status</th>
+                                    <th
+                                        class="filterable-header"
+                                        data-filter-column="status"
+                                    >
+                                        <span>Status</span>
+                                        <button
+                                            class="filter-btn"
+                                            data-filter-type="status"
+                                            title="Filtruj wg statusu"
+                                        >
+                                            <span
+                                                class="material-icons filter-icon"
+                                                >filter_list</span
+                                            >
+                                        </button>
+                                        <span class="filter-badge hidden"
+                                            >0</span
+                                        >
+                                    </th>
                                     <th>Akcje</th>
                                 </tr>
                             </thead>
@@ -670,11 +767,11 @@
                     <div
                         class="app-update-container"
                         style="
-                            background: #252526;
+                            background: var(--bg-card);
                             padding: 20px;
                             border-radius: 8px;
                             margin-bottom: 25px;
-                            border: 1px solid #444;
+                            border: 1px solid var(--border);
                         "
                     >
                         <div
@@ -698,11 +795,19 @@
                                     >
                                     Aktualizacja Programu Nous
                                 </h3>
-                                <p style="color: #aaa; margin: 5px 0 15px 0">
+                                <p
+                                    style="
+                                        color: var(--text-muted);
+                                        margin: 5px 0 15px 0;
+                                    "
+                                >
                                     Obecna wersja:
                                     <span
                                         id="app-current-version"
-                                        style="color: white; font-weight: bold"
+                                        style="
+                                            color: var(--text-main);
+                                            font-weight: bold;
+                                        "
                                         >v...</span
                                     >
                                 </p>
@@ -725,7 +830,7 @@
                                             justify-content: space-between;
                                             font-size: 12px;
                                             margin-bottom: 5px;
-                                            color: #ccc;
+                                            color: var(--text-muted);
                                         "
                                     >
                                         <span>Pobieranie...</span>
@@ -735,7 +840,7 @@
                                         class="progress-bar-bg"
                                         style="
                                             height: 6px;
-                                            background: #444;
+                                            background: var(--border);
                                             border-radius: 3px;
                                         "
                                     >
@@ -800,9 +905,9 @@
                             style="
                                 width: 250px;
                                 padding: 8px;
-                                background: #252526;
-                                border: 1px solid #444;
-                                color: white;
+                                background: var(--bg-card);
+                                border: 1px solid var(--border);
+                                color: var(--text-main);
                                 border-radius: 4px;
                             "
                         />
@@ -869,7 +974,7 @@
                     </div>
 
                     <h3 style="margin-top: 24px">Dane Uczestnika Badania</h3>
-                    <p style="color: #888; margin-bottom: 20px">
+                    <p style="color: var(--text-muted); margin-bottom: 20px">
                         Wypełnij te dane przed uruchomieniem testu.
                     </p>
 
@@ -887,7 +992,12 @@
 
                         <div id="dynamic-demo-form">
                             <!-- JS wstrzyknie pola formularza tutaj -->
-                            <p style="color: #ccc; font-style: italic">
+                            <p
+                                style="
+                                    color: var(--text-muted);
+                                    font-style: italic;
+                                "
+                            >
                                 Wybierz szablon, aby zobaczyć pola.
                             </p>
                         </div>
@@ -932,7 +1042,7 @@
                 <!-- WIDOK 5: Kreator Metryczek (NOWY) -->
                 <div id="demo-creator-view" class="hidden">
                     <h3>Kreator Szablonów Metryczek</h3>
-                    <p style="color: #888; margin-bottom: 20px">
+                    <p style="color: var(--text-muted); margin-bottom: 20px">
                         Zdefiniuj własne pola, które chcesz zbierać od
                         uczestników.
                     </p>
@@ -952,7 +1062,7 @@
                         <hr
                             style="
                                 border: 0;
-                                border-top: 1px solid #444;
+                                border-top: 1px solid var(--border);
                                 margin: 20px 0;
                             "
                         />
@@ -1000,7 +1110,7 @@
                     <hr
                         style="
                             border: 0;
-                            border-top: 1px solid #444;
+                            border-top: 1px solid var(--border);
                             margin: 30px 0;
                         "
                     />
@@ -1048,7 +1158,7 @@
                     >
                         <div>
                             <h3>Ustawienia Wyglądu</h3>
-                            <p style="color: #888; margin: 0">
+                            <p style="color: var(--text-muted); margin: 0">
                                 Dostosuj wygląd aplikacji do własnych
                                 preferencji.
                             </p>
@@ -1105,7 +1215,7 @@
                                 <p
                                     style="
                                         font-size: 12px;
-                                        color: #888;
+                                        color: var(--text-muted);
                                         margin-top: 10px;
                                     "
                                 >
@@ -1438,7 +1548,7 @@
                         <hr
                             style="
                                 border: 0;
-                                border-top: 1px solid #444;
+                                border-top: 1px solid var(--border);
                                 margin: 20px 0;
                             "
                         />
@@ -1469,7 +1579,7 @@
                             <p
                                 style="
                                     font-size: 12px;
-                                    color: #888;
+                                    color: var(--text-muted);
                                     margin-top: 10px;
                                 "
                             >
@@ -1492,7 +1602,7 @@
                         <hr
                             style="
                                 border: 0;
-                                border-top: 1px solid #444;
+                                border-top: 1px solid var(--border);
                                 margin: 20px 0;
                             "
                         />
@@ -1586,7 +1696,7 @@
                         <hr
                             style="
                                 border: 0;
-                                border-top: 1px solid #444;
+                                border-top: 1px solid var(--border);
                                 margin: 30px 0;
                             "
                         />
@@ -1637,7 +1747,7 @@
                     >
                         <div>
                             <h3>Co nowego w Nous?</h3>
-                            <p style="color: #888; margin: 0">
+                            <p style="color: var(--text-muted); margin: 0">
                                 Ostatnie zmiany i aktualizacje aplikacji.
                             </p>
                         </div>
@@ -1755,7 +1865,12 @@
                             <p style="margin-top: 15px">
                                 Nie udało się załadować informacji o zmianach.
                             </p>
-                            <p style="font-size: 14px; color: #888">
+                            <p
+                                style="
+                                    font-size: 14px;
+                                    color: var(--text-muted);
+                                "
+                            >
                                 Spróbuj ponownie później lub otwórz GitHub
                                 ręcznie.
                             </p>
@@ -1951,11 +2066,11 @@
                     <hr
                         style="
                             border: 0;
-                            border-top: 1px solid #444;
+                            border-top: 1px solid var(--border);
                             margin: 20px 0;
                         "
                     />
-                    <p style="font-size: 12px; color: #888">
+                    <p style="font-size: 12px; color: var(--text-muted)">
                         Praca Inżynierska<br />
                         Autor: Bartosz Kauc<br />
                         Uczelnia: Uniwersytet Kazimierza Wielkiego<br />
@@ -2033,7 +2148,7 @@
                     <p
                         style="
                             font-size: 13px;
-                            color: #aaa;
+                            color: var(--text-muted);
                             margin-bottom: 20px;
                         "
                     >
@@ -2053,9 +2168,9 @@
                                 letter-spacing: 5px;
                                 width: 200px;
                                 margin: 0 auto;
-                                background: #252526;
+                                background: var(--bg-card);
                                 color: white;
-                                border: 1px solid #444;
+                                border: 1px solid var(--border);
                                 padding: 10px;
                                 border-radius: 4px;
                             "
@@ -2111,9 +2226,9 @@
                                 letter-spacing: 5px;
                                 width: 200px;
                                 margin: 0 auto;
-                                background: #252526;
+                                background: var(--bg-card);
                                 color: white;
-                                border: 1px solid #444;
+                                border: 1px solid var(--border);
                                 padding: 10px;
                                 border-radius: 4px;
                             "
@@ -2187,9 +2302,9 @@
                                 font-size: 16px;
                                 width: 100%;
                                 margin: 0 auto;
-                                background: #252526;
+                                background: var(--bg-card);
                                 color: white;
-                                border: 1px solid #444;
+                                border: 1px solid var(--border);
                                 padding: 10px;
                                 border-radius: 4px;
                             "
@@ -2208,9 +2323,9 @@
                                 letter-spacing: 5px;
                                 width: 200px;
                                 margin: 0 auto;
-                                background: #252526;
+                                background: var(--bg-card);
                                 color: white;
-                                border: 1px solid #444;
+                                border: 1px solid var(--border);
                                 padding: 10px;
                                 border-radius: 4px;
                             "
@@ -2248,7 +2363,7 @@
                     <p
                         style="
                             font-size: 13px;
-                            color: #aaa;
+                            color: var(--text-muted);
                             margin-bottom: 20px;
                         "
                     >
@@ -2262,7 +2377,7 @@
                             background: rgba(0, 0, 0, 0.3);
                             padding: 15px;
                             border-radius: 8px;
-                            border: 1px solid #444;
+                            border: 1px solid var(--border);
                             margin-bottom: 15px;
                             user-select: text;
                         "

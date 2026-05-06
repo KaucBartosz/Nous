@@ -148,33 +148,34 @@ export async function syncNow() {
 
   let synced_count = 0;
 
-  for (const record of pending) {
-    try {
-      await syncSingleResultInternal(record); // Użyj wspólnej funkcji wewn.
-      synced_count++;
+  try {
+    for (const record of pending) {
+      try {
+        await syncSingleResultInternal(record); // Użyj wspólnej funkcji wewn.
+        synced_count++;
 
-      // Aktualizuj progress
-      updateSyncUI(true, pending.length - synced_count);
-    } catch (e) {
-      console.error(`Failed to sync record ${record.id}:`, e);
+        // Aktualizuj progress
+        updateSyncUI(true, pending.length - synced_count);
+      } catch (e) {
+        console.error(`Failed to sync record ${record.id}:`, e);
 
-      if (e.code === "permission-denied") {
-        isSyncing = false;
-        updateSyncUI(false, 0);
-        import("./dialog.js").then(({ Dialog }) => {
-          Dialog.alert(
-            `Błąd synchronizacji: Brak uprawnień. Sprawdź czy Twój status to 'APPROVED' i czy reguły bazy danych są poprawne.`,
-            "error",
-          );
-        });
-        break; // Stop syncing on perm error
+        if (e.code === "permission-denied") {
+          updateSyncUI(false, 0);
+          import("./dialog.js").then(({ Dialog }) => {
+            Dialog.alert(
+              `Błąd synchronizacji: Brak uprawnień. Sprawdź czy Twój status to 'APPROVED' i czy reguły bazy danych są poprawne.`,
+              "error",
+            );
+          });
+          break; // Stop syncing on perm error
+        }
       }
     }
+  } finally {
+    // Zakończ synchronizację — zawsze resetuj flagę
+    isSyncing = false;
+    updateSyncUI(false, 0);
   }
-
-  // Zakończ synchronizację
-  isSyncing = false;
-  updateSyncUI(false, 0);
 
   // #13: Show toast after successful sync
   if (synced_count > 0) {

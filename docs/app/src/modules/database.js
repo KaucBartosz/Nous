@@ -85,6 +85,9 @@ export async function initDB() {
           db.createObjectStore("localAccounts", { keyPath: "username" });
         }
       },
+    }).catch(err => {
+      dbPromise = null;
+      throw err;
     });
   }
 
@@ -212,8 +215,17 @@ export async function getAllResults() {
     const db = await initDB();
     const records = await db.getAllFromIndex("results", "timestamp");
 
-    // Decrypt all
-    return await Promise.all(records.map(processRecordOutput));
+    // Decrypt all — pojedynczy zepsuty record nie zabija reszty
+    const results = await Promise.allSettled(records.map(processRecordOutput));
+    const decrypted = [];
+    for (const r of results) {
+      if (r.status === "fulfilled") {
+        decrypted.push(r.value);
+      } else {
+        console.error("Failed to decrypt one result record:", r.reason);
+      }
+    }
+    return decrypted;
   } catch (error) {
     console.error("Error getting all results:", error);
     throw new Error(`Nie udało się pobrać wyników: ${error.message}`);
@@ -232,7 +244,10 @@ export async function getPendingResults(userId) {
       records = await db.getAllFromIndex("results", "syncStatus", "PENDING");
     }
 
-    const decodedRecords = await Promise.all(records.map(processRecordOutput));
+    const results = await Promise.allSettled(records.map(processRecordOutput));
+    const decodedRecords = results
+      .filter(r => r.status === "fulfilled")
+      .map(r => r.value);
 
     // Filter by user if userId is provided
     if (userId) {
@@ -258,9 +273,6 @@ export async function markAsSynced(local_id, firestore_id) {
     if (record) {
       record.sync_status = "SYNCED";
       record.firestore_id = firestore_id;
-      // Also set legacy fields for backward compatibility
-      record.syncStatus = "SYNCED";
-      record.firestoreId = firestore_id;
       await store.put(record);
     }
     await tx.done;
@@ -308,19 +320,14 @@ export async function checkResultExists(
   testId,
   subjectId,
 ) {
-  try {
-    const results = await getAllResults();
-    return results.some(
-      (r) =>
-        (firestoreId && r.firestore_id === firestoreId) ||
-        (r.timestamp === timestamp &&
-          r.test_id === testId &&
-          r.subject_id === subjectId),
-    );
-  } catch (e) {
-    console.error("Error checking for duplicate:", e);
-    return false;
-  }
+  const results = await getAllResults();
+  return results.some(
+    (r) =>
+      (firestoreId && r.firestore_id === firestoreId) ||
+      (r.timestamp === timestamp &&
+        r.test_id === testId &&
+        r.subject_id === subjectId),
+  );
 }
 
 /**
@@ -445,7 +452,7 @@ export async function getAllParticipants(researcherUid) {
       researcherUid,
     );
     return allParticipants.sort((a, b) =>
-      a.display_name.localeCompare(b.display_name, "pl"),
+      (a.display_name || "").localeCompare(b.display_name || "", "pl"),
     );
   } catch (error) {
     console.error("Error getting participants:", error);
