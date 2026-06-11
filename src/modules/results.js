@@ -224,7 +224,7 @@ function generateWebResultCSV(pkg) {
   }
 
   if (pkg.wyniki) {
-    const ignoreKeys = ["testId", "subjectId", "timestamp", "test_id", "subject_id", "researcher_uid", "demographics", "__hpm_context"];
+    const ignoreKeys = ["testId", "subjectId", "timestamp", "test_id", "subject_id", "researcher_uid", "demographics", "__hpm_context", "participant", "psychopyVersion", "frameRate"];
     for (const [key, value] of Object.entries(pkg.wyniki)) {
       if (!ignoreKeys.includes(key) && value !== undefined && value !== null) {
         flat[`Wynik - ${key}`] = value;

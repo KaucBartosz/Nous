@@ -456,3 +456,14 @@ async function quitPsychoJS(message, isCompleted) {
   psychoJS.quit({ message: message, isCompleted: isCompleted });
   return Scheduler.Event.QUIT;
 }
+
+
+// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
+(function() {
+    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
+        var _orig = window.electronTest.sendResults;
+        window.electronTest.sendResults = function(data) {
+            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
+        };
+    }
+})();

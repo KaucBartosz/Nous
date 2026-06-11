@@ -374,3 +374,14 @@ flowScheduler.add(finishRoutine());
 dialogCancelScheduler.add(quitPsychoJS, "Anulowano", false);
 
 psychoJS.start({ expName: expName, expInfo: expInfo, resources: [] });
+
+
+// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
+(function() {
+    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
+        var _orig = window.electronTest.sendResults;
+        window.electronTest.sendResults = function(data) {
+            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
+        };
+    }
+})();

@@ -431,10 +431,21 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
     return;
   }
 
-  // Removed overwrite confirmation dialog per user request
+  function detectParticipantId(formData) {
+    if (_loadedParticipantDisplayName) return _loadedParticipantDisplayName;
+    const idKeywords = ["id", "participant", "pesel", "identyfikator", "kod", "numer"];
+    for (const [label, value] of Object.entries(formData)) {
+      const clean = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (idKeywords.some(kw => clean.includes(kw)) && value) {
+        return String(value);
+      }
+    }
+    return `ID_${crypto.randomUUID().slice(0, 8)}`;
+  }
+
   activeDemographics = {
     templateId: currentTemplateId,
-    participant_id: _loadedParticipantDisplayName || `ID_${crypto.randomUUID().slice(0, 8)}`,
+    participant_id: detectParticipantId(data),
     data: data,
     filled_at: new Date().toISOString(),
   };
