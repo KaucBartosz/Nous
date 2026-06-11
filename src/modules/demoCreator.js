@@ -241,11 +241,24 @@ async function loadTemplateIntoCreator(id) {
 
 async function exportCurrentTemplate(template) {
     try {
-        const result = await window.electronAPI.exportTemplate(template);
-        if (result.success) {
-            await Dialog.alert(`Szablon "${template.name}" został wyeksportowany pomyślnie.`, 'info');
-        } else if (!result.cancelled) {
-            await Dialog.alert("Błąd eksportu: " + result.error, 'error');
+        if (window.electronAPI) {
+            const result = await window.electronAPI.exportTemplate(template);
+            if (result.success) {
+                await Dialog.alert(`Szablon "${template.name}" został wyeksportowany pomyślnie.`, 'info');
+            } else if (!result.cancelled) {
+                await Dialog.alert("Błąd eksportu: " + result.error, 'error');
+            }
+        } else {
+            const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${template.name.replace(/[^a-z0-9]/gi, '_')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+            await Dialog.alert(`Szablon "${template.name}" został pobrany.`, 'info');
         }
     } catch (e) {
         console.error("Export error:", e);
@@ -255,28 +268,58 @@ async function exportCurrentTemplate(template) {
 
 async function importTemplateFromFile() {
     try {
-        const result = await window.electronAPI.importTemplate();
-        if (result.success && result.data) {
-            const imported = result.data;
+        if (window.electronAPI) {
+            const result = await window.electronAPI.importTemplate();
+            if (result.success && result.data) {
+                const imported = result.data;
 
-            // Check if name is taken? 
-            // We can just load it into the creator and let the user decide to save (maybe rename).
+                resetCreatorForm();
 
+                document.getElementById('creator-template-name').value = imported.name + " (Import)";
+
+                if (imported.fields && Array.isArray(imported.fields)) {
+                    imported.fields.forEach(field => addFieldUI(field));
+                }
+
+                await Dialog.alert("Szablon został zaimportowany do kreatora. Możesz go teraz zapisać.", 'info');
+
+                document.getElementById('demo-creator-view').scrollIntoView({ behavior: 'smooth' });
+
+            } else if (!result.cancelled) {
+                await Dialog.alert("Błąd importu: " + result.error, 'error');
+            }
+        } else {
+            const data = await new Promise((resolve, reject) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) { resolve(null); return; }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            resolve(JSON.parse(ev.target.result));
+                        } catch (err) {
+                            reject(new Error('Nieprawidłowy plik JSON'));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('Błąd odczytu pliku'));
+                    reader.readAsText(file);
+                };
+                input.click();
+            });
+
+            if (!data) return;
+
+            const imported = data;
             resetCreatorForm();
-
-            document.getElementById('creator-template-name').value = imported.name + " (Import)";
-
+            document.getElementById('creator-template-name').value = (imported.name || "Szablon") + " (Import)";
             if (imported.fields && Array.isArray(imported.fields)) {
                 imported.fields.forEach(field => addFieldUI(field));
             }
-
             await Dialog.alert("Szablon został zaimportowany do kreatora. Możesz go teraz zapisać.", 'info');
-
-            // Scroll to top
             document.getElementById('demo-creator-view').scrollIntoView({ behavior: 'smooth' });
-
-        } else if (!result.cancelled) {
-            await Dialog.alert("Błąd importu: " + result.error, 'error');
         }
     } catch (e) {
         console.error("Import error:", e);

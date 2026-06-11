@@ -36,6 +36,22 @@ export function initResultsHandler() {
         });
       }
     });
+  } else {
+    window.addEventListener("message", (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data && event.data.type === "test-results") {
+        console.log("Web: Odebrano wyniki z testu. Przetwarzanie...");
+        try {
+          const validatedData = validateTestResults(event.data.data);
+          handleTestResults(validatedData);
+        } catch (e) {
+          console.error("Web: Błąd walidacji wyników:", e);
+          import("./dialog.js").then(({ Dialog }) => {
+            Dialog.alert(`Błąd walidacji wyników testu: ${e.message}`, "error");
+          });
+        }
+      }
+    });
   }
 
   elements.btnCloseModal.addEventListener("click", () => {
@@ -47,7 +63,6 @@ export function initResultsHandler() {
     loadTestsList();
   });
 
-  // Zmiana: Button teraz służy do "Zapisu w systemie" (Local -> Cloud)
   elements.btnUploadCloud.addEventListener("click", saveResultToSystem);
 }
 
@@ -175,17 +190,18 @@ async function saveResultToSystem() {
     elements.btnUploadCloud.disabled = true;
     elements.btnUploadCloud.textContent = "Zapisywanie...";
 
-    // Get current user ID for verification (works for Firebase, Local, and Guest)
     const currentUserId = getResearcherUid();
 
-    // 1. Zapis do IndexedDB
     await saveResult(currentResultPackage, currentUserId);
+
+    if (!window.electronAPI) {
+      generateWebResultCSV(currentResultPackage);
+    }
 
     elements.btnUploadCloud.textContent = "Zapisano!";
     elements.modalOverlay.classList.add("hidden");
     loadTestsList();
 
-    // 2. Próba synchronizacji (fire & forget)
     syncNow().catch(err => console.error("Sync after save failed:", err));
   } catch (e) {
     await Dialog.alert("Błąd zapisu bazy: " + e.message, "error");
@@ -193,4 +209,47 @@ async function saveResultToSystem() {
   } finally {
     elements.btnUploadCloud.disabled = false;
   }
+}
+
+function generateWebResultCSV(pkg) {
+  const flat = {};
+  flat["Data"] = new Date(pkg.timestamp).toLocaleString();
+  flat["Test ID"] = pkg.test_id;
+  flat["ID Badanego"] = pkg.subject_id;
+
+  if (pkg.demographics && pkg.demographics.data) {
+    for (const [key, value] of Object.entries(pkg.demographics.data)) {
+      flat[`Metryczka - ${key}`] = value;
+    }
+  }
+
+  if (pkg.wyniki) {
+    const ignoreKeys = ["testId", "subjectId", "timestamp", "test_id", "subject_id", "researcher_uid", "demographics", "__hpm_context"];
+    for (const [key, value] of Object.entries(pkg.wyniki)) {
+      if (!ignoreKeys.includes(key) && value !== undefined && value !== null) {
+        flat[`Wynik - ${key}`] = value;
+      }
+    }
+  }
+
+  const bom = "\uFEFF";
+  let csvContent = bom + "Parametr;Wartość\r\n";
+  for (const [key, value] of Object.entries(flat)) {
+    let valStr = String(value);
+    if (valStr.includes(";") || valStr.includes("\n")) {
+      valStr = `"${valStr.replace(/"/g, '""')}"`;
+    }
+    csvContent += `${key};${valStr}\r\n`;
+  }
+
+  const filename = `Wynik_${pkg.test_id}_${Date.now()}.csv`;
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
