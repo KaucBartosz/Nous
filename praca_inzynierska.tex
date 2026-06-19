@@ -1,0 +1,1029 @@
+% ============================================================
+%  PRACA INŻYNIERSKA
+%  Aplikacja do przeprowadzania testów psychologicznych
+% ============================================================
+
+\documentclass[12pt, a4paper, oneside]{report}
+
+% --- Kodowanie i język ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+
+% --- Czcionki ---
+\usepackage{lmodern}
+
+% --- Geometria strony ---
+\usepackage[
+  left=3.5cm,
+  right=2.5cm,
+  top=2.5cm,
+  bottom=2.5cm
+]{geometry}
+
+% --- Grafika i kolory ---
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+
+% --- Tabele ---
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+
+% --- Odwołania i linki ---
+\usepackage[
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+]{hyperref}
+
+% --- Listingi kodu ---
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!70!black},
+  showstringspaces=false,
+  tabsize=2
+}
+
+% --- Bibliografia ---
+\usepackage[
+  backend=biber,
+  style=numeric,
+  sorting=nyt
+]{biblatex}
+% \addbibresource{bibliografia.bib}  % odkomentuj gdy dodasz plik .bib
+
+% --- Interlinia ---
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Nagłówki rozdziałów ---
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\Large\bfseries}
+  {\chaptertitlename\ \thechapter}{16pt}{\LARGE}
+
+% --- Pakiety dodatkowe ---
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{pdfpages}
+\usepackage{csquotes}
+\usepackage[patch=none]{microtype}
+\microtypesetup{nopatch=footnote}
+
+
+% ============================================================
+%  POCZĄTEK DOKUMENTU
+% ============================================================
+\begin{document}
+
+% ============================================================
+%  STRONA TYTUŁOWA
+% ============================================================
+\begin{titlepage}
+	\centering
+
+	\vspace*{1cm}
+
+	{\large\textbf{Uniwersytet Kazimierza Wielkiego w~Bydgoszczy}}\\[0.3cm]
+	{\large Wydział Informatyki}\\[2cm]
+
+	{\large Bartosz Kauc}\\[0.3cm]
+	{\large Nr albumu: 104154}\\[2cm]
+
+	\rule{\textwidth}{0.4pt}\\[0.6cm]
+
+	{\LARGE\bfseries
+		Aplikacja do przeprowadzania testów psychologicznych
+	}\\[0.4cm]
+
+	\rule{\textwidth}{0.4pt}\\[2cm]
+
+	{\large Praca inżynierska}\\[1cm]
+
+	{\large Promotor: dr Tomasz Bednarek}\\[2cm]
+
+	\vfill
+
+	{\large Bydgoszcz, 2027}
+
+\end{titlepage}
+\pagenumbering{Roman}
+
+% ============================================================
+%  SPIS TREŚCI
+% ============================================================
+\tableofcontents
+\newpage
+
+% Odkomentuj poniższe gdy praca będzie gotowa i będziesz mieć rysunki/tabele:
+%\listoffigures
+%\addcontentsline{toc}{chapter}{Spis rysunków}
+%\newpage
+%\listoftables
+%\addcontentsline{toc}{chapter}{Spis tabel}
+%\newpage
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  WSTĘP (nienumerowany)
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter*{Wstęp}
+\addcontentsline{toc}{chapter}{Wstęp}
+\label{chap:wstep}
+
+Świat technologii nieustannie się rozwija, jednak niektóre obszary pracy psychologa pozostają niezmienione od dekad. Do dziś w diagnostyce psychologicznej i psychometrycznej wykorzystuje się wielkogabarytowe i kosztowne urządzenia pomiarowe. Powstaje więc pytanie: czy można uprościć ten proces, zmniejszyć koszty i przyspieszyć badanie, zachowując przy tym porównywalną dokładność wyników?
+
+Istniejące platformy, takie jak Pavlovia i inne, choć oferują pewien stopień cyfryzacji, nie są wolne od ograniczeń. Dostęp do nich jest najczęściej możliwy wyłącznie przez przeglądarkę internetową, a jakość wyników bywa podatna na opóźnienia związane z jakością łącza sieciowego. Ten brak elastyczności nie pozwala na ich efektywne wykorzystanie w warunkach terenowych (np. na maratonach, rajdach) lub w warunkach specjalistycznych (oddziały zamknięte, izolatki). Ta luka stała się motywacją do stworzenia własnego rozwiązania.
+
+Celem pracy jest zaprojektowanie i implementacja platformy desktopowej typu „launcher” do dystrybucji i przeprowadzania testów psychologicznych w prosty i przystępny sposób, gdzie raz pobrany test można uruchamiać wielokrotnie, w każdych warunkach, niezależnie od dostępu do internetu.
+
+Praca została podzielona na 4 główne bloki tematyczne:
+\begin{itemize}[noitemsep]
+	\item Cel pracy, jak i porównanie do istniejących już rozwiązań.
+	\item Projekt, jak i stworzenie programu.
+	\item Weryfikacja zgodności z tematem pracy.
+	\item Wnioski, podsumowanie i perspektywy na przyszłość.
+\end{itemize}
+\newpage
+\pagenumbering{arabic}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  ROZDZIAŁ 1 — CEL, ANALIZA I LITERATURA
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Cel pracy, analiza istniejących rozwiązań i~literatura}
+\label{chap:cel-analiza}
+
+
+% ============================================================
+\section{Cel i zakres pracy}
+\label{sec:cel}
+
+Celem niniejszej pracy inżynierskiej jest zaprojektowanie i~zaimplementowanie
+modularnej platformy desktopowej typu \textit{launcher}, umożliwiającej
+pobieranie i~uruchamianie cyfrowych testów psychologicznych. Platforma
+wykorzystuje architekturę klient-serwer, w~której backend stanowi usługa
+Firebase, a~aplikacja kliencka została zbudowana w~technologii Electron.
+
+Zakres pracy obejmuje:
+\begin{itemize}[noitemsep]
+	\item Analizę istniejących rozwiązań w~dziedzinie komputerowo wspomaganej
+	      diagnostyki psychologicznej.
+	\item Zaprojektowanie architektury systemu, w~tym bezpiecznej komunikacji
+	      międzyprocesowej (IPC), kontroli dostępu opartej na rolach (RBAC)
+	      oraz mechanizmów zapewnienia integralności danych lokalnych.
+	\item Implementację aplikacji klienckiej obsługującej rejestrację
+	      i~logowanie użytkowników, izolowane uruchamianie testów oraz
+	      warunkową synchronizację wyników z~bazą Firestore.
+	\item Zapewnienie trybu offline z~lokalnym przechowywaniem danych dla
+	      niezweryfikowanych użytkowników oraz pełnej synchronizacji
+	      i~archiwizacji w~chmurze (NoSQL) po zatwierdzeniu przez
+	      administratora.
+	\item Weryfikację poprawności działania systemu względem postawionych
+	      wymagań.
+\end{itemize}
+
+
+% ============================================================
+\section{Analiza istniejących rozwiązań}
+\label{sec:analiza}
+
+\subsection{Przegląd dostępnych platform}
+\label{subsec:przeglad}
+
+Na rynku istnieje kilka platform umożliwiających przeprowadzanie testów
+psychologicznych drogą cyfrową. Poniżej omówiono sześć rozwiązań
+wybranych jako reprezentatywne punkty odniesienia dla niniejszej pracy.
+
+\subsubsection{PsyPack}
+
+PsyPack (\url{https://psypack.com}) to platforma SaaS skierowana do
+psychologów i terapeutów, oferująca ponad 100~standaryzowanych narzędzi
+psychometrycznych z~automatycznym scoringiem i~raportowaniem.
+Działa wyłącznie przez przeglądarkę internetową --- nie istnieje wersja
+desktopowa ani tryb offline.
+Model licencyjny jest freemium: plan bezpłatny ogranicza liczbę badań
+do~3~miesięcznie, plan Professional kosztuje 17~USD miesięcznie
+(przy rozliczeniu rocznym) i~obejmuje 50~administracji w~miesiącu
+z~możliwością dokupienia kolejnych za~10~USD za~każde następne 50.
+Platforma skupia się na~kwestionariuszach i~skalach klinicznych
+(np.~PHQ-9, GAD-7) --- nie oferuje testów eksperymentalnych wymagających
+precyzyjnego pomiaru czasu reakcji.
+
+\subsubsection{Pavlovia}
+
+Pavlovia (\url{https://pavlovia.org}) to platforma Open Science stworzona
+przez twórców PsychoPy, przeznaczona do uruchamiania eksperymentów
+behawioralnych online. Pozwala na~tworzenie zaawansowanych zadań
+z~pomiarem czasu reakcji, jednak dokładność temporalna jest ograniczona
+przez środowisko przeglądarki i~jakość łącza internetowego.
+Model cenowy oparty jest na~płatności za~badanie: £0,24 za~jedno
+przeprowadzone badanie (ok.~1,18~zł według kursu z~dnia 15.06.2026).
+Przy~większej skali badań koszty szybko rosną.
+Platforma działa wyłącznie online --- brak trybu offline uniemożliwia
+korzystanie z~niej w~warunkach terenowych lub w~miejscach bez stałego
+dostępu do sieci.
+
+\subsubsection{Evalora}
+
+Evalora (\url{https://evalora.org}) to nowoczesna platforma webowa
+skierowana do~studentów i~badaczy psychologii.
+Umożliwia tworzenie i~dystrybucję kwestionariuszy psychologicznych,
+automatyczne obliczanie wyników (w~tym współczynnika Cronbacha~$\alpha$),
+oraz eksport danych do~formatów CSV, SPSS (.sav), Excel i~PDF
+w~stylu APA.
+Działa wyłącznie w~przeglądarce, bez instalacji i~bez trybu offline.
+Model cenowy jest elastyczny --- użytkownik samodzielnie decyduje
+o~kwocie (,,pay what you think we're worth'').
+Evalora ograniczona jest do~kwestionariuszy i~skal odpowiedzi;
+nie~obsługuje zadań eksperymentalnych wymagających pomiaru czasu reakcji.
+
+\subsubsection{OpenScales}
+
+OpenScales (\url{https://openscales.net}) to otwarty (open-source)
+repozytorium psychologicznych narzędzi pomiarowych w~formacie OSD
+(Open Scale Definition).
+Skale zapisane są jako pliki JSON i~mogą być uruchamiane bezpośrednio
+w~przeglądarce lub za~pośrednictwem środowiska PEBL na~komputerze
+stacjonarnym, co~częściowo umożliwia pracę offline.
+Platforma jest bezpłatna, jednak ograniczona wyłącznie do~kwestionariuszy
+i~skal --- brak wsparcia dla zadań eksperymentalnych z~rejestracją czasu
+reakcji. Nie posiada własnego systemu zarządzania użytkownikami
+ani synchronizacji wyników z~chmurą.
+
+\subsubsection{VTS (Vienna Test System)}
+
+Vienna Test System (VTS, \url{https://www.schuhfried.com/en/}) to
+specjalistyczne oprogramowanie wraz z~dedykowanym sprzętem, pozwalające
+na~precyzyjne testowanie zdolności psychometrycznych człowieka.
+VTS dzieli się na~dwie części. Pierwsza to~płatne oprogramowanie
+pozwalające na~przeprowadzanie testów online (€25,95 miesięcznie,
+cena z~15.06.2026). Druga część to~specjalistyczny sprzęt, który
+po~wypożyczeniu pozwala na~przeprowadzanie badań offline
+(€30,56 miesięcznie lub €45,41 miesięcznie, w~zależności od zestawu,
+cena z~15.06.2026).
+
+\subsubsection{Test2Drive / Optimis}
+
+Test2Drive / Optimis --- polskie rozwiązanie chmurowe stworzone pod
+kierunkiem dr.~hab.~Adama Tarnowskiego we~współpracy z~zespołem
+badawczo-rozwojowym ALTA. Platforma umożliwia przeprowadzanie testów
+online bez~konieczności instalacji. Cena dostępu dla instytucji nie
+jest publicznie znana, natomiast koszt badania dla osoby badanej jest
+ustalony urzędowo i~zależnie od~rodzaju badania wynosi np.~ok.~150~zł
+(stan na~15.06.2026).
+
+
+\subsection{Porównanie funkcjonalności}
+\label{subsec:porownanie}
+
+Zestawienie analizowanych platform względem czterech kryteriów kluczowych
+dla niniejszej pracy przedstawia tabela~\ref{tab:porownanie}.
+Symbole: T --- spełnione, N --- niespełnione, C --- częściowo spełnione.
+
+\begin{table}[H]
+	\centering
+	\caption{Porównanie istniejących platform do testów psychologicznych}
+	\label{tab:porownanie}
+	\footnotesize
+	\begin{tabular}{p{3.5cm}ccccccc}
+		\toprule
+		\textbf{Kryterium}
+		                                        & \textbf{PsyPack}
+		                                        & \textbf{Pavlovia}
+		                                        & \textbf{Evalora}
+		                                        & \textbf{OpenScales}
+		                                        & \textbf{VTS}
+		                                        & \textbf{Optimis}
+		                                        & \textbf{Nous}                               \\
+		\midrule
+		Bezpłatny dostęp bez limitów            & N                   & N & C & T & N & N & T \\
+		Tryb offline                            & N                   & N & N & C & C & N & T \\
+		Testy wykraczające poza kwestionariusze & N                   & T & N & N & T & T & T \\
+		Nowoczesny i przyjazny interfejs        & T                   & N & T & N & T & T & T \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Żadna z~analizowanych platform konkurencyjnych nie spełnia jednocześnie
+wszystkich czterech kryteriów. Pavlovia jako jedyna spośród platform
+online obsługuje testy eksperymentalne, jednak jest płatna i~wymaga
+stałego dostępu do sieci. OpenScales jest bezpłatny i~częściowo działa
+offline (przez PEBL), lecz ograniczony jest do~kwestionariuszy
+i~pozbawiony centralnego zarządzania użytkownikami. VTS reprezentuje
+podejście profesjonalne, jednak generuje wysokie koszty cykliczne.
+Ta~luka stanowi bezpośrednią motywację do~stworzenia własnego
+rozwiązania --- Nous.
+
+\section{Uzasadnienie wybranego rozwiązania}
+\label{sec:uzasadnienie}
+
+Z~przeprowadzonej analizy wynika, że żadna z~istniejących platform nie
+spełnia jednocześnie wymagań kluczowych dla pracy w~warunkach
+terenowych i~specjalistycznych: pracy w~pełnym trybie offline, niskich
+kosztów eksploatacji oraz dostępu wykraczającego poza proste
+kwestionariusze. Poniżej przedstawiono kluczowe argumenty przemawiające
+za~opracowaniem dedykowanego rozwiązania:
+
+\begin{itemize}
+	\item Możliwość przeprowadzania testów w~trybie offline.
+	\item Modularność i~możliwość rozbudowy o~nowe testy bez ingerencji
+	      w~rdzeń aplikacji.
+	\item Potrzeba kontroli dostępu (RBAC) z~zatwierdzaniem przez
+	      administratora.
+	\item Specyficzne wymagania instytucji badawczej.
+	\item Większa kontrola nad wszystkimi funkcjonalnościami platformy.
+\end{itemize}
+
+
+% ============================================================
+\section{Podstawy teoretyczne i~literatura}
+\label{sec:literatura}
+
+\subsection{Cyfryzacja diagnostyki psychologicznej i psychometrycznej}
+\label{subsec:diagnostyka}
+
+Wykorzystywanie komputerów przy diagnostyce miało już miejsce w~1959/1962
+roku w~Mayo Clinic (system powstał w~1959, lecz został sformalizowany
+jako CBTI w~1962), gdzie służyło to~interpretacji danych
+testowych\footnote{\url{https://pl.wikipedia.org/wiki/Mayo_Clinic} (15.06.2026)}.
+W~1986 zadebiutował Wiedeński System Testów (VTS) działający na~komputerach
+osobistych (PC), co~zrewolucjonizowało psychologię transportu i~pracy
+na~świecie.
+Choć pierwsze polskie komputery i~ośrodki informatyczne rozwijały się
+wcześniej, upowszechnienie komputerowych badań psychologicznych
+nastąpiło po~transformacji ustrojowej w~1989 roku. W~latach 80. i~90.
+powstało m.in.~Laboratorium Testów (późniejsza Pracownia Testów
+Psychologicznych Polskiego Towarzystwa Psychologicznego), które
+rozpoczęło systematyczną cyfryzację i~udostępnianie standaryzowanych
+metod w~wersjach elektronicznych\footnote{\url{https://www.schuhfried.com/pl/} (15.06.2026)}\footnote{\url{https://www.practest.com.pl/} (15.06.2026)}.
+
+\subsection{Precyzja pomiaru czasu reakcji w~środowiskach Chromium}
+\label{subsec:precyzja}
+
+Czas reakcji to~jeden z~podstawowych parametrów badanych przy testach
+psychometrycznych, gdzie precyzja jest kluczowa dla poprawnej
+interpretacji wyników. W~zadaniach takich jak test Stroopa, test
+Implicit Association Test (IAT) czy proste i~złożone czasy reakcji,
+różnica rzędu nawet 10--20~ms może istotnie wpłynąć na~wynik pomiaru
+i~jego interpretację kliniczną, dlatego dokładność temporalna
+oprogramowania pomiarowego nie jest kwestią drugorzędną.
+
+Środowiska oparte na~przeglądarce internetowej, w~tym Chromium
+wykorzystywane przez Electron, udostępniają programiście dwa
+podstawowe sposoby znakowania czasu zdarzeń: funkcję \texttt{Date.now()}
+oraz interfejs \texttt{performance.now()} z~specyfikacji High Resolution
+Time. Pierwsza z~nich zwraca czas systemowy z~rozdzielczością
+milisekundową i~jest podatna na~korekty zegara systemowego
+w~trakcie pomiaru, co~może wprowadzać nieciągłości. Druga --- zalecana
+w~zastosowaniach pomiarowych --- zwraca czas monotoniczny
+(niezależny od~ewentualnych korekt zegara systemowego)
+z~rozdzielczością sub-milisekundową, co~czyni ją właściwym narzędziem
+do~pomiaru czasu reakcji w~aplikacjach webowych.
+
+Drugim istotnym zagadnieniem jest sposób planowania momentu prezentacji
+stymulusu i~rejestracji odpowiedzi badanego. Funkcja
+\texttt{requestAnimationFrame} synchronizuje wykonanie kodu z~cyklem
+odświeżania ekranu (typowo ok.~16,7~ms przy częstotliwości 60~Hz),
+dzięki czemu zmiany na~ekranie są prezentowane w~przewidywalnych
+odstępach czasu. W~przeciwieństwie do~niej, funkcje \texttt{setTimeout}
+i~\texttt{setInterval} nie gwarantują wykonania kodu w~zadanym momencie
+--- ich dokładność zależy od~obciążenia silnika JavaScript i~może
+ulegać tzw. throttlingowi, szczególnie gdy okno aplikacji znajduje się
+w~tle.
+
+Na~dokładność pomiaru w~środowisku Chromium/Electron wpływają
+dodatkowo: cykliczne działanie mechanizmu odśmiecania pamięci
+(\textit{garbage collector}), synchronizacja wertykalna obrazu (V-Sync)
+oraz nieprzewidywalne opóźnienia (\textit{jitter}) wynikające
+z~harmonogramowania procesów przez system operacyjny i~sterownik
+karty graficznej. Łączny błąd pomiaru w~typowych warunkach
+w~przeglądarce szacuje się na~kilka do~kilkunastu milisekund, co~jest
+wystarczające dla wielu zastosowań przesiewowych, lecz niedostateczne
+dla badań wymagających najwyższej precyzji naukowej.
+
+Dla porównania, natywne środowiska laboratoryjne, takie jak~PsychoPy
+lub~E-Prime, uzyskują dokładność pomiaru rzędu~1~ms dzięki
+bezpośredniemu dostępowi do~sprzętu i~pominięciu warstwy renderowania
+przeglądarki. Z~tego powodu w~niniejszej pracy zaprojektowano
+alternatywny tryb wykonania testu (\textit{High Precision Mode}),
+opisany szerzej w~sekcji~\ref{subsec:hpm}, który pozwala uzyskać
+porównywalną dokładność pomiaru bez konieczności rezygnacji z~wygody
+dystrybucji testów webowych w~pozostałych przypadkach użycia.
+
+\subsection{Bezpieczeństwo danych psychologicznych w~chmurze}
+\label{subsec:bezpieczenstwo}
+
+Dane zbierane w~ramach testów psychologicznych --- wyniki testów
+osobowości, skal klinicznych czy danych demograficznych badanych ---
+stanowią w~rozumieniu Rozporządzenia Parlamentu Europejskiego i~Rady
+(UE) 2016/679 (RODO) szczególną kategorię danych osobowych, ujętą
+w~art.~9 RODO jako dane dotyczące zdrowia. Przetwarzanie takich danych
+wymaga zastosowania podwyższonych środków technicznych
+i~organizacyjnych, w~tym minimalizacji zakresu zbieranych danych,
+zapewnienia możliwości ich usunięcia oraz odpowiedniego zabezpieczenia
+przed nieuprawnionym dostępem.
+
+W~przypadku rozwiązań chmurowych podstawowym mechanizmem ochrony jest
+szyfrowanie danych w~spoczynku (\textit{at rest}) oraz w~tranzycie
+(\textit{in transit}). Usługa Firebase Firestore domyślnie szyfruje
+wszystkie przechowywane dane algorytmem AES-256, a~komunikacja
+klient--serwer odbywa się wyłącznie poprzez połączenie szyfrowane
+TLS. Mechanizmy te chronią jednak dane wyłącznie przed dostępem osób
+trzecich z~zewnątrz infrastruktury --- nie zabezpieczają danych przed
+dostawcą usługi chmurowej ani przed osobą posiadającą uprawnienia
+administracyjne do~bazy danych.
+
+Z~tego powodu w~systemach przetwarzających dane wrażliwe rekomendowane
+jest dodatkowo szyfrowanie end-to-end (E2EE), w~którym dane są
+szyfrowane po~stronie klienta, zanim jeszcze trafią do~jakiejkolwiek
+usługi pośredniczącej, a~klucz deszyfrujący nie jest nigdy przesyłany
+ani przechowywany na~serwerze. Tylko osoba posiadająca odpowiedni
+klucz (w~praktyce: sam badacz) jest w~stanie odczytać treść wyników.
+Uzupełnieniem szyfrowania jest deklaratywny model reguł dostępu
+(np.~Firebase Security Rules), pozwalający precyzyjnie określić, które
+operacje odczytu i~zapisu są dozwolone dla danej roli użytkownika,
+oraz model kontroli dostępu oparty na~rolach (RBAC), opisany szerzej
+w~sekcji~\ref{subsec:rbac}, dodatkowo ograniczający możliwość
+przypadkowego lub umyślnego naruszenia poufności danych przez
+nieuprawnionych użytkowników systemu. Ostatnim elementem układanki są
+mechanizmy integralności danych, takie jak~sumy kontrolne i~podpisy
+kryptograficzne (HMAC), umożliwiające wykrycie nieautoryzowanej
+modyfikacji danych już po~ich zapisaniu.
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  ROZDZIAŁ 2 — PROJEKTOWANIE, IMPLEMENTACJA I TESTOWANIE
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Projektowanie, implementacja i~testowanie}
+\label{chap:impl}
+
+
+% ============================================================
+\section{Wymagania funkcjonalne i~niefunkcjonalne}
+\label{sec:wymagania}
+
+\subsection{Wymagania funkcjonalne}
+\label{subsec:wym-funk}
+
+\begin{description}[noitemsep]
+	\item[WF1:] System pozwala na rejestrację użytkownika poprzez podanie loginu i~hasła (konto lokalne) lub adresu email i~hasła (konto online).
+	\item[WF2:] System pozwala na zalogowanie się na konto systemowe (Gość), umożliwiające pobranie i~wykonanie testu, ale nie dające dostępu do danych na serwerze.
+	\item[WF3:] Administrator może zatwierdzić lub odrzucić konto online, aby umożliwić dostęp do bazy danych.
+	\item[WF4:] Użytkownik może pobrać wybrany test i~uruchomić go lokalnie.
+	\item[WF5:] Wynik testu jest zapisywany lokalnie od razu po zakończeniu testu.
+	\item[WF6:] Zatwierdzony użytkownik po zalogowaniu może przesłać zapisane wyniki testów do bazy danych.
+	\item[WF7:] System obsługuje tryb offline -- raz pobrane testy mogą być uruchamiane bez potrzeby ponownego pobierania ani połączenia internetowego.
+	\item[WF8:] Badacz i~badany mają dostęp do ankiet (metryczek), które są podpinane do wyników testów.
+	\item[WF9:] Wynik zapisany w~trakcie sesji gościa (GUEST) może zostać przypisany do konta użytkownika po~jego zalogowaniu się.
+	\item[WF10:] Aplikacja informuje o~dostępności nowej wersji programu i~umożliwia jej pobranie oraz instalację.
+\end{description}
+
+\subsection{Wymagania niefunkcjonalne}
+\label{subsec:wym-niefunk}
+
+\begin{description}[noitemsep]
+	\item[WN1:] Program ma uruchamiać się w~przystępnym czasie (max~15~sekund).
+	\item[WN2:] Czas reakcji interfejsu na działania użytkownika nie przekracza~200~ms.
+	\item[WN3:] Dane logowania użytkowników są przechowywane wyłącznie w~postaci zahashowanej.
+	\item[WN4:] Lokalne pliki wyników są chronione przed dostępem spoza programu.
+	\item[WN5:] Program ma być wieloplatformowy (Windows, Linux, macOS).
+	\item[WN6:] Interfejs użytkownika jest przejrzysty i~intuicyjny.
+\end{description}
+
+\subsection{Ogólna architektura klient-serwer}
+\label{subsec:arch-ogolna}
+
+Projektowany system opiera się na architekturze klient-serwer, w~której warstwa kliencka (aplikacja desktopowa) współpracuje z~usługami chmurowymi backendu (Firebase). Struktura ta została podzielona na cztery główne warstwy:
+\begin{enumerate}
+	\item \textbf{Warstwa kliencka (Electron):} Aplikacja desktopowa dzieli się na dwa odseparowane rodzaje procesów:
+	      \begin{itemize}
+		      \item \textit{Main Process (Proces Główny):} Działa w~środowisku Node.js. Odpowiada za cykl życia aplikacji, tworzenie okien interfejsu graficznego, komunikację z~systemem plików, pobieranie paczek testowych z~zewnętrznych serwerów, uruchamianie procesów testowych oraz bezpieczne przechowywanie kluczy kryptograficznych przy pomocy interfejsu \texttt{safeStorage}.
+		      \item \textit{Renderer Process (Proces Renderowania):} Działa w~izolowanym środowisku Chromium. Odpowiada za wyświetlanie interfejsu użytkownika (zbudowanego w~technologiach HTML, CSS i~Vanilla JavaScript), w~tym paneli autoryzacji, listy testów, formularzy demograficznych oraz historii wyników. Nie posiada bezpośredniego dostępu do interfejsu systemowego Node.js, co minimalizuje ryzyko ataków typu \textit{Remote Code Execution} (RCE).
+	      \end{itemize}
+	\item \textbf{Warstwa chmurowa (Firebase backend):} Odpowiada za centralne zarządzanie danymi i~sesjami badaczy:
+	      \begin{itemize}
+		      \item \textit{Firebase Authentication:} Umożliwia bezpieczne logowanie i~rejestrację za pomocą poczty e-mail i~hasła, weryfikację tożsamości oraz zarządzanie tokenami sesyjnymi JWT.
+		      \item \textit{Cloud Firestore:} Zorientowana na dokumenty baza danych NoSQL przechowująca metadane o~dostępnych testach, szczegółowe profile i~statusy kont użytkowników (kolekcja \texttt{users}) oraz w~pełni zaszyfrowane wyniki testów przesyłane przez badaczy (kolekcja \texttt{results}).
+	      \end{itemize}
+	\item \textbf{Warstwa logiki serwerowej (Cloud Functions):} Część operacji administracyjnych i~bezpieczeństwa, które nie powinny być wykonywane bezpośrednio przez klienta (np.~nadawanie uprawnień, operacje wymagające klucza administracyjnego Firebase Admin SDK), zostały wydzielone do~funkcji chmurowych Firebase Cloud Functions, uruchamianych po~stronie serwera w~odpowiedzi na~zdarzenia w~Firestore lub wywołania HTTPS.
+	\item \textbf{Moduły testowe (Uruchamiane lokalnie):} System umożliwia elastyczną realizację badań psychologicznych w~dwóch środowiskach wykonawczych:
+	      \begin{itemize}
+		      \item \textit{Testy webowe (HTML/JS):} Uruchamiane w~izolowanym oknie \texttt{BrowserWindow} (z~włączoną piaskownicą Electrona). Wyniki po zakończeniu badania są przekazywane przez specjalny skrypt pomostowy z~powrotem do aplikacji głównej.
+		      \item \textit{Testy natywne (Python/PsychoPy):} Uruchamiane w~ramach trybu wysokiej precyzji (\textit{High Precision Mode} – HPM). Aplikacja kliencka tworzy podproces dedykowanego środowiska Python, który realizuje pomiary z~dokładnością sub-milisekundową. Wynik zapisywany jest lokalnie do pliku JSON, po czym jest wczytywany przez proces główny.
+	      \end{itemize}
+\end{enumerate}
+
+\subsection{Komunikacja międzyprocesowa (IPC)}
+\label{subsec:ipc}
+
+Bezpieczeństwo architektury aplikacji opartej o~szablon Electrona wymagało ścisłego oddzielenia logiki biznesowej renderera od możliwości niskopoziomowych procesu głównego. W~tym celu w~systemie całkowicie wyłączono integrację z~Node.js po stronie renderera (\texttt{nodeIntegration: false}) oraz włączono pełną izolację kontekstu (\texttt{contextIsolation: true}).
+
+Jedynym pomostem umożliwiającym komunikację między procesami jest skrypt preload (\texttt{preload.js}), który przy użyciu modułu \texttt{contextBridge} udostępnia w~globalnym obiekcie \texttt{window} bezpieczne, zminimalizowane API o~nazwie \texttt{electronAPI}. Implementacja ta zapobiega wstrzykiwaniu dowolnego kodu Node.js przez skrypty testowe i~renderer. Komunikacja opiera się na ściśle zdefiniowanych kanałach IPC:
+\begin{itemize}
+	\item \textbf{Kanały żądań jednostronnych (Renderer $\rightarrow$ Main via \texttt{ipcRenderer.send}):}
+	      \begin{itemize}
+		      \item \texttt{download-and-run} – przekazuje adres URL i~identyfikator testu w~celu pobrania paczki ZIP i~jej natychmiastowego wykonania,
+		      \item \texttt{save-local-result} – wywołuje systemowe okno zapisu pliku wyniku, obliczając uprzednio sygnaturę HMAC danych,
+		      \item \texttt{check-app-update}, \texttt{download-app-update}, \texttt{install-app-update} – sterują procesem aktualizacji programu klienckiego (mechanizm opisany szerzej w~sekcji~\ref{subsec:impl-update}),
+		      \item \texttt{open-external} – żąda otwarcia bezpiecznego adresu URL w~zewnętrznej przeglądarce systemowej (z~weryfikacją protokołów \texttt{http:}, \texttt{https:} oraz \texttt{mailto:} w~celu uniknięcia podatności wstrzyknięć poleceń).
+	      \end{itemize}
+	\item \textbf{Kanały asynchronicznej obsługi dwukierunkowej (Renderer $\rightarrow$ Main via \texttt{ipcRenderer.invoke}):}
+	      \begin{itemize}
+		      \item \texttt{get-local-versions} – skanuje lokalną bibliotekę i~zwraca wersje testów obecnych na dysku,
+		      \item \texttt{delete-test} – pozwala na bezpieczne usunięcie wybranego katalogu testowego po wcześniejszej walidacji jego identyfikatora,
+		      \item \texttt{get-encryption-key} – pobiera z~procesu głównego unikalny klucz główny (Master Key) odszyfrowany za pomocą \texttt{safeStorage},
+		      \item \texttt{get-e2e-key} i~\texttt{set-e2e-key} – odpowiadają za odczyt i~zapis klucza chmurowego E2E zabezpieczonego na dysku,
+		      \item \texttt{export-template} i~\texttt{import-template} – realizują operacje eksportu/importu szablonów ankiet demograficznych w~formacie JSON,
+		      \item \texttt{download-bulk-zip} – generuje paczkę ZIP z~wybranymi rezultatami badań i~zapisuje ją w~wybranej przez użytkownika lokalizacji.
+	      \end{itemize}
+	\item \textbf{Kanały subskrypcji zdarzeń (Main $\rightarrow$ Renderer via \texttt{ipcRenderer.on}):}
+	      \begin{itemize}
+		      \item \texttt{test-status} – przesyła tekstowe komunikaty o~stanie wykonywania testu,
+		      \item \texttt{download-progress} – informuje o~postępie pobierania paczki testowej (w~procentach),
+		      \item \texttt{test-results-forwarded} – przesyła odebrane z~testu rezultaty do formularza zapisu i~synchronizacji w~rendererze,
+		      \item \texttt{test-process-stopped} – powiadamia o~zamknięciu procesu testowego w~celu przywrócenia interfejsu launchera.
+	      \end{itemize}
+\end{itemize}
+
+Każde wejście z~kanału IPC jest rygorystycznie walidowane w~procesie głównym. Dla przykładu, identyfikator testu (\texttt{testId}) weryfikowany jest wyrażeniem regularnym \lstinline|/^[a-zA-Z0-9_-]+$/|, co zapobiega atakom typu \textit{Path Traversal} przy operacjach dyskowych.
+
+\subsection{Model kontroli dostępu (RBAC)}
+\label{subsec:rbac}
+
+Aplikacja implementuje autorski, wielopoziomowy model kontroli dostępu oparty na rolach (RBAC – \textit{Role-Based Access Control}) sprzężony ze statusem konta użytkownika. Zaimplementowano pięć głównych stanów dostępu:
+\begin{enumerate}
+	\item \textbf{ADMIN:} Rola przeznaczona dla zarządcy platformy. Umożliwia wgląd w~listę wszystkich zarejestrowanych kont badaczy online, ich zatwierdzanie (\texttt{APPROVED}) bądź blokowanie (\texttt{BLOCKED}). Daje również pełny dostęp do podglądu wszystkich wyników w~Firestore, resetowania haseł lokalnych oraz edycji globalnej biblioteki testów.
+	\item \textbf{APPROVED:} Status zatwierdzonego badacza. Daje pełny dostęp do pobierania i~uruchamiania testów z~biblioteki, automatycznej synchronizacji wyników badań z~chmurą Firestore z~użyciem klucza E2E, a~także przeglądania historii własnych badań.
+	\item \textbf{PENDING:} Domyślny status po rejestracji konta online. Badacz może uruchamiać pobrane testy, jednak ze względów bezpieczeństwa wyniki są zapisywane wyłącznie lokalnie w~zaszyfrowanej bazie IndexedDB. Funkcja automatycznej synchronizacji do chmury pozostaje zablokowana do czasu zmiany statusu na \texttt{APPROVED} przez administratora.
+	\item \textbf{LOCAL:} Status przypisany do konta lokalnego (offline). Profil ten jest tworzony w~lokalnej bazie danych IndexedDB. Umożliwia pełne korzystanie z~programu bez dostępu do sieci, hasła są weryfikowane lokalnie (SHA-256 z~kryptograficzną solą), a~dane badań zapisują się wyłącznie lokalnie i~nie mogą być synchronizowane z~chmurą.
+	\item \textbf{GUEST:} Tryb gościnny, niewymagający żadnej autoryzacji. Zapewnia podstawowe uruchamianie testów i~zapisywanie wyników w~pliku JSON z~HMAC na dysku lub w~lokalnej bazie IndexedDB z~identyfikatorem badacza ustawionym jako \texttt{GUEST}. Wyniki te mogą zostać później przypisane do konta online za pomocą mechanizmu przejmowania wyników (\texttt{claimGuestResult}, por.~WF9).
+\end{enumerate}
+
+Poziom dostępu jest weryfikowany natychmiast przy uruchomieniu aplikacji podczas inicjalizacji modułu autoryzacyjnego w~pliku \texttt{auth.js} (metoda \texttt{initAuth}) oraz dynamicznie przy wywoływaniu funkcji systemowych (np. w~module \texttt{sync.js} przed jakąkolwiek próbą komunikacji z~Firestore).
+
+\subsection{Struktura bazy danych}
+\label{subsec:baza}
+
+System korzysta z~dwóch baz danych: chmurowej bazy NoSQL Cloud Firestore oraz lokalnej bazy IndexedDB zainstalowanej w~kontenerze Chromium.
+
+W~bazie Firestore dane zorganizowane są w~trzy podstawowe kolekcje:
+\begin{itemize}
+	\item \textbf{Kolekcja \texttt{users}:} Dokument identyfikowany przez \texttt{uid} (z~Firebase Auth). Zawiera pola: \texttt{email} (string), \texttt{status} (string: \texttt{PENDING}, \texttt{APPROVED}, \texttt{ADMIN}, \texttt{BLOCKED}) oraz \texttt{createdAt} (ISO date string).
+	\item \textbf{Kolekcja \texttt{tests}:} Dokument identyfikowany przez \texttt{testId} (identyfikator testu). Zawiera pola: \texttt{name} (nazwa testu), \texttt{version} (wersja numeryczna), \texttt{download\_url} (URL paczki ZIP w~repozytorium) oraz \texttt{description} (opis testu).
+	\item \textbf{Kolekcja \texttt{results}:} Dokumenty z~wynikami badań. W~celu ochrony prywatności pacjentów dane są zaszyfrowane w~procesie klienta (E2E). Dokument zawiera: \texttt{researcher\_uid} (ID badacza), \texttt{test\_id} (ID testu), \texttt{subject\_id} (identyfikator badanego), \texttt{data} (zaszyfrowany base64 payload wyników eksperymentalnych), \texttt{iv} (wektor inicjujący AES-GCM base64), \texttt{is\_encrypted} (wartość logiczna \texttt{true}), \texttt{timestamp} (czas badania) oraz \texttt{synced\_at} (czas synchronizacji). Pole \texttt{demographics} po zaszyfrowaniu przyjmuje wartość \texttt{null} (dane demograficzne są scalane z~wynikami wewnątrz zaszyfrowanego kontenera).
+\end{itemize}
+
+Bezpieczeństwo na poziomie bazy gwarantują reguły \textit{Firestore Security Rules}. Dostęp do kolekcji został zdefiniowany następująco:
+\begin{itemize}[noitemsep]
+	\item \textbf{\texttt{users}:} odczyt -- każdy zalogowany użytkownik; zapis -- właściciel konta lub ADMIN.
+	\item \textbf{\texttt{tests}:} odczyt -- każdy zalogowany użytkownik; zapis -- wyłącznie ADMIN.
+	\item \textbf{\texttt{results}:} tworzenie -- wyłącznie użytkownik ze statusem APPROVED; odczyt, aktualizacja, usuwanie -- właściciel wyniku lub ADMIN.
+\end{itemize}
+
+\subsection{Mechanizmy integralności danych lokalnych}
+\label{subsec:integralnosc}
+
+Lokalne pliki i~bazy danych programu są zabezpieczone przed nieautoryzowanym odczytem lub modyfikacją przez podmioty zewnętrzne.
+\begin{enumerate}
+	\item \textbf{Szyfrowanie bazy IndexedDB (AES-GCM-256):}
+	      Lokalna baza \texttt{NousDB} szyfruje wrażliwe wpisy (wyniki badań) algorytmem AES-GCM z~256-bitowym kluczem Master Key. Klucz ten jest generowany losowo przy pierwszym uruchomieniu aplikacji, a~następnie szyfrowany za pomocą systemowego API Electrona \texttt{safeStorage} (które w~zależności od systemu operacyjnego deleguje to zadanie do interfejsów DPAPI na Windows, Keychain na macOS lub Libsecret na Linuxie) i~zapisywany w~pliku \texttt{master\_key.enc}. Do bazy IndexedDB trafia wyłącznie zaszyfrowany szyfrogram (\texttt{encrypted\_payload}) oraz wektor inicjujący (\texttt{iv}). Pola wyszukiwania (jak ID testu czy identyfikator badacza) pozostają niezaszyfrowane w~celu optymalizacji zapytań i~generowania historii w~interfejsie.
+	\item \textbf{Sygnatura HMAC-SHA256 dla plików eksportowanych:}
+	      Gdy badacz decyduje się na zapis pojedynczego wyniku do zewnętrznego pliku JSON za pomocą okna dialogowego (\texttt{save-local-result}), proces główny wylicza sumę kontrolną danych badania (pole \texttt{wyniki}) z~użyciem algorytmu HMAC-SHA256, opierając się na wyżej wymienionym kluczu Master Key. Sygnatura ta jest dołączana do pliku w~metadanych (\texttt{meta.signature}). Podczas próby wczytania lub synchronizacji takiego pliku w~przyszłości, system sprawdza poprawność podpisu. Zmiana chociażby jednego znaku (np. zmiana zmierzonego czasu reakcji) unieważnia sygnaturę i~skutkuje odmową przetworzenia pliku przez aplikację.
+\end{enumerate}
+
+\subsection{Projekt interfejsu użytkownika}
+\label{subsec:ui}
+
+Interfejs użytkownika zaprojektowano w~minimalistycznym, czytelnym i~responsywnym stylu za pomocą czystego języka CSS (Vanilla CSS) bez narzutu bibliotek zewnętrznych, co zapewnia maksymalną wydajność renderowania Chromium. W~strukturze aplikacji wydzielono następujące ekrany:
+\begin{enumerate}
+	\item \textbf{Ekran wyboru uwierzytelniania:} Umożliwia przejście do logowania/rejestracji online (Firebase), logowania/rejestracji offline (Konta Lokalne) lub wejścia bez logowania (Gość).
+	\item \textbf{Panel Główny (Launcher):} Centralny punkt aplikacji. Składa się z~paska narzędziowego (wyszukiwarka z~obsługą tagów, przełącznik trybu treningowego, aktywator trybu wysokiej precyzji HPM) oraz obszaru prezentacji testów. Użytkownik może przełączać widoki: siatki (karty testów z~opisem), listy, tabeli oraz widoku kompaktowego. Przy każdym teście znajduje się przycisk uruchamiania, który zmienia stan dynamicznie: „Pobierz" (brak na dysku), „Uruchom" (zainstalowano) lub „Uruchom (Dev)" (wersja lokalna).
+	\item \textbf{Ekrany metryczek i~kartoteki badanych:} Pozwalają na definiowanie szablonów formularzy demograficznych (pytania otwarte, jednokrotnego wyboru, suwaki), które pacjent wypełnia przed przystąpieniem do testu psychologicznego.
+\end{enumerate}
+
+
+% ============================================================
+\section{Implementacja}
+\label{sec:implementacja}
+
+Aplikacja kliencka \textit{Nous Launcher} została zaprojektowana jako kompletne środowisko desktopowe współpracujące z~chmurą Firebase w~modelu Serverless. Poniżej przedstawiono szczegółową charakterystykę decyzji technologicznych oraz poszczególnych modułów funkcjonalnych systemu.
+
+\subsection{Zastosowane technologie}
+\label{subsec:technologie}
+
+Do budowy systemu wybrano technologie gwarantujące wysoką modularność, bezpieczeństwo danych oraz niezawodność pomiarów czasu reakcji:
+\begin{itemize}
+	\item \textbf{Electron (v40.0.0):} Framework stanowiący szkielet aplikacji desktopowej. Umożliwia uruchamianie logiki interfejsu (Renderer) w~izolowanym środowisku przeglądarki Chromium przy jednoczesnym dostępie do zasobów sprzętowych komputera (system plików, podprocesy) poprzez proces główny (Node.js). Jako alternatywę rozważano framework Tauri (Rust), jednak odrzucono go ze względu na skomplikowane zarządzanie zależnościami Pythona w~systemie i~mniej dojrzały ekosystem.
+	\item \textbf{Firebase (v12.8.0):} Wykorzystano usługi chmurowe Google jako backend. Firebase Authentication obsługuje bezpieczne, szyfrowane logowanie online bez konieczności tworzenia i~utrzymywania własnych serwerów. Baza danych Cloud Firestore przechowuje metadane testów oraz zaszyfrowane wyniki. Firebase Cloud Functions realizuje natomiast operacje administracyjne wymagające uprawnień serwerowych. Wybór tej technologii podyktowany był elastycznością bazy dokumentowej oraz wbudowanymi mechanizmami walidacji dostępu (Security Rules).
+	\item \textbf{JavaScript (ES6+) i HTML5/CSS3:} Interfejs użytkownika zaimplementowano z~użyciem czystego języka JavaScript (Vanilla JS) i~arkuszy CSS. Rezygnacja z~ciężkich frameworków front-endowych (np. React, Angular) przełożyła się na zminimalizowanie zużycia pamięci RAM oraz brak opóźnień (jittera) interfejsu podczas interakcji.
+	\item \textbf{Python i PsychoPy (dla trybu HPM):} PsychoPy to biblioteka naukowa w~języku Python służąca do przeprowadzania precyzyjnych eksperymentów psychofizycznych. Tryb HPM wykorzystuje dedykowane, odchudzone środowisko Python (pobierane jednorazowo z~serwera w~postaci paczki ZIP), co eliminuje konieczność wcześniejszej instalacji interpretera przez użytkownika.
+	\item \textbf{electron-builder (v26.4.0):} Zintegrowane środowisko do budowania wieloplatformowych pakietów instalacyjnych. Odpowiada za kompresję zasobów (plików JS, HTML) do natywnego formatu ASAR, konfigurację instalatora NSIS dla Windows, podpisywanie i~uprawnienia \textit{sandbox/hardened runtime} dla macOS (plik \texttt{entitlements.mac.plist}) oraz tworzenie dystrybucji typu AppImage na Linuxa.
+	\item \textbf{GitHub Actions (CI/CD):} Proces budowania i~publikacji wydań (\textit{releases}) został zautomatyzowany za pomocą przepływów pracy GitHub Actions. Po~oznaczeniu nowej wersji w~repozytorium, system automatycznie kompiluje paczki instalacyjne dla systemów Windows, macOS oraz Linux i~publikuje je w~sekcji Releases repozytorium projektu.
+\end{itemize}
+
+\subsection{Struktura projektu}
+\label{subsec:struktura}
+
+Organizacja katalogów i~plików odzwierciedla podział odpowiedzialności między rendererem, preloadem a~procesem głównym. Kluczowe elementy projektu przedstawiają się następująco:
+\begin{lstlisting}[language=bash]
+Nous/
++-- main.js                  # Main process (Node.js) - entry point
++-- preload.js               # Communication bridge (contextBridge)
++-- preload_test.js          # Preload script for test windows
++-- admin_main.js            # Admin panel main process
++-- index.html               # Launcher view (HTML5)
++-- admin.html               # Admin view (HTML5)
++-- style.css                # Main stylesheet
++-- package.json             # npm dependencies configuration
++-- functions/                # Firebase Cloud Functions (serverless)
++-- src/
+|   +-- firebaseConfig.js    # Firebase connection initialization
+|   +-- app.js               # Main renderer logic
+|   +-- modules/             # UI functional modules
+|       +-- auth.js          # Registration, online and offline login
+|       +-- cryptoService.js # Local and E2E encryption
+|       +-- database.js      # IndexedDB database management
+|       +-- sync.js          # Cloud synchronization
+|       +-- library.js       # Scanning and displaying tests
+|       +-- demographics.js  # Creating and handling demographics
++-- tests/                    # Unit and integration tests (Vitest)
++-- .github/workflows/        # CI/CD pipelines (GitHub Actions)
+\end{lstlisting}
+
+Proces główny (\texttt{main.js}) zarządza oknem aplikacji i~obsługuje zapytania systemowe. Skrypty w~katalogu \texttt{src/modules/} realizują logikę po stronie renderera, wywołując metody systemowe poprzez bezpieczny interfejs \texttt{window.electronAPI} zdefiniowany w~\texttt{preload.js}. Katalog \texttt{functions/} zawiera kod funkcji chmurowych wykonywanych po stronie serwera Firebase, natomiast katalog \texttt{tests/} obejmuje zestaw testów automatycznych opisanych szerzej w~sekcji~\ref{sec:testowanie}.
+
+\subsection{Moduł autoryzacji i~rejestracji}
+\label{subsec:impl-auth}
+
+Moduł zlokalizowany w~pliku \texttt{auth.js} obsługuje dwa scenariusze uwierzytelniania:
+\begin{enumerate}
+	\item \textbf{Uwierzytelnianie chmurowe (Firebase):} Wykorzystuje metody \texttt{signInWithEmailAndPassword} oraz \texttt{createUserWithEmailAndPassword} z~biblioteki Firebase Auth. Po pomyślnej rejestracji, moduł automatycznie tworzy dokument w~Firestore w~kolekcji \texttt{users} ze statusem \texttt{PENDING}.
+	\item \textbf{Uwierzytelnianie lokalne (IndexedDB):} Zaprojektowane z~myślą o~pracy w~pełni offline. Proces rejestracji lokalnej polega na wygenerowaniu 16-bajtowej kryptograficznej soli (za pomocą \texttt{crypto.getRandomValues}), a~następnie obliczeniu bezpiecznego hashu hasła metodą PBKDF2 lub SHA-256 za pomocą interfejsu \texttt{crypto.subtle.digest}. Rekord konta (login, hash, sól, data utworzenia) zapisywany jest w~tabeli \texttt{localAccounts}. Przy logowaniu moduł wylicza hash z~podanego hasła i~porównuje go z~bazą danych.
+\end{enumerate}
+W~celu obrony przed atakami siłowymi (brute-force), w~obu kanałach autoryzacji wprowadzono mechanizm ograniczenia częstotliwości prób (\textit{rate limiting}) do maksymalnie jednego wywołania na sekundę.
+
+\subsection{Moduł dystrybucji testów}
+\label{subsec:impl-dystrybucja}
+
+Dystrybucja modułów testowych realizowana jest dynamicznie przez proces główny. Po kliknięciu przez badacza przycisku „Pobierz”, aplikacja wysyła zapytanie IPC \texttt{download-and-run} z~adresem URL paczki testowej.
+\begin{itemize}
+	\item \textbf{Zabezpieczenie pobierania:} URL jest sprawdzany pod kątem bezpieczeństwa – dopuszczane są wyłącznie połączenia szyfrowane HTTPS prowadzące do oficjalnego repozytorium projektu lub dedykowanego serwera CDN GitHub Releases.
+	\item \textbf{Weryfikacja integralności i Zip Slip:} Paczka testu jest pobierana jako archiwum ZIP do tymczasowego folderu. Przy rozpakowywaniu program weryfikuje każdą ścieżkę wyjściową (\textit{Zip Slip vulnerability check}) – jeśli plik wewnątrz archiwum próbuje wyjść poza docelowy katalog biblioteki (poprzez sekwencję \texttt{../}), ekstrakcja jest natychmiast przerywana, a~pliki usuwane.
+	\item \textbf{Wersjonowanie (Cache):} Po udanym rozpakowaniu, w~folderze testu zapisywany jest plik \texttt{meta.json} zawierający aktualny numer wersji. Przy kolejnych uruchomieniach launcher porównuje lokalną wersję z~wersją chmurową zapisaną w~Firestore – pobranie nowej paczki następuje tylko w~przypadku wykrycia aktualizacji na serwerze.
+\end{itemize}
+
+\subsection{Moduł wykonywania testów}
+\label{subsec:impl-testy}
+
+Uruchomienie testu następuje na dwa sposoby, w~zależności od konfiguracji modułu:
+\begin{enumerate}
+	\item \textbf{Testy Webowe:} Proces główny tworzy nowe, zmaksymalizowane okno \texttt{BrowserWindow} pozbawione ramek i~menu systemowego. Okno ładuje plik \texttt{index.html} testu. Komunikacja z~testem odbywa się za pośrednictwem dedykowanego skryptu \texttt{preload\_test.js}, który nasłuchuje na zdarzenie zakończenia testu i~przekazuje zebrane surowe dane za pomocą kanału IPC \texttt{test-finished}. Po odebraniu danych okno testu zostaje automatycznie zamknięte.
+	\item \textbf{Testy Natywne (HPM):} Proces główny uruchamia podproces natywnego środowiska Python za pomocą funkcji \texttt{child\_process.spawn()}. Do środowiska przekazywana jest ścieżka do pliku \texttt{main.py} testu. Aby zapobiec konfliktom z~lokalnymi zmiennymi systemowymi użytkownika (szczególnie na platformach macOS i~Linux), proces główny jawnie ustawia zmienną \texttt{PYTHONHOME} na ścieżkę wbudowanego interpretera oraz czyści zmienne \texttt{PYTHONPATH}, \texttt{DYLD\_INSERT\_LIBRARIES} i~\texttt{LD\_LIBRARY\_PATH}. Po zakończeniu pracy skryptu PsychoPy, launcher odczytuje wygenerowany przez test plik \texttt{results.json}, parsuje wyniki i~usuwa plik tymczasowy.
+\end{enumerate}
+
+Po zebraniu danych z~dowolnego środowiska, aplikacja wywołuje procedurę zapisu w~IndexedDB z~automatycznym szyfrowaniem AES-GCM-256 oraz wyliczeniem lokalnego podpisu HMAC-SHA256 (patrz sekcja \ref{subsec:integralnosc}).
+
+\subsubsection{Tryb HPM -- natywna precyzja pomiaru czasu reakcji}
+\label{subsec:hpm}
+
+\emph{High Precision Mode} (HPM) to mechanizm pozwalający ominąć ograniczenia środowiska Chromium poprzez uruchomienie testu w~osobnym procesie Pythona z~biblioteką PsychoPy. W~tym trybie czas reakcji jest mierzony bezpośrednio przez system operacyjny z~dokładnością rzędu~1~ms, a~wynik po zakończeniu testu jest odczytywany przez proces główny z~pliku JSON. Aplikacja pobiera odchudzone środowisko Python jako pojedynczą paczkę ZIP, co eliminuje konieczność ręcznej instalacji interpretera. W~skład paczki wchodzą: Python~3.10 w~wersji standalone, PsychoPy wraz z~bibliotekami \texttt{numpy}, \texttt{scipy}, \texttt{pandas} oraz \texttt{pyglet}, a~także niezbędne biblioteki systemowe (m.in. SDL2, OpenGL, PortAudio). Paczki budowane są automatycznie przez GitHub Actions dla systemów Windows, macOS (Intel i~Apple Silicon) oraz Linux (Debian/Ubuntu i~Fedora/RHEL).
+
+Rozwiązanie to stanowi kompromis między wygodą użytkowania a~dokładnością pomiaru -- testy webowe (JS) są uruchamiane szybko i~bez dodatkowych zależności, natomiast gdy precyzja ma kluczowe znaczenie, badacz może włączyć tryb HPM i~uzyskać jakość pomiaru porównywalną z~natywnymi systemami laboratoryjnymi (E-Prime, PsychoPy).
+
+\subsubsection{Dostępność obu rozwiązań -- wygoda i~precyzja}
+\label{subsec:oba-rozwiazania}
+
+Udostępnienie dwóch niezależnych trybów wykonawczych nie jest przypadkowe -- każdy z~nich znajduje zastosowanie w~innej sytuacji. Tryb webowy (JavaScript w~Chromium) nie wymaga dodatkowego środowiska uruchomieniowego i~działa natychmiast po pobraniu testu. Sprawdza się tam, gdzie priorytetem jest szybki dostęp i~łatwość użycia: osoba badana może samodzielnie sprawdzić swoje możliwości lub poćwiczyć w~domu, bez konieczności konfiguracji specjalistycznego oprogramowania.
+
+Tryb HPM (Python/PsychoPy) przeznaczony jest natomiast dla sytuacji, w~których kluczowa jest precyzja pomiaru. Gdy badanie odbywa się pod nadzorem psychologa lub badacza, a~wyniki mają wartość diagnostyczną lub naukową, specjalista uruchamia test na swoim komputerze z~wcześniej pobraną paczką HPM, uzyskując dokładność rzędu~1~ms.
+
+Oba tryby są w~pełni zintegrowane z~launcherem -- wybór odpowiedniego następuje automatycznie na podstawie dostępności paczki HPM i~ustawień badacza, bez konieczności przełączania się między osobnymi aplikacjami.
+
+\subsection{Moduł synchronizacji z~chmurą}
+\label{subsec:impl-sync}
+
+Moduł \texttt{sync.js} zarządza procesem bezpiecznego przesyłania wyników badań do chmury Firestore.
+\begin{itemize}
+	\item \textbf{Szyfrowanie chmurowe E2E:} Zanim dane trafią do internetu, system sprawdza dostępność klucza chmurowego E2E. Klucz ten jest ładowany do pamięci RAM po podaniu przez badacza unikalnego kodu PIN (klucz jest odbezpieczany z~pliku \texttt{e2e\_key.enc} za pomocą algorytmu PBKDF2 z~200~000 iteracji SHA-256). Moduł szyfruje wyniki badań oraz ankietę demograficzną pacjenta w~jeden nieczytelny szyfrogram AES-GCM-256. Do chmury Firestore przesyłany jest wyłącznie ten szyfrogram, wektor inicjujący (IV) oraz jawne identyfikatory badacza i~testu (potrzebne do filtrowania danych).
+	\item \textbf{Tryb offline i kolejkowanie:} Jeśli aplikacja nie posiada połączenia z~siecią, wynik jest zapisywany lokalnie w~IndexedDB ze statusem \texttt{sync\_status: 'PENDING'}. Moduł nasłuchuje systemowego zdarzenia sieciowego \texttt{window.addEventListener('online')}. Po wykryciu połączenia internetowego, automatycznie uruchamiana jest pętla synchronizacyjna: system odpytuje IndexedDB o~wszystkie oczekujące rekordy zalogowanego użytkownika online i~wysyła je kolejno do Firestore. Po potwierdzeniu zapisu przez serwer, lokalny status rekordu zmienia się na \texttt{SYNCED}, a~badacz otrzymuje wizualne powiadomienie (Toast).
+	\item \textbf{Zapobieganie duplikatom:} Każdy wynik posiada unikalne ID (UUID generowane w~kliencie). Serwer Firestore sprawdza czy dany identyfikator już istnieje w~bazie chmurowej – jeśli tak, synchronizacja rekordu jest pomijana, co zapobiega dublowaniu danych w~przypadku chwilowych przerw w~transmisji.
+\end{itemize}
+
+\subsection{Moduł administracyjny}
+\label{subsec:impl-admin}
+
+Moduł zarządzania administracyjnego jest w~pełni odseparowany i~uruchamia się za pośrednictwem pliku \texttt{admin.html} (z~własnym procesem głównym \texttt{admin\_main.js}). Dostęp do niego posiadają wyłącznie zalogowani użytkownicy ze statusem \texttt{ADMIN}. Moduł ten realizuje następujące zadania:
+\begin{itemize}
+	\item \textbf{Zatwierdzanie kont badaczy online:} Pobiera z~Firestore listę dokumentów użytkowników, których status wynosi \texttt{PENDING}. Administrator może jednym kliknięciem zmienić status na \texttt{APPROVED} lub \texttt{BLOCKED}; operacja ta jest realizowana za pośrednictwem dedykowanej funkcji Cloud Functions, co~zapobiega bezpośredniej manipulacji uprawnieniami z~poziomu klienta.
+	\item \textbf{Reset haseł kont lokalnych:} Umożliwia administratorowi nadpisanie hasha hasła dla konta lokalnego zapisanego w~IndexedDB (bez konieczności znajomości starego hasła).
+	\item \textbf{Eksport bazy danych do formatu CSV:} Trudnością przy analizie wyników psychologicznych jest zagnieżdżona struktura dokumentów JSON. Moduł administracyjny pobiera wyniki, odszyfrowuje je w~pamięci lokalnej, a~następnie spłaszcza strukturę danych (rekurencyjnie rozwija obiekty i~tablice wyników oraz dane metryczek demograficznych do pojedynczych kolumn). Wynikowy plik CSV jest kodowany w~standardzie UTF-8 z~oznaczeniem BOM (\textit{Byte Order Mark}), co zapewnia automatyczne i~poprawne rozpoznanie polskich znaków diakrytycznych przez programy arkuszy kalkulacyjnych (np. Microsoft Excel).
+\end{itemize}
+
+\subsection{Moduł aktualizacji aplikacji}
+\label{subsec:impl-update}
+
+Aplikacja posiada wbudowany mechanizm samoaktualizacji, oparty na komunikacji z~repozytorium wydań (\textit{Releases}) na GitHubie. Po uruchomieniu launchera, proces główny automatycznie sprawdza dostępność nowej wersji (kanał IPC \texttt{check-app-update}), porównując lokalny numer wersji programu z~najnowszym tagiem opublikowanym w~repozytorium. W~przypadku wykrycia nowszej wersji, użytkownik jest informowany odpowiednim komunikatem w~interfejsie i~może zainicjować pobranie aktualizacji (\texttt{download-app-update}) wraz z~wizualizacją postępu, a~następnie jej instalację (\texttt{install-app-update}), która restartuje aplikację z~nową wersją plików wykonywalnych.
+
+
+% ============================================================
+\section{Testowanie}
+\label{sec:testowanie}
+
+\subsection{Metodyka testowania}
+\label{subsec:metodyka}
+
+Proces testowania aplikacji Nous obejmuje trzy uzupełniające się poziomy weryfikacji jakości: automatyczne testy jednostkowe i~integracyjne uruchamiane przy każdej zmianie kodu, manualne testy scenariuszowe przeprowadzane przez autora aplikacji oraz testy z~udziałem rzeczywistych użytkowników. Środowisko testowe automatycznych testów jednostkowych oparte jest na bibliotece Vitest, natomiast testy end-to-end (obejmujące pełny interfejs aplikacji) realizowane są przy użyciu frameworka Playwright. Testy te są uruchamiane lokalnie w~trakcie rozwoju aplikacji, a~ich wyniki (w~tym raport pokrycia kodu) są archiwizowane w~repozytorium projektu w~katalogach \texttt{coverage/} oraz \texttt{playwright-report/}.
+
+\subsection{Testy jednostkowe i~integracyjne}
+\label{subsec:testy-auto}
+
+% TODO: To jest miejsce, w którym najłatwiej napiszesz konkretne dane,
+% bo masz je już wygenerowane w repo. Otwórz lokalnie:
+%   - katalog coverage/ (raport pokrycia testów Vitest, zwykle plik
+%     coverage/index.html lub coverage-summary.json)
+%   - katalog tests/ (zobacz nazwy plików *.test.js - to są dokładnie
+%     funkcje, które testujesz)
+%   - katalog playwright-report/ (raport z testów E2E)
+%
+% Napisz tutaj:
+%   — Jakim narzędziem są testy jednostkowe? (Vitest -- już to wiemy)
+%   — Jakie konkretne moduły/funkcje są pokryte testami jednostkowymi?
+%     Przejrzyj tests/ i wymień np.: cryptoService.js (szyfrowanie/odszyfrowanie
+%     AES-GCM, generowanie HMAC), walidacja testId regexem, parsowanie
+%     manifestu meta.json, logika kolejki synchronizacji w sync.js
+%   — Jakie scenariusze testowane są integracyjnie? (np. pełny przepływ:
+%     zapis lokalny -> szyfrowanie -> próba synchronizacji)
+%   — Jaki jest wynik pokrycia kodu (coverage)? Podaj procent z raportu
+%     (np. "pokrycie instrukcji wyniosło X%, pokrycie funkcji Y%")
+%   — Co obejmują testy E2E w Playwright? (np. pełny przepływ rejestracji
+%     i logowania w realnym oknie aplikacji, test panelu administratora)
+%   — Ile testów E2E masz i co konkretnie sprawdzają (przejrzyj tests/
+%     lub playwright-report/ pod kątem nazw scenariuszy)
+%
+% Wstawienie fragmentu kodu jednego z testów jako \begin{lstlisting} bardzo
+% wzbogaci tę sekcję i jest często wymagane/cenione przez promotorów.
+
+\subsection{Testy manualne}
+\label{subsec:testy-manualne}
+
+% TODO: Opisz scenariusze, które przeszedłeś osobiście jako deweloper,
+% wykraczające poza to co sprawdza Playwright (np. testy na różnych
+% systemach operacyjnych, testy z prawdziwym sprzętem, testy paczki HPM).
+% Możesz też opisać tu testy wieloplatformowości -- czy faktycznie
+% sprawdzałeś działanie na Windows/macOS/Linux (skoro WN5 to wymaga)?
+% Zapisz to w formie listy scenariuszy, np.:
+%
+%   Scenariusz 1: Instalacja i pierwsze uruchomienie na czystym systemie
+%     Windows 11 -- weryfikacja czy SmartScreen i instalator NSIS
+%     działają zgodnie z oczekiwaniami.
+%
+%   Scenariusz 2: Przeprowadzenie testu w trybie HPM na maszynie bez
+%     wcześniej zainstalowanego Pythona -- weryfikacja pobrania
+%     i działania wbudowanego środowiska.
+%
+%   Scenariusz 3: Praca w pełnym trybie offline (wyłączony Wi-Fi) --
+%     rejestracja konta lokalnego, wykonanie testu, zapis wyniku,
+%     późniejsze sprawdzenie integralności HMAC.
+%
+%   Scenariusz 4: Próba manipulacji zaszyfrowanym plikiem wyniku --
+%     oczekiwany wynik: odmowa wczytania przez aplikację.
+%
+%   Scenariusz 5: Próba uzyskania dostępu do panelu admina przez
+%     konto ze statusem PENDING -- oczekiwany wynik: odmowa dostępu.
+
+\subsection{Testy z~udziałem użytkowników}
+\label{subsec:testy-user}
+
+% TODO: Opisz testy, w których brali udział rzeczywiści użytkownicy
+% (nie Ty jako deweloper). Napisz o:
+%   — Kiedy i w jakich warunkach odbyły się testy?
+%   — Kto brał udział? Ilu uczestników, jaki profil?
+%     (np. studenci psychologii, pracownicy uczelni)
+%   — Jakie scenariusze zadań dostali uczestnicy?
+%   — Co obserwowałeś / mierzyłeś? (błędy nawigacji, czas wykonania
+%     zadań, opinie subiektywne -- np. ankieta SUS: System Usability Scale)
+%   — Jakie wnioski wyciągnąłeś i co zmieniłeś w aplikacji po testach?
+
+\subsection{Znalezione problemy i~ich rozwiązania}
+\label{subsec:problemy}
+
+% TODO: Lista konkretnych problemów napotkanych w trakcie implementacji
+% i testowania wraz ze sposobem ich rozwiązania. Schemat:
+%
+%   Problem 1: [krótki opis problemu]
+%   Przyczyna: [co było źródłem]
+%   Rozwiązanie: [co zrobiłeś]
+%
+% Przykłady problemów, które prawdopodobnie napotkałeś (dopasuj do realiów):
+%   — Konflikt zmiennych środowiskowych Pythona na macOS/Linux przy
+%     uruchamianiu podprocesu HPM (rozwiązane przez czyszczenie
+%     PYTHONPATH/DYLD_INSERT_LIBRARIES -- patrz sekcja 2.3.4)
+%   — Zip Slip / bezpieczeństwo rozpakowywania paczek testowych
+%   — Zarządzanie kluczem E2E między sesjami (PIN, PBKDF2)
+%   — Rozmiar paczek HPM (Python + PsychoPy) i czas ich pobierania
+%   — Podpisywanie aplikacji na macOS (Gatekeeper, entitlements)
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  ROZDZIAŁ 3 — WERYFIKACJA
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Weryfikacja zgodności z~tematem pracy}
+\label{chap:weryfikacja}
+
+
+% ============================================================
+\section{Kryteria weryfikacji}
+\label{sec:kryteria}
+
+% TODO: Napisz krótki akapit (ok. pół strony) wyjaśniający:
+%   — Względem czego weryfikujesz? (wymagania z sekcji 2.1
+%     oraz wymagania z karty pracy dyplomowej / tematu pracy)
+%   — W jaki sposób weryfikujesz? (analiza wyników testów z rozdziału 2,
+%     demonstracja działania, przegląd kodu)
+%   — Co oznacza „spełnione" vs „częściowo spełnione" vs „niespełnione"?
+
+
+% ============================================================
+\section{Weryfikacja wymagań funkcjonalnych}
+\label{sec:wer-funk}
+
+\begin{table}[H]
+	\centering
+	\caption{Weryfikacja wymagań funkcjonalnych}
+	\label{tab:wer-funk}
+	\begin{tabular}{p{1cm} p{7cm} p{2cm} p{3cm}}
+		\toprule
+		\textbf{ID} & \textbf{Wymaganie}                        & \textbf{Spełnione}
+		            & \textbf{Sposób weryfikacji}                                                   \\
+		\midrule
+		WF1         & Rejestracja konta lokalnego lub online    & Tak                & Scenariusz 1 \\
+		WF2         & Logowanie jako Gość                       & Tak                & Scenariusz 1 \\
+		WF3         & Zatwierdzanie/odrzucanie konta online     & Tak                & Scenariusz 5 \\
+		WF4         & Pobieranie i uruchamianie testów lokalnie & Tak                & Scenariusz 2 \\
+		WF5         & Zapis wyniku testu lokalnie               & Tak                & Scenariusz 3 \\
+		WF6         & Synchronizacja wyników z chmurą           & Tak                & Scenariusz 3 \\
+		WF7         & Tryb offline                              & Tak                & Scenariusz 3 \\
+		WF8         & Ankiety (metryczki) podpinane do wyników  & Tak                & Scenariusz 2 \\
+		WF9         & Przejęcie wyniku Gościa po zalogowaniu    & Tak                & Scenariusz 1 \\
+		WF10        & Powiadomienie i instalacja aktualizacji   & Tak                & Scenariusz 1 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+% TODO: Numery "Scenariusz X" odwołują się do scenariuszy testów manualnych
+% z sekcji 2.4.3 -- po wypełnieniu tamtej sekcji upewnij się, że numeracja
+% scenariuszy w tabeli powyżej zgadza się z tą, którą faktycznie opiszesz.
+% Jeśli któreś wymaganie jest "Częściowo" -- dodaj przypis pod tabelą
+% z wyjaśnieniem czego brakuje.
+
+
+% ============================================================
+\section{Weryfikacja wymagań niefunkcjonalnych}
+\label{sec:wer-niefunk}
+
+% TODO: Dla wymagań niefunkcjonalnych (WN1--WN6) opisz jak je zmierzyłeś.
+% Przykłady:
+%
+%   WN1 (czas uruchomienia <= 15 s):
+%   Zmierzono czas uruchomienia aplikacji na [opis sprzętu testowego]
+%   w 10 próbach. Średni czas wyniósł X,XX s, maksymalny Y,YY s.
+%
+%   WN2 (czas odpowiedzi UI < 200 ms):
+%   Zmierzono czas od kliknięcia przycisku "Uruchom" do pojawienia się
+%   okna testu.
+%
+%   WN3 (hasła hashowane):
+%   Zweryfikowano przez inspekcję kodu -- konta online uwierzytelniane
+%   przez Firebase Auth, konta lokalne -- hash + sól w IndexedDB
+%   (patrz sekcja 2.3.3).
+%
+%   WN4 (integralność plików lokalnych):
+%   Zweryfikowano testem manualnym -- edycja zaszyfrowanego rekordu
+%   lub pliku JSON skutkuje odmową wczytania (HMAC/AES-GCM, sekcja 2.2.5).
+%
+%   WN5 (wieloplatformowość):
+%   Odwołaj się do realnych wydań na GitHub Releases dla Windows,
+%   macOS i Linux oraz testów manualnych na każdym z systemów.
+
+
+% ============================================================
+\section{Zgodność z~tematem pracy inżynierskiej}
+\label{sec:zgodnosc}
+
+% TODO: Punkt po punkcie wykaż, że praca realizuje to, co było w temacie
+% pracy. Schemat dla każdego punktu:
+%   "Wymaganie: [przepisz z karty pracy]. Realizacja: [gdzie i jak
+%   zostało zrealizowane -- odwołaj się do sekcji pracy]."
+%
+% Punkty do wykazania (dostosuj do swojej karty pracy):
+%   1. Platforma desktopowa -- Electron (sekcja 2.3.1), instalatory
+%      na Windows/macOS/Linux (sekcja 2.3.1, GitHub Actions).
+%   2. Dystrybucja testów psychologicznych -- moduł dystrybucji
+%      testów (sekcja 2.3.4).
+%   3. Przeprowadzanie testów psychologicznych -- moduł wykonywania
+%      testów, tryb webowy i HPM (sekcja 2.3.5).
+%   4. Progresywna autoryzacja / RBAC -- model RBAC z 5 stanami
+%      (sekcja 2.2.3), moduł autoryzacji (sekcja 2.3.3).
+%   5. Synchronizacja wyników w chmurze -- moduł synchronizacji
+%      z szyfrowaniem E2E (sekcja 2.3.6).
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  ROZDZIAŁ 4 — WNIOSKI I PODSUMOWANIE
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Wnioski, podsumowanie i~dalsze możliwości rozwoju}
+\label{chap:podsumowanie}
+
+
+% ============================================================
+\section{Wnioski}
+\label{sec:wnioski}
+
+% TODO: Wnioski to nie podsumowanie co zrobiłeś -- to refleksja co
+% z tego wynika. Napisz o:
+%   — Co okazało się trudniejsze niż zakładałeś? Dlaczego?
+%     (np. zarządzanie zmiennymi środowiskowymi Pythona w trybie HPM
+%     na różnych systemach, złożoność szyfrowania E2E i zarządzania
+%     kluczem PIN, synchronizacja offline-first)
+%   — Co okazało się prostsze dzięki wyborom technologicznym?
+%     (np. Firebase Auth wyeliminował potrzebę pisania własnego
+%     backendu uwierzytelniania)
+%   — Jakie kompromisy podjąłeś i czy były trafne?
+%     (np. Electron jest ciężki, ale dał szybkie time-to-market
+%     i wieloplatformowość "za darmo")
+%   — Czego nauczyłeś się w trakcie projektu?
+%   — Czy platforma nadaje się do realnego użytku? (masz już 19 wydań
+%     i realnych użytkowników -- to mocny argument!)
+
+
+% ============================================================
+\section{Ocena realizacji celów}
+\label{sec:ocena}
+
+% TODO: Wróć do celów z sekcji 1.1 i oceń każdy z nich.
+% Bądź szczery -- jeśli coś nie zostało w pełni zrealizowane,
+% napisz dlaczego i co by było potrzebne.
+
+
+% ============================================================
+\section{Podsumowanie}
+\label{sec:podsumowanie-ogolne}
+
+% TODO: Krótkie (ok. pół strony) domknięcie całej pracy.
+% Co powstało, dla kogo, dlaczego to ma wartość.
+
+
+% ============================================================
+\section{Dalsze możliwości rozwoju}
+\label{sec:rozwoj}
+
+% TODO: Lista kierunków rozwoju z 1-2 zdaniami uzasadnienia każdego, np.:
+%   — Wersja mobilna (React Native / Flutter / Capacitor)
+%   — Zaawansowana analityka wyników (statystyki, wykresy, ML)
+%   — Integracja z zewnętrznymi systemami klinicznymi (HL7 FHIR)
+%   — Certyfikacja jako wyrób medyczny (MDR, klasa I)
+%   — Wielojęzyczność interfejsu (i18n)
+%   — Eksport do formatów klinicznych (SPSS .sav, REDCap)
+%   — Rozszerzenie biblioteki testów o kolejne moduły HPM
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  ZAŁĄCZNIKI (opcjonalnie)
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter*{Załączniki}
+\addcontentsline{toc}{chapter}{Załączniki}
+\label{chap:zalaczniki}
+
+% Jeśli nie masz żadnych załączników -- usuń cały ten rozdział.
+%
+% Co może tu trafić:
+%   — Instrukcja instalacji i pierwszego uruchomienia aplikacji
+%     (masz już gotowy opis w README.md repozytorium -- można
+%     przeredagować na potrzeby pracy)
+%   — Dodatkowe zrzuty ekranu (jeśli nie zmieściły się w rozdziale 2)
+%   — Konfiguracja Firebase Security Rules (firestore.rules)
+%   — Konfiguracja electron-builder (electron-builder.yml)
+%   — Ankieta użytkownika z testów (SUS lub własna) -- pytania i wyniki
+%   — Zawartość pliku manifest.json/meta.json opisującego strukturę
+%     paczki testu
+
+
+% ============================================================
+%  BIBLIOGRAFIA
+% ============================================================
+% Odkomentuj gdy dodasz plik .bib:
+% \printbibliography[heading=bibintoc, title={Bibliografia}]
+
+\end{document}

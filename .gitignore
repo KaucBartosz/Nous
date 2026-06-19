@@ -25,3 +25,13 @@ build/
 *.pkl
 *.json  # Jeśli masz ogromne pliki z danymi testowymi.dual-graph/
 kartaPracyDyplomowej.pdf
+praca_inzynierska.aux
+praca_inzynierska.bcf
+praca_inzynierska.fdb_latexmk
+praca_inzynierska.fls
+praca_inzynierska.log
+praca_inzynierska.out
+praca_inzynierska.pdf
+praca_inzynierska.run.xml
+praca_inzynierska.synctex.gz
+praca_inzynierska.toc
