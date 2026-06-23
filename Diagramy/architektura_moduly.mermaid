@@ -2,9 +2,11 @@ graph TD
     %% Styling and Classes
     classDef main fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
     classDef module fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c;
+    classDef renderer fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px,color:#0d47a1;
 
     Main["Główny Proces Electron (main.js)"]:::main
-    Db[("Lokalna Baza IndexedDB")]:::main
+    LauncherUI["Renderer / Launcher UI<br/>(HTML/JS)"]:::renderer
+    Db[("Lokalna Baza IndexedDB (NousDB)")]:::main
 
     subgraph WebMode ["Tryb Standardowy (Webowy)"]
         Window["BrowserWindow<br/>(Włączona Piaskownica)"]:::module
@@ -14,7 +16,7 @@ graph TD
 
     subgraph HPMMode ["Tryb Wysokiej Precyzji (HPM)"]
         Spawn["child_process.spawn"]:::main
-        Python["Wbudowany interpreter Python"]:::module
+        Python["Wbudowany interpreter Python<br/>(W pełni w Pythonie, brak HTML/JS)"]:::module
         PsychoPy["Skrypt testu PsychoPy (main.py)"]:::module
         ResultFile[("Plik tymczasowy results.json")]:::module
     end
@@ -31,4 +33,5 @@ graph TD
     PsychoPy -->|Zapisuje surowe wyniki| ResultFile
     ResultFile -->|Odczytuje i parsuje| Main
     
-    Main -->|Szyfrowanie i zapis wyniku| Db
+    Main -->|Przekazanie wyników via IPC test-results-forwarded| LauncherUI
+    LauncherUI -->|Szyfrowanie i zapis w IndexedDB| Db

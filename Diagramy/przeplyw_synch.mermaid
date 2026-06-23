@@ -1,0 +1,57 @@
+graph TD
+    %% Styling and Classes
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px,color:#2d3748;
+    classDef process fill:#e3f2fd,stroke:#1e88e5,stroke-width:1.5px,color:#0d47a1;
+    classDef decision fill:#fff3e0,stroke:#fb8c00,stroke-width:1.5px,color:#e65100;
+    classDef storage fill:#e8f5e9,stroke:#43a047,stroke-width:1.5px,color:#1b5e20;
+    classDef event fill:#f3e5f5,stroke:#8e24aa,stroke-width:1.5px,color:#4a148c;
+    classDef system fill:#ffffff,stroke:#718096,stroke-width:2px;
+
+    %% Node Definitions
+    Start([Inicjalizacja synchronizacji]):::system
+    CheckNet{Czy aplikacja posiada<br/>połączenie sieciowe?}:::decision
+    OfflineQueue[Kolejkowanie rekordu w IndexedDB<br/>Oczekiwanie w tle]:::process
+    WaitOnline{Wykryto zdarzenie online?<br/>window.online}:::event
+    CheckAccountType{Jaki jest typ konta?}:::decision
+    NoSync[Brak synchronizacji<br/>Wyniki pozostają wyłącznie lokalnie]:::process
+    EndOffline([Koniec - zapis tylko lokalny]):::system
+    CheckAuth{Czy status konta to<br/>APPROVED / ADMIN?}:::decision
+    BlockSync[Zablokowanie synchronizacji<br/>Wymaga zatwierdzenia konta]:::process
+    EndPending([Koniec - wynik pozostaje lokalnie]):::system
+    EncryptE2E[Szyfrowanie End-to-End<br/>Klucz E2E AES-GCM z PIN lub Backup]:::process
+    SendFS[Przesłanie szyfrogramu do Cloud Firestore]:::process
+    ConfirmFS{Czy Firebase potwierdził<br/>poprawny zapis?}:::decision
+    UpdateStatus[(Aktualizacja statusu w IndexedDB<br/>Zmiana statusu na SYNCED)]:::storage
+    ShowToast[Powiadomienie badacza<br/>Wizualny Toast w Launcherze]:::process
+    EndOnline([Koniec - status SYNCED]):::system
+
+    %% Connections
+    Start --> CheckNet
+    
+    %% Offline path
+    CheckNet -->|Nie lub Offline| OfflineQueue
+    OfflineQueue --> WaitOnline
+    WaitOnline -->|Nie| OfflineQueue
+    WaitOnline -->|Tak| CheckAccountType
+    
+    %% Online path
+    CheckNet -->|Tak lub Online| CheckAccountType
+    
+    CheckAccountType -->|Gość lub Lokalne| NoSync
+    NoSync --> EndOffline
+    
+    CheckAccountType -->|Online| CheckAuth
+    
+    CheckAuth -->|Status PENDING lub BLOCKED| BlockSync
+    BlockSync --> EndPending
+    
+    CheckAuth -->|Tak| EncryptE2E
+    
+    EncryptE2E --> SendFS
+    SendFS --> ConfirmFS
+    
+    ConfirmFS -->|Tak lub Sukces| UpdateStatus
+    ConfirmFS -->|Nie lub Błąd sieci| OfflineQueue
+    
+    UpdateStatus --> ShowToast
+    ShowToast --> EndOnline

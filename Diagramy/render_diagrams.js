@@ -7,6 +7,11 @@ const fs = require('fs');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   
+  // Listen for console logs inside the page
+  page.on('console', msg => {
+    console.log(`PAGE LOG: [${msg.type()}] ${msg.text()}`);
+  });
+
   // Ustawienie dużego viewportu, aby uniknąć zawijania i zniekształceń
   await page.setViewportSize({ width: 2400, height: 3500 });
   
@@ -22,7 +27,8 @@ const fs = require('fs');
   await page.waitForSelector('#diagram-arch-ipc svg');
   await page.waitForSelector('#diagram-arch-moduly svg');
   await page.waitForSelector('#diagram-rbac svg');
-  await page.waitForSelector('#diagram-przeplyw svg');
+  await page.waitForSelector('#diagram-przeplyw-zapis svg');
+  await page.waitForSelector('#diagram-przeplyw-synch svg');
   
   // Dodatkowa chwila na stabilizację czcionek z Google Fonts
   await page.waitForTimeout(1500);
@@ -49,9 +55,14 @@ const fs = require('fs');
       baseName: 'rbac' 
     },
     { 
-      containerId: 'container-przeplyw', 
-      mermaidId: 'diagram-przeplyw', 
-      baseName: 'przeplyw' 
+      containerId: 'container-przeplyw-zapis', 
+      mermaidId: 'diagram-przeplyw-zapis', 
+      baseName: 'przeplyw_zapis' 
+    },
+    { 
+      containerId: 'container-przeplyw-synch', 
+      mermaidId: 'diagram-przeplyw-synch', 
+      baseName: 'przeplyw_synch' 
     }
   ];
 

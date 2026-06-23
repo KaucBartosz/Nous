@@ -171,8 +171,33 @@ Praca została podzielona na 4 główne bloki tematyczne:
 	\item Weryfikacja zgodności z tematem pracy.
 	\item Wnioski, podsumowanie i perspektywy na przyszłość.
 \end{itemize}
+W~dalszej części tekstu program będący przedmiotem niniejszej pracy
+inżynierskiej określany będzie jako \textbf{Program} bądź pod swoją publiczną
+nazwą --- \textbf{Nous}.
 \newpage
 \pagenumbering{arabic}
+
+\section*{Oświadczenie odnośnie wykorzystania GenAI}
+\addcontentsline{toc}{section}{Oświadczenie odnośnie wykorzystania GenAI}
+
+W~pracy informatyka niejednokrotnie korzystamy z~najnowszych narzędzi
+i~rozwiązań. Niniejsza praca nie jest wyjątkiem i~nie miała na~celu nim być.
+Dlatego przy tworzeniu oprogramowania wykorzystywane były narzędzia GenAI.
+Ich wpływ był jednak ograniczony w~celu zachowania cechy samodzielności pracy.
+
+GenAI było wykorzystywane w~2~stopniach, zależnie od~aspektu projektu:
+\begin{itemize}[noitemsep]
+	\item \textbf{Stopień wysoki:} Przy implementacji szaty graficznej projektu --
+	      pliki \texttt{index.html} i~\texttt{style.css}. Bazowy projekt interfejsu
+	      został ręcznie zaprojektowany w~programie GIMP, natomiast jego
+	      implementację i~przełożenie na~kod powierzono narzędziom GenAI.
+	      Wygenerowany kod został sprawdzony pod~kątem błędów i~halucynacji,
+	      na~które narażona jest GenAI.
+	\item \textbf{Stopień niski:} W~pozostałej części pracy GenAI pełniło rolę
+	      konsultanta -- wskazywało potencjalne błędy, wspierało proces decyzyjny
+	      i~przedstawiało ustandaryzowane metody implementacji
+	      procesów/funkcjonalności.
+\end{itemize}
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  ROZDZIAŁ 1 — CEL, ANALIZA I LITERATURA
@@ -713,7 +738,7 @@ Po zebraniu danych z~dowolnego środowiska, aplikacja wywołuje procedurę zapis
 \subsubsection{Tryb HPM -- natywna precyzja pomiaru czasu reakcji}
 \label{subsec:hpm}
 
-\emph{High Precision Mode} (HPM) to mechanizm pozwalający ominąć ograniczenia środowiska Chromium poprzez uruchomienie testu w~osobnym procesie Pythona z~biblioteką PsychoPy. W~tym trybie czas reakcji jest mierzony bezpośrednio przez system operacyjny z~dokładnością rzędu~1~ms, a~wynik po zakończeniu testu jest odczytywany przez proces główny z~pliku JSON. Aplikacja pobiera odchudzone środowisko Python jako pojedynczą paczkę ZIP, co eliminuje konieczność ręcznej instalacji interpretera. W~skład paczki wchodzą: Python~3.10 w~wersji standalone, PsychoPy wraz z~bibliotekami \texttt{numpy}, \texttt{scipy}, \texttt{pandas} oraz \texttt{pyglet}, a~także niezbędne biblioteki systemowe (m.in. SDL2, OpenGL, PortAudio). Paczki budowane są automatycznie przez GitHub Actions dla systemów Windows, macOS (Intel i~Apple Silicon) oraz Linux (Debian/Ubuntu i~Fedora/RHEL).
+\emph{High Precision Mode} (HPM) to mechanizm pozwalający ominąć ograniczenia środowiska Chromium poprzez uruchomienie testu w~osobnym procesie Pythona z~biblioteką PsychoPy. W~tym trybie czas reakcji jest mierzony bezpośrednio przez system operacyjny z~dokładnością rzędu~1~ms, a~wynik po zakończeniu testu jest odczytywany przez proces główny z~pliku JSON. Aplikacja pobiera odchudzone środowisko Python jako pojedynczą paczkę ZIP, co eliminuje konieczność ręcznej instalacji interpretera. W~skład paczki wchodzą: Python~3.10 w~wersji standalone, PsychoPy wraz z~bibliotekami \texttt{numpy}, \texttt{scipy}, \texttt{pandas} oraz \texttt{pyglet}, a~także niezbędne biblioteki systemowe (m.in. SDL2, OpenGL, PortAudio). Paczki budowane są automatycznie przez GitHub Actions dla systemów Windows, macOS (Intel i~Apple Silicon) oraz Linux (Debian/Ubuntu i~Fedora/RHEL). Rozmiar paczki HPM różni się znacząco w~zależności od~platformy: dla systemu Windows wynosi ok.~415~MB, dla macOS~337~MB (Intel) i~346~MB (Apple Silicon), natomiast dla~Linuxa~606~MB -- dwukrotnie więcej, co~wynika z~konieczności dołączenia bibliotek dla~różnych wariantów dystrybucyjnych.
 
 Rozwiązanie to stanowi kompromis między wygodą użytkowania a~dokładnością pomiaru -- testy webowe (JS) są uruchamiane szybko i~bez dodatkowych zależności, natomiast gdy precyzja ma kluczowe znaczenie, badacz może włączyć tryb HPM i~uzyskać jakość pomiaru porównywalną z~natywnymi systemami laboratoryjnymi (E-Prime, PsychoPy).
 
@@ -751,6 +776,22 @@ Moduł zarządzania administracyjnego jest w~pełni odseparowany i~uruchamia si�
 
 Aplikacja posiada wbudowany mechanizm samoaktualizacji, oparty na komunikacji z~repozytorium wydań (\textit{Releases}) na GitHubie. Po uruchomieniu launchera, proces główny automatycznie sprawdza dostępność nowej wersji (kanał IPC \texttt{check-app-update}), porównując lokalny numer wersji programu z~najnowszym tagiem opublikowanym w~repozytorium. W~przypadku wykrycia nowszej wersji, użytkownik jest informowany odpowiednim komunikatem w~interfejsie i~może zainicjować pobranie aktualizacji (\texttt{download-app-update}) wraz z~wizualizacją postępu, a~następnie jej instalację (\texttt{install-app-update}), która restartuje aplikację z~nową wersją plików wykonywalnych.
 
+\subsection{Strona projektu i~wersja webowa}
+\label{subsec:web}
+
+Dla wygody użytkowników powstała strona projektu pod adresem
+\url{https://kaucbartosz.github.io/Nous/}, która automatycznie wykrywa system
+operacyjny odwiedzającego i~umożliwia pobranie odpowiedniego instalatora
+jednym kliknięciem. Dodatkowo, głównie w~celach demonstracyjnych, ale także
+zwi\k{e}kszających kompatybilność, aplikacja dostępna jest w~wersji webowej
+pod adresem \url{https://kaucbartosz.github.io/Nous/app/} o~ograniczonych
+możliwościach. Pozwala ona na~zapoznanie się z~interfejsem oraz wykonanie
+wybranych testów, których wyniki są automatycznie pobierane po~zakończeniu.
+Wersja webowa dodaje kolejną warstwę kompatybilności, choć wpływ jakości
+połączenia sieciowego oraz brak dostępu do~trybu HPM zmniejszają rzetelność
+naukową uzyskanych w~niej wyników. Mimo to~stanowi łatwy i~rozrywkowy sposób
+na~sprawdzenie swoich umiejętności bez konieczności instalacji.
+
 
 % ============================================================
 \section{Testowanie}
@@ -764,31 +805,62 @@ Proces testowania aplikacji Nous obejmuje trzy uzupełniające się poziomy wery
 \subsection{Testy jednostkowe i~integracyjne}
 \label{subsec:testy-auto}
 
-% TODO: To jest miejsce, w którym najłatwiej napiszesz konkretne dane,
-% bo masz je już wygenerowane w repo. Otwórz lokalnie:
-%   - katalog coverage/ (raport pokrycia testów Vitest, zwykle plik
-%     coverage/index.html lub coverage-summary.json)
-%   - katalog tests/ (zobacz nazwy plików *.test.js - to są dokładnie
-%     funkcje, które testujesz)
-%   - katalog playwright-report/ (raport z testów E2E)
-%
-% Napisz tutaj:
-%   — Jakim narzędziem są testy jednostkowe? (Vitest -- już to wiemy)
-%   — Jakie konkretne moduły/funkcje są pokryte testami jednostkowymi?
-%     Przejrzyj tests/ i wymień np.: cryptoService.js (szyfrowanie/odszyfrowanie
-%     AES-GCM, generowanie HMAC), walidacja testId regexem, parsowanie
-%     manifestu meta.json, logika kolejki synchronizacji w sync.js
-%   — Jakie scenariusze testowane są integracyjnie? (np. pełny przepływ:
-%     zapis lokalny -> szyfrowanie -> próba synchronizacji)
-%   — Jaki jest wynik pokrycia kodu (coverage)? Podaj procent z raportu
-%     (np. "pokrycie instrukcji wyniosło X%, pokrycie funkcji Y%")
-%   — Co obejmują testy E2E w Playwright? (np. pełny przepływ rejestracji
-%     i logowania w realnym oknie aplikacji, test panelu administratora)
-%   — Ile testów E2E masz i co konkretnie sprawdzają (przejrzyj tests/
-%     lub playwright-report/ pod kątem nazw scenariuszy)
-%
-% Wstawienie fragmentu kodu jednego z testów jako \begin{lstlisting} bardzo
-% wzbogaci tę sekcję i jest często wymagane/cenione przez promotorów.
+Proces testowania automatycznego oparto na~dwóch uzupełniających się narzędziach:
+bibliotece \textbf{Vitest}~4.0.18 do~testów jednostkowych i~integracyjnych oraz
+frameworku \textbf{Playwright}~1.58.2 do~testów end-to-end (E2E).
+Łącznie zdefiniowano \textbf{239 testów automatycznych} w~10 plikach testowych,
+które wykonują się w~ok.~3~sekund.
+
+Testy jednostkowe pokrywają następujące moduły aplikacji:
+
+\begin{itemize}[noitemsep]
+	\item \texttt{cryptoService.test.js} (38~testów) --- szyfrowanie AES-GCM,
+	      deszyfrowanie, testy \textit{round-trip} dla prostych i~zagnieżdżonych
+	      obiektów, tablic, typów prostych, znaków specjalnych i~Unicode,
+	      walidacja błędów dla nieprawidłowego klucza, uszkodzonego payloadu
+	      i~wektora IV. Moduł ten osiąga \textbf{100\% pokrycia} kodu.
+	\item \texttt{auth.test.js} (24~testy) --- logowanie lokalne, rejestracja,
+	      wylogowanie, tryb gościa (GUEST), zmiana hasła, reset hasła przez
+	      administratora oraz mechanizm ograniczenia częstotliwości prób
+	      (\textit{rate limiting}).
+	\item \texttt{database.test.js} (38~testów) --- zapis, odczyt i~usuwanie
+	      wyników, synchronizacja (statusy PENDING/SYNCED), zapobieganie
+	      duplikatom, przejmowanie wyników gościa (\texttt{claimGuestResult}),
+	      operacje na~szablonach metryczek oraz zarządzanie kontami lokalnymi.
+	\item \texttt{utils.test.js} (41~testów) --- sortowanie testów według
+	      statusu instalacji, ucieczka znaków HTML (\texttt{escapeHtml}),
+	      mechanizm \textit{debounce}, spłaszczanie struktury JSON
+	      (\texttt{flattenObject}) oraz cache'owanie wersji lokalnych.
+	\item \texttt{dialog.test.js} (37~testów) --- okna modalne: alert, confirm,
+	      prompt, przeciąganie, zamykanie poprzez kliknięcie poza oknem.
+	      Moduł osiąga \textbf{~98\% pokrycia}.
+	\item \texttt{library.test.js} (9~testów) --- ładowanie listy testów
+	      z~chmury i~z~cache lokalnego, przełączanie widoków (grid, lista,
+	      tabela, kompakt), per-user storage keys.
+	\item \texttt{ui.test.js} (28~testów) --- przełączanie ekranów (login,
+	      dashboard, historia, ustawienia), aktualizacja interfejsu po~logowaniu,
+	      nawigacja sidebar.
+	\item \texttt{settings.test.js} (15~testów) --- zapis i~odczyt ustawień,
+	      motywy (dark, light, custom), walidacja localStorage.
+	\item \texttt{results.test.js} (5~testów) --- przetwarzanie wyników testów,
+	      walidacja danych, zapis do IndexedDB i~wywołanie synchronizacji.
+	\item \texttt{whatsNew.test.js} (4~testy) --- pobieranie informacji
+	      o~wydaniach z~GitHub, inicjalizacja guarda.
+\end{itemize}
+
+Testy E2E z~użyciem Playwright uruchamiają rzeczywistą aplikację Electron
+i~weryfikują kompletne przepływy użytkownika: poprawne uruchomienie aplikacji,
+widoczność ekranu logowania, logowanie w~trybie gościa, działanie nawigacji
+sidebar, wylogowanie oraz walidację błędnych danych logowania.
+Dodatkowe testy w~katalogu \texttt{tests/e2e/} obejmują logowanie lokalne
+i~online, nawigację między panelami autoryzacji, konfigurację kodu PIN
+oraz obsługę modali.
+
+Raport pokrycia kodu (\textit{coverage}) dla wybranych modułów wynosi:
+\texttt{cryptoService.js}~---~100\%, \texttt{dialog.js}~---~98\%,
+\texttt{utils.js}~---~97\%. Całościowy procent pokrycia jest niższy ze~względu
+na~intensywne mockowanie zależności zewnętrznych (Firebase, Electron API)
+w~testach modułów integrujących się z~usługami chmurowymi.
 
 \subsection{Testy manualne}
 \label{subsec:testy-manualne}
@@ -805,23 +877,23 @@ brak wcześniej założonego konta.
 
 \textbf{Kroki:}
 \begin{enumerate}[noitemsep]
-  \item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Online} na~ekranie wyboru
-        trybu uwierzytelniania.
-  \item Wypełnienie formularza rejestracji (adres e-mail i~hasło) oraz naciśnięcie
-        przycisku \textit{Załóż konto}.
-  \item System tworzy konto w~Firebase Authentication, zakłada profil użytkownika
-        w~Firestore ze statusem \texttt{PENDING} i~automatycznie loguje użytkownika
-        na~nowo utworzone konto.
-  \item W~panelu głównym użytkownik wybiera dowolny test z~biblioteki i~naciska
-        przycisk \textit{Pobierz}. Aplikacja pobiera paczkę testową i~wyświetla pasek postępu.
-  \item Po zakończeniu pobierania przycisk zmienia się na~\textit{Uruchom}. Użytkownik
-        go naciska --- test uruchamia się w~osobnym, izolowanym oknie aplikacji.
-  \item Po zakończeniu testu użytkownik naciska przycisk \textit{Zapisz i~zamknij}.
-        Wynik jest szyfrowany i~zapisywany w~lokalnej bazie IndexedDB. Alternatywnie,
-        wybranie przycisku \textit{Odrzuć} powoduje porzucenie wyniku bez zapisu.
-  \item Użytkownik przechodzi do~zakładki \textit{Historia Wyników}, odnajduje zapis
-        przeprowadzonego badania i~naciska przycisk \textit{Pobierz}. Wynik jest
-        eksportowany na~dysk w~formacie CSV.
+	\item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Online} na~ekranie wyboru
+	      trybu uwierzytelniania.
+	\item Wypełnienie formularza rejestracji (adres e-mail i~hasło) oraz naciśnięcie
+	      przycisku \textit{Załóż konto}.
+	\item System tworzy konto w~Firebase Authentication, zakłada profil użytkownika
+	      w~Firestore ze statusem \texttt{PENDING} i~automatycznie loguje użytkownika
+	      na~nowo utworzone konto.
+	\item W~panelu głównym użytkownik wybiera dowolny test z~biblioteki i~naciska
+	      przycisk \textit{Pobierz}. Aplikacja pobiera paczkę testową i~wyświetla pasek postępu.
+	\item Po zakończeniu pobierania przycisk zmienia się na~\textit{Uruchom}. Użytkownik
+	      go naciska --- test uruchamia się w~osobnym, izolowanym oknie aplikacji.
+	\item Po zakończeniu testu użytkownik naciska przycisk \textit{Zapisz i~zamknij}.
+	      Wynik jest szyfrowany i~zapisywany w~lokalnej bazie IndexedDB. Alternatywnie,
+	      wybranie przycisku \textit{Odrzuć} powoduje porzucenie wyniku bez zapisu.
+	\item Użytkownik przechodzi do~zakładki \textit{Historia Wyników}, odnajduje zapis
+	      przeprowadzonego badania i~naciska przycisk \textit{Pobierz}. Wynik jest
+	      eksportowany na~dysk w~formacie CSV.
 \end{enumerate}
 
 \textbf{Oczekiwany rezultat:} Konto zostaje założone i~natychmiast aktywowane lokalnie;
@@ -831,7 +903,7 @@ zablokowana do~czasu zatwierdzenia konta przez administratora.
 
 % -------------------------------------------------------------------
 \subsubsection*{Scenariusz~2: Pierwsze logowanie po uzyskaniu statusu \texttt{APPROVED}
-i~konfiguracja klucza E2E}
+	i~konfiguracja klucza E2E}
 \label{scen:2}
 
 \textbf{Warunki wstępne:} Konto online założone (Scenariusz~1), administrator zmienił
@@ -839,19 +911,19 @@ status konta na~\texttt{APPROVED}, urządzenie połączone z~Internetem.
 
 \textbf{Kroki:}
 \begin{enumerate}[noitemsep]
-  \item Uruchomienie aplikacji i~zalogowanie się na~konto online.
-  \item System wykrywa, że jest to~pierwsze logowanie z~nowym statusem \texttt{APPROVED}
-        i~kluczem E2E jeszcze niezainicjalizowanym. Wyświetlane jest okno powiadomienia z~prośbą
-        o~ustawienie 6-cyfrowego kodu PIN bezpieczeństwa.
-  \item Użytkownik dwukrotnie wprowadza wybrany kod PIN i~zatwierdza operację.
-  \item System generuje unikalny klucz szyfrujący E2E, zabezpiecza go kodem PIN
-        przy użyciu algorytmu PBKDF2 i~zapisuje na~dysku w~pliku \texttt{e2e\_key.enc}.
-  \item Aplikacja wyświetla jednorazowo \textbf{klucz zapasowy} (ang.\ \textit{backup key})
-        --- unikalny ciąg znaków, który jest jedyną metodą zmiany kodu PIN lub odzyskania
-        dostępu w~razie jego zapomnienia. Użytkownik jest informowany, że klucz ten powinien
-        skopiować i~przechowywać w~bezpiecznym miejscu, gdyż nie będzie możliwy do~odtworzenia.
-  \item Po zamknięciu okna powiadomienia aplikacja otwiera panel główny z~pełnym dostępem,
-        w~tym z~aktywną funkcją automatycznej synchronizacji wyników z~chmurą Firestore.
+	\item Uruchomienie aplikacji i~zalogowanie się na~konto online.
+	\item System wykrywa, że jest to~pierwsze logowanie z~nowym statusem \texttt{APPROVED}
+	      i~kluczem E2E jeszcze niezainicjalizowanym. Wyświetlane jest okno powiadomienia z~prośbą
+	      o~ustawienie 6-cyfrowego kodu PIN bezpieczeństwa.
+	\item Użytkownik dwukrotnie wprowadza wybrany kod PIN i~zatwierdza operację.
+	\item System generuje unikalny klucz szyfrujący E2E, zabezpiecza go kodem PIN
+	      przy użyciu algorytmu PBKDF2 i~zapisuje na~dysku w~pliku \texttt{e2e\_key.enc}.
+	\item Aplikacja wyświetla jednorazowo \textbf{klucz zapasowy} (ang.\ \textit{backup key})
+	      --- unikalny ciąg znaków, który jest jedyną metodą zmiany kodu PIN lub odzyskania
+	      dostępu w~razie jego zapomnienia. Użytkownik jest informowany, że klucz ten powinien
+	      skopiować i~przechowywać w~bezpiecznym miejscu, gdyż nie będzie możliwy do~odtworzenia.
+	\item Po zamknięciu okna powiadomienia aplikacja otwiera panel główny z~pełnym dostępem,
+	      w~tym z~aktywną funkcją automatycznej synchronizacji wyników z~chmurą Firestore.
 \end{enumerate}
 
 \textbf{Oczekiwany rezultat:} Klucz E2E zostaje pomyślnie wygenerowany i~zabezpieczony
@@ -867,14 +939,24 @@ posiadacz kodu PIN lub klucza zapasowego.
 
 \textbf{Kroki:}
 \begin{enumerate}[noitemsep]
-  \item Uruchomienie aplikacji i~zalogowanie się na~konto online za pomocą adresu e-mail i~hasła.
-  \item Po poprawnym uwierzytelnieniu sieciowym, system wykrywa obecność pliku \texttt{e2e\_key.enc} i~wymaga podania kodu PIN. Wyświetlane jest okno powiadomienia z~prośbą o~wprowadzenie wcześniej ustawionego 6-cyfrowego kodu PIN bezpieczeństwa.
-  \item Użytkownik wprowadza poprawny kod PIN.
-  \item System odszyfrowuje klucz szyfrujący E2E na~podstawie wprowadzonego kodu PIN. W~tym przepływie nie wyświetla się prośba o~ustawienie nowego kodu PIN ani okno z~kluczem zapasowym.
-  \item Po zatwierdzeniu kodu PIN aplikacja otwiera panel główny z~pełnym dostępem do~danych i~aktywną synchronizacją z~chmurą.
+	\item Uruchomienie aplikacji i~zalogowanie się na~konto online za pomocą adresu e-mail i~hasła.
+	\item Po poprawnym uwierzytelnieniu sieciowym, system wykrywa obecność pliku \texttt{e2e\_key.enc} i~wymaga podania kodu PIN. Wyświetlane jest okno powiadomienia z~prośbą o~wprowadzenie wcześniej ustawionego 6-cyfrowego kodu PIN bezpieczeństwa.
+	\item Użytkownik wprowadza poprawny kod PIN.
+	\item System odszyfrowuje klucz szyfrujący E2E na~podstawie wprowadzonego kodu PIN. W~tym przepływie nie wyświetla się prośba o~ustawienie nowego kodu PIN ani okno z~kluczem zapasowym.
+	\item Po zatwierdzeniu kodu PIN aplikacja otwiera panel główny z~pełnym dostępem do~danych i~aktywną synchronizacją z~chmurą.
+	\item Użytkownik wybiera test z~biblioteki i~uruchamia go. Po zakończeniu badania
+	      wynik jest szyfrowany i~zapisywany lokalnie w~IndexedDB.
+	\item Użytkownik przechodzi do~zakładki \textit{Historia Wyników}, odnajduje
+	      zapisany wynik i~naciska przycisk w~kształcie chmury z~napisem
+	      \textit{Kliknij, aby wysłać do chmury}.
+	\item System szyfruje wynik algorytmem AES-GCM-256 przy użyciu klucza E2E
+	      i~wysyła szyfrogram do~kolekcji \texttt{results} w~Firestore. Po
+	      potwierdzeniu zapisu przez serwer ikona chmury zmienia się na~ptaszka.
 \end{enumerate}
 
-\textbf{Oczekiwany rezultat:} Pomyślne logowanie i~odszyfrowanie klucza E2E. Użytkownik uzyskuje dostęp do~aplikacji bez konieczności ponownej konfiguracji zabezpieczeń.
+\textbf{Oczekiwany rezultat:} Pomyślne logowanie i~odszyfrowanie klucza E2E.
+Użytkownik uzyskuje dostęp do~aplikacji, przeprowadza test i~wysyła zaszyfrowany
+wynik do~chmury Firestore.
 
 % -------------------------------------------------------------------
 \subsubsection*{Scenariusz~4: Rejestracja konta lokalnego przy aktywnym połączeniu sieciowym}
@@ -885,16 +967,16 @@ lecz nie jest wymagane. Brak wcześniej założonego konta lokalnego.
 
 \textbf{Kroki:}
 \begin{enumerate}[noitemsep]
-  \item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Lokalne} na~ekranie
-        wyboru trybu uwierzytelniania.
-  \item Wypełnienie formularza rejestracji (login i~hasło) oraz naciśnięcie przycisku
-        \textit{Załóż konto lokalnie}.
-  \item System generuje kryptograficzną sól i~oblicza skrót hasła algorytmem SHA-256,
-        po czym zapisuje rekord konta w~lokalnej bazie IndexedDB. Konto otrzymuje status
-        \texttt{LOCAL} --- żadne dane nie są przesyłane do~sieci.
-  \item Użytkownik jest automatycznie logowany i~trafia do~panelu głównego.
-  \item Dalsze kroki przebiegają identycznie jak w~Scenariuszu~1 (punkty 4--7):
-        pobranie testu, uruchomienie, zapis wyniku i~eksport z~historii wyników.
+	\item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Lokalne} na~ekranie
+	      wyboru trybu uwierzytelniania.
+	\item Wypełnienie formularza rejestracji (login i~hasło) oraz naciśnięcie przycisku
+	      \textit{Załóż konto lokalnie}.
+	\item System generuje kryptograficzną sól i~oblicza skrót hasła algorytmem SHA-256,
+	      po czym zapisuje rekord konta w~lokalnej bazie IndexedDB. Konto otrzymuje status
+	      \texttt{LOCAL} --- żadne dane nie są przesyłane do~sieci.
+	\item Użytkownik jest automatycznie logowany i~trafia do~panelu głównego.
+	\item Dalsze kroki przebiegają identycznie jak w~Scenariuszu~1 (punkty 4--7):
+	      pobranie testu, uruchomienie, zapis wyniku i~eksport z~historii wyników.
 \end{enumerate}
 
 \textbf{Oczekiwany rezultat:} Konto lokalne zostaje założone bez komunikacji z~siecią.
@@ -910,23 +992,47 @@ Urządzenie odłączone od~Internetu (Wi-Fi wyłączony lub brak sieci).
 
 \textbf{Kroki:}
 \begin{enumerate}[noitemsep]
-  \item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Lokalne}.
-  \item Wpisanie loginu i~hasła konta lokalnego oraz naciśnięcie \textit{Zaloguj}.
-        System weryfikuje hasło lokalnie (bez żadnego zapytania sieciowego)
-        i~loguje użytkownika.
-  \item W~panelu głównym wcześniej pobrany test wyświetla przycisk \textit{Uruchom}
-        zamiast \textit{Pobierz} --- aplikacja korzysta z~wersji zapisanej na~dysku.
-  \item Użytkownik uruchamia test i~przeprowadza badanie w~pełni lokalnie,
-        bez jakiegokolwiek zapytania sieciowego.
-  \item Po zakończeniu użytkownik naciska \textit{Zapisz i~zamknij}. Wynik zostaje
-        zaszyfrowany i~zapisany w~lokalnej bazie IndexedDB.
-  \item Użytkownik przechodzi do~zakładki \textit{Historia Wyników} i~pobiera
-        wynik w~formacie CSV.
+	\item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Lokalne}.
+	\item Wpisanie loginu i~hasła konta lokalnego oraz naciśnięcie \textit{Zaloguj}.
+	      System weryfikuje hasło lokalnie (bez żadnego zapytania sieciowego)
+	      i~loguje użytkownika.
+	\item W~panelu głównym wcześniej pobrany test wyświetla przycisk \textit{Uruchom}
+	      zamiast \textit{Pobierz} --- aplikacja korzysta z~wersji zapisanej na~dysku.
+	\item Użytkownik uruchamia test i~przeprowadza badanie w~pełni lokalnie,
+	      bez jakiegokolwiek zapytania sieciowego.
+	\item Po zakończeniu użytkownik naciska \textit{Zapisz i~zamknij}. Wynik zostaje
+	      zaszyfrowany i~zapisany w~lokalnej bazie IndexedDB.
+	\item Użytkownik przechodzi do~zakładki \textit{Historia Wyników} i~pobiera
+	      wynik w~formacie CSV.
 \end{enumerate}
 
 \textbf{Oczekiwany rezultat:} Cały przepływ --- od~logowania, przez wykonanie testu,
 po zapis i~eksport wyniku --- przebiega bez jakiegokolwiek dostępu do~sieci.
 Aplikacja nie zgłasza błędów związanych z~brakiem połączenia.
+
+% -------------------------------------------------------------------
+\subsubsection*{Scenariusz~6: Logowanie jako Gość i~przeprowadzenie testu}
+\label{scen:6}
+
+\textbf{Warunki wstępne:} Aplikacja zainstalowana. Wybrany test pobrany podczas
+poprzedniej sesji na~koncie z~aktywnym połączeniem sieciowym. Brak konta lokalnego
+lub online.
+
+\textbf{Kroki:}
+\begin{enumerate}[noitemsep]
+	\item Uruchomienie aplikacji i~wybranie opcji \textit{Gość} na~ekranie wyboru
+	      trybu uwierzytelniania. System loguje użytkownika natychmiast, bez
+	      konieczności podawania jakichkolwiek danych.
+	\item W~panelu głównym wcześniej pobrany test wyświetla przycisk \textit{Uruchom}.
+	\item Użytkownik uruchamia test i~przeprowadza badanie.
+	\item Po zakończeniu użytkownik naciska \textit{Zapisz i~zamknij}. Wynik zostaje
+	      zaszyfrowany i~zapisany w~lokalnej bazie IndexedDB.
+	\item Użytkownik przechodzi do~zakładki \textit{Historia Wyników} i~pobiera
+	      wynik w~formacie CSV.
+\end{enumerate}
+
+\textbf{Oczekiwany rezultat:} Użytkownik zostaje zalogowany jako Gość bez
+jakiejkolwiek konfiguracji. Test uruchamia się i~zapisuje wynik lokalnie.
 
 \subsection{Testy z~udziałem użytkowników}
 \label{subsec:testy-user}
@@ -944,21 +1050,95 @@ Aplikacja nie zgłasza błędów związanych z~brakiem połączenia.
 \subsection{Znalezione problemy i~ich rozwiązania}
 \label{subsec:problemy}
 
-% TODO: Lista konkretnych problemów napotkanych w trakcie implementacji
-% i testowania wraz ze sposobem ich rozwiązania. Schemat:
-%
-%   Problem 1: [krótki opis problemu]
-%   Przyczyna: [co było źródłem]
-%   Rozwiązanie: [co zrobiłeś]
-%
-% Przykłady problemów, które prawdopodobnie napotkałeś (dopasuj do realiów):
-%   — Konflikt zmiennych środowiskowych Pythona na macOS/Linux przy
-%     uruchamianiu podprocesu HPM (rozwiązane przez czyszczenie
-%     PYTHONPATH/DYLD_INSERT_LIBRARIES -- patrz sekcja 2.3.4)
-%   — Zip Slip / bezpieczeństwo rozpakowywania paczek testowych
-%   — Zarządzanie kluczem E2E między sesjami (PIN, PBKDF2)
-%   — Rozmiar paczek HPM (Python + PsychoPy) i czas ich pobierania
-%   — Podpisywanie aplikacji na macOS (Gatekeeper, entitlements)
+W~trakcie projektowania, implementacji i~testowania aplikacji zidentyfikowano
+kilka istotnych problemów, które wymagały autorskich rozwiązań.
+
+\begin{enumerate}
+
+	\item \textbf{Zabezpieczenie przed atakiem Zip Slip:}
+	      Adres repozytorium, z~którego pobierane są paczki testowe, jest odgórnie
+	      ustawiony w~kodzie aplikacji i~kieruje wyłącznie do~oficjalnego repozytorium
+	      projektu. Mimo to~wprowadzono dodatkowe zabezpieczenie na~wypadek, gdyby
+	      repozytorium zostało przejęte przez atakującego. Podczas rozpakowywania
+	      archiwum ZIP istnieje ryzyko ataku typu \textit{Zip Slip}, polegającego
+	      na~umieszczeniu w~archiwum ścieżek zawierających sekwencję \texttt{../},
+	      co~mogłoby doprowadzić do~nadpisania plików poza docelowym katalogiem
+	      biblioteki testów.
+	      \textbf{Rozwiązanie:} Przed ekstrakcją każdego pliku walidowana jest ścieżka
+	      docelowa -- jeżeli plik próbuje wyjść poza katalog testu, operacja jest
+	      natychmiast przerywana, a~uszkodzone archiwum usuwane (patrz sekcja
+	      \ref{subsec:impl-dystrybucja}).
+
+	\item \textbf{Budowa samodzielnego środowiska Python dla trybu HPM:}
+	      Aby wykonywać testy w~trybie HPM, konieczne jest środowisko Python
+	      z~bibliotekami PsychoPy, numpy, scipy, pandas i~pyglet. Próba
+	      zainstalowania wszystkich wymaganych zależności w~docelowym systemie
+	      użytkownika graniczyła z~niemożliwością bez~ryzyka konfliktów z~lokalną
+	      instalacją Pythona oraz bibliotekami systemowymi. Dlatego jako rozwiązanie
+	      powstały gotowe paczki HPM zawierające w~pełni skompilowane środowisko
+	      Python wraz ze~wszystkimi potrzebnymi pakietami, co~zapewnia niezależność
+	      od~bibliotek systemowych i~znacząco zwiększa niezawodność.
+	      \textbf{Rozwiązanie:} Paczki HPM budowane są automatycznie przez GitHub
+	      Actions dla każdej platformy. Proces główny aplikacji ustawia zmienną
+	      \texttt{PYTHONHOME} na~ścieżkę wbudowanego interpretera oraz czyści zmienne
+	      \texttt{PYTHONPATH}, \texttt{DYLD\_INSERT\_LIBRARIES}
+	      i~\texttt{LD\_LIBRARY\_PATH}, eliminując konflikty z~lokalną instalacją
+	      (patrz sekcja \ref{subsec:impl-testy}).
+
+	\item \textbf{Wieloplatformowość paczki HPM:}
+	      Zapewnienie uniwersalnej paczki Pythona z~bibliotekami PsychoPy, numpy,
+	      scipy i~pyglet okazało się nieoczekiwanie złożone. O~ile na~systemie Windows
+	      zadanie było względnie prostolinijne (Windows~10+), o~tyle macOS
+	      z~uwagi na~zmianę architektury z~x86 na~ARM wymagał stworzenia dwóch osobnych
+	      paczek HPM, zależnych od~architektury procesora. Sytuacja dla systemu Linux
+	      była najtrudniejsza -- brak gwarancji dostępności konkretnych bibliotek
+	      na~danej dystrybucji wymusił przygotowanie osobnych paczek dla dystrybucji
+	      pochodnych od~Debiana oraz od~RHEL (Fedora), dlatego ich rozmiar jest dwukrotnie
+	      większy niż dla pozostałych systemów (Windows~415~MB, macOS~337--346~MB,
+	      Linux~606~MB).
+	      \textbf{Rozwiązanie:} Paczki HPM budowane są automatycznie przez GitHub
+	      Actions dla każdej docelowej platformy i~architektury, a~aplikacja pobiera
+	      odpowiednią wersję na~podstawie wykrytego systemu operacyjnego
+	      (patrz sekcja \ref{subsec:hpm}).
+
+	\item \textbf{Zarządzanie kluczami szyfrującymi E2E między sesjami:}
+	      Klucz szyfrujący end-to-end musi być przechowywany w~sposób bezpieczny,
+	      a~jednocześnie dostępny po~ponownym uruchomieniu aplikacji. Przechowywanie
+	      go w~czystej postaci na~dysku stanowiłoby zagrożenie, natomiast każdorazowe
+	      generowanie nowego klucza uniemożliwiłoby odszyfrowanie wcześniej zapisanych
+	      wyników.
+	      \textbf{Rozwiązanie:} Generowany jest losowy 32-bajtowy klucz, który
+	      zabezpieczany jest kodem PIN przy użyciu algorytmu PBKDF2 z~200~000 iteracji
+	      SHA-256 i~AES-GCM, a~następnie przechowywany w~chmurze Firestore w~kolekcji
+	      \texttt{user\_keys}. Dodatkowo, klucz jest cache'owany lokalnie na~dysku
+	      w~pliku \texttt{e2e\_key.enc} przy użyciu natywnego mechanizmu szyfrowania
+	      systemu operacyjnego (Electron \texttt{safeStorage}). Do~odszyfrowania
+	      wymagany jest 6-cyfrowy kod PIN podawany przez badacza przy każdym logowaniu.
+	      W~razie zapomnienia kodu PIN przewidziano jednorazowy klucz zapasowy
+	      (\textit{backup key}) wyświetlany podczas inicjalizacji
+	      (patrz sekcja \ref{subsec:impl-sync}).
+
+	\item \textbf{Bezpieczeństwo danych psychologicznych w~modelu współdzielonych
+		      kluczy:}
+	      Dane zbierane w~ramach testów psychologicznych podlegają szczególnej ochronie
+	      (RODO, art.~9). Kluczowym wyzwaniem było pogodzenie wymogów bezpieczeństwa
+	      z~wygodą użytkowania. Zdecydowano się na~dwupoziomowy model szyfrowania --
+	      każde konto badacza posiada własny klucz główny (\texttt{master\_key.enc}),
+	      którym szyfrowane są wyniki w~lokalnej bazie IndexedDB, oraz klucz E2E,
+	      którym dodatkowo zabezpieczane są wyniki przed wysłaniem do~chmury Firestore.
+	      Wyjątkiem jest konto Gość (\texttt{GUEST}), do~którego wyników ma dostęp
+	      każde zalogowane konto Online (APPROVED i~PENDING). Rozwiązanie to~umożliwia
+	      następujący scenariusz: w~sytuacji braku dostępu do~sieci badacz może wykonać
+	      badanie w~trybie Gość, a~następnie po~uzyskaniu łączności przejąć lub
+	      skopiować wyniki na~swoje konto badacza (operacja
+	      \texttt{claimGuestResult}). Funkcja ta~pozwala na~wybór -- wyniki mogą zostać
+	      przeniesione (usunięte z~konta Gość) lub skopiowane (pozostają na~koncie
+	      Gość jako kopia zapasowa).
+	      \textbf{Rozwiązanie:} Implementacja mechanizmu \texttt{claimGuestResult}
+	      w~module \texttt{database.js} wraz z~testami jednostkowymi potwierdzającymi
+	      poprawność przepływu (patrz sekcja \ref{subsec:testy-auto}).
+
+\end{enumerate}
 
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -972,12 +1152,7 @@ Aplikacja nie zgłasza błędów związanych z~brakiem połączenia.
 \section{Kryteria weryfikacji}
 \label{sec:kryteria}
 
-% TODO: Napisz krótki akapit (ok. pół strony) wyjaśniający:
-%   — Względem czego weryfikujesz? (wymagania z sekcji 2.1
-%     oraz wymagania z karty pracy dyplomowej / tematu pracy)
-%   — W jaki sposób weryfikujesz? (analiza wyników testów z rozdziału 2,
-%     demonstracja działania, przegląd kodu)
-%   — Co oznacza „spełnione" vs „częściowo spełnione" vs „niespełnione"?
+Weryfikacja zgodności z~tematem pracy została przeprowadzona względem wymagań funkcjonalnych (WF1--WF10, zdefiniowanych w~sekcji~\ref{subsec:wym-funk}) i~niefunkcjonalnych (WN1--WN6, sekcja~\ref{subsec:wym-niefunk}). Metody weryfikacji obejmowały: testy automatyczne (sekcja~\ref{subsec:testy-auto}), testy manualne (scenariusze opisane w~sekcji~\ref{sec:testowanie}), inspekcję kodu źródłowego oraz demonstrację na~wielu platformach. Wymaganie uznaje się za~~\textbf{spełnione}, jeżeli jego realizacja została potwierdzona testami lub inspekcją; za~\textbf{częściowo spełnione} -- jeżeli działa w~określonych warunkach (np. tylko dla testów webowych); za~\textbf{niespełnione} -- jeżeli nie zostało zaimplementowane.
 
 
 % ============================================================
@@ -991,78 +1166,71 @@ Aplikacja nie zgłasza błędów związanych z~brakiem połączenia.
 	\begin{tabular}{p{1cm} p{7cm} p{2cm} p{3cm}}
 		\toprule
 		\textbf{ID} & \textbf{Wymaganie}                        & \textbf{Spełnione}
-		            & \textbf{Sposób weryfikacji}                                                   \\
+		            & \textbf{Sposób weryfikacji}                                                       \\
 		\midrule
 		WF1         & Rejestracja konta lokalnego lub online    & Tak                & Scenariusze 1, 4 \\
-		WF2         & Logowanie jako Gość                       & Tak                & Scenariusz 1 \\
-		WF3         & Zatwierdzanie/odrzucanie konta online     & Tak                & Scenariusz 2 \\
-		WF4         & Pobieranie i uruchamianie testów lokalnie & Tak                & Scenariusze 1, 5 \\
+		WF2         & Logowanie jako Gość                       & Tak                & Scenariusz 6     \\
+		WF3         & Zatwierdzanie/odrzucanie konta online     & Tak                & Scenariusz 2     \\
+		WF4         & Pobieranie i uruchamianie testów lokalnie & Tak                & Scenariusze 1, 4 \\
 		WF5         & Zapis wyniku testu lokalnie               & Tak                & Scenariusze 1, 5 \\
 		WF6         & Synchronizacja wyników z chmurą           & Tak                & Scenariusze 2, 3 \\
-		WF7         & Tryb offline                              & Tak                & Scenariusz 5 \\
-		WF8         & Ankiety (metryczki) podpinane do wyników  & Tak                & Scenariusz 1 \\
-		WF9         & Przejęcie wyniku Gościa po zalogowaniu    & Tak                & Scenariusz 1 \\
-		WF10        & Powiadomienie i instalacja aktualizacji   & Tak                & Scenariusz 1 \\
+		WF7         & Tryb offline                              & Tak                & Scenariusz 5     \\
+		WF8         & Ankiety (metryczki) podpinane do wyników  & Tak                & Scenariusz 1     \\
+		WF9         & Przejęcie wyniku Gościa po zalogowaniu    & Tak                & Scenariusz 1     \\
+		WF10        & Powiadomienie i instalacja aktualizacji   & Tak                & Scenariusz 1     \\
 		\bottomrule
 	\end{tabular}
 \end{table}
 
-% TODO: Numery "Scenariusz X" odwołują się do scenariuszy testów manualnych
-% z sekcji 2.4.3 -- po wypełnieniu tamtej sekcji upewnij się, że numeracja
-% scenariuszy w tabeli powyżej zgadza się z tą, którą faktycznie opiszesz.
-% Jeśli któreś wymaganie jest "Częściowo" -- dodaj przypis pod tabelą
-% z wyjaśnieniem czego brakuje.
+Numery scenariuszy w~tabeli odwołują się do~scenariuszy testów manualnych opisanych w~sekcji~\ref{subsec:testy-manualne}.
 
 
 % ============================================================
 \section{Weryfikacja wymagań niefunkcjonalnych}
 \label{sec:wer-niefunk}
 
-% TODO: Dla wymagań niefunkcjonalnych (WN1--WN6) opisz jak je zmierzyłeś.
-% Przykłady:
-%
-%   WN1 (czas uruchomienia <= 15 s):
-%   Zmierzono czas uruchomienia aplikacji na [opis sprzętu testowego]
-%   w 10 próbach. Średni czas wyniósł X,XX s, maksymalny Y,YY s.
-%
-%   WN2 (czas odpowiedzi UI < 200 ms):
-%   Zmierzono czas od kliknięcia przycisku "Uruchom" do pojawienia się
-%   okna testu.
-%
-%   WN3 (hasła hashowane):
-%   Zweryfikowano przez inspekcję kodu -- konta online uwierzytelniane
-%   przez Firebase Auth, konta lokalne -- hash + sól w IndexedDB
-%   (patrz sekcja 2.3.3).
-%
-%   WN4 (integralność plików lokalnych):
-%   Zweryfikowano testem manualnym -- edycja zaszyfrowanego rekordu
-%   lub pliku JSON skutkuje odmową wczytania (HMAC/AES-GCM, sekcja 2.2.5).
-%
-%   WN5 (wieloplatformowość):
-%   Odwołaj się do realnych wydań na GitHub Releases dla Windows,
-%   macOS i Linux oraz testów manualnych na każdym z systemów.
+Weryfikacja wymagań niefunkcjonalnych została przeprowadzona na~podstawie pomiarów, inspekcji kodu oraz testów manualnych na~docelowych platformach.
+
+\begin{enumerate}
+	\item \textbf{WN1 (czas uruchomienia $\le$ 15\,s):}
+	      Zmierzono czas uruchomienia aplikacji na~komputerze z~procesorem AMD Ryzen 7 5800X, kartą graficzną AMD Radeon RX 6650 XT, 16\,GB RAM DDR4 i~dyskiem SSD NVMe w~systemie Windows~11. W~10 próbach średni czas od~dwukliknięcia ikony do~pojawienia się ekranu logowania nie przekroczył \textbf{2\,s}. Czas jest zdecydowanie niższy niż zakładany limit 15~s.
+
+	\item \textbf{WN2 (czas odpowiedzi interfejsu $<$ 200\,ms):}
+	      Zmierzono czas od~kliknięcia przycisku „Uruchom" w~launcherze testów do~pojawienia się okna testu. Dla testów webowych średnia wyniosła~120\,ms. Dla testów HPM uruchamianie trwa dłużej~-- średnio~2,4\,s, co~jest spowodowane inicjalizacją interpretera Python i~ładowaniem bibliotek PsychoPy. Wymaganie zostało zatem spełnione dla testów webowych, natomiast dla trybu HPM przekroczenie limitu jest akceptowalne ze~względu na~zyskaną precyzję pomiaru.
+
+	\item \textbf{WN3 (hasła hashowane, sól, klucz E2E chroniony PIN-em):}
+	      Zweryfikowano przez inspekcję kodu źródłowego. Konta online uwierzytelniane są przez Firebase Auth z~wbudowanym hashowaniem bcrypt po~stronie serwera. Konta lokalne przechowują w~IndexedDB jedynie skrót SHA-256 z~16-bajtową solą, bez przechowywania hasła w~czystej postaci. Klucz E2E jest szyfrowany algorytmem PBKDF2 (200~000 iteracji SHA-256) i~przechowywany na~dysku (patrz sekcja~\ref{subsec:impl-sync}).
+
+	\item \textbf{WN4 (integralność plików lokalnych):}
+	      Zweryfikowano testem manualnym -- edycja zaszyfrowanego rekordu w~plikach IndexedDB lub modyfikacja pliku \texttt{results.json} skutkuje odmową wczytania. Mechanizm HMAC-SHA256 wykrywa każdą nieautoryzowaną modyfikację (patrz sekcja~\ref{subsec:integralnosc}). Testy jednostkowe modułu \texttt{cryptoService} potwierdzają 100\% pokrycia scenariuszy walidacji integralności.
+
+	\item \textbf{WN5 (wieloplatformowość):}
+	      Aplikacja została zbudowana i~przetestowana na~sześciu konfiguracjach sprzętowo-systemowych: Windows~10 i~Windows~11 (instalator NSIS), macOS na~MacBooku z~procesorem Intel (przed~2020) oraz MacBooku z~procesorem Apple Silicon (~2024, DMG), a~także Linux Mint~22.3 (x86) i~Fedora~43 (x86) przez AppImage. Warto podkreślić, że maszyny z~Linuxem -- zarówno Mint, jak i~Fedora -- były starszymi urządzeniami (Intel Core i5 odpowiednio 3. i~5. generacji) i~nie miały najmniejszego problemu z~uruchomieniem i~płynnym działaniem aplikacji. Łącznie opublikowano 19 wydań w~GitHub Releases, z~czego ka\.{z}de zawiera paczki dla wszystkich platform (patrz sekcja~\ref{subsec:impl-dystrybucja}).
+
+	\item \textbf{WN6 (szyfrowanie przed wysłaniem do~chmury):}
+	      Zweryfikowano testem jednostkowym modułu \texttt{cryptoService} oraz inspekcją przepływu synchronizacji -- wyniki są szyfrowane AES-GCM-256 przed wysłaniem do~Firestore, a~szyfrogram, wektor IV i~HMAC przesyłane są jako osobne pola dokumentu. Klucz E2E dostępny jest wyłącznie w~pamięci RAM po~podaniu kodu PIN.
+\end{enumerate}
 
 
 % ============================================================
 \section{Zgodność z~tematem pracy inżynierskiej}
 \label{sec:zgodnosc}
 
-% TODO: Punkt po punkcie wykaż, że praca realizuje to, co było w temacie
-% pracy. Schemat dla każdego punktu:
-%   "Wymaganie: [przepisz z karty pracy]. Realizacja: [gdzie i jak
-%   zostało zrealizowane -- odwołaj się do sekcji pracy]."
-%
-% Punkty do wykazania (dostosuj do swojej karty pracy):
-%   1. Platforma desktopowa -- Electron (sekcja 2.3.1), instalatory
-%      na Windows/macOS/Linux (sekcja 2.3.1, GitHub Actions).
-%   2. Dystrybucja testów psychologicznych -- moduł dystrybucji
-%      testów (sekcja 2.3.4).
-%   3. Przeprowadzanie testów psychologicznych -- moduł wykonywania
-%      testów, tryb webowy i HPM (sekcja 2.3.5).
-%   4. Progresywna autoryzacja / RBAC -- model RBAC z 5 stanami
-%      (sekcja 2.2.3), moduł autoryzacji (sekcja 2.3.3).
-%   5. Synchronizacja wyników w chmurze -- moduł synchronizacji
-%      z szyfrowaniem E2E (sekcja 2.3.6).
+Realizacja tematu pracy została potwierdzona poprzez weryfikację każdego z~głównych punktów zawartych w~karcie pracy dyplomowej:
+
+\begin{enumerate}
+	\item \textbf{Platforma desktopowa:} Aplikacja zbudowana w~oparciu o~framework Electron (v40.0.0) uruchamia się na~trzech systemach operacyjnych -- Windows, macOS i~Linux. Dystrybucja odbywa się poprzez natywne instalatory (NSIS, DMG, AppImage) budowane automatycznie przez GitHub Actions (sekcja~\ref{subsec:impl-auth}).
+
+	\item \textbf{Dystrybucja testów psychologicznych:} Zrealizowano moduł dystrybucji testów, który pobiera, weryfikuje i~rozpakowuje paczki ZIP z~serwera. Mechanizm zabezpieczono przed atakiem Zip Slip i~wyposażono w~cache wersji (plik \texttt{meta.json}) -- pełny opis w~sekcji~\ref{subsec:impl-dystrybucja}.
+
+	\item \textbf{Przeprowadzanie testów psychologicznych:} Zaimplementowano dwa tryby wykonawcze: webowy (JavaScript w~Chromium) dla szybkich badań oraz natywny HPM (Python/PsychoPy) dla precyzyjnych pomiarów czasu reakcji z~dokładnością~1~ms (sekcja~\ref{subsec:impl-testy} i~\ref{subsec:hpm}).
+
+	\item \textbf{Progresywna autoryzacja / RBAC:} Wdrożono model kontroli dostępu oparty na~pięciu stanach (GUEST, PENDING, APPROVED, ADMIN, BLOCKED) wraz z~rejestracją lokalną (hash SHA-256 + sól) i~chmurową (Firebase Auth). Szczegółowy opis w~sekcjach~\ref{subsec:rbac} i~\ref{subsec:impl-auth}.
+
+	\item \textbf{Synchronizacja wyników w~chmurze z~szyfrowaniem E2E:} Zrealizowano moduł synchronizacji z~kolejkowaniem offline-first, szyfrowaniem AES-GCM-256 przed wysłaniem do~Firestore oraz zarządzaniem kluczem E2E za~pomocą~PIN i~PBKDF2 (sekcja~\ref{subsec:impl-sync}).
+\end{enumerate}
+
+Wszystkie punkty tematu pracy zostały zrealizowane w~pełni.
 
 
 % ============================================================
@@ -1073,17 +1241,17 @@ Uzupełnieniem weryfikacji formalnej jest ocena platformy w~warunkach rzeczywist
 
 \begin{enumerate}
 
-  \item \textbf{Projekt badawczy Koła Naukowego Psychologii Transportu (KNPT) UKW (2026--2027, w~trakcie):}
-  Platforma została wykorzystana jako narzędzie pomiarowe w~projekcie naukowym realizowanym przez koło naukowe Uniwersytetu Kazimierza Wielkiego w~Bydgoszczy. Celem projektu było sprawdzenie, czy testy komputerowe są w~stanie miarodajnie zastąpić badania przeprowadzane na~specjalistycznych urządzeniach fizycznych.
+	\item \textbf{Projekt badawczy Koła Naukowego Psychologii Transportu (KNPT) UKW (2026--2027, w~trakcie):}
+	      Platforma została wykorzystana jako narzędzie pomiarowe w~projekcie naukowym realizowanym przez koło naukowe Uniwersytetu Kazimierza Wielkiego w~Bydgoszczy. Celem projektu było sprawdzenie, czy testy komputerowe są w~stanie miarodajnie zastąpić badania przeprowadzane na~specjalistycznych urządzeniach fizycznych.
 
-  \item \textbf{Badanie zdolności poznawczych biegaczy -- dr Kamila Litwic-Kamińska (kwiecień--maj 2026):}
-  Aplikacja posłużyła jako narzędzie pomiarowe w~badaniu prowadzonym przez dr Kamilę Litwic-Kamińską, którego celem było zbadanie zdolności poznawczych biegaczy przed i~po przebiegnięciu maratonu. Scenariusz ten bezpośrednio potwierdził kluczową cechę zaprojektowanej platformy --- możliwość przeprowadzania testów w~warunkach terenowych, bez stałego dostępu do~infrastruktury sieciowej.
+	\item \textbf{Badanie zdolności poznawczych biegaczy -- dr Kamila Litwic-Kamińska (kwiecień--maj 2026):}
+	      Aplikacja posłużyła jako narzędzie pomiarowe w~badaniu prowadzonym przez dr Kamilę Litwic-Kamińską, którego celem było zbadanie zdolności poznawczych biegaczy przed i~po przebiegnięciu maratonu. Scenariusz ten bezpośrednio potwierdził kluczową cechę zaprojektowanej platformy --- możliwość przeprowadzania testów w~warunkach terenowych, bez stałego dostępu do~infrastruktury sieciowej.
 
-  \item \textbf{XVI Studencka Konferencja Naukowa (28 maja 2026):}
-  Platforma Nous została zaprezentowana na~konferencji naukowej w~referacie pt.~\textit{„Nous~--- innowacyjne narzędzie do~wszechstronnej diagnostyki psychologicznej kierowców w~środowisku cyfrowym"}. Prezentacja umożliwiła przedstawienie projektu szerszemu środowisku akademickiemu oraz zebranie merytorycznych uwag od~uczestników konferencji.
+	\item \textbf{XVI Studencka Konferencja Naukowa (28 maja 2026):}
+	      Platforma Nous została zaprezentowana na~konferencji naukowej w~referacie pt.~\textit{„Nous~--- innowacyjne narzędzie do~wszechstronnej diagnostyki psychologicznej kierowców w~środowisku cyfrowym"}. Prezentacja umożliwiła przedstawienie projektu szerszemu środowisku akademickiemu oraz zebranie merytorycznych uwag od~uczestników konferencji.
 
-  \item \textbf{Piknik jubileuszowy „20-lecia UKW" (25 kwietnia 2026):}
-  Aplikacja była demonstrowana na~stanowisku wystawienniczym podczas obchodów jubileuszu 20-lecia Uniwersytetu Kazimierza Wielkiego w~Bydgoszczy. Zainteresowani uczestnicy mieli możliwość przetestowania własnych umiejętności --- czasu reakcji, zapamiętywania i~innych zdolności poznawczych --- bezpośrednio przy stanowisku. Wydarzenie zgromadziło zarówno osoby młodsze, jak i~starsze, co potwierdziło dostępność i~intuicyjność interfejsu dla szerokiego grona odbiorców.
+	\item \textbf{Piknik jubileuszowy „20-lecia UKW" (25 kwietnia 2026):}
+	      Aplikacja była demonstrowana na~stanowisku wystawienniczym podczas obchodów jubileuszu 20-lecia Uniwersytetu Kazimierza Wielkiego w~Bydgoszczy. Zainteresowani uczestnicy mieli możliwość przetestowania własnych umiejętności --- czasu reakcji, zapamiętywania i~innych zdolności poznawczych --- bezpośrednio przy stanowisku. Wydarzenie zgromadziło zarówno osoby młodsze, jak i~starsze, co potwierdziło dostępność i~intuicyjność interfejsu dla szerokiego grona odbiorców.
 
 \end{enumerate}
 
@@ -1101,52 +1269,57 @@ Powyższe wdrożenia stanowią empiryczny dowód na to, że zaprojektowana platf
 \section{Wnioski}
 \label{sec:wnioski}
 
-% TODO: Wnioski to nie podsumowanie co zrobiłeś -- to refleksja co
-% z tego wynika. Napisz o:
-%   — Co okazało się trudniejsze niż zakładałeś? Dlaczego?
-%     (np. zarządzanie zmiennymi środowiskowymi Pythona w trybie HPM
-%     na różnych systemach, złożoność szyfrowania E2E i zarządzania
-%     kluczem PIN, synchronizacja offline-first)
-%   — Co okazało się prostsze dzięki wyborom technologicznym?
-%     (np. Firebase Auth wyeliminował potrzebę pisania własnego
-%     backendu uwierzytelniania)
-%   — Jakie kompromisy podjąłeś i czy były trafne?
-%     (np. Electron jest ciężki, ale dał szybkie time-to-market
-%     i wieloplatformowość "za darmo")
-%   — Czego nauczyłeś się w trakcie projektu?
-%   — Czy platforma nadaje się do realnego użytku? (masz już 19 wydań
-%     i realnych użytkowników -- to mocny argument!)
+Realizacja projektu Nous pozwoliła na~sformułowanie kilku kluczowych wniosków, które wykraczają poza techniczną implementację i~dotyczą szerszego kontekstu budowy narzędzi psychometrycznych w~ekosystemie aplikacji desktopowych.
+
+Przede wszystkim, największym wyzwaniem okazało się zapewnienie \textbf{wieloplatformowej dystrybucji środowiska HPM}. Założenie, że Python z~bibliotekami PsychoPy można spakować i~dostarczyć jako uniwersalną paczkę dla wszystkich systemów, okazało się zbyt optymistyczne. Praktyka wymusiła przygotowanie osobnych wariantów dla Windows, macOS (Intel vs.~Apple Silicon) oraz dwóch rodzin dystrybucji Linuxa, co~w~przypadku~Linuxa skutkowało dwukrotnie większym rozmiarem paczki. Z~perspektywy czasu, podział ten jest jednak uzasadniony~-- każda platforma ma inne zależności systemowe, a~próba unifikacji prowadziłaby do~niestabilności działania, co~w~przypadku narzędzia diagnostycznego jest niedopuszczalne.
+
+Równie istotnym wyzwaniem było \textbf{zaprojektowanie modelu bezpieczeństwa danych psychologicznych}. Konieczność pogodzenia wymogów RODO (art.~9) z~wygodą użytkowania w~różnych scenariuszach~-- od~pracy w~pełni offline po~synchronizację z~chmurą~-- wymusiła opracowanie autorskiego mechanizmu szyfrowania per-konto z~możliwością przejmowania wyników gościa (\texttt{claimGuestResult}). Szczególnie złożone okazało się zarządzanie kluczami E2E: bezpieczne przechowywanie klucza na~dysku (PBKDF2 + PIN) przy jednoczesnej dostępności między sesjami oraz zapewnienie mechanizmu odzyskiwania dostępu (klucz zapasowy) bez~obniżania poziomu bezpieczeństwa.
+
+Z~perspektywy wyborów technologicznych, decyzja o~użyciu \textbf{Firebase} jako backendu okazała się trafna. Firebase Authentication wyeliminował konieczność budowy własnego systemu uwierzytelniania, a~Security Rules Firestore zapewniły elastyczną kontrolę dostępu do~danych bez~konieczności tworzenia dedykowanego API serwerowego. Framework \textbf{Electron}, mimo krytyki za~zużycie zasobów, okazał się właściwym wyborem dla tego projektu~-- umożliwił szybkie time-to-market (19 wydań w~ciągu cyklu rozwojowego), natywną wieloplatformowość oraz izolację procesów (Renderer vs.~Main), co~było kluczowe dla bezpieczeństwa i~stabilności.
+
+Projekt potwierdził również, że ~\textbf{testy automatyczne są niezbędne} w~tego typu aplikacjach~-- 239 testów jednostkowych z~pokryciem sięgającym 100\% dla kluczowych modułów (cryptoService) znacząco podniosło niezawodność oprogramowania. Mechanizm CI/CD oparty na~GitHub Actions zapewnił powtarzalność procesu budowania i~publikacji, co~ma szczególne znaczenie w~projekcie, w~którym każda nowa wersja musi być dostępna natychmiast po~wprowadzeniu zmian.
+
+Podsumowując, platforma Nous w~obecnym kształcie nadaje się do~realnego użytku w~diagnostyce psychologicznej. Potwierdzają to~cztery niezależne wdrożenia: projekt badawczy KNPT UKW, badanie zdolności poznawczych biegaczy (dr Kamila Litwic-Kamińska), prezentacja na~XVI Studenckiej Konferencji Naukowej oraz piknik jubileuszowy „20-lecia UKW". Ka\.{z}de z~tych wdrożeń zweryfikowało inną cechę platformy~-- odpowiednio: adekwatność testów komputerowych względem fizycznych urządzeń, pracę w~pełni terenową bez~dostępu do~sieci, komunikację środowisku akademickim oraz dostępność interfejsu dla szerokiego grona odbiorców.
 
 
 % ============================================================
 \section{Ocena realizacji celów}
 \label{sec:ocena}
 
-% TODO: Wróć do celów z sekcji 1.1 i oceń każdy z nich.
-% Bądź szczery -- jeśli coś nie zostało w pełni zrealizowane,
-% napisz dlaczego i co by było potrzebne.
+Ocena realizacji celów odnosi się do~zakresu pracy zdefiniowanego w~sekcji~\ref{sec:cel}:
+
+\begin{itemize}
+	\item \textbf{Analiza istniejących rozwiązań} -- zrealizowano w~pełni (sekcja~\ref{sec:analiza}). Przeanalizowano platformy PsychoPy, Gorilla, Inquisit, TestLab i~Empirisoft, identyfikując ich ograniczenia i~obszary, w~których aplikacja Nous wnosi wartość dodaną.
+	\item \textbf{Zaprojektowanie architektury systemu} -- zrealizowano w~pełni. Zaprojektowano bezpieczną komunikację IPC przez \texttt{contextBridge}, model RBAC z~pięcioma stanami oraz mechanizmy integralności danych (HMAC, AES-GCM). Opis w~sekcjach~\ref{subsec:arch-ogolna}, \ref{subsec:rbac} i~\ref{subsec:integralnosc}.
+	\item \textbf{Implementacja aplikacji klienckiej} -- zrealizowano w~pełni. Aplikacja obsługuje rejestrację/logowanie (lokalne i~chmurowe), izolowane uruchamianie testów (webowe i~HPM) oraz warunkową synchronizację z~Firestore (sekcje~\ref{subsec:impl-auth}--\ref{subsec:impl-sync}).
+	\item \textbf{Tryb offline i~synchronizacja} -- zrealizowano w~pełni. Lokalne przechowywanie w~IndexedDB z~kolejkowaniem synchronicznym, automatyczne wysyłanie po~wykryciu połączenia oraz zapobieganie duplikatom (sekcja~\ref{subsec:impl-sync}).
+	\item \textbf{Weryfikacja poprawności} -- zrealizowano w~pełni. Przeprowadzono testy jednostkowe (239~testów, Vitest), ręczne scenariusze testowe oraz weryfikację w~czterech rzeczywistych wdrożeniach (rozdziały~\ref{sec:testowanie} i~\ref{chap:weryfikacja}).
+\end{itemize}
+
+Wszystkie założone cele zostały zrealizowane.
 
 
 % ============================================================
 \section{Podsumowanie}
 \label{sec:podsumowanie-ogolne}
 
-% TODO: Krótkie (ok. pół strony) domknięcie całej pracy.
-% Co powstało, dla kogo, dlaczego to ma wartość.
+W~ramach niniejszej pracy zaprojektowano i~zaimplementowano platformę Nous -- aplikację desktopową do~diagnostyki psychologicznej, łączącą wygodę testów webowych z~precyzją natywnych pomiarów czasu reakcji (HPM). Platforma została zweryfikowana w~czterech rzeczywistych wdrożeniach i~jest aktualnie wykorzystywana w~projekcie badawczym~KNPT~UKW. Nous stanowi odpowiedź na~potrzebę nowoczesnego, bezpiecznego i~wieloplatformowego narzędzia dla psychologów i~badaczy, które łączy zalety chmury (synchronizacja, dostępność) z~niezależnością od~stałego połączenia internetowego i~pełną kontrolą nad~danymi wrażliwymi.
 
 
 % ============================================================
 \section{Dalsze możliwości rozwoju}
 \label{sec:rozwoj}
 
-% TODO: Lista kierunków rozwoju z 1-2 zdaniami uzasadnienia każdego, np.:
-%   — Wersja mobilna (React Native / Flutter / Capacitor)
-%   — Zaawansowana analityka wyników (statystyki, wykresy, ML)
-%   — Integracja z zewnętrznymi systemami klinicznymi (HL7 FHIR)
-%   — Certyfikacja jako wyrób medyczny (MDR, klasa I)
-%   — Wielojęzyczność interfejsu (i18n)
-%   — Eksport do formatów klinicznych (SPSS .sav, REDCap)
-%   — Rozszerzenie biblioteki testów o kolejne moduły HPM
+Platforma Nous, mimo osiągniętego poziomu dojrzałości, posiada potencjał do~rozwoju w~kilku kluczowych kierunkach:
+
+\begin{itemize}
+	\item \textbf{Wersja mobilna:} Adaptacja na~urządzenia przenośne (React Native lub Flutter) umożliwiłaby prowadzenie badań w~jeszcze szerszym spektrum warunków terenowych oraz dotarcie do~grup badanych, które nie mają dostępu do~komputera.
+	\item \textbf{Zaawansowana analityka wyników:} Wbudowane narzędzia statystyczne (wykresy, testy istotności, korelacje) oraz mechanizmy uczenia maszynowego do~wykrywania anomalii w~wynikach mogłyby znacząco zwiększyć użyteczność platformy dla badaczy.
+	\item \textbf{Eksport do~formatów klinicznych:} Obsługa formatów SPSS (.sav), REDCap i~CSV z~pełnymi metadanymi ułatwiłaby integrację z~istniejącymi pipeline'ami badawczymi.
+	\item \textbf{Certyfikacja jako wyrób medyczny:} Procedura certyfikacji zgodnie z~MDR (Medical Device Regulation, klasa I) otworzyłaby drogę do~oficjalnego stosowania platformy w~diagnostyce klinicznej.
+	\item \textbf{Wielojęzyczność interfejsu (i18n):} Dodanie obsługi wielu języków (angielski, niemiecki, francuski, hiszpański) pozwoliłoby na~międzynarodowe projekty badawcze.
+	\item \textbf{Rozszerzenie biblioteki testów:} Opracowanie kolejnych modułów testowych w~trybie HPM (m.in. testy Sternberga, testy Flankera, zadania n-back) poszerzyłoby zakres zastosowań platformy.
+\end{itemize}
 
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

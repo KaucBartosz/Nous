@@ -11,14 +11,18 @@ graph TD
     end
 
     subgraph Backend ["Backend w Chmurze (Firebase)"]
-        FBAuth["Firebase Authentication<br/>(Logowanie i Rejestracja)"]:::firebase
+        FBAuth["Firebase Authentication<br/>(Uwierzytelnianie sieciowe)"]:::firebase
         Firestore["Cloud Firestore<br/>(Baza Dokumentowa NoSQL)"]:::firebase
         CloudFunc["Firebase Cloud Functions<br/>(Logika Serwerowa / Admin)"]:::firebase
     end
 
     %% Connections
-    Launcher -->|Szyfrowanie i Odczyt/Zapis| DbLocal
-    Launcher -->|Uwierzytelnianie sieciowe| FBAuth
-    Launcher -.->|Synchronizacja wyników E2EE SSL| Firestore
+    Launcher -->|"Zapis/Szyfrowanie wyników<br/>(Wszystkie konta: Gość, Lokalne, Online)"| DbLocal
+    Launcher -->|"Logowanie Lokalne<br/>(Konto LOCAL)"| DbLocal
+    
+    Launcher -->|"Logowanie Online<br/>(Konta APPROVED & PENDING)"| FBAuth
+    
+    Launcher -.->|"Synchronizacja E2EE<br/>(Tylko użytkownicy APPROVED / ADMIN)"| Firestore
+    
     Firestore <-->|Triggery zdarzeń| CloudFunc
     Modules -->|Przekazanie wyników po badaniu| Launcher

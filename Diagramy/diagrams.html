@@ -95,15 +95,19 @@ graph TD
     end
 
     subgraph Backend ["Backend w Chmurze (Firebase)"]
-        FBAuth["Firebase Authentication<br/>(Logowanie i Rejestracja)"]:::firebase
+        FBAuth["Firebase Authentication<br/>(Uwierzytelnianie sieciowe)"]:::firebase
         Firestore["Cloud Firestore<br/>(Baza Dokumentowa NoSQL)"]:::firebase
         CloudFunc["Firebase Cloud Functions<br/>(Logika Serwerowa / Admin)"]:::firebase
     end
 
     %% Connections
-    Launcher -->|Szyfrowanie i Odczyt/Zapis| DbLocal
-    Launcher -->|Uwierzytelnianie sieciowe| FBAuth
-    Launcher -.->|Synchronizacja wyników E2EE SSL| Firestore
+    Launcher -->|"Zapis/Szyfrowanie wyników<br/>(Wszystkie konta: Gość, Lokalne, Online)"| DbLocal
+    Launcher -->|"Logowanie Lokalne<br/>(Konto LOCAL)"| DbLocal
+    
+    Launcher -->|"Logowanie Online<br/>(Konta APPROVED & PENDING)"| FBAuth
+    
+    Launcher -.->|"Synchronizacja E2EE<br/>(Tylko użytkownicy APPROVED / ADMIN)"| Firestore
+    
     Firestore <-->|Triggery zdarzeń| CloudFunc
     Modules -->|Przekazanie wyników po badaniu| Launcher
     </div>
@@ -151,15 +155,17 @@ graph TD
 
   <!-- DIAGRAM 1C: MODUŁY WYKONAWCZE TESTÓW I TRYB HPM -->
   <div class="diagram-container" id="container-arch-moduly">
-    <div class="diagram-title">Diagram 1c: Moduły Wykonawcze Testów i Tryb HPM</div>
+    <div class="diagram-title">Diagram 1c: Moduły Wykonawczę Testów i Tryb HPM</div>
     <div class="mermaid" id="diagram-arch-moduly">
 graph TD
     %% Styling and Classes
     classDef main fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
     classDef module fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c;
+    classDef renderer fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px,color:#0d47a1;
 
     Main["Główny Proces Electron (main.js)"]:::main
-    Db[("Lokalna Baza IndexedDB")]:::main
+    LauncherUI["Renderer / Launcher UI<br/>(HTML/JS)"]:::renderer
+    Db[("Lokalna Baza IndexedDB (NousDB)")]:::main
 
     subgraph WebMode ["Tryb Standardowy (Webowy)"]
         Window["BrowserWindow<br/>(Włączona Piaskownica)"]:::module
@@ -169,7 +175,7 @@ graph TD
 
     subgraph HPMMode ["Tryb Wysokiej Precyzji (HPM)"]
         Spawn["child_process.spawn"]:::main
-        Python["Wbudowany interpreter Python"]:::module
+        Python["Wbudowany interpreter Python<br/>(W pełni w Pythonie, brak HTML/JS)"]:::module
         PsychoPy["Skrypt testu PsychoPy (main.py)"]:::module
         ResultFile[("Plik tymczasowy results.json")]:::module
     end
@@ -186,7 +192,8 @@ graph TD
     PsychoPy -->|Zapisuje surowe wyniki| ResultFile
     ResultFile -->|Odczytuje i parsuje| Main
     
-    Main -->|Szyfrowanie i zapis wyniku| Db
+    Main -->|Przekazanie wyników via IPC test-results-forwarded| LauncherUI
+    LauncherUI -->|Szyfrowanie i zapis w IndexedDB| Db
     </div>
   </div>
 
@@ -209,7 +216,7 @@ graph TD
     
     %% States
     GUEST["GUEST<br/>(Tryb Gościa - brak autoryzacji)"]:::guest
-    LOCAL["LOCAL<br/>(Konto Lokalne - stan końcowy offline)"]:::local
+    LOCAL["LOCAL<br/>(Konto Lokalne - przechowywane na komputerze)"]:::local
     PENDING["PENDING<br/>(Konto Online - oczekujące)"]:::pending
     APPROVED["APPROVED<br/>(Konto Online - zatwierdzony badacz)"]:::approved
     BLOCKED["BLOCKED<br/>(Konto Online - zablokowane)"]:::blocked
@@ -233,7 +240,7 @@ graph TD
     PENDING -->|Odrzucenie rejestracji<br/><i>- Akcja Administratora</i>| BLOCKED
     
     APPROVED -->|Zawieszenie uprawnień<br/><i>- Akcja Administratora</i>| BLOCKED
-    BLOCKED -->|<br/><br/>Przywrócenie uprawnień<br/><i>- Akcja Administratora</i>| APPROVED
+    BLOCKED -->|Przywrócenie uprawnień<br/><i>- Akcja Administratora</i>| APPROVED
 
     %% Admin hierarchy
     APPROVED -->|Nadanie uprawnień admina| ADMIN
@@ -241,10 +248,44 @@ graph TD
     </div>
   </div>
 
-  <!-- DIAGRAM 3: PRZEPŁYW OFFLINE / ONLINE -->
-  <div class="diagram-container" id="container-przeplyw">
-    <div class="diagram-title">Diagram 3: Przepływ Danych i Synchronizacja Wyników</div>
-    <div class="mermaid" id="diagram-przeplyw">
+  <!-- DIAGRAM 3A: ZAPIS LOKALNY WYNIKÓW -->
+  <div class="diagram-container" id="container-przeplyw-zapis">
+    <div class="diagram-title">Diagram 3a: Zapis Lokalny Wyników Badania</div>
+    <div class="mermaid" id="diagram-przeplyw-zapis">
+graph TD
+    %% Styling and Classes
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px,color:#2d3748;
+    classDef process fill:#e3f2fd,stroke:#1e88e5,stroke-width:1.5px,color:#0d47a1;
+    classDef decision fill:#fff3e0,stroke:#fb8c00,stroke-width:1.5px,color:#e65100;
+    classDef storage fill:#e8f5e9,stroke:#43a047,stroke-width:1.5px,color:#1b5e20;
+    classDef system fill:#ffffff,stroke:#718096,stroke-width:2px;
+
+    %% Node Definitions
+    Start([Rozpoczęcie badania]):::system
+    Run[Przeprowadzenie testu<br/>Środowisko Web lub HPM]:::process
+    AppendDemographics[Dołączenie metryczki badawczej<br/>Niezależnie od typu konta]:::process
+    EncryptLocal[Zabezpieczenie lokalne<br/>Szyfrowanie AES-GCM-256 i HMAC-SHA256]:::process
+    SaveLocal[(Zapis w bazie lokalnej IndexedDB<br/>Zapis z początkowym statusem PENDING)]:::storage
+    CheckAutoSync{Użytkownik APPROVED<br/>oraz auto-sync włączony?}:::decision
+    TriggerSync[Automatyczne przesłanie do Firestore<br/>Zgodnie z procedurą synchronizacji]:::process
+    EndFlow([Koniec procedury badania]):::system
+
+    %% Connections
+    Start --> Run
+    Run --> AppendDemographics
+    AppendDemographics --> EncryptLocal
+    EncryptLocal --> SaveLocal
+    SaveLocal --> CheckAutoSync
+    CheckAutoSync -->|Tak| TriggerSync
+    CheckAutoSync -->|Nie| EndFlow
+    TriggerSync --> EndFlow
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3B: SYNCHRONIZACJA Z SERWEREM -->
+  <div class="diagram-container" id="container-przeplyw-synch">
+    <div class="diagram-title">Diagram 3b: Synchronizacja Wyników z Serwerem</div>
+    <div class="mermaid" id="diagram-przeplyw-synch">
 graph TD
     %% Styling and Classes
     classDef default fill:#ffffff,stroke:#718096,stroke-width:1px,color:#2d3748;
@@ -254,37 +295,54 @@ graph TD
     classDef event fill:#f3e5f5,stroke:#8e24aa,stroke-width:1.5px,color:#4a148c;
     classDef system fill:#ffffff,stroke:#718096,stroke-width:2px;
 
-    Start([Rozpoczęcie badania]):::system
-    
-    Start --> Run["Przeprowadzenie testu<br/><i>(środowisko Web lub HPM)</i>"]:::process
-    Run --> EncryptLocal["Zabezpieczenie lokalne<br/><i>(Szyfrowanie AES-GCM-256 + HMAC-SHA256)</i>"]:::process
-    EncryptLocal --> SaveLocal[("Zapis w bazie lokalnej IndexedDB<br/><i>status: 'PENDING'</i>")]:::storage
-    
-    SaveLocal --> CheckNet{"Czy aplikacja posiada<br/>połączenie sieciowe?"}:::decision
+    %% Node Definitions
+    Start([Inicjalizacja synchronizacji]):::system
+    CheckNet{Czy aplikacja posiada<br/>połączenie sieciowe?}:::decision
+    OfflineQueue[Kolejkowanie rekordu w IndexedDB<br/>Oczekiwanie w tle]:::process
+    WaitOnline{Wykryto zdarzenie online?<br/>window.online}:::event
+    CheckAccountType{Jaki jest typ konta?}:::decision
+    NoSync[Brak synchronizacji<br/>Wyniki pozostają wyłącznie lokalnie]:::process
+    EndOffline([Koniec - zapis tylko lokalny]):::system
+    CheckAuth{Czy status konta to<br/>APPROVED / ADMIN?}:::decision
+    BlockSync[Zablokowanie synchronizacji<br/>Wymaga zatwierdzenia konta]:::process
+    EndPending([Koniec - wynik pozostaje lokalnie]):::system
+    EncryptE2E[Szyfrowanie End-to-End<br/>Klucz E2E AES-GCM z PIN lub Backup]:::process
+    SendFS[Przesłanie szyfrogramu do Cloud Firestore]:::process
+    ConfirmFS{Czy Firebase potwierdził<br/>poprawny zapis?}:::decision
+    UpdateStatus[(Aktualizacja statusu w IndexedDB<br/>Zmiana statusu na SYNCED)]:::storage
+    ShowToast[Powiadomienie badacza<br/>Wizualny Toast w Launcherze]:::process
+    EndOnline([Koniec - status SYNCED]):::system
+
+    %% Connections
+    Start --> CheckNet
     
     %% Offline path
-    CheckNet -->|Nie / Offline| OfflineQueue["Kolejkowanie rekordu w IndexedDB<br/><i>(oczekiwanie w tle)</i>"]:::process
-    OfflineQueue --> WaitOnline{"Wykryto zdarzenie online?<br/><i>window.online</i>"}:::event
+    CheckNet -->|Nie lub Offline| OfflineQueue
+    OfflineQueue --> WaitOnline
     WaitOnline -->|Nie| OfflineQueue
-    WaitOnline -->|Tak| CheckAuth{"Czy status konta to<br/>APPROVED / ADMIN?"}:::decision
+    WaitOnline -->|Tak| CheckAccountType
     
     %% Online path
-    CheckNet -->|Tak / Online| CheckAuth
+    CheckNet -->|Tak lub Online| CheckAccountType
     
-    %% Authentication Gate
-    CheckAuth -->|Nie| BlockSync["Zablokowanie synchronizacji<br/><i>(wymaga zatwierdzenia konta)</i>"]:::process
-    BlockSync --> EndOffline([Koniec - wynik pozostaje lokalnie]):::system
+    CheckAccountType -->|Gość lub Lokalne| NoSync
+    NoSync --> EndOffline
     
-    CheckAuth -->|Tak| EncryptE2E["Szyfrowanie End-to-End<br/><i>(Klucz E2E AES-GCM z PIN/Backup)</i>"]:::process
+    CheckAccountType -->|Online| CheckAuth
     
-    EncryptE2E --> SendFS["Przesłanie szyfrogramu do Cloud Firestore"]:::process
-    SendFS --> ConfirmFS{"Czy Firebase potwierdził<br/>poprawny zapis?"}:::decision
+    CheckAuth -->|Status PENDING lub BLOCKED| BlockSync
+    BlockSync --> EndPending
     
-    ConfirmFS -->|Tak / Sukces| UpdateStatus[("Aktualizacja statusu w IndexedDB<br/><i>status: 'SYNCED'</i>")]:::storage
-    ConfirmFS -->|Nie / Błąd sieci| OfflineQueue
+    CheckAuth -->|Tak| EncryptE2E
     
-    UpdateStatus --> ShowToast["Powiadomienie badacza<br/><i>(Wizualny Toast w Launcherze)</i>"]:::process
-    ShowToast --> EndOnline([Koniec - status SYNCED]):::system
+    EncryptE2E --> SendFS
+    SendFS --> ConfirmFS
+    
+    ConfirmFS -->|Tak lub Sukces| UpdateStatus
+    ConfirmFS -->|Nie lub Błąd sieci| OfflineQueue
+    
+    UpdateStatus --> ShowToast
+    ShowToast --> EndOnline
     </div>
   </div>
 

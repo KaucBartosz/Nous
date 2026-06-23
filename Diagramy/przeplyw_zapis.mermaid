@@ -1,0 +1,27 @@
+graph TD
+    %% Styling and Classes
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px,color:#2d3748;
+    classDef process fill:#e3f2fd,stroke:#1e88e5,stroke-width:1.5px,color:#0d47a1;
+    classDef decision fill:#fff3e0,stroke:#fb8c00,stroke-width:1.5px,color:#e65100;
+    classDef storage fill:#e8f5e9,stroke:#43a047,stroke-width:1.5px,color:#1b5e20;
+    classDef system fill:#ffffff,stroke:#718096,stroke-width:2px;
+
+    %% Node Definitions
+    Start([Rozpoczęcie badania]):::system
+    Run[Przeprowadzenie testu<br/>Środowisko Web lub HPM]:::process
+    AppendDemographics[Dołączenie metryczki badawczej<br/>Niezależnie od typu konta]:::process
+    EncryptLocal[Zabezpieczenie lokalne<br/>Szyfrowanie AES-GCM-256 i HMAC-SHA256]:::process
+    SaveLocal[(Zapis w bazie lokalnej IndexedDB<br/>Zapis z początkowym statusem PENDING)]:::storage
+    CheckAutoSync{Użytkownik APPROVED<br/>oraz auto-sync włączony?}:::decision
+    TriggerSync[Automatyczne przesłanie do Firestore<br/>Zgodnie z procedurą synchronizacji]:::process
+    EndFlow([Koniec procedury badania]):::system
+
+    %% Connections
+    Start --> Run
+    Run --> AppendDemographics
+    AppendDemographics --> EncryptLocal
+    EncryptLocal --> SaveLocal
+    SaveLocal --> CheckAutoSync
+    CheckAutoSync -->|Tak| TriggerSync
+    CheckAutoSync -->|Nie| EndFlow
+    TriggerSync --> EndFlow
