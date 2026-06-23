@@ -1,0 +1,24 @@
+graph TD
+    %% Styling and Classes
+    classDef client fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef firebase fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#e65100;
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px;
+
+    subgraph Client ["Aplikacja Kliencka (Desktop - Electron)"]
+        Launcher["Launcher / Aplikacja Główna"]:::client
+        Modules["Moduły Wykonawcze Testów<br/>(Web & HPM)"]:::client
+        DbLocal[("Baza Lokalna<br/>(IndexedDB - NousDB)")]:::client
+    end
+
+    subgraph Backend ["Backend w Chmurze (Firebase)"]
+        FBAuth["Firebase Authentication<br/>(Logowanie i Rejestracja)"]:::firebase
+        Firestore["Cloud Firestore<br/>(Baza Dokumentowa NoSQL)"]:::firebase
+        CloudFunc["Firebase Cloud Functions<br/>(Logika Serwerowa / Admin)"]:::firebase
+    end
+
+    %% Connections
+    Launcher -->|Szyfrowanie i Odczyt/Zapis| DbLocal
+    Launcher -->|Uwierzytelnianie sieciowe| FBAuth
+    Launcher -.->|Synchronizacja wyników E2EE SSL| Firestore
+    Firestore <-->|Triggery zdarzeń| CloudFunc
+    Modules -->|Przekazanie wyników po badaniu| Launcher

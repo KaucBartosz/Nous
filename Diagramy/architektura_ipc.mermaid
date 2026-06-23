@@ -1,0 +1,33 @@
+graph TD
+    %% Styling and Classes
+    classDef renderer fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px,color:#0d47a1;
+    classDef main fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef bridge fill:#f7fafc,stroke:#cbd5e0,stroke-width:1.5px,color:#4a5568,stroke-dasharray: 3 3;
+
+    subgraph Renderer ["Renderer Process (Chromium - Izolowany)"]
+        UI["Launcher UI (HTML/CSS/JS)"]:::renderer
+        AuthUI["Panel Autoryzacji"]:::renderer
+        HistUI["Historia i Metryczki"]:::renderer
+    end
+
+    subgraph Bridge ["preload.js (contextBridge)"]
+        API["electronAPI (Bezpieczny Pomost)"]:::bridge
+    end
+
+    subgraph Main ["Main Process (Node.js - Uprawnienia Systemowe)"]
+        MainProc["Główny Proces (main.js)"]:::main
+        Crypto["Moduł safeStorage & AES-GCM"]:::main
+        Storage["Obsługa Dysku i IndexedDB Wrapper"]:::main
+    end
+
+    %% IPC Flow
+    UI -->|Wywołanie API| API
+    AuthUI -->|Wywołanie API| API
+    HistUI -->|Wywołanie API| API
+    
+    API -->|ipcRenderer.send / invoke| MainProc
+    MainProc -->|ipcRenderer.on| API
+    API -->|Przekazanie zdarzeń| UI
+    
+    MainProc -->|Szyfrowanie danych| Crypto
+    MainProc -->|Operacje We/Wy| Storage

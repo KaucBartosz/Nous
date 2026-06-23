@@ -1,0 +1,34 @@
+graph TD
+    %% Styling and Classes
+    classDef main fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef module fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c;
+
+    Main["Główny Proces Electron (main.js)"]:::main
+    Db[("Lokalna Baza IndexedDB")]:::main
+
+    subgraph WebMode ["Tryb Standardowy (Webowy)"]
+        Window["BrowserWindow<br/>(Włączona Piaskownica)"]:::module
+        PreloadTest["preload_test.js"]:::module
+        TestJS["Skrypty Testu (HTML5/JS)"]:::module
+    end
+
+    subgraph HPMMode ["Tryb Wysokiej Precyzji (HPM)"]
+        Spawn["child_process.spawn"]:::main
+        Python["Wbudowany interpreter Python"]:::module
+        PsychoPy["Skrypt testu PsychoPy (main.py)"]:::module
+        ResultFile[("Plik tymczasowy results.json")]:::module
+    end
+
+    %% Execution flows
+    Main -->|Tworzy i zarządza| Window
+    Window -->|Ładuje skrypt pomostowy| PreloadTest
+    PreloadTest -->|Nasłuchuje zdarzeń testu| TestJS
+    TestJS -->|Dane wyniku via IPC test-finished| Main
+
+    Main -->|Uruchamia podproces| Spawn
+    Spawn -->|Przekazuje parametry i wbudowany interpreter| Python
+    Python -->|Precyzyjny pomiar czasów reakcji| PsychoPy
+    PsychoPy -->|Zapisuje surowe wyniki| ResultFile
+    ResultFile -->|Odczytuje i parsuje| Main
+    
+    Main -->|Szyfrowanie i zapis wyniku| Db

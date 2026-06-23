@@ -1,0 +1,44 @@
+graph TD
+    %% Styling and Classes
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px,color:#2d3748;
+    classDef guest fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px,color:#0d47a1;
+    classDef local fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef pending fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#e65100;
+    classDef approved fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c;
+    classDef blocked fill:#ffebee,stroke:#e53935,stroke-width:2px,color:#b71c1c;
+    classDef admin fill:#eceff1,stroke:#546e7a,stroke-width:2px,color:#263238;
+    classDef system fill:#ffffff,stroke:#718096,stroke-dasharray: 4 4;
+
+    Start([Start]):::system
+    
+    %% States
+    GUEST["GUEST<br/>(Tryb Gościa - brak autoryzacji)"]:::guest
+    LOCAL["LOCAL<br/>(Konto Lokalne - stan końcowy offline)"]:::local
+    PENDING["PENDING<br/>(Konto Online - oczekujące)"]:::pending
+    APPROVED["APPROVED<br/>(Konto Online - zatwierdzony badacz)"]:::approved
+    BLOCKED["BLOCKED<br/>(Konto Online - zablokowane)"]:::blocked
+    ADMIN["ADMIN<br/>(Administrator systemu)"]:::admin
+
+    %% Transitions
+    Start -->|Uruchomienie bez logowania| GUEST
+    Start -->|Rejestracja lokalna| LOCAL
+    Start -->|Rejestracja sieciowa| PENDING
+
+    %% Guest promotions / transfers
+    GUEST -.->|Logowanie na konto lokalne| LOCAL
+    GUEST -.->|Logowanie na konto online - oczekujące| PENDING
+    GUEST -.->|Logowanie na konto online - zatwierdzone| APPROVED
+
+    GUEST -.->|claimGuestResult<br/><i>- przypisanie wyników do konta</i>| APPROVED
+    GUEST -.->|claimGuestResult<br/><i>- przypisanie wyników do konta</i>| PENDING
+
+    %% Administrative Actions
+    PENDING -->|Zatwierdzenie konta<br/><i>- Akcja Administratora</i>| APPROVED
+    PENDING -->|Odrzucenie rejestracji<br/><i>- Akcja Administratora</i>| BLOCKED
+    
+    APPROVED -->|Zawieszenie uprawnień<br/><i>- Akcja Administratora</i>| BLOCKED
+    BLOCKED -->|Przywrócenie uprawnień<br/><i>- Akcja Administratora</i>| APPROVED
+
+    %% Admin hierarchy
+    APPROVED -->|Nadanie uprawnień admina| ADMIN
+    ADMIN -->|Odebranie uprawnień admina| APPROVED

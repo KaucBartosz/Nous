@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Nous Diagrams Renderer</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+    .diagram-container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid #eef0f2;
+      width: fit-content;
+      max-width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .diagram-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 20px;
+      text-align: center;
+      border-bottom: 2px solid #edf2f7;
+      padding-bottom: 8px;
+      width: 100%;
+    }
+    .mermaid {
+      background: white;
+      display: flex;
+      justify-content: center;
+    }
+  </style>
+
+  <!-- Load Mermaid from JSDelivr CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        fontSize: '13px',
+        primaryColor: '#f8f9fa',
+        primaryTextColor: '#1a202c',
+        lineColor: '#718096',
+        secondaryColor: '#edf2f7',
+        tertiaryColor: '#e2e8f0'
+      },
+      flowchart: {
+        htmlLabels: true,
+        useMaxWidth: false,
+        curve: 'basis'
+      },
+      state: {
+        htmlLabels: true,
+        useMaxWidth: false
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- DIAGRAM 1A: OGÓLNA ARCHITEKTURA KLIENT-SERWER -->
+  <div class="diagram-container" id="container-arch-ogolna">
+    <div class="diagram-title">Diagram 1a: Ogólna Architektura Klient-Serwer</div>
+    <div class="mermaid" id="diagram-arch-ogolna">
+graph TD
+    %% Styling and Classes
+    classDef client fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef firebase fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#e65100;
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px;
+
+    subgraph Client ["Aplikacja Kliencka (Desktop - Electron)"]
+        Launcher["Launcher / Aplikacja Główna"]:::client
+        Modules["Moduły Wykonawcze Testów<br/>(Web & HPM)"]:::client
+        DbLocal[("Baza Lokalna<br/>(IndexedDB - NousDB)")]:::client
+    end
+
+    subgraph Backend ["Backend w Chmurze (Firebase)"]
+        FBAuth["Firebase Authentication<br/>(Logowanie i Rejestracja)"]:::firebase
+        Firestore["Cloud Firestore<br/>(Baza Dokumentowa NoSQL)"]:::firebase
+        CloudFunc["Firebase Cloud Functions<br/>(Logika Serwerowa / Admin)"]:::firebase
+    end
+
+    %% Connections
+    Launcher -->|Szyfrowanie i Odczyt/Zapis| DbLocal
+    Launcher -->|Uwierzytelnianie sieciowe| FBAuth
+    Launcher -.->|Synchronizacja wyników E2EE SSL| Firestore
+    Firestore <-->|Triggery zdarzeń| CloudFunc
+    Modules -->|Przekazanie wyników po badaniu| Launcher
+    </div>
+  </div>
+
+  <!-- DIAGRAM 1B: ARCHITEKTURA PROCESU ELECTRON I IPC -->
+  <div class="diagram-container" id="container-arch-ipc">
+    <div class="diagram-title">Diagram 1b: Architektura Procesu Electron i Komunikacja IPC</div>
+    <div class="mermaid" id="diagram-arch-ipc">
+graph TD
+    %% Styling and Classes
+    classDef renderer fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px,color:#0d47a1;
+    classDef main fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef bridge fill:#f7fafc,stroke:#cbd5e0,stroke-width:1.5px,color:#4a5568,stroke-dasharray: 3 3;
+
+    subgraph Renderer ["Renderer Process (Chromium - Izolowany)"]
+        UI["Launcher UI (HTML/CSS/JS)"]:::renderer
+        AuthUI["Panel Autoryzacji"]:::renderer
+        HistUI["Historia i Metryczki"]:::renderer
+    end
+
+    subgraph Bridge ["preload.js (contextBridge)"]
+        API["electronAPI (Bezpieczny Pomost)"]:::bridge
+    end
+
+    subgraph Main ["Main Process (Node.js - Uprawnienia Systemowe)"]
+        MainProc["Główny Proces (main.js)"]:::main
+        Crypto["Moduł safeStorage & AES-GCM"]:::main
+        Storage["Obsługa Dysku i IndexedDB Wrapper"]:::main
+    end
+
+    %% IPC Flow
+    UI -->|Wywołanie API| API
+    AuthUI -->|Wywołanie API| API
+    HistUI -->|Wywołanie API| API
+    
+    API -->|ipcRenderer.send / invoke| MainProc
+    MainProc -->|ipcRenderer.on| API
+    API -->|Przekazanie zdarzeń| UI
+    
+    MainProc -->|Szyfrowanie danych| Crypto
+    MainProc -->|Operacje We/Wy| Storage
+    </div>
+  </div>
+
+  <!-- DIAGRAM 1C: MODUŁY WYKONAWCZE TESTÓW I TRYB HPM -->
+  <div class="diagram-container" id="container-arch-moduly">
+    <div class="diagram-title">Diagram 1c: Moduły Wykonawcze Testów i Tryb HPM</div>
+    <div class="mermaid" id="diagram-arch-moduly">
+graph TD
+    %% Styling and Classes
+    classDef main fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef module fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c;
+
+    Main["Główny Proces Electron (main.js)"]:::main
+    Db[("Lokalna Baza IndexedDB")]:::main
+
+    subgraph WebMode ["Tryb Standardowy (Webowy)"]
+        Window["BrowserWindow<br/>(Włączona Piaskownica)"]:::module
+        PreloadTest["preload_test.js"]:::module
+        TestJS["Skrypty Testu (HTML5/JS)"]:::module
+    end
+
+    subgraph HPMMode ["Tryb Wysokiej Precyzji (HPM)"]
+        Spawn["child_process.spawn"]:::main
+        Python["Wbudowany interpreter Python"]:::module
+        PsychoPy["Skrypt testu PsychoPy (main.py)"]:::module
+        ResultFile[("Plik tymczasowy results.json")]:::module
+    end
+
+    %% Execution flows
+    Main -->|Tworzy i zarządza| Window
+    Window -->|Ładuje skrypt pomostowy| PreloadTest
+    PreloadTest -->|Nasłuchuje zdarzeń testu| TestJS
+    TestJS -->|Dane wyniku via IPC test-finished| Main
+
+    Main -->|Uruchamia podproces| Spawn
+    Spawn -->|Przekazuje parametry i wbudowany interpreter| Python
+    Python -->|Precyzyjny pomiar czasów reakcji| PsychoPy
+    PsychoPy -->|Zapisuje surowe wyniki| ResultFile
+    ResultFile -->|Odczytuje i parsuje| Main
+    
+    Main -->|Szyfrowanie i zapis wyniku| Db
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2: STANY RBAC -->
+  <div class="diagram-container" id="container-rbac">
+    <div class="diagram-title">Diagram 2: Model Kontroli Dostępu i Stany Kont (RBAC)</div>
+    <div class="mermaid" id="diagram-rbac">
+graph TD
+    %% Styling and Classes
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px,color:#2d3748;
+    classDef guest fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px,color:#0d47a1;
+    classDef local fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef pending fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#e65100;
+    classDef approved fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c;
+    classDef blocked fill:#ffebee,stroke:#e53935,stroke-width:2px,color:#b71c1c;
+    classDef admin fill:#eceff1,stroke:#546e7a,stroke-width:2px,color:#263238;
+    classDef system fill:#ffffff,stroke:#718096,stroke-dasharray: 4 4;
+
+    Start([Start]):::system
+    
+    %% States
+    GUEST["GUEST<br/>(Tryb Gościa - brak autoryzacji)"]:::guest
+    LOCAL["LOCAL<br/>(Konto Lokalne - stan końcowy offline)"]:::local
+    PENDING["PENDING<br/>(Konto Online - oczekujące)"]:::pending
+    APPROVED["APPROVED<br/>(Konto Online - zatwierdzony badacz)"]:::approved
+    BLOCKED["BLOCKED<br/>(Konto Online - zablokowane)"]:::blocked
+    ADMIN["ADMIN<br/>(Administrator systemu)"]:::admin
+
+    %% Transitions
+    Start -->|Uruchomienie bez logowania| GUEST
+    Start -->|Rejestracja lokalna| LOCAL
+    Start -->|Rejestracja sieciowa| PENDING
+
+    %% Guest promotions / transfers
+    GUEST -.->|Logowanie na konto lokalne| LOCAL
+    GUEST -.->|Logowanie na konto online - oczekujące| PENDING
+    GUEST -.->|Logowanie na konto online - zatwierdzone| APPROVED
+
+    GUEST -.->|claimGuestResult<br/><i>- przypisanie wyników do konta</i>| APPROVED
+    GUEST -.->|claimGuestResult<br/><i>- przypisanie wyników do konta</i>| PENDING
+
+    %% Administrative Actions
+    PENDING -->|Zatwierdzenie konta<br/><i>- Akcja Administratora</i>| APPROVED
+    PENDING -->|Odrzucenie rejestracji<br/><i>- Akcja Administratora</i>| BLOCKED
+    
+    APPROVED -->|Zawieszenie uprawnień<br/><i>- Akcja Administratora</i>| BLOCKED
+    BLOCKED -->|<br/><br/>Przywrócenie uprawnień<br/><i>- Akcja Administratora</i>| APPROVED
+
+    %% Admin hierarchy
+    APPROVED -->|Nadanie uprawnień admina| ADMIN
+    ADMIN -->|Odebranie uprawnień admina| APPROVED
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3: PRZEPŁYW OFFLINE / ONLINE -->
+  <div class="diagram-container" id="container-przeplyw">
+    <div class="diagram-title">Diagram 3: Przepływ Danych i Synchronizacja Wyników</div>
+    <div class="mermaid" id="diagram-przeplyw">
+graph TD
+    %% Styling and Classes
+    classDef default fill:#ffffff,stroke:#718096,stroke-width:1px,color:#2d3748;
+    classDef process fill:#e3f2fd,stroke:#1e88e5,stroke-width:1.5px,color:#0d47a1;
+    classDef decision fill:#fff3e0,stroke:#fb8c00,stroke-width:1.5px,color:#e65100;
+    classDef storage fill:#e8f5e9,stroke:#43a047,stroke-width:1.5px,color:#1b5e20;
+    classDef event fill:#f3e5f5,stroke:#8e24aa,stroke-width:1.5px,color:#4a148c;
+    classDef system fill:#ffffff,stroke:#718096,stroke-width:2px;
+
+    Start([Rozpoczęcie badania]):::system
+    
+    Start --> Run["Przeprowadzenie testu<br/><i>(środowisko Web lub HPM)</i>"]:::process
+    Run --> EncryptLocal["Zabezpieczenie lokalne<br/><i>(Szyfrowanie AES-GCM-256 + HMAC-SHA256)</i>"]:::process
+    EncryptLocal --> SaveLocal[("Zapis w bazie lokalnej IndexedDB<br/><i>status: 'PENDING'</i>")]:::storage
+    
+    SaveLocal --> CheckNet{"Czy aplikacja posiada<br/>połączenie sieciowe?"}:::decision
+    
+    %% Offline path
+    CheckNet -->|Nie / Offline| OfflineQueue["Kolejkowanie rekordu w IndexedDB<br/><i>(oczekiwanie w tle)</i>"]:::process
+    OfflineQueue --> WaitOnline{"Wykryto zdarzenie online?<br/><i>window.online</i>"}:::event
+    WaitOnline -->|Nie| OfflineQueue
+    WaitOnline -->|Tak| CheckAuth{"Czy status konta to<br/>APPROVED / ADMIN?"}:::decision
+    
+    %% Online path
+    CheckNet -->|Tak / Online| CheckAuth
+    
+    %% Authentication Gate
+    CheckAuth -->|Nie| BlockSync["Zablokowanie synchronizacji<br/><i>(wymaga zatwierdzenia konta)</i>"]:::process
+    BlockSync --> EndOffline([Koniec - wynik pozostaje lokalnie]):::system
+    
+    CheckAuth -->|Tak| EncryptE2E["Szyfrowanie End-to-End<br/><i>(Klucz E2E AES-GCM z PIN/Backup)</i>"]:::process
+    
+    EncryptE2E --> SendFS["Przesłanie szyfrogramu do Cloud Firestore"]:::process
+    SendFS --> ConfirmFS{"Czy Firebase potwierdził<br/>poprawny zapis?"}:::decision
+    
+    ConfirmFS -->|Tak / Sukces| UpdateStatus[("Aktualizacja statusu w IndexedDB<br/><i>status: 'SYNCED'</i>")]:::storage
+    ConfirmFS -->|Nie / Błąd sieci| OfflineQueue
+    
+    UpdateStatus --> ShowToast["Powiadomienie badacza<br/><i>(Wizualny Toast w Launcherze)</i>"]:::process
+    ShowToast --> EndOnline([Koniec - status SYNCED]):::system
+    </div>
+  </div>
+
+</body>
+</html>
