@@ -3,6 +3,19 @@
 %  Aplikacja do przeprowadzania testów psychologicznych
 % ============================================================
 
+% Diagramy do zrobienia
+% Oto co rekomenduję jako minimum (3 diagramy), z konkretnym zakresem każdego:
+% 1. Diagram architektury systemu (do sekcji 2.2.1, fig:architektura)
+%
+% Pokaż cztery warstwy z osi tekstu: Renderer Process ↔ Main Process (połączone przez preload.js/contextBridge) → Firebase (Auth + Firestore) → Cloud Functions jako boczna gałąź od Firestore. Osobno zaznacz dwa moduły testowe podłączone do Main Process: test webowy (BrowserWindow) i test HPM (proces Python). Strzałki powinny pokazywać kierunek komunikacji IPC i kierunek synchronizacji danych (offline→online).
+% 2. Diagram stanów konta użytkownika / RBAC (do sekcji 2.2.3, przy opisie 5 ról)
+%
+% Diagram stanów (state machine) z węzłami: GUEST, LOCAL, PENDING, APPROVED, BLOCKED, ADMIN. Strzałki: rejestracja online → PENDING; PENDING → APPROVED (akcja admina) lub → BLOCKED; rejestracja offline → LOCAL (stan końcowy, bez przejść do innych); GUEST → (strzałka przerywana, opisana "claimGuestResult") → APPROVED/PENDING po zalogowaniu. To dobrze pokaże asymetrię między kontami chmurowymi i lokalnymi.
+% 3. Diagram przepływu danych przy wykonaniu i synchronizacji wyniku (do sekcji 2.3.5 lub 2.3.6)
+%
+% Sekwencja: Uruchomienie testu → zapis lokalny (szyfrowanie AES-GCM + HMAC) → sprawdzenie statusu sieci → jeśli offline: kolejka PENDING w IndexedDB → (zdarzenie online) → szyfrowanie E2E → wysyłka do Firestore → potwierdzenie → status SYNCED. To najlepiej zrobić jako diagram sekwencji lub flowchart z rozwidleniem online/offline.
+% Opcjonalnie, jeśli będzie czas: diagram struktury kolekcji Firestore (users/tests/results z polami) do sekcji 2.2.4 — to najmniej krytyczne, bo tekst już dobrze to opisuje, ale ładnie domyka rozdział wizualnie.
+
 \documentclass[12pt, a4paper, oneside]{report}
 
 % --- Kodowanie i język ---
@@ -148,6 +161,8 @@
 Istniejące platformy, takie jak Pavlovia i inne, choć oferują pewien stopień cyfryzacji, nie są wolne od ograniczeń. Dostęp do nich jest najczęściej możliwy wyłącznie przez przeglądarkę internetową, a jakość wyników bywa podatna na opóźnienia związane z jakością łącza sieciowego. Ten brak elastyczności nie pozwala na ich efektywne wykorzystanie w warunkach terenowych (np. na maratonach, rajdach) lub w warunkach specjalistycznych (oddziały zamknięte, izolatki). Ta luka stała się motywacją do stworzenia własnego rozwiązania.
 
 Celem pracy jest zaprojektowanie i implementacja platformy desktopowej typu „launcher” do dystrybucji i przeprowadzania testów psychologicznych w prosty i przystępny sposób, gdzie raz pobrany test można uruchamiać wielokrotnie, w każdych warunkach, niezależnie od dostępu do internetu.
+
+Postawiono następujące pytanie badawcze: \textit{Czy możliwe jest zbudowanie platformy desktopowej do dystrybucji i~przeprowadzania testów psychologicznych, która zapewni pełną funkcjonalność bez dostępu do internetu, przy jednoczesnym zachowaniu bezpieczeństwa danych wrażliwych i~dokładności pomiaru czasu reakcji porównywalnej z~natywnymi systemami laboratoryjnymi?}
 
 Praca została podzielona na 4 główne bloki tematyczne:
 \begin{itemize}[noitemsep]
@@ -495,7 +510,7 @@ modyfikacji danych już po~ich zapisaniu.
 
 \begin{description}[noitemsep]
 	\item[WN1:] Program ma uruchamiać się w~przystępnym czasie (max~15~sekund).
-	\item[WN2:] Czas reakcji interfejsu na działania użytkownika nie przekracza~200~ms.
+	\item[WN2:] Czas odpowiedzi interfejsu na działania użytkownika nie przekracza~200~ms.
 	\item[WN3:] Dane logowania użytkowników są przechowywane wyłącznie w~postaci zahashowanej.
 	\item[WN4:] Lokalne pliki wyników są chronione przed dostępem spoza programu.
 	\item[WN5:] Program ma być wieloplatformowy (Windows, Linux, macOS).
@@ -670,7 +685,7 @@ Proces główny (\texttt{main.js}) zarządza oknem aplikacji i~obsługuje zapyta
 Moduł zlokalizowany w~pliku \texttt{auth.js} obsługuje dwa scenariusze uwierzytelniania:
 \begin{enumerate}
 	\item \textbf{Uwierzytelnianie chmurowe (Firebase):} Wykorzystuje metody \texttt{signInWithEmailAndPassword} oraz \texttt{createUserWithEmailAndPassword} z~biblioteki Firebase Auth. Po pomyślnej rejestracji, moduł automatycznie tworzy dokument w~Firestore w~kolekcji \texttt{users} ze statusem \texttt{PENDING}.
-	\item \textbf{Uwierzytelnianie lokalne (IndexedDB):} Zaprojektowane z~myślą o~pracy w~pełni offline. Proces rejestracji lokalnej polega na wygenerowaniu 16-bajtowej kryptograficznej soli (za pomocą \texttt{crypto.getRandomValues}), a~następnie obliczeniu bezpiecznego hashu hasła metodą PBKDF2 lub SHA-256 za pomocą interfejsu \texttt{crypto.subtle.digest}. Rekord konta (login, hash, sól, data utworzenia) zapisywany jest w~tabeli \texttt{localAccounts}. Przy logowaniu moduł wylicza hash z~podanego hasła i~porównuje go z~bazą danych.
+	\item \textbf{Uwierzytelnianie lokalne (IndexedDB):} Zaprojektowane z~myślą o~pracy w~pełni offline. Proces rejestracji lokalnej polega na wygenerowaniu 16-bajtowej kryptograficznej soli (za pomocą \texttt{crypto.getRandomValues}), a~następnie obliczeniu skrótu hasła algorytmem SHA-256 z~solą za pomocą interfejsu \texttt{crypto.subtle.digest}. Rekord konta (login, skrót, sól, data utworzenia) zapisywany jest w~tabeli \texttt{localAccounts}. Przy logowaniu moduł wylicza skrót z~podanego hasła i~porównuje go ze skrótem zapisanym w~bazie danych.
 \end{enumerate}
 W~celu obrony przed atakami siłowymi (brute-force), w~obu kanałach autoryzacji wprowadzono mechanizm ograniczenia częstotliwości prób (\textit{rate limiting}) do maksymalnie jednego wywołania na sekundę.
 
@@ -778,30 +793,140 @@ Proces testowania aplikacji Nous obejmuje trzy uzupełniające się poziomy wery
 \subsection{Testy manualne}
 \label{subsec:testy-manualne}
 
-% TODO: Opisz scenariusze, które przeszedłeś osobiście jako deweloper,
-% wykraczające poza to co sprawdza Playwright (np. testy na różnych
-% systemach operacyjnych, testy z prawdziwym sprzętem, testy paczki HPM).
-% Możesz też opisać tu testy wieloplatformowości -- czy faktycznie
-% sprawdzałeś działanie na Windows/macOS/Linux (skoro WN5 to wymaga)?
-% Zapisz to w formie listy scenariuszy, np.:
-%
-%   Scenariusz 1: Instalacja i pierwsze uruchomienie na czystym systemie
-%     Windows 11 -- weryfikacja czy SmartScreen i instalator NSIS
-%     działają zgodnie z oczekiwaniami.
-%
-%   Scenariusz 2: Przeprowadzenie testu w trybie HPM na maszynie bez
-%     wcześniej zainstalowanego Pythona -- weryfikacja pobrania
-%     i działania wbudowanego środowiska.
-%
-%   Scenariusz 3: Praca w pełnym trybie offline (wyłączony Wi-Fi) --
-%     rejestracja konta lokalnego, wykonanie testu, zapis wyniku,
-%     późniejsze sprawdzenie integralności HMAC.
-%
-%   Scenariusz 4: Próba manipulacji zaszyfrowanym plikiem wyniku --
-%     oczekiwany wynik: odmowa wczytania przez aplikację.
-%
-%   Scenariusz 5: Próba uzyskania dostępu do panelu admina przez
-%     konto ze statusem PENDING -- oczekiwany wynik: odmowa dostępu.
+Testy manualne przeprowadzono w~formie scenariuszy weryfikujących kluczowe przepływy użytkownika.
+Każdy scenariusz opisuje wymagane warunki wstępne, kolejne kroki oraz oczekiwany rezultat.
+
+% -------------------------------------------------------------------
+\subsubsection*{Scenariusz~1: Rejestracja konta online i~przeprowadzenie testu}
+\label{scen:1}
+
+\textbf{Warunki wstępne:} Aplikacja zainstalowana, urządzenie połączone z~Internetem,
+brak wcześniej założonego konta.
+
+\textbf{Kroki:}
+\begin{enumerate}[noitemsep]
+  \item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Online} na~ekranie wyboru
+        trybu uwierzytelniania.
+  \item Wypełnienie formularza rejestracji (adres e-mail i~hasło) oraz naciśnięcie
+        przycisku \textit{Załóż konto}.
+  \item System tworzy konto w~Firebase Authentication, zakłada profil użytkownika
+        w~Firestore ze statusem \texttt{PENDING} i~automatycznie loguje użytkownika
+        na~nowo utworzone konto.
+  \item W~panelu głównym użytkownik wybiera dowolny test z~biblioteki i~naciska
+        przycisk \textit{Pobierz}. Aplikacja pobiera paczkę testową i~wyświetla pasek postępu.
+  \item Po zakończeniu pobierania przycisk zmienia się na~\textit{Uruchom}. Użytkownik
+        go naciska --- test uruchamia się w~osobnym, izolowanym oknie aplikacji.
+  \item Po zakończeniu testu użytkownik naciska przycisk \textit{Zapisz i~zamknij}.
+        Wynik jest szyfrowany i~zapisywany w~lokalnej bazie IndexedDB. Alternatywnie,
+        wybranie przycisku \textit{Odrzuć} powoduje porzucenie wyniku bez zapisu.
+  \item Użytkownik przechodzi do~zakładki \textit{Historia Wyników}, odnajduje zapis
+        przeprowadzonego badania i~naciska przycisk \textit{Pobierz}. Wynik jest
+        eksportowany na~dysk w~formacie CSV.
+\end{enumerate}
+
+\textbf{Oczekiwany rezultat:} Konto zostaje założone i~natychmiast aktywowane lokalnie;
+test uruchamia się poprawnie; wynik jest dostępny w~historii i~możliwy do~pobrania w~formacie CSV.
+Ze względu na~status \texttt{PENDING} automatyczna synchronizacja wyników z~chmurą pozostaje
+zablokowana do~czasu zatwierdzenia konta przez administratora.
+
+% -------------------------------------------------------------------
+\subsubsection*{Scenariusz~2: Pierwsze logowanie po uzyskaniu statusu \texttt{APPROVED}
+i~konfiguracja klucza E2E}
+\label{scen:2}
+
+\textbf{Warunki wstępne:} Konto online założone (Scenariusz~1), administrator zmienił
+status konta na~\texttt{APPROVED}, urządzenie połączone z~Internetem.
+
+\textbf{Kroki:}
+\begin{enumerate}[noitemsep]
+  \item Uruchomienie aplikacji i~zalogowanie się na~konto online.
+  \item System wykrywa, że jest to~pierwsze logowanie z~nowym statusem \texttt{APPROVED}
+        i~kluczem E2E jeszcze niezainicjalizowanym. Wyświetlane jest okno powiadomienia z~prośbą
+        o~ustawienie 6-cyfrowego kodu PIN bezpieczeństwa.
+  \item Użytkownik dwukrotnie wprowadza wybrany kod PIN i~zatwierdza operację.
+  \item System generuje unikalny klucz szyfrujący E2E, zabezpiecza go kodem PIN
+        przy użyciu algorytmu PBKDF2 i~zapisuje na~dysku w~pliku \texttt{e2e\_key.enc}.
+  \item Aplikacja wyświetla jednorazowo \textbf{klucz zapasowy} (ang.\ \textit{backup key})
+        --- unikalny ciąg znaków, który jest jedyną metodą zmiany kodu PIN lub odzyskania
+        dostępu w~razie jego zapomnienia. Użytkownik jest informowany, że klucz ten powinien
+        skopiować i~przechowywać w~bezpiecznym miejscu, gdyż nie będzie możliwy do~odtworzenia.
+  \item Po zamknięciu okna powiadomienia aplikacja otwiera panel główny z~pełnym dostępem,
+        w~tym z~aktywną funkcją automatycznej synchronizacji wyników z~chmurą Firestore.
+\end{enumerate}
+
+\textbf{Oczekiwany rezultat:} Klucz E2E zostaje pomyślnie wygenerowany i~zabezpieczony
+kodem PIN. Od tej chwili wszystkie wyniki badań przed wysłaniem do~Firestore są szyfrowane
+lokalnie algorytmem AES-GCM-256, a~dostęp do~odszyfrowania danych ma wyłącznie
+posiadacz kodu PIN lub klucza zapasowego.
+
+% -------------------------------------------------------------------
+\subsubsection*{Scenariusz~3: Logowanie na~konto Online po raz kolejny z~użyciem kodu PIN}
+\label{scen:3}
+
+\textbf{Warunki wstępne:} Konto online z~aktywnym statusem \texttt{APPROVED} i~wcześniej skonfigurowanym kodem PIN oraz kluczem E2E (Scenariusz~2), urządzenie połączone z~Internetem.
+
+\textbf{Kroki:}
+\begin{enumerate}[noitemsep]
+  \item Uruchomienie aplikacji i~zalogowanie się na~konto online za pomocą adresu e-mail i~hasła.
+  \item Po poprawnym uwierzytelnieniu sieciowym, system wykrywa obecność pliku \texttt{e2e\_key.enc} i~wymaga podania kodu PIN. Wyświetlane jest okno powiadomienia z~prośbą o~wprowadzenie wcześniej ustawionego 6-cyfrowego kodu PIN bezpieczeństwa.
+  \item Użytkownik wprowadza poprawny kod PIN.
+  \item System odszyfrowuje klucz szyfrujący E2E na~podstawie wprowadzonego kodu PIN. W~tym przepływie nie wyświetla się prośba o~ustawienie nowego kodu PIN ani okno z~kluczem zapasowym.
+  \item Po zatwierdzeniu kodu PIN aplikacja otwiera panel główny z~pełnym dostępem do~danych i~aktywną synchronizacją z~chmurą.
+\end{enumerate}
+
+\textbf{Oczekiwany rezultat:} Pomyślne logowanie i~odszyfrowanie klucza E2E. Użytkownik uzyskuje dostęp do~aplikacji bez konieczności ponownej konfiguracji zabezpieczeń.
+
+% -------------------------------------------------------------------
+\subsubsection*{Scenariusz~4: Rejestracja konta lokalnego przy aktywnym połączeniu sieciowym}
+\label{scen:4}
+
+\textbf{Warunki wstępne:} Aplikacja zainstalowana. Połączenie sieciowe jest dostępne,
+lecz nie jest wymagane. Brak wcześniej założonego konta lokalnego.
+
+\textbf{Kroki:}
+\begin{enumerate}[noitemsep]
+  \item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Lokalne} na~ekranie
+        wyboru trybu uwierzytelniania.
+  \item Wypełnienie formularza rejestracji (login i~hasło) oraz naciśnięcie przycisku
+        \textit{Załóż konto lokalnie}.
+  \item System generuje kryptograficzną sól i~oblicza skrót hasła algorytmem SHA-256,
+        po czym zapisuje rekord konta w~lokalnej bazie IndexedDB. Konto otrzymuje status
+        \texttt{LOCAL} --- żadne dane nie są przesyłane do~sieci.
+  \item Użytkownik jest automatycznie logowany i~trafia do~panelu głównego.
+  \item Dalsze kroki przebiegają identycznie jak w~Scenariuszu~1 (punkty 4--7):
+        pobranie testu, uruchomienie, zapis wyniku i~eksport z~historii wyników.
+\end{enumerate}
+
+\textbf{Oczekiwany rezultat:} Konto lokalne zostaje założone bez komunikacji z~siecią.
+Wyniki są przechowywane wyłącznie lokalnie i~nie mogą być synchronizowane z~chmurą Firestore.
+
+% -------------------------------------------------------------------
+\subsubsection*{Scenariusz~5: Przeprowadzenie testu na~koncie lokalnym bez dostępu do~sieci}
+\label{scen:5}
+
+\textbf{Warunki wstępne:} Konto lokalne wcześniej założone (Scenariusz~4).
+Wybrany test pobrany na~dysk podczas poprzedniej sesji z~aktywnym połączeniem sieciowym.
+Urządzenie odłączone od~Internetu (Wi-Fi wyłączony lub brak sieci).
+
+\textbf{Kroki:}
+\begin{enumerate}[noitemsep]
+  \item Uruchomienie aplikacji i~wybranie opcji \textit{Konto Lokalne}.
+  \item Wpisanie loginu i~hasła konta lokalnego oraz naciśnięcie \textit{Zaloguj}.
+        System weryfikuje hasło lokalnie (bez żadnego zapytania sieciowego)
+        i~loguje użytkownika.
+  \item W~panelu głównym wcześniej pobrany test wyświetla przycisk \textit{Uruchom}
+        zamiast \textit{Pobierz} --- aplikacja korzysta z~wersji zapisanej na~dysku.
+  \item Użytkownik uruchamia test i~przeprowadza badanie w~pełni lokalnie,
+        bez jakiegokolwiek zapytania sieciowego.
+  \item Po zakończeniu użytkownik naciska \textit{Zapisz i~zamknij}. Wynik zostaje
+        zaszyfrowany i~zapisany w~lokalnej bazie IndexedDB.
+  \item Użytkownik przechodzi do~zakładki \textit{Historia Wyników} i~pobiera
+        wynik w~formacie CSV.
+\end{enumerate}
+
+\textbf{Oczekiwany rezultat:} Cały przepływ --- od~logowania, przez wykonanie testu,
+po zapis i~eksport wyniku --- przebiega bez jakiegokolwiek dostępu do~sieci.
+Aplikacja nie zgłasza błędów związanych z~brakiem połączenia.
 
 \subsection{Testy z~udziałem użytkowników}
 \label{subsec:testy-user}
@@ -868,14 +993,14 @@ Proces testowania aplikacji Nous obejmuje trzy uzupełniające się poziomy wery
 		\textbf{ID} & \textbf{Wymaganie}                        & \textbf{Spełnione}
 		            & \textbf{Sposób weryfikacji}                                                   \\
 		\midrule
-		WF1         & Rejestracja konta lokalnego lub online    & Tak                & Scenariusz 1 \\
+		WF1         & Rejestracja konta lokalnego lub online    & Tak                & Scenariusze 1, 4 \\
 		WF2         & Logowanie jako Gość                       & Tak                & Scenariusz 1 \\
-		WF3         & Zatwierdzanie/odrzucanie konta online     & Tak                & Scenariusz 5 \\
-		WF4         & Pobieranie i uruchamianie testów lokalnie & Tak                & Scenariusz 2 \\
-		WF5         & Zapis wyniku testu lokalnie               & Tak                & Scenariusz 3 \\
-		WF6         & Synchronizacja wyników z chmurą           & Tak                & Scenariusz 3 \\
-		WF7         & Tryb offline                              & Tak                & Scenariusz 3 \\
-		WF8         & Ankiety (metryczki) podpinane do wyników  & Tak                & Scenariusz 2 \\
+		WF3         & Zatwierdzanie/odrzucanie konta online     & Tak                & Scenariusz 2 \\
+		WF4         & Pobieranie i uruchamianie testów lokalnie & Tak                & Scenariusze 1, 5 \\
+		WF5         & Zapis wyniku testu lokalnie               & Tak                & Scenariusze 1, 5 \\
+		WF6         & Synchronizacja wyników z chmurą           & Tak                & Scenariusze 2, 3 \\
+		WF7         & Tryb offline                              & Tak                & Scenariusz 5 \\
+		WF8         & Ankiety (metryczki) podpinane do wyników  & Tak                & Scenariusz 1 \\
 		WF9         & Przejęcie wyniku Gościa po zalogowaniu    & Tak                & Scenariusz 1 \\
 		WF10        & Powiadomienie i instalacja aktualizacji   & Tak                & Scenariusz 1 \\
 		\bottomrule
@@ -938,6 +1063,31 @@ Proces testowania aplikacji Nous obejmuje trzy uzupełniające się poziomy wery
 %      (sekcja 2.2.3), moduł autoryzacji (sekcja 2.3.3).
 %   5. Synchronizacja wyników w chmurze -- moduł synchronizacji
 %      z szyfrowaniem E2E (sekcja 2.3.6).
+
+
+% ============================================================
+\section{Weryfikacja programu w~praktyce}
+\label{sec:weryfikacja-praktyczna}
+
+Uzupełnieniem weryfikacji formalnej jest ocena platformy w~warunkach rzeczywistego użytkowania. Aplikacja Nous została wdrożona i~zaprezentowana w~ramach czterech niezależnych wydarzeń, co pozwoliło zweryfikować jej przydatność w~zróżnicowanych kontekstach badawczych i~popularnonaukowych.
+
+\begin{enumerate}
+
+  \item \textbf{Projekt badawczy Koła Naukowego Psychologii Transportu (KNPT) UKW (2026--2027, w~trakcie):}
+  Platforma została wykorzystana jako narzędzie pomiarowe w~projekcie naukowym realizowanym przez koło naukowe Uniwersytetu Kazimierza Wielkiego w~Bydgoszczy. Celem projektu było sprawdzenie, czy testy komputerowe są w~stanie miarodajnie zastąpić badania przeprowadzane na~specjalistycznych urządzeniach fizycznych.
+
+  \item \textbf{Badanie zdolności poznawczych biegaczy -- dr Kamila Litwic-Kamińska (kwiecień--maj 2026):}
+  Aplikacja posłużyła jako narzędzie pomiarowe w~badaniu prowadzonym przez dr Kamilę Litwic-Kamińską, którego celem było zbadanie zdolności poznawczych biegaczy przed i~po przebiegnięciu maratonu. Scenariusz ten bezpośrednio potwierdził kluczową cechę zaprojektowanej platformy --- możliwość przeprowadzania testów w~warunkach terenowych, bez stałego dostępu do~infrastruktury sieciowej.
+
+  \item \textbf{XVI Studencka Konferencja Naukowa (28 maja 2026):}
+  Platforma Nous została zaprezentowana na~konferencji naukowej w~referacie pt.~\textit{„Nous~--- innowacyjne narzędzie do~wszechstronnej diagnostyki psychologicznej kierowców w~środowisku cyfrowym"}. Prezentacja umożliwiła przedstawienie projektu szerszemu środowisku akademickiemu oraz zebranie merytorycznych uwag od~uczestników konferencji.
+
+  \item \textbf{Piknik jubileuszowy „20-lecia UKW" (25 kwietnia 2026):}
+  Aplikacja była demonstrowana na~stanowisku wystawienniczym podczas obchodów jubileuszu 20-lecia Uniwersytetu Kazimierza Wielkiego w~Bydgoszczy. Zainteresowani uczestnicy mieli możliwość przetestowania własnych umiejętności --- czasu reakcji, zapamiętywania i~innych zdolności poznawczych --- bezpośrednio przy stanowisku. Wydarzenie zgromadziło zarówno osoby młodsze, jak i~starsze, co potwierdziło dostępność i~intuicyjność interfejsu dla szerokiego grona odbiorców.
+
+\end{enumerate}
+
+Powyższe wdrożenia stanowią empiryczny dowód na to, że zaprojektowana platforma spełnia postawione wymagania nie tylko w~warunkach laboratoryjnych, ale również w~realnych, wymagających środowiskach użytkowania.
 
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
