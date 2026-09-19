@@ -166,7 +166,7 @@ ipcMain.on('download-and-run', (event, taskData) => {
                 return;
             }
             // --- SECURITY CHECK: OWNER ALLOWLIST ---
-            // Dozwolone są wyłącznie repozytoria właściciela KaucBartosz.
+            // Dozwolone są wyłącznie oficjalne repozytorium BBTP.
             // objects.githubusercontent.com to CDN GitHub Releases – nie ma tam ścieżki /owner/.
             const allowedOwner = 'KaucBartosz';
             const cdnDomain = 'objects.githubusercontent.com';
@@ -198,6 +198,8 @@ ipcMain.on('download-and-run', (event, taskData) => {
 });
 
 async function executeDownloadTask(task) {
+
+    // TODO/Do zrobienia: usunąć "onlyDownload" gdyż jest to teraz domyślne ustawienie (nie potrzebne ify itd.)
     const { sender, url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription, isLocalDev } = task;
 
     const finishTask = () => {
@@ -275,7 +277,7 @@ async function executeDownloadTask(task) {
                     return;
                 }
             }
-
+            // 404 itd. wyrzuci błąd
             if (response.statusCode !== 200) {
                 sender.send('test-status', `Błąd HTTP: ${response.statusCode}`);
                 fs.unlink(zipPath, () => { });
@@ -305,7 +307,7 @@ async function executeDownloadTask(task) {
             response.on('end', () => {
                 file.end(); // Important!
 
-                // Wait for file stream to finish closing
+                // Koniec pracy na pliku -> próbujemy rozpakować zip
                 file.on('finish', async () => {
                     file.close();
 
@@ -344,7 +346,7 @@ async function executeDownloadTask(task) {
                         // Szukamy pliku ponownie po rozpakowaniu
                         entryFile = findStartFile(testFolder);
 
-                        // --- NEW EVENT FOR UI REFRESH ---
+                        // Info przez IPC aby odświeżyć liste testów
                         sender.send('test-installed', { test_id: testId, version: Number(version) });
 
                         if (!entryFile) {
@@ -398,8 +400,7 @@ ipcMain.handle('get-local-versions', async (event) => {
     let userDataPath = getUserDataPath();
     let testsDir = path.join(userDataPath, 'tests_library');
 
-    // Linux-specific fallback: Check common paths as Electron behavior on Linux 
-    // can vary depending on whether it's running via AppImage, generic electron, or local build.
+    // Próba wsparcia jak największej ilości dystrybucji Linuxa (oraz wsteczna kompatybilność) po przez szukanie po wielu potencjalnych ścieżkach
     if (process.platform === 'linux' && !fs.existsSync(testsDir)) {
         const os = require('os');
         const altPaths = [
@@ -598,7 +599,7 @@ function openTestWindow(htmlPath) {
 
     const isLinux = process.platform === 'linux';
 
-    // Na Linuksie (szczególnie Cinnamon/Mint): 
+    // Na Linuksie (szczególnie Cinnamon/Mint):
     // - parent blokuje fullscreen w niektórych WM
     // - fullscreen w konstruktorze jest ignorowany przez Cinnamona
     // - okno musi być najpierw zmapowane (widoczne), zanim WM zaakceptuje fullscreen
@@ -1219,7 +1220,7 @@ ipcMain.on('download-hpm-engine', async (event) => {
                         try { fs.unlinkSync(zipPath); } catch (e) { }
 
                         // --- POLYFILL DLA WYBRAKOWANYCH BIBLIOTEK NUMPY ---
-                        // Jeśli ZIP z HPM miał agresywnie usunięte foldery "tests" (np. przez odchudzanie wagi), 
+                        // Jeśli ZIP z HPM miał agresywnie usunięte foldery "tests" (np. przez odchudzanie wagi),
                         // Numpy 2.0+ wywali błąd `ModuleNotFoundError: No module named 'numpy._core.tests'`.
                         // Tworzymy na szybko zaślepkę tego modułu:
                         try {

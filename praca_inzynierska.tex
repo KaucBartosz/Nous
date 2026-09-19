@@ -709,8 +709,8 @@ Proces główny (\texttt{main.js}) zarządza oknem aplikacji i~obsługuje zapyta
 
 Moduł zlokalizowany w~pliku \texttt{auth.js} obsługuje dwa scenariusze uwierzytelniania:
 \begin{enumerate}
-	\item \textbf{Uwierzytelnianie chmurowe (Firebase):} Wykorzystuje metody \texttt{signInWithEmailAndPassword} oraz \texttt{createUserWithEmailAndPassword} z~biblioteki Firebase Auth. Po pomyślnej rejestracji, moduł automatycznie tworzy dokument w~Firestore w~kolekcji \texttt{users} ze statusem \texttt{PENDING}.
-	\item \textbf{Uwierzytelnianie lokalne (IndexedDB):} Zaprojektowane z~myślą o~pracy w~pełni offline. Proces rejestracji lokalnej polega na wygenerowaniu 16-bajtowej kryptograficznej soli (za pomocą \texttt{crypto.getRandomValues}), a~następnie obliczeniu skrótu hasła algorytmem SHA-256 z~solą za pomocą interfejsu \texttt{crypto.subtle.digest}. Rekord konta (login, skrót, sól, data utworzenia) zapisywany jest w~tabeli \texttt{localAccounts}. Przy logowaniu moduł wylicza skrót z~podanego hasła i~porównuje go ze skrótem zapisanym w~bazie danych.
+	\item \textbf{Uwierzytelnianie chmurowe (Firebase):} Wykorzystuje metody\\  \texttt{signInWithEmailAndPassword} oraz \texttt{createUserWithEmailAndPassword} z~biblioteki Firebase Auth. Po pomyślnej rejestracji, moduł automatycznie tworzy dokument w~Firestore w~kolekcji \texttt{users} ze statusem \texttt{PENDING}.
+	\item \textbf{Uwierzytelnianie lokalne (IndexedDB):} Zaprojektowane z~myślą o~pracy w~pełni offline. Proces rejestracji lokalnej polega na wygenerowaniu 16-bajtowej kryptograficznej soli (za pomocą \texttt{crypto.getRandomValues}), a~następnie obliczeniu skrótu hasła algorytmem SHA-256 z~solą za pomocą interfejsu \\ \texttt{crypto.subtle.digest}. Rekord konta (login, skrót, sól, data utworzenia) zapisywany jest w~tabeli \texttt{localAccounts}. Przy logowaniu moduł wylicza skrót z~podanego hasła i~porównuje go ze skrótem zapisanym w~bazie danych.
 \end{enumerate}
 W~celu obrony przed atakami siłowymi (brute-force), w~obu kanałach autoryzacji wprowadzono mechanizm ograniczenia częstotliwości prób (\textit{rate limiting}) do maksymalnie jednego wywołania na sekundę.
 
@@ -729,8 +729,8 @@ Dystrybucja modułów testowych realizowana jest dynamicznie przez proces głów
 
 Uruchomienie testu następuje na dwa sposoby, w~zależności od konfiguracji modułu:
 \begin{enumerate}
-	\item \textbf{Testy Webowe:} Proces główny tworzy nowe, zmaksymalizowane okno \texttt{BrowserWindow} pozbawione ramek i~menu systemowego. Okno ładuje plik \texttt{index.html} testu. Komunikacja z~testem odbywa się za pośrednictwem dedykowanego skryptu \texttt{preload\_test.js}, który nasłuchuje na zdarzenie zakończenia testu i~przekazuje zebrane surowe dane za pomocą kanału IPC \texttt{test-finished}. Po odebraniu danych okno testu zostaje automatycznie zamknięte.
-	\item \textbf{Testy Natywne (HPM):} Proces główny uruchamia podproces natywnego środowiska Python za pomocą funkcji \texttt{child\_process.spawn()}. Do środowiska przekazywana jest ścieżka do pliku \texttt{main.py} testu. Aby zapobiec konfliktom z~lokalnymi zmiennymi systemowymi użytkownika (szczególnie na platformach macOS i~Linux), proces główny jawnie ustawia zmienną \texttt{PYTHONHOME} na ścieżkę wbudowanego interpretera oraz czyści zmienne \texttt{PYTHONPATH}, \texttt{DYLD\_INSERT\_LIBRARIES} i~\texttt{LD\_LIBRARY\_PATH}. Po zakończeniu pracy skryptu PsychoPy, launcher odczytuje wygenerowany przez test plik \texttt{results.json}, parsuje wyniki i~usuwa plik tymczasowy.
+	\item \textbf{Testy Webowe:} Proces główny tworzy nowe, zmaksymalizowane okno \\ \texttt{BrowserWindow} pozbawione ramek i~menu systemowego. Okno ładuje plik \texttt{index.html} testu. Komunikacja z~testem odbywa się za pośrednictwem dedykowanego skryptu \texttt{preload\_test.js}, który nasłuchuje na zdarzenie zakończenia testu i~przekazuje zebrane surowe dane za pomocą kanału IPC \texttt{test-finished}. Po odebraniu danych okno testu zostaje automatycznie zamknięte.
+	\item \textbf{Testy Natywne (HPM):} Proces główny uruchamia podproces natywnego środowiska Python za pomocą funkcji \texttt{child\_process.spawn()}. Do środowiska przekazywana jest ścieżka do pliku \texttt{main.py} testu. Aby zapobiec konfliktom z~lokalnymi zmiennymi systemowymi użytkownika (szczególnie na platformach macOS i~Linux), proces główny jawnie ustawia zmienną \texttt{PYTHONHOME} na ścieżkę wbudowanego interpretera oraz czyści zmienne \texttt{PYTHONPATH}, \\ \texttt{DYLD\_INSERT\_LIBRARIES} i~\texttt{LD\_LIBRARY\_PATH}. Po zakończeniu pracy skryptu PsychoPy, launcher odczytuje wygenerowany przez test plik \texttt{results.json}, parsuje wyniki i~usuwa plik tymczasowy.
 \end{enumerate}
 
 Po zebraniu danych z~dowolnego środowiska, aplikacja wywołuje procedurę zapisu w~IndexedDB z~automatycznym szyfrowaniem AES-GCM-256 oraz wyliczeniem lokalnego podpisu HMAC-SHA256 (patrz sekcja \ref{subsec:integralnosc}).
@@ -751,13 +751,15 @@ Tryb HPM (Python/PsychoPy) przeznaczony jest natomiast dla sytuacji, w~których 
 
 Oba tryby są w~pełni zintegrowane z~launcherem -- wybór odpowiedniego następuje automatycznie na podstawie dostępności paczki HPM i~ustawień badacza, bez konieczności przełączania się między osobnymi aplikacjami.
 
+Kiedy należy korzystać z HPM - jeśli w badaniu kluczowy jest czas reakcji to korzystamy z HPM, natomiast w przypadku badania innych funkcji poznawczych (pamięć, koncentracja, myślenie) HPM staje się zbędny.
+
 \subsection{Moduł synchronizacji z~chmurą}
 \label{subsec:impl-sync}
 
 Moduł \texttt{sync.js} zarządza procesem bezpiecznego przesyłania wyników badań do chmury Firestore.
 \begin{itemize}
 	\item \textbf{Szyfrowanie chmurowe E2E:} Zanim dane trafią do internetu, system sprawdza dostępność klucza chmurowego E2E. Klucz ten jest ładowany do pamięci RAM po podaniu przez badacza unikalnego kodu PIN (klucz jest odbezpieczany z~pliku \texttt{e2e\_key.enc} za pomocą algorytmu PBKDF2 z~200~000 iteracji SHA-256). Moduł szyfruje wyniki badań oraz ankietę demograficzną pacjenta w~jeden nieczytelny szyfrogram AES-GCM-256. Do chmury Firestore przesyłany jest wyłącznie ten szyfrogram, wektor inicjujący (IV) oraz jawne identyfikatory badacza i~testu (potrzebne do filtrowania danych).
-	\item \textbf{Tryb offline i kolejkowanie:} Jeśli aplikacja nie posiada połączenia z~siecią, wynik jest zapisywany lokalnie w~IndexedDB ze statusem \texttt{sync\_status: 'PENDING'}. Moduł nasłuchuje systemowego zdarzenia sieciowego \texttt{window.addEventListener('online')}. Po wykryciu połączenia internetowego, automatycznie uruchamiana jest pętla synchronizacyjna: system odpytuje IndexedDB o~wszystkie oczekujące rekordy zalogowanego użytkownika online i~wysyła je kolejno do Firestore. Po potwierdzeniu zapisu przez serwer, lokalny status rekordu zmienia się na \texttt{SYNCED}, a~badacz otrzymuje wizualne powiadomienie (Toast).
+	\item \textbf{Tryb offline i kolejkowanie:} Jeśli aplikacja nie posiada połączenia z~siecią, wynik jest zapisywany lokalnie w~IndexedDB ze statusem \texttt{sync\_status: 'PENDING'}. Moduł nasłuchuje systemowego zdarzenia sieciowego \\ \texttt{window.addEventListener('online')}. Po wykryciu połączenia internetowego, automatycznie uruchamiana jest pętla synchronizacyjna: system odpytuje IndexedDB o~wszystkie oczekujące rekordy zalogowanego użytkownika online i~wysyła je kolejno do Firestore. Po potwierdzeniu zapisu przez serwer, lokalny status rekordu zmienia się na \texttt{SYNCED}, a~badacz otrzymuje wizualne powiadomienie (Toast).
 	\item \textbf{Zapobieganie duplikatom:} Każdy wynik posiada unikalne ID (UUID generowane w~kliencie). Serwer Firestore sprawdza czy dany identyfikator już istnieje w~bazie chmurowej – jeśli tak, synchronizacja rekordu jest pomijana, co zapobiega dublowaniu danych w~przypadku chwilowych przerw w~transmisji.
 \end{itemize}
 
@@ -779,12 +781,12 @@ Aplikacja posiada wbudowany mechanizm samoaktualizacji, oparty na komunikacji z~
 \subsection{Strona projektu i~wersja webowa}
 \label{subsec:web}
 
-Dla wygody użytkowników powstała strona projektu pod adresem
+Dla wygody użytkowników powstała strona projektu pod adresem \\
 \url{https://kaucbartosz.github.io/Nous/}, która automatycznie wykrywa system
 operacyjny odwiedzającego i~umożliwia pobranie odpowiedniego instalatora
 jednym kliknięciem. Dodatkowo, głównie w~celach demonstracyjnych, ale także
 zwi\k{e}kszających kompatybilność, aplikacja dostępna jest w~wersji webowej
-pod adresem \url{https://kaucbartosz.github.io/Nous/app/} o~ograniczonych
+pod adresem\\  \url{https://kaucbartosz.github.io/Nous/app/} o~ograniczonych
 możliwościach. Pozwala ona na~zapoznanie się z~interfejsem oraz wykonanie
 wybranych testów, których wyniki są automatycznie pobierane po~zakończeniu.
 Wersja webowa dodaje kolejną warstwę kompatybilności, choć wpływ jakości
@@ -1315,10 +1317,11 @@ Platforma Nous, mimo osiągniętego poziomu dojrzałości, posiada potencjał do
 \begin{itemize}
 	\item \textbf{Wersja mobilna:} Adaptacja na~urządzenia przenośne (React Native lub Flutter) umożliwiłaby prowadzenie badań w~jeszcze szerszym spektrum warunków terenowych oraz dotarcie do~grup badanych, które nie mają dostępu do~komputera.
 	\item \textbf{Zaawansowana analityka wyników:} Wbudowane narzędzia statystyczne (wykresy, testy istotności, korelacje) oraz mechanizmy uczenia maszynowego do~wykrywania anomalii w~wynikach mogłyby znacząco zwiększyć użyteczność platformy dla badaczy.
-	\item \textbf{Eksport do~formatów klinicznych:} Obsługa formatów SPSS (.sav), REDCap i~CSV z~pełnymi metadanymi ułatwiłaby integrację z~istniejącymi pipeline'ami badawczymi.
+	\item \textbf{Eksport do~formatów klinicznych:} Obsługa formatów SPSS (.sav) i REDCap z~pełnymi metadanymi ułatwiłaby integrację z~istniejącymi pipeline'ami badawczymi.
 	\item \textbf{Certyfikacja jako wyrób medyczny:} Procedura certyfikacji zgodnie z~MDR (Medical Device Regulation, klasa I) otworzyłaby drogę do~oficjalnego stosowania platformy w~diagnostyce klinicznej.
 	\item \textbf{Wielojęzyczność interfejsu (i18n):} Dodanie obsługi wielu języków (angielski, niemiecki, francuski, hiszpański) pozwoliłoby na~międzynarodowe projekty badawcze.
 	\item \textbf{Rozszerzenie biblioteki testów:} Opracowanie kolejnych modułów testowych w~trybie HPM (m.in. testy Sternberga, testy Flankera, zadania n-back) poszerzyłoby zakres zastosowań platformy.
+	\item \textbf{Zakup certyfikatów ~Code Signing} Podpisanie programu usprawniło by proces instalacji oraz zwiększyło by wiarygodność oprogramowania.
 \end{itemize}
 
 
