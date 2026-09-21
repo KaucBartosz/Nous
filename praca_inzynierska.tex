@@ -52,6 +52,7 @@
   urlcolor=blue
 ]{hyperref}
 
+
 % --- Listingi kodu ---
 \usepackage{listings}
 \lstset{
@@ -95,6 +96,9 @@
 \usepackage[patch=none]{microtype}
 \microtypesetup{nopatch=footnote}
 
+% --- zawijanie wierszy ---
+\usepackage{ragged2e}
+
 
 % ============================================================
 %  POCZĄTEK DOKUMENTU
@@ -111,7 +115,6 @@
 
 	{\large\textbf{Uniwersytet Kazimierza Wielkiego w~Bydgoszczy}}\\[0.3cm]
 	{\large Wydział Informatyki}\\[2cm]
-
 	{\large Bartosz Kauc}\\[0.3cm]
 	{\large Nr albumu: 104154}\\[2cm]
 
@@ -435,7 +438,7 @@ do~pomiaru czasu reakcji w~aplikacjach webowych.
 Drugim istotnym zagadnieniem jest sposób planowania momentu prezentacji
 stymulusu i~rejestracji odpowiedzi badanego. Funkcja
 \texttt{requestAnimationFrame} synchronizuje wykonanie kodu z~cyklem
-odświeżania ekranu (typowo ok.~16,7~ms przy częstotliwości 60~Hz),
+odświeżania ekranu (typowo ok.~16,7~ms przy częstotliwości 60~Hz)\footnote{\raggedright \url{https://blurbusters.com/blur-busters-law-amazing-journey-to-future-1000hz-displays-with-blurfree-sample-and-hold/} (21.09.2026)},
 dzięki czemu zmiany na~ekranie są prezentowane w~przewidywalnych
 odstępach czasu. W~przeciwieństwie do~niej, funkcje \texttt{setTimeout}
 i~\texttt{setInterval} nie gwarantują wykonania kodu w~zadanym momencie
@@ -444,8 +447,8 @@ ulegać tzw. throttlingowi, szczególnie gdy okno aplikacji znajduje się
 w~tle.
 
 Na~dokładność pomiaru w~środowisku Chromium/Electron wpływają
-dodatkowo: cykliczne działanie mechanizmu odśmiecania pamięci
-(\textit{garbage collector}), synchronizacja wertykalna obrazu (V-Sync)
+dodatkowo: cykliczne działanie mechanizmu czysczenia pamięci
+(\textit{garbage collector})\footnote{\url{https://developer.chrome.com/docs/devtools/memory-problems} (21.09.2026)}, synchronizacja wertykalna obrazu (V-Sync)
 oraz nieprzewidywalne opóźnienia (\textit{jitter}) wynikające
 z~harmonogramowania procesów przez system operacyjny i~sterownik
 karty graficznej. Łączny błąd pomiaru w~typowych warunkach
@@ -468,7 +471,7 @@ dystrybucji testów webowych w~pozostałych przypadkach użycia.
 Dane zbierane w~ramach testów psychologicznych --- wyniki testów
 osobowości, skal klinicznych czy danych demograficznych badanych ---
 stanowią w~rozumieniu Rozporządzenia Parlamentu Europejskiego i~Rady
-(UE) 2016/679 (RODO) szczególną kategorię danych osobowych, ujętą
+(UE) 2016/679 (RODO) \footnote{\url{https://uodo.gov.pl/404} (21.09.2026)} szczególną kategorię danych osobowych, ujętą
 w~art.~9 RODO jako dane dotyczące zdrowia. Przetwarzanie takich danych
 wymaga zastosowania podwyższonych środków technicznych
 i~organizacyjnych, w~tym minimalizacji zakresu zbieranych danych,
@@ -481,7 +484,7 @@ szyfrowanie danych w~spoczynku (\textit{at rest}) oraz w~tranzycie
 wszystkie przechowywane dane algorytmem AES-256, a~komunikacja
 klient--serwer odbywa się wyłącznie poprzez połączenie szyfrowane
 TLS. Mechanizmy te chronią jednak dane wyłącznie przed dostępem osób
-trzecich z~zewnątrz infrastruktury --- nie zabezpieczają danych przed
+trzecich z~zewnątrz infrastruktury, lecz nie zabezpieczają danych przed
 dostawcą usługi chmurowej ani przed osobą posiadającą uprawnienia
 administracyjne do~bazy danych.
 
@@ -506,7 +509,7 @@ modyfikacji danych już po~ich zapisaniu.
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  ROZDZIAŁ 2 — PROJEKTOWANIE, IMPLEMENTACJA I TESTOWANIE
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Projektowanie, implementacja i~testowanie}
+\chapter{Projektowanie, implementacja i testowanie}
 \label{chap:impl}
 
 
@@ -568,9 +571,9 @@ Projektowany system opiera się na architekturze klient-serwer, w~której warstw
 \subsection{Komunikacja międzyprocesowa (IPC)}
 \label{subsec:ipc}
 
-Bezpieczeństwo architektury aplikacji opartej o~szablon Electrona wymagało ścisłego oddzielenia logiki biznesowej renderera od możliwości niskopoziomowych procesu głównego. W~tym celu w~systemie całkowicie wyłączono integrację z~Node.js po stronie renderera (\texttt{nodeIntegration: false}) oraz włączono pełną izolację kontekstu (\texttt{contextIsolation: true}).
+Bezpieczeństwo architektury aplikacji opartej o~szablon Electrona wymagało ścisłego oddzielenia logiki biznesowej renderera od możliwości niskopoziomowych procesu głównego. W~tym celu w~systemie całkowicie wyłączono integrację z~Node.js po stronie renderera (\texttt{nodeIntegration: false}) oraz włączono pełną izolację kontekstu (\texttt{contextIsolation: true}).\footnote{\url{https://www.electronjs.org/docs/latest/tutorial/security} (21.09.2026)}
 
-Jedynym pomostem umożliwiającym komunikację między procesami jest skrypt preload (\texttt{preload.js}), który przy użyciu modułu \texttt{contextBridge} udostępnia w~globalnym obiekcie \texttt{window} bezpieczne, zminimalizowane API o~nazwie \texttt{electronAPI}. Implementacja ta zapobiega wstrzykiwaniu dowolnego kodu Node.js przez skrypty testowe i~renderer. Komunikacja opiera się na ściśle zdefiniowanych kanałach IPC:
+Jedynym pomostem umożliwiającym komunikację między procesami jest skrypt preload (\texttt{preload.js}), który przy użyciu modułu \texttt{contextBridge}\footnote{\url{https://www.electronjs.org/docs/latest/api/context-bridge} (21.09.2026)} udostępnia w~globalnym obiekcie \texttt{window} bezpieczne, zminimalizowane API o~nazwie \texttt{electronAPI}. Implementacja ta zapobiega wstrzykiwaniu dowolnego kodu Node.js przez skrypty testowe i~renderer. Komunikacja opiera się na ściśle zdefiniowanych kanałach IPC:
 \begin{itemize}
 	\item \textbf{Kanały żądań jednostronnych (Renderer $\rightarrow$ Main via \texttt{ipcRenderer.send}):}
 	      \begin{itemize}
