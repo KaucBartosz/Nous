@@ -1,0 +1,4 @@
+1. Usunięcie trybu HPM. wykorzystanie odpowiednich bibliotek itd. spowodowało iż precyzja pomiaru w przypadku wersji JS jest wystarczająca i wręcz równa wersji HPM (HPM niepotrzebny).
+2. Poprawa sygnałów IPC - "missliding" download-and-run (obecnie program nie uruchamia testu odrazu po pobraniu)
+3. Nous training - sprawdzić czy działa i jak działa
+4. Usunąć wersje Python testów

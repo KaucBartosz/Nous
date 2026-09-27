@@ -1,0 +1,59 @@
+\babel@toc {polish}{}\relax 
+\contentsline {chapter}{Wstęp}{III}{chapter*.2}%
+\contentsline {section}{Oświadczenie odnośnie wykorzystania GenAI}{1}{section*.3}%
+\contentsline {chapter}{\numberline {1}Cel pracy, analiza istniejących rozwiązań i~literatura}{2}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Cel i zakres pracy}{2}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Analiza istniejących rozwiązań}{2}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Przegląd dostępnych platform}{2}{subsection.1.2.1}%
+\contentsline {subsubsection}{PsyPack}{3}{subsection.1.2.1}%
+\contentsline {subsubsection}{Pavlovia}{3}{subsection.1.2.1}%
+\contentsline {subsubsection}{Evalora}{3}{subsection.1.2.1}%
+\contentsline {subsubsection}{OpenScales}{3}{subsection.1.2.1}%
+\contentsline {subsubsection}{VTS (Vienna Test System)}{4}{subsection.1.2.1}%
+\contentsline {subsubsection}{Test2Drive / Optimis}{4}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Porównanie funkcjonalności}{4}{subsection.1.2.2}%
+\contentsline {section}{\numberline {1.3}Uzasadnienie wybranego rozwiązania}{5}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Podstawy teoretyczne i~literatura}{5}{section.1.4}%
+\contentsline {subsection}{\numberline {1.4.1}Cyfryzacja diagnostyki psychologicznej i psychometrycznej}{5}{subsection.1.4.1}%
+\contentsline {subsection}{\numberline {1.4.2}Precyzja pomiaru czasu reakcji w~środowiskach Chromium}{6}{subsection.1.4.2}%
+\contentsline {subsection}{\numberline {1.4.3}Bezpieczeństwo danych psychologicznych w~chmurze}{7}{subsection.1.4.3}%
+\contentsline {chapter}{\numberline {2}Projektowanie, implementacja i testowanie}{9}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Wymagania funkcjonalne i~niefunkcjonalne}{9}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Wymagania funkcjonalne}{9}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Wymagania niefunkcjonalne}{9}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}Ogólna architektura klient-serwer}{10}{subsection.2.1.3}%
+\contentsline {subsection}{\numberline {2.1.4}Komunikacja międzyprocesowa (IPC)}{11}{subsection.2.1.4}%
+\contentsline {subsection}{\numberline {2.1.5}Model kontroli dostępu (RBAC)}{12}{subsection.2.1.5}%
+\contentsline {subsection}{\numberline {2.1.6}Struktura bazy danych}{13}{subsection.2.1.6}%
+\contentsline {subsection}{\numberline {2.1.7}Mechanizmy integralności danych lokalnych}{14}{subsection.2.1.7}%
+\contentsline {subsection}{\numberline {2.1.8}Projekt interfejsu użytkownika}{15}{subsection.2.1.8}%
+\contentsline {section}{\numberline {2.2}Implementacja}{15}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Zastosowane technologie}{16}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Struktura projektu}{17}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Moduł autoryzacji i~rejestracji}{18}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}Moduł dystrybucji testów}{18}{subsection.2.2.4}%
+\contentsline {subsection}{\numberline {2.2.5}Moduł wykonywania testów}{19}{subsection.2.2.5}%
+\contentsline {subsubsection}{Tryb HPM -- natywna precyzja pomiaru czasu reakcji}{19}{Item.18}%
+\contentsline {subsubsection}{Dostępność obu rozwiązań -- wygoda i~precyzja}{20}{Item.18}%
+\contentsline {subsection}{\numberline {2.2.6}Moduł synchronizacji z~chmurą}{20}{subsection.2.2.6}%
+\contentsline {subsection}{\numberline {2.2.7}Moduł administracyjny}{21}{subsection.2.2.7}%
+\contentsline {subsection}{\numberline {2.2.8}Moduł aktualizacji aplikacji}{22}{subsection.2.2.8}%
+\contentsline {subsection}{\numberline {2.2.9}Strona projektu i~wersja webowa}{22}{subsection.2.2.9}%
+\contentsline {section}{\numberline {2.3}Testowanie}{22}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Metodyka testowania}{22}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Testy jednostkowe i~integracyjne}{23}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Testy manualne}{24}{subsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.3.4}Testy z~udziałem użytkowników}{28}{subsection.2.3.4}%
+\contentsline {subsection}{\numberline {2.3.5}Znalezione problemy i~ich rozwiązania}{28}{subsection.2.3.5}%
+\contentsline {chapter}{\numberline {3}Weryfikacja zgodności z~tematem pracy}{31}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Kryteria weryfikacji}{31}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Weryfikacja wymagań funkcjonalnych}{31}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Weryfikacja wymagań niefunkcjonalnych}{32}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Zgodność z~tematem pracy inżynierskiej}{33}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Weryfikacja programu w~praktyce}{34}{section.3.5}%
+\contentsline {chapter}{\numberline {4}Wnioski, podsumowanie i~dalsze możliwości rozwoju}{36}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Wnioski}{36}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Ocena realizacji celów}{37}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Podsumowanie}{38}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Dalsze możliwości rozwoju}{38}{section.4.4}%
+\contentsline {chapter}{Załączniki}{40}{chapter*.6}%
