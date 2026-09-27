@@ -54,7 +54,6 @@ vi.mock("../../src/modules/ui.js", () => ({
         if (prop === "testsGrid") return document.getElementById("tests-grid");
         if (prop === "toggleTrainingMode")
           return document.getElementById("toggle-training-mode");
-        if (prop === "toggleHPM") return document.getElementById("toggle-hpm");
         return document.getElementById(prop) || null;
       },
     },
@@ -73,7 +72,6 @@ describe("Library Module", () => {
       <button id="view-table"></button>
       <button id="view-compact"></button>
       <input type="checkbox" id="toggle-training-mode" />
-      <input type="checkbox" id="toggle-hpm" />
       <input type="text" id="library-search" />
     `;
     localStorage.clear();
@@ -86,15 +84,10 @@ describe("Library Module", () => {
   });
 
   // ─── Gettery stanu ──────────────────────────────────────────
-  describe("getTrainingMode / getHpmEnabled", () => {
+  describe("getTrainingMode", () => {
     it("domyślnie tryb treningowy jest wyłączony", async () => {
       const { getTrainingMode } = await import("../../src/modules/library.js");
       expect(getTrainingMode()).toBe(false);
-    });
-
-    it("domyślnie HPM jest wyłączony", async () => {
-      const { getHpmEnabled } = await import("../../src/modules/library.js");
-      expect(getHpmEnabled()).toBe(false);
     });
   });
 
@@ -106,8 +99,6 @@ describe("Library Module", () => {
       expect(() => initLibraryListeners()).not.toThrow();
       expect(window.electronAPI.onDownloadProgress).toHaveBeenCalled();
       expect(window.electronAPI.onTestInstalled).toHaveBeenCalled();
-      expect(window.electronAPI.onHpmDownloadProgress).toHaveBeenCalled();
-      expect(window.electronAPI.onHpmInstalled).toHaveBeenCalled();
       expect(window.electronAPI.onTestProcessStopped).toHaveBeenCalled();
     });
 

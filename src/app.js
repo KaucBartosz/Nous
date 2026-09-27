@@ -116,15 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSaveRegistry = document.getElementById("btn-save-to-registry");
     if (btnSaveRegistry) btnSaveRegistry.style.display = "none";
 
-    // Zablokuj HPM
-    if (elements.toggleHPM) {
-      elements.toggleHPM.disabled = true;
-      elements.toggleHPM.checked = false;
-      elements.toggleHPM.parentElement.parentElement.title =
-        "Tryb HPM wymaga natywnej aplikacji Desktopowej.";
-      elements.toggleHPM.parentElement.parentElement.style.opacity = "0.5";
-    }
-
     // Blokada urządzeń mobilnych (ekranów dotykowych)
     if (
       "ontouchstart" in window ||

@@ -108,10 +108,6 @@ test.describe('Biblioteka testów', () => {
   test('przełącznik trybu treningowego jest widoczny', async ({ page }) => {
     await expect(page.locator('#toggle-training-mode')).toBeVisible();
   });
-
-  test('przełącznik trybu HPM jest widoczny', async ({ page }) => {
-    await expect(page.locator('#toggle-hpm')).toBeVisible();
-  });
 });
 
 test.describe('Historia wyników', () => {

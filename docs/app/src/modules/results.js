@@ -87,7 +87,6 @@ function handleTestResults(raw) {
   currentResultPackage = {
     test_id: raw.testId || "test",
     timestamp: new Date().toISOString(),
-    hpm_used: !!raw.__hpm_context, // Czy test faktycznie wykonał się w HPM
     researcher_uid: researcherUid,
     subject_id: participantId,
     demographics: currentDemo,

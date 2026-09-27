@@ -105,7 +105,6 @@ export async function getLocalVersionsCached() {
                 registry.forEach(test => {
                     webVersions[test.id] = {
                         version: test.version || 1,
-                        hasPython: false,
                         isLocalDev: false,
                         name: test.name,
                         description: test.description,

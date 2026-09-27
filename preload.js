@@ -2,9 +2,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    // 1. Aktualizacja downloadAndRun (dodano parametr onlyDownload, hpmEnabled i trainingMode)
-    downloadAndRun: (url, testId, version, onlyDownload = false, hpmEnabled = false, trainingMode = false, testName = '', testDescription = '', isLocalDev = false) =>
-        ipcRenderer.send('download-and-run', { url, testId, version, onlyDownload, hpmEnabled, trainingMode, testName, testDescription, isLocalDev }),
+    // 1. Pobieranie i uruchamianie testów (tylko JS)
+    downloadAndRun: (url, testId, version, onlyDownload = false, trainingMode = false, testName = '', testDescription = '', isLocalDev = false) =>
+        ipcRenderer.send('download-and-run', { url, testId, version, onlyDownload, trainingMode, testName, testDescription, isLocalDev }),
 
     onStatusUpdate: (callback) => ipcRenderer.on('test-status', (event, message) => callback(message)),
     onTestResults: (callback) => ipcRenderer.on('test-results-forwarded', (event, data) => callback(data)),
@@ -49,18 +49,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 9. OTWIERANIE LINKÓW
     openExternal: (url) => ipcRenderer.send('open-external', url),
 
-    // 10. HIGH PRECISION MODE (HPM)
-    getHpmStatus: () => ipcRenderer.invoke('get-hpm-status'),
-    downloadHpmEngine: () => ipcRenderer.send('download-hpm-engine'),
-    onHpmDownloadProgress: (callback) => ipcRenderer.on('hpm-download-progress', (event, percent) => callback(percent)),
-    onHpmInstalled: (callback) => ipcRenderer.on('hpm-installed', (event, success) => callback(success)),
-
-    // 11. ZDARZENIA PROCESU TESTU
+    // 10. ZDARZENIA PROCESU TESTU
     onTestProcessStopped: (callback) => ipcRenderer.on('test-process-stopped', () => callback()),
 
-    // 12. SYSTEM INFO
+    // 11. SYSTEM INFO
     isMac: process.platform === 'darwin',
-    isLinux: process.platform === 'linux',
-    getLinuxDistro: () => ipcRenderer.invoke('get-linux-distro'),
-    checkHpmUpdate: () => ipcRenderer.invoke('check-hpm-update')
+    isLinux: process.platform === 'linux'
 });

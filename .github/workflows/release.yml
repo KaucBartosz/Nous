@@ -4,9 +4,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
-  push:
-    tags:
-      - "v*"
+  # TYLKO ręczne uruchomienie (Actions -> Build/Release -> Run workflow).
+  # Tagi v* służą wyłącznie do wersjonowania — nie budują installera.
   workflow_dispatch:
 
 permissions:

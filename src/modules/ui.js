@@ -85,7 +85,6 @@ function getElementsLazy() {
 
     // Training Mode
     toggleTrainingMode: document.getElementById("toggle-training-mode"),
-    toggleHPM: document.getElementById("toggle-hpm"),
     trainingResultsContent: document.getElementById("training-results-content"),
     normalResultsContent: document.getElementById("normal-results-content"),
     modalHeaderTitle: document.querySelector("#results-modal .modal-header h3"),

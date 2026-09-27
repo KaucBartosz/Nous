@@ -102,13 +102,7 @@ global.window.electronAPI = {
   onTestProcessStopped: vi.fn(),
   onTestInstalled: vi.fn(),
   onDownloadProgress: vi.fn(),
-  onHpmDownloadProgress: vi.fn(),
-  onHpmInstalled: vi.fn(),
-  getHpmStatus: vi.fn(() => true),
-  checkHpmUpdate: vi.fn(() => ({ hasUpdate: false })),
-  downloadHpmEngine: vi.fn(),
   isLinux: false,
-  getLinuxDistro: vi.fn(() => ({ family: "other" })),
 };
 
 // ==========================================================

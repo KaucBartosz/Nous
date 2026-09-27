@@ -331,7 +331,7 @@ test.describe('Custom Dialog Modal', () => {
   });
 });
 
-test.describe('Tryb treningowy i HPM', () => {
+test.describe('Tryb treningowy', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -349,19 +349,8 @@ test.describe('Tryb treningowy i HPM', () => {
     await expect(page.locator('#toggle-training-mode')).not.toBeChecked();
   });
 
-  test('przełącznik HPM działa', async ({ page }) => {
-    await expect(page.locator('#toggle-hpm')).toBeVisible();
-
-    await page.check('#toggle-hpm');
-    await expect(page.locator('#toggle-hpm')).toBeChecked();
-
-    await page.uncheck('#toggle-hpm');
-    await expect(page.locator('#toggle-hpm')).not.toBeChecked();
-  });
-
-  test('ikony informacyjne trybów są widoczne', async ({ page }) => {
+  test('ikona informacyjna trybu treningowego jest widoczna', async ({ page }) => {
     await expect(page.locator('#training-info-icon')).toBeVisible();
-    await expect(page.locator('#hpm-info-icon')).toBeVisible();
   });
 });
 

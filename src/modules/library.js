@@ -33,15 +33,10 @@ let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
 let currentViewMode = "grid"; // 'grid', 'list', 'table', 'compact'
 let isTrainingMode = false;
-let isHpmEnabled = false;
 let isLoading = false; // Flaga zapobiegająca współbieżnym wywołaniom loadTestsList (race condition → duplikaty)
 
 export function getTrainingMode() {
   return isTrainingMode;
-}
-
-export function getHpmEnabled() {
-  return isHpmEnabled;
 }
 
 // View mode button references
@@ -89,27 +84,6 @@ export function initLibraryListeners() {
     console.log("Test installed, refreshing library:", data);
     invalidateLocalVersionsCache(); // Unieważnij cache
     loadTestsList(undefined, true); // Force refresh
-  });
-
-  window.electronAPI.onHpmDownloadProgress((percent) => {
-    console.log(`HPM Download: ${percent}%`);
-    const statusLabel = document.getElementById("hpm-status-label");
-    if (statusLabel) statusLabel.textContent = `Pobieranie: ${percent}%`;
-  });
-
-  window.electronAPI.onHpmInstalled((success) => {
-    if (success) {
-      Dialog.alert(
-        "Silnik Python (HPM) został zainstalowany pomyślnie!",
-        "success",
-      );
-    } else {
-      Dialog.alert("Błąd podczas instalacji silnika Python.", "error");
-      if (elements.toggleHPM) elements.toggleHPM.checked = false;
-      isHpmEnabled = false;
-    }
-    const statusLabel = document.getElementById("hpm-status-label");
-    if (statusLabel) statusLabel.textContent = "";
   });
 
   window.electronAPI.onTestProcessStopped(() => {
@@ -180,95 +154,11 @@ export function initViewSwitcher() {
     });
   }
 
-  // Bind HPM toggle
-  if (elements.toggleHPM) {
-    // Zawsze wyłączony przy uruchomieniu (zgodnie z życzeniem użytkownika)
-    isHpmEnabled = false;
-    elements.toggleHPM.checked = false;
-    localStorage.setItem("hpmEnabled", "false"); // Opcjonalnie resetujemy też w storage
-
-    elements.toggleHPM.addEventListener("change", async (e) => {
-      if (e.target.checked) {
-        // Dodaj label stanu pod toggle
-        let statusLabel = document.getElementById("hpm-status-label");
-        if (!statusLabel) {
-          statusLabel = document.createElement("span");
-          statusLabel.id = "hpm-status-label";
-          statusLabel.style.cssText =
-            "font-size: 10px; color: var(--primary); margin-left: 10px;";
-          elements.toggleHPM.parentElement.parentElement.appendChild(
-            statusLabel,
-          );
-        }
-
-        // Check if engine exists
-        const engineExists = await window.electronAPI.getHpmStatus();
-        if (!engineExists) {
-          // Buduj notę o wymaganiach systemowych dla Linux
-          let linuxNote = "";
-          if (window.electronAPI.isLinux) {
-            const distro = await window.electronAPI.getLinuxDistro();
-            if (distro.family === "rhel") {
-              linuxNote =
-                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>${escapeHtml(distro.id || "linux")}</strong>.` +
-                ` Jeśli wystąpią błędy graficzne: <code>sudo dnf install SDL2 mesa-libGL alsa-lib</code></small>`;
-            } else {
-              linuxNote =
-                `<br><br><small style="color:#aaa">⚙️ Wykryto dystrybucję <strong>${escapeHtml(distro.id || "linux")}</strong>.` +
-                ` Jeśli wystąpią błędy graficzne: <code>sudo apt-get install libsdl2-2.0-0 libgl1 libasound2</code></small>`;
-            }
-          }
-
-          const confirmed = await Dialog.confirm(
-            "Tryb Wysokiej Precyzji (HPM) zapewnia najwyższą dokładność pomiaru parametrów czasowych poprzez natywne wykonywanie testów. Aktywacja tego trybu wymaga jednorazowego pobrania specjalistycznego pakietu zasobów (ok. 300MB). Czy chcesz kontynuować?" +
-              linuxNote,
-            "info",
-          );
-
-          if (confirmed) {
-            isHpmEnabled = true;
-            localStorage.setItem("hpmEnabled", "true");
-            statusLabel.textContent = "Pobieranie...";
-            window.electronAPI.downloadHpmEngine();
-          } else {
-            e.target.checked = false;
-            isHpmEnabled = false;
-          }
-        } else {
-          // Engine exists, check for update
-          statusLabel.textContent = "Sprawdzanie aktualizacji...";
-          try {
-            const updateInfo = await window.electronAPI.checkHpmUpdate();
-            statusLabel.textContent = ""; // Clear label after check
-
-            if (updateInfo.hasUpdate) {
-              const confirmUpdate = await Dialog.confirm(
-                "Dodano nową wersję silnika HPM online.<br><br>" +
-                  "Zalecamy aktualizację dla lepszej stabilności i precyzji pomiarów.<br>" +
-                  "<small style='color:#ff9800'>Uwaga: Możesz odmówić i używać obecnej wersji, ale robisz to na własną odpowiedzialność.</small><br><br>" +
-                  "Czy chcesz teraz pobrać aktualizację?",
-                "info",
-              );
-              if (confirmUpdate) {
-                statusLabel.textContent = "Aktualizacja...";
-                window.electronAPI.downloadHpmEngine();
-              }
-            }
-          } catch (err) {
-            console.error("Błąd sprawdzania aktualizacji HPM:", err);
-            statusLabel.textContent = "";
-          }
-
-          isHpmEnabled = true;
-          localStorage.setItem("hpmEnabled", "true");
-        }
-      } else {
-        isHpmEnabled = false;
-        localStorage.setItem("hpmEnabled", "false");
-        const statusLabel = document.getElementById("hpm-status-label");
-        if (statusLabel) statusLabel.textContent = "";
-      }
-    });
+  // Migracja: usuń pozostałość po usuniętym trybie HPM (decyzja #6)
+  try {
+    localStorage.removeItem("hpmEnabled");
+  } catch (e) {
+    console.warn("Nie można wyczyścić klucza hpmEnabled:", e);
   }
 
   // Init Electron listeners
@@ -380,11 +270,9 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
     const local = localVersions[t.id];
     if (local) {
       t.local_ver = Number(local.version);
-      t.hasPython = local.hasPython;
       t.isLocalDev = local.isLocalDev || false;
     } else {
       t.local_ver = 0;
-      t.hasPython = false;
       t.isLocalDev = false;
     }
   });
@@ -412,7 +300,6 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
           version: local.version || 0,
           local_ver: Number(local.version || 0),
           remote_ver: Number(local.version || 0),
-          hasPython: local.hasPython,
           isLocalDev: local.isLocalDev || false,
           download_url: "",
           _isBackfill: true, // Marker do czyszczenia przy kolejnym wywołaniu
@@ -626,14 +513,6 @@ function renderGridView(tests) {
     versionSpan.style.cssText =
       "color: #666; display: flex; align-items: center; gap: 8px;";
 
-    if (t.hasPython) {
-      const badge = document.createElement("span");
-      badge.className = "hpm-badge";
-      badge.textContent = "HPM";
-      badge.title = "Ten test wspiera tryb wysokiej precyzji (Python/PsychoPy)";
-      versionSpan.appendChild(badge);
-    }
-
     versionSpan.appendChild(document.createTextNode(`v${t.version}`));
 
     topDiv.appendChild(iconsDiv);
@@ -755,12 +634,6 @@ function renderListView(tests) {
     versionSpan.style.alignItems = "center";
     versionSpan.style.gap = "8px";
 
-    if (t.hasPython) {
-      const badge = document.createElement("span");
-      badge.className = "hpm-badge small";
-      badge.textContent = "HPM";
-      versionSpan.appendChild(badge);
-    }
     versionSpan.appendChild(document.createTextNode(`v${t.version}`));
 
     const statusSpan = document.createElement("span");
@@ -964,12 +837,6 @@ function renderCompactView(tests) {
     versionSpan.style.alignItems = "center";
     versionSpan.style.gap = "4px";
 
-    if (t.hasPython) {
-      const badge = document.createElement("span");
-      badge.className = "hpm-badge compact";
-      badge.textContent = "HPM";
-      versionSpan.appendChild(badge);
-    }
     versionSpan.appendChild(document.createTextNode(`v${t.version}`));
 
     const button = document.createElement("button");
@@ -1056,7 +923,6 @@ export async function startTestProcess(
         id,
         ver,
         onlyDownload,
-        isHpmEnabled,
         isTrainingMode,
         name,
         description,
