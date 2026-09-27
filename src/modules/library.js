@@ -10,7 +10,6 @@ import {
   sortByInstallStatus,
   debounce,
   getLocalVersionsCached,
-  invalidateLocalVersionsCache,
   escapeHtml,
 } from "./utils.js";
 import * as Tags from "./tags.js";
@@ -82,7 +81,6 @@ export function initLibraryListeners() {
 
   window.electronAPI.onTestInstalled((data) => {
     console.log("Test installed, refreshing library:", data);
-    invalidateLocalVersionsCache(); // Unieważnij cache
     loadTestsList(undefined, true); // Force refresh
   });
 

@@ -4,7 +4,7 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/f
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
 import { Dialog } from './dialog.js';
-import { sortByInstallStatus, debounce, getLocalVersionsCached, invalidateLocalVersionsCache, updateUpdatesBadge } from './utils.js';
+import { sortByInstallStatus, debounce, getLocalVersionsCached, updateUpdatesBadge } from './utils.js';
 
 let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
@@ -34,7 +34,6 @@ export function initUpdatesListeners() {
 
     window.electronAPI.onTestInstalled((data) => {
         console.log("Test installed (update), refreshing...", data);
-        invalidateLocalVersionsCache(); // Unieważnij cache
         loadUpdatesData();
         loadTestsList(undefined, true);
     });
@@ -241,7 +240,6 @@ export async function deleteLocalTest(test_id) {
 
         const res = await window.electronAPI.deleteTest(test_id);
         if (res.success) {
-            invalidateLocalVersionsCache(); // Unieważnij cache po usunięciu
             loadUpdatesData();
             loadTestsList();
         } else {

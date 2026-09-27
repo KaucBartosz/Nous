@@ -65,33 +65,22 @@ export function debounce(fn, delay = 200) {
 }
 
 // ==========================================================
-// CACHE WERSJI LOKALNYCH
+// WERSJE LOKALNE (bez cache — odczyt z dysku przez IPC jest tani,
+// a cache z TTL powodował nieświeże dane i wymagał ręcznego unieważniania)
 // ==========================================================
 
-let localVersionsCache = null;
-let lastFetchTime = 0;
-const CACHE_TTL = 5000; // 5 sekund
-
 /**
- * Pobiera wersje lokalne z cache lub z API (jeśli cache wygasł).
+ * Pobiera wersje lokalne (zawsze świeże).
  * @returns {Promise<Object>} - Obiekt {testId: version}
  */
 export async function getLocalVersionsCached() {
-    const now = Date.now();
-
-    // Sprawdź czy cache jest aktualny
-    if (localVersionsCache && (now - lastFetchTime < CACHE_TTL)) {
-        return localVersionsCache;
-    }
-
     // Pobierz świeże dane
     if (window.electronAPI) {
         try {
-            localVersionsCache = await window.electronAPI.getLocalVersions();
-            lastFetchTime = now;
+            return await window.electronAPI.getLocalVersions();
         } catch (e) {
             console.error("Error fetching local versions:", e);
-            return localVersionsCache || {};
+            return {};
         }
     } else {
         // Tryb Web (Aplikacja w przeglądarce)
@@ -111,26 +100,15 @@ export async function getLocalVersionsCached() {
                         webPath: test.path || ''
                     };
                 });
-                localVersionsCache = webVersions;
-                lastFetchTime = now;
+                return webVersions;
             } else {
-                localVersionsCache = {};
+                return {};
             }
         } catch (err) {
             console.warn("Tryb Web: Błąd pobierania tests-registry.json", err);
-            localVersionsCache = {};
+            return {};
         }
     }
-
-    return localVersionsCache || {};
-}
-
-/**
- * Unieważnia cache wersji lokalnych (np. po instalacji/usunięciu testu).
- */
-export function invalidateLocalVersionsCache() {
-    localVersionsCache = null;
-    lastFetchTime = 0;
 }
 
 // ==========================================================

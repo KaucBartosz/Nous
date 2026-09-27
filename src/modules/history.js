@@ -208,6 +208,27 @@ function openFilterDropdownFor(type, btn) {
   });
 }
 
+// Jedna funkcja licząca zamiast 3 kopii pętli
+// (test_id/subject_id/status różniły się tylko wyciąganiem klucza).
+function countBy(results, keyFn) {
+  const counts = {};
+  results.forEach(r => {
+    const val = keyFn(r);
+    counts[val] = (counts[val] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+}
+
+function statusLabel(r) {
+  const sync_status = r.sync_status || r.syncStatus;
+  if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) return 'Konto lokalne';
+  if (sync_status === 'LOCAL') return 'Konto lokalne';
+  if (r.researcher_uid === 'GUEST') return 'Tryb Gościa';
+  if (sync_status === 'SYNCED') return 'Zsynchronizowano';
+  if (sync_status === 'PENDING') return 'Oczekuje';
+  return 'Lokalne';
+}
+
 function buildFilterValues(type) {
   const results = currentAllResults;
   if (type === 'date') {
@@ -228,40 +249,13 @@ function buildFilterValues(type) {
     return tree;
   }
   if (type === 'test_id') {
-    const counts = {};
-    results.forEach(r => {
-      const val = r.test_id || r.testId || 'Nieznany';
-      counts[val] = (counts[val] || 0) + 1;
-    });
-    return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+    return countBy(results, r => r.test_id || r.testId || 'Nieznany');
   }
   if (type === 'subject_id') {
-    const counts = {};
-    results.forEach(r => {
-      const val = r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany';
-      counts[val] = (counts[val] || 0) + 1;
-    });
-    return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+    return countBy(results, r => r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany');
   }
   if (type === 'status') {
-    const counts = {};
-    results.forEach(r => {
-      let label = 'Lokalne';
-      const sync_status = r.sync_status || r.syncStatus;
-      if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) {
-        label = 'Konto lokalne';
-      } else if (sync_status === 'LOCAL') {
-        label = 'Konto lokalne';
-      } else if (r.researcher_uid === 'GUEST') {
-        label = 'Tryb Gościa';
-      } else if (sync_status === 'SYNCED') {
-        label = 'Zsynchronizowano';
-      } else if (sync_status === 'PENDING') {
-        label = 'Oczekuje';
-      }
-      counts[label] = (counts[label] || 0) + 1;
-    });
-    return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+    return countBy(results, statusLabel);
   }
   return [];
 }

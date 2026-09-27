@@ -67,6 +67,37 @@ function getDefaultsForTheme(theme) {
     return { ...DEFAULT_DARK_SETTINGS };
 }
 
+// Jeden deskryptor na kolor w formularzu (klucz elements to key+'Picker'/'Value'):
+// - fallback: inny klucz ustawień używany gdy brak wartości,
+// - fallbackValue: literał używany w ostateczności,
+// - hexOnly: input[type=color] wymaga HEX (nie rgba) — w przeciwnym razie fallbackValue.
+const COLOR_FIELDS = [
+    { key: 'primaryColor' },
+    { key: 'primaryHover' },
+    { key: 'textMain' },
+    { key: 'textMuted' },
+    { key: 'textInactiveTab', fallback: 'textMuted' },
+    { key: 'textTestDescription', fallback: 'textMuted' },
+    { key: 'textTestName', fallback: 'textMain' },
+    { key: 'buttonText', fallbackValue: '#ffffff' },
+    { key: 'iconColor' },
+    { key: 'iconActive' },
+    { key: 'bgDark', fallbackValue: '#0f111a', hexOnly: true },
+    { key: 'bgSidebar', fallbackValue: '#1a1c26', hexOnly: true },
+    { key: 'borderColor', fallbackValue: '#ffffff', hexOnly: true },
+];
+
+/**
+ * Wyznacza wartość koloru dla formularza (z fallbackami jak poprzednio per-pole).
+ */
+function resolveColor(settings, field) {
+    let val = settings[field.key];
+    if (!val && field.fallback) val = settings[field.fallback];
+    if (!val && field.fallbackValue) val = field.fallbackValue;
+    if (field.hexOnly && (typeof val !== 'string' || !val.startsWith('#'))) val = field.fallbackValue;
+    return val;
+}
+
 /**
  * Load settings from localStorage
  */
@@ -358,66 +389,18 @@ export function initSettings() {
 
     // Initialize form values
     function updateFormValues(settings) {
-        if (elements.primaryColorPicker) {
-            elements.primaryColorPicker.value = settings.primaryColor;
-            elements.primaryColorValue.value = settings.primaryColor;
-        }
-        if (elements.primaryHoverPicker) {
-            elements.primaryHoverPicker.value = settings.primaryHover;
-            elements.primaryHoverValue.value = settings.primaryHover;
-        }
-        if (elements.textMainPicker) {
-            elements.textMainPicker.value = settings.textMain;
-            elements.textMainValue.value = settings.textMain;
-        }
-        if (elements.textMutedPicker) {
-            elements.textMutedPicker.value = settings.textMuted;
-            elements.textMutedValue.value = settings.textMuted;
-        }
-        if (elements.textInactiveTabPicker) {
-            const val = settings.textInactiveTab || settings.textMuted;
-            elements.textInactiveTabPicker.value = val;
-            elements.textInactiveTabValue.value = val;
-        }
-        if (elements.textTestDescriptionPicker) {
-            const val = settings.textTestDescription || settings.textMuted;
-            elements.textTestDescriptionPicker.value = val;
-            elements.textTestDescriptionValue.value = val;
-        }
-        if (elements.textTestNamePicker) {
-            const val = settings.textTestName || settings.textMain;
-            elements.textTestNamePicker.value = val;
-            elements.textTestNameValue.value = val;
-        }
-        if (elements.buttonTextPicker) {
-            elements.buttonTextPicker.value = settings.buttonText || '#ffffff';
-            elements.buttonTextValue.value = settings.buttonText || '#ffffff';
-        }
+        COLOR_FIELDS.forEach(f => {
+            const picker = elements[f.key + 'Picker'];
+            if (!picker) return;
+            const val = resolveColor(settings, f);
+            picker.value = val;
+            // Podgląd tekstowy pokazuje surową wartość (jak poprzednio), picker — znormalizowaną.
+            const raw = settings[f.key];
+            const valueDisplay = elements[f.key + 'Value'];
+            if (valueDisplay) valueDisplay.value = (raw === undefined || raw === null || raw === '') ? val : raw;
+        });
         if (elements.showLocalTestsToggle) {
             elements.showLocalTestsToggle.checked = settings.showLocalTests === true;
-        }
-        if (elements.iconColorPicker) {
-            elements.iconColorPicker.value = settings.iconColor;
-            elements.iconColorValue.value = settings.iconColor;
-        }
-        if (elements.iconActivePicker) {
-            elements.iconActivePicker.value = settings.iconActive;
-            elements.iconActiveValue.value = settings.iconActive;
-        }
-        if (elements.bgDarkPicker) {
-          const bgDark = typeof settings.bgDark === 'string' ? settings.bgDark : '#0f111a';
-          elements.bgDarkPicker.value = bgDark.startsWith('#') ? bgDark : '#0f111a';
-          elements.bgDarkValue.value = bgDark;
-        }
-        if (elements.bgSidebarPicker) {
-          const bgSidebar = typeof settings.bgSidebar === 'string' ? settings.bgSidebar : '#1a1c26';
-          elements.bgSidebarPicker.value = bgSidebar.startsWith('#') ? bgSidebar : '#1a1c26';
-          elements.bgSidebarValue.value = bgSidebar;
-        }
-        if (elements.borderColorPicker) {
-          const borderHex = typeof settings.borderColor === 'string' ? settings.borderColor : '#ffffff';
-          elements.borderColorPicker.value = borderHex.startsWith('#') ? borderHex : '#ffffff';
-          elements.borderColorValue.value = borderHex;
         }
 
         elements.themeRadios.forEach(radio => {
@@ -447,19 +430,9 @@ export function initSettings() {
         });
     }
 
-    setupColorPicker(elements.primaryColorPicker, elements.primaryColorValue, 'primaryColor');
-    setupColorPicker(elements.primaryHoverPicker, elements.primaryHoverValue, 'primaryHover');
-    setupColorPicker(elements.textMainPicker, elements.textMainValue, 'textMain');
-    setupColorPicker(elements.textMutedPicker, elements.textMutedValue, 'textMuted');
-    setupColorPicker(elements.textInactiveTabPicker, elements.textInactiveTabValue, 'textInactiveTab');
-    setupColorPicker(elements.textTestDescriptionPicker, elements.textTestDescriptionValue, 'textTestDescription');
-    setupColorPicker(elements.textTestNamePicker, elements.textTestNameValue, 'textTestName');
-    setupColorPicker(elements.buttonTextPicker, elements.buttonTextValue, 'buttonText');
-    setupColorPicker(elements.iconColorPicker, elements.iconColorValue, 'iconColor');
-    setupColorPicker(elements.iconActivePicker, elements.iconActiveValue, 'iconActive');
-    setupColorPicker(elements.bgDarkPicker, elements.bgDarkValue, 'bgDark');
-    setupColorPicker(elements.bgSidebarPicker, elements.bgSidebarValue, 'bgSidebar');
-    setupColorPicker(elements.borderColorPicker, elements.borderColorValue, 'borderColor');
+    COLOR_FIELDS.forEach(f => {
+        setupColorPicker(elements[f.key + 'Picker'], elements[f.key + 'Value'], f.key);
+    });
 
     // Theme change - reset to defaults for selected theme
     elements.themeRadios.forEach(radio => {

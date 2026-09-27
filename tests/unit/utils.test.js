@@ -4,7 +4,6 @@ import {
   escapeHtml,
   debounce,
   getLocalVersionsCached,
-  invalidateLocalVersionsCache,
   flattenObject,
   updateUpdatesBadge
 } from '../../src/modules/utils.js';
@@ -269,38 +268,18 @@ describe('debounce', () => {
 });
 
 // ==========================================================
-// getLocalVersionsCached Tests
+// getLocalVersionsCached Tests (bez cache — zawsze świeże dane)
 // ==========================================================
 describe('getLocalVersionsCached', () => {
   beforeEach(() => {
-    invalidateLocalVersionsCache();
-    vi.useFakeTimers();
     // Reset mock before each test
     window.electronAPI.getLocalVersions.mockClear();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('returns cached data if TTL not expired', async () => {
-    const mockVersions = { test1: { version: 1 }, test2: { version: 2 } };
-    window.electronAPI.getLocalVersions.mockResolvedValue(mockVersions);
-
-    // First call - fetches from API
-    const result1 = await getLocalVersionsCached();
-    expect(result1).toEqual(mockVersions);
-
-    // Second call - returns cached data
-    const result2 = await getLocalVersionsCached();
-    expect(result2).toEqual(mockVersions);
-    expect(window.electronAPI.getLocalVersions).toHaveBeenCalledTimes(1);
-  });
-
-  it('fetches fresh data if cache expired (TTL)', async () => {
+  it('fetches fresh data on every call (no cache)', async () => {
     const mockVersions1 = { test1: { version: 1 } };
     const mockVersions2 = { test1: { version: 2 } };
-    
+
     window.electronAPI.getLocalVersions
       .mockResolvedValueOnce(mockVersions1)
       .mockResolvedValueOnce(mockVersions2);
@@ -309,30 +288,17 @@ describe('getLocalVersionsCached', () => {
     const result1 = await getLocalVersionsCached();
     expect(result1).toEqual(mockVersions1);
 
-    // Advance time past TTL (5 seconds + 1ms)
-    vi.advanceTimersByTime(5001);
-
-    // Second call - should fetch fresh data
+    // Second call — still fetches (no TTL cache)
     const result2 = await getLocalVersionsCached();
     expect(result2).toEqual(mockVersions2);
     expect(window.electronAPI.getLocalVersions).toHaveBeenCalledTimes(2);
   });
 
-  it('returns cached data on error', async () => {
-    const mockVersions = { test1: { version: 1 } };
-    window.electronAPI.getLocalVersions
-      .mockResolvedValueOnce(mockVersions)
-      .mockRejectedValueOnce(new Error('Network error'));
+  it('returns empty object on error', async () => {
+    window.electronAPI.getLocalVersions.mockRejectedValueOnce(new Error('API Error'));
 
-    // First call - successful
-    await getLocalVersionsCached();
-
-    // Advance time past TTL
-    vi.advanceTimersByTime(5001);
-
-    // Second call - error, should return cached data
     const result = await getLocalVersionsCached();
-    expect(result).toEqual(mockVersions);
+    expect(result).toEqual({});
   });
 
   it('returns empty object when no electronAPI', async () => {
@@ -343,63 +309,6 @@ describe('getLocalVersionsCached', () => {
     expect(result).toEqual({});
 
     window.electronAPI = originalAPI;
-  });
-
-  it('returns empty object on first call error with no cache', async () => {
-    window.electronAPI.getLocalVersions.mockRejectedValueOnce(new Error('API Error'));
-
-    const result = await getLocalVersionsCached();
-    expect(result).toEqual({});
-  });
-});
-
-// ==========================================================
-// invalidateLocalVersionsCache Tests
-// ==========================================================
-describe('invalidateLocalVersionsCache', () => {
-  beforeEach(() => {
-    invalidateLocalVersionsCache();
-    vi.useFakeTimers();
-    // Reset mock before each test
-    window.electronAPI.getLocalVersions.mockClear();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('invalidates cache forcing fresh fetch', async () => {
-    const mockVersions1 = { test1: { version: 1 } };
-    const mockVersions2 = { test2: { version: 2 } };
-
-    window.electronAPI.getLocalVersions
-      .mockResolvedValueOnce(mockVersions1)
-      .mockResolvedValueOnce(mockVersions2);
-
-    // First call
-    const result1 = await getLocalVersionsCached();
-    expect(result1).toEqual(mockVersions1);
-
-    // Invalidate cache
-    invalidateLocalVersionsCache();
-
-    // Should fetch fresh data even without TTL expiry
-    const result2 = await getLocalVersionsCached();
-    expect(result2).toEqual(mockVersions2);
-    expect(window.electronAPI.getLocalVersions).toHaveBeenCalledTimes(2);
-  });
-
-  it('resets cache to null', async () => {
-    window.electronAPI.getLocalVersions
-      .mockResolvedValueOnce({ test: { version: 1 } })
-      .mockResolvedValueOnce({ test: { version: 2 } });
-
-    await getLocalVersionsCached();
-    invalidateLocalVersionsCache();
-
-    // After invalidation, should fetch again
-    await getLocalVersionsCached();
-    expect(window.electronAPI.getLocalVersions).toHaveBeenCalledTimes(2);
   });
 });
 

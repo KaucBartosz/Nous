@@ -32,26 +32,16 @@ export function initSyncService() {
 }
 
 export function enforceSyncPolicy(status) {
-  // Konta lokalne i goście nigdy nie synchronizują — wymusz wyłączenie i zakończ
-  if (status === "LOCAL" || status === "GUEST") {
+  // Synchronizować mogą wyłącznie zatwierdzeni użytkownicy (konta lokalne/goście nigdy).
+  if (status !== "APPROVED") {
     if (isAutoSyncEnabled) {
-      console.log(
-        "AutoSync disabled: konto lokalne/gość nie synchronizuje z chmurą.",
-      );
+      console.log("AutoSync disabled due to status:", status);
       isAutoSyncEnabled = false;
       localStorage.setItem("autoSync", "false");
       const toggleSync = document.getElementById("toggle-sync");
       if (toggleSync) toggleSync.checked = false;
     }
-    return; // Wyjdź — dalsze sprawdzenia nie mają sensu
-  }
-
-  if (isAutoSyncEnabled && status !== "APPROVED") {
-    console.log("AutoSync disabled due to non-approved status:", status);
-    isAutoSyncEnabled = false;
-    localStorage.setItem("autoSync", "false");
-    const toggleSync = document.getElementById("toggle-sync");
-    if (toggleSync) toggleSync.checked = false;
+    return;
   }
 }
 

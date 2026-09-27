@@ -29,7 +29,6 @@ vi.mock("../../src/modules/utils.js", () => ({
   sortByInstallStatus: vi.fn((arr) => arr),
   debounce: vi.fn((fn) => fn),
   getLocalVersionsCached: vi.fn(() => Promise.resolve({})),
-  invalidateLocalVersionsCache: vi.fn(),
   escapeHtml: vi.fn((s) => s),
 }));
 

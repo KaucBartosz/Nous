@@ -17,9 +17,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test tests/e2e-electron.spec.js",
-    "test:e2e:ui": "playwright test tests/e2e-electron.spec.js --ui",
-    "test:e2e:debug": "playwright test tests/e2e-electron.spec.js --debug",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report"
   },
   "keywords": [],
@@ -39,8 +39,7 @@
     "adm-zip": "^0.5.16",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.1.7",
-    "firebase": "^12.8.0",
-    "idb": "^8.0.3"
+    "firebase": "^12.8.0"
   },
   "build": {
     "appId": "com.student.nous",

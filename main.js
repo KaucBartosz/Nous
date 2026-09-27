@@ -46,33 +46,15 @@ function processDownloadQueue() {
  * Helper do znajdowania właściwego folderu danych na wszystkich platformach
  */
 function getUserDataPath() {
-    let userDataPath = app.getPath('userData');
+    const userDataPath = app.getPath('userData');
 
     // macOS: ~/Library/Application Support/Nous
     if (process.platform === 'darwin') {
         return path.join(app.getPath('home'), 'Library', 'Application Support', 'Nous');
     }
 
-    // Linux: sprawdź różne ścieżki dla różnych dystrybucji
-    if (process.platform === 'linux') {
-        const os = require('os');
-        const candidates = [
-            path.join(os.homedir(), '.config', 'nous'),
-            path.join(os.homedir(), '.config', 'Nous'),
-            path.join(os.homedir(), '.config', 'nous-launcher'),
-            path.join(os.homedir(), '.config', 'Electron'),
-            path.join(os.homedir(), '.config', 'electron')
-        ];
-
-        // Sprawdza czy w którejś z ścieżek znajduje sie folder z testami. Jeśli tak tą ścieżkę jako ścieżkę do której odnosi się program
-        for (const cand of candidates) {
-            if (fs.existsSync(path.join(cand, 'tests_library'))) {
-                return cand;
-            }
-        }
-    }
-
-    // Windows: domyślna ścieżka Electrona
+    // Linux: ~/.config/nous (nazwa z package.json:name; brak setName).
+    // Windows: domyślna ścieżka Electrona.
     return userDataPath;
 }
 
@@ -390,29 +372,8 @@ async function executeDownloadTask(task) {
 // ==========================================================
 
 ipcMain.handle('get-local-versions', async (event) => {
-    let userDataPath = getUserDataPath();
-    let testsDir = path.join(userDataPath, 'tests_library');
-
-    // Próba wsparcia jak największej ilości dystrybucji Linuxa (oraz wsteczna kompatybilność) po przez szukanie po wielu potencjalnych ścieżkach
-    if (process.platform === 'linux' && !fs.existsSync(testsDir)) {
-        const os = require('os');
-        const altPaths = [
-            path.join(os.homedir(), '.config', 'nous', 'tests_library'),
-            path.join(os.homedir(), '.config', 'Nous', 'tests_library'),
-            path.join(os.homedir(), '.config', 'nous-launcher', 'tests_library'),
-            path.join(os.homedir(), '.config', 'Electron', 'tests_library'),
-            path.join(os.homedir(), '.config', 'electron', 'tests_library'),
-            path.join(__dirname, 'tests_library') // Check current directory as well
-        ];
-
-        for (const altPath of altPaths) {
-            if (fs.existsSync(altPath)) {
-                console.log(`Found tests_library in alternative path: ${altPath}`);
-                testsDir = altPath;
-                break;
-            }
-        }
-    }
+    const userDataPath = getUserDataPath();
+    const testsDir = path.join(userDataPath, 'tests_library');
 
     const localVersions = {};
     // Store the path we used for debugging in a special key

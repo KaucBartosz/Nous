@@ -158,9 +158,6 @@ function displayWhatsNew(data) {
     nextBtn.disabled = (currentIndex <= 0);
     indexSpan.textContent = `${currentIndex + 1} / ${allReleases.length}`;
 
-    // Konwersja Markdown na HTML
-    const htmlContent = convertMarkdownToHTML(data.body);
-
     // Przewiń do góry przy zmianie wersji
     const container = document.querySelector('.content-area');
     if (container) container.scrollTop = 0;
@@ -173,121 +170,56 @@ function displayWhatsNew(data) {
                 <span class="release-date">Data wydania: ${escapeHtml(data.date)}</span>
             </div>
         </div>
-        <div class="release-body">
-            ${htmlContent}
-        </div>
+        <div class="release-body"></div>
         <div class="release-actions">
             <a href="${escapeHtml(data.html_url)}" target="_blank" class="btn primary small">
                 <span class="material-icons">open_in_new</span> Zobacz szczegóły tej wersji na GitHubie
             </a>
         </div>
     `;
-}
 
-function convertMarkdownToHTML(markdown) {
-    if (!markdown) return '';
-
-    // Normalize line endings
-    let html = markdown.replace(/\r\n/g, '\n');
-
-    // Headers
-    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-    // Bold & Italic
-    html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-    // Images syntax: ![alt](url)
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px; margin: 10px 0; display: block;">');
-
-    // Links: [text](url)
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-
-    // Existing <img ... /> tags
-    html = html.replace(/<img (.*?)src=["'](.*?)["'](.*?)>/g, '<img src="$2" $1 $3 style="max-width: 100%; height: auto; border-radius: 4px; margin: 10px 0; display: block;">');
-
-    // List items (dash and asterisk)
-    const lines = html.split('\n');
-    let inList = false;
-    const processedLines = lines.map(line => {
-        const listMatch = line.match(/^[*-] (.+)$/);
-        if (listMatch) {
-            let result = '';
-            if (!inList) {
-                result = '<ul>';
-                inList = true;
-            }
-            result += `<li>${listMatch[1]}</li>`;
-            return result;
-        } else {
-            if (inList) {
-                inList = false;
-                return '</ul>' + line;
-            }
-            return line;
-        }
-    });
-
-    if (inList) processedLines.push('</ul>');
-    html = processedLines.join('\n');
-
-    // Newlines to <br>
-    html = html.split('\n').map(line => {
-        if (line.match(/^<(h[1-3]|ul|li|img|div)/) || line.match(/<\/(ul|li|div)>$/)) return line;
-        if (line.trim() === '') return '<br>';
-        return line + '<br>';
-    }).join('\n');
-
-    // Strip dangerous tags and attributes
-    html = sanitizeHTML(html);
-
-    return html;
+    // Render treści opisu jako bezpieczny tekst (textContent — brak HTML z sieci)
+    renderReleaseBody(contentEl.querySelector('.release-body'), data.body);
 }
 
 /**
- * Sanitizes HTML produced by the Markdown converter.
- * Removes dangerous tags (script, iframe, etc.) and attributes (on*, javascript:).
+ * Renderuje opis wydania (Markdown z GitHuba) jako zwykły tekst:
+ * nagłówki #, listy -/*, reszta jako akapity. Wszystko przez textContent,
+ * więc wstrzyknięcie HTML/JS jest niemożliwe (nie potrzeba sanitizera).
  */
-function sanitizeHTML(html) {
-    const div = document.createElement('div');
-    div.innerHTML = html;
+function renderReleaseBody(container, markdown) {
+    if (!container) return;
+    container.textContent = '';
+    if (!markdown) return;
 
-    // Remove dangerous elements entirely
-    const dangerous = div.querySelectorAll('script, iframe, object, embed, form, svg, math, link, style, meta, base');
-    dangerous.forEach(el => el.remove());
-
-    // Sanitize all remaining elements
-    div.querySelectorAll('*').forEach(el => {
-        for (const attr of [...el.attributes]) {
-            const name = attr.name.toLowerCase();
-            const value = attr.value;
-
-            // Remove event handlers
-            if (name.startsWith('on')) {
-                el.removeAttribute(attr.name);
-                continue;
+    const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+    let list = null;
+    lines.forEach(rawLine => {
+        const line = rawLine.trim();
+        const heading = line.match(/^(#{1,3})\s+(.*)$/);
+        const item = line.match(/^[-*]\s+(.*)$/);
+        if (heading) {
+            list = null;
+            const h = document.createElement('h' + heading[1].length);
+            h.textContent = heading[2];
+            container.appendChild(h);
+        } else if (item) {
+            if (!list) {
+                list = document.createElement('ul');
+                container.appendChild(list);
             }
-
-            // Block javascript:, data:, vbscript: in href/src
-            if (name === 'href' || name === 'src' || name === 'action' || name === 'formaction') {
-                if (/^\s*(javascript|data|vbscript):/i.test(value)) {
-                    el.removeAttribute(attr.name);
-                    continue;
-                }
-                // Only allow https/http for img src
-                if (name === 'src' && el.tagName.toLowerCase() === 'img') {
-                    if (!/^\s*(https?:\/\/|\/)/i.test(value) && !value.startsWith('data:image/')) {
-                        el.removeAttribute(attr.name);
-                    }
-                }
-            }
+            const li = document.createElement('li');
+            li.textContent = item[1];
+            list.appendChild(li);
+        } else if (line === '') {
+            list = null;
+        } else {
+            list = null;
+            const p = document.createElement('p');
+            p.textContent = rawLine;
+            container.appendChild(p);
         }
     });
-
-    return div.innerHTML;
 }
 
 function showErrorState() {
