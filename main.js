@@ -542,10 +542,6 @@ ipcMain.handle('clear-e2e-key', async () => {
     }
 });
 
-ipcMain.handle('is-test-running', async () => {
-    return isTestRunning();
-});
-
 function openTestWindow(htmlPath) {
     if (isTestRunning()) return;
 
