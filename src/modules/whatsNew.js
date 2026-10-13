@@ -1,5 +1,6 @@
 import { elements } from './ui.js';
 import { escapeHtml } from './utils.js';
+import { getPlatform } from '../platform/index.js';
 
 const CACHE_KEY = 'whats_new_cache_v2';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
@@ -47,12 +48,7 @@ export function initWhatsNew() {
 
     // Obsługa przycisku otwierania GitHub
     githubBtn.addEventListener('click', () => {
-        const url = 'https://github.com/KaucBartosz/Nous/releases/';
-        if (window.electronAPI && window.electronAPI.openExternal) {
-            window.electronAPI.openExternal(url);
-        } else {
-            window.open(url, '_blank');
-        }
+        getPlatform().links.openExternal('https://github.com/KaucBartosz/Nous/releases/');
     });
 
     // Przechwytywanie wszystkich linków w kontenerze (w tym tych z Markdown)
@@ -62,11 +58,7 @@ export function initWhatsNew() {
             const link = e.target.closest('a');
             if (link && link.href && link.href.startsWith('http')) {
                 e.preventDefault();
-                if (window.electronAPI && window.electronAPI.openExternal) {
-                    window.electronAPI.openExternal(link.href);
-                } else {
-                    window.open(link.href, '_blank');
-                }
+                getPlatform().links.openExternal(link.href);
             }
         });
     }

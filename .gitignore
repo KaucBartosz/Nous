@@ -7,6 +7,11 @@ firestore.rules
 tests/Piorkowski/
 test-output.txt
 .codebase-index-cache.pkl
+# Lokalne pliki architektoniczne (niecommitowane na życzenie użytkownika)
+CONTEXT.md
+docs/adr/
+architecture-review-*.html
+
 # Zależności
 node_modules/
 .venv/

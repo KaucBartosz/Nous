@@ -4,14 +4,36 @@ import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.8.0/f
 import {
     hasCloudKey,
     setCloudKeyFromHex,
-    clearCloudKey,
     generateRandomHexKey,
     wrapCloudKey,
     unwrapCloudKey,
     formatRecoveryKey,
     unformatRecoveryKey
 } from './cryptoService.js';
-import { showError } from './ui.js';
+import {
+    isValidPin,
+    saltForUid,
+    setupNewMaster,
+    unlockWithPin,
+    recoverWithCode,
+    describeRemoteKey,
+} from '../session/e2ePolicy.js';
+import { createCloudVault, createLocalVault } from '../session/keyVault.js';
+
+/** Vault chmury nad prawdziwym Firestore (zależności jawne, polityka w session/). */
+function cloudVault() {
+    return createCloudVault({
+        getDocFn: async (uid) => {
+            const d = await getDoc(doc(db, "user_keys", uid));
+            return d.exists() ? d.data() : null;
+        },
+        setDocFn: (uid, payload) => setDoc(doc(db, "user_keys", uid), payload),
+        wrapFn: wrapCloudKey,
+        unwrapFn: unwrapCloudKey,
+        randomHexFn: generateRandomHexKey,
+    });
+}
+import { getPlatform } from '../platform/index.js';
 
 // Cached DOM elements (populated by initE2E)
 let _els = null;
@@ -52,7 +74,7 @@ export function initE2E() {
 
     e.btnSavePin?.addEventListener('click', async () => {
         const pin = e.pinSetupInput.value;
-        if (!pin || pin.length !== 6 || !/^\d+$/.test(pin)) {
+        if (!isValidPin(pin)) {
             e.pinSetupError.textContent = "PIN musi składać się z 6 cyfr.";
             return;
         }
@@ -64,21 +86,15 @@ export function initE2E() {
             e.btnSavePin.disabled = true;
             e.btnSavePin.textContent = "Szyfrowanie...";
 
-            const saltHex = getUserSalt();
-            const newMasterKey = generateRandomHexKey();
-            const wrapped = await wrapCloudKey(newMasterKey, pin, saltHex);
+            // C4: orkiestracja w session/e2ePolicy.js, tu tylko UI + persist
+            const newMasterKey = await setupNewMaster(
+                { uid: user.uid, pin, salt: saltForUid(user.uid) },
+                cloudVault(),
+                { setRamKey: setCloudKeyFromHex },
+            );
 
-            await setDoc(doc(db, "user_keys", user.uid), {
-                encryptedMasterKey: wrapped.encryptedKey,
-                iv: wrapped.iv,
-                updatedAt: new Date().toISOString()
-            });
-
-            await setCloudKeyFromHex(newMasterKey);
-
-            if (window.electronAPI && window.electronAPI.setE2EKey) {
-                await window.electronAPI.setE2EKey(newMasterKey);
-            }
+            // C1: zapis klucza przez seam (Web/Fake obsłużone w adapterze)
+            await getPlatform().keys.setE2EKey(newMasterKey);
 
             e.pinSetupModal.classList.add('hidden');
 
@@ -105,7 +121,7 @@ export function initE2E() {
 
     e.btnSubmitPin?.addEventListener('click', async () => {
         const pin = e.pinEnterInput.value;
-        if (!pin || pin.length !== 6 || !/^\d+$/.test(pin)) {
+        if (!isValidPin(pin)) {
             e.pinEnterError.textContent = "PIN musi składać się z 6 cyfr.";
             return;
         }
@@ -120,19 +136,14 @@ export function initE2E() {
             const originalText = e.btnSubmitPin.textContent;
             e.btnSubmitPin.textContent = "Odszyfrowywanie...";
 
-            const keyDoc = await getDoc(doc(db, "user_keys", user.uid));
-            if (!keyDoc.exists()) throw new Error("Brak klucza w chmurze!");
+            // C4: unwrap w policy; brak klucza w chmurze rzuca jak wcześniej
+            const decryptedMasterKeyHex = await unlockWithPin(
+                { uid: user.uid, pin, salt: saltForUid(user.uid) },
+                cloudVault(),
+                { setRamKey: setCloudKeyFromHex },
+            );
 
-            const data = keyDoc.data();
-            const saltHex = getUserSalt();
-
-            const decryptedMasterKeyHex = await unwrapCloudKey(data.encryptedMasterKey, data.iv, pin, saltHex);
-
-            await setCloudKeyFromHex(decryptedMasterKeyHex);
-
-            if (window.electronAPI && window.electronAPI.setE2EKey) {
-                await window.electronAPI.setE2EKey(decryptedMasterKeyHex);
-            }
+            await getPlatform().keys.setE2EKey(decryptedMasterKeyHex);
 
             e.pinEnterModal.classList.add('hidden');
             e.btnSubmitPin.textContent = originalText;
@@ -174,7 +185,7 @@ export function initE2E() {
             e.pinRecoveryError.textContent = "Podaj kod odzyskiwania.";
             return;
         }
-        if (!newPin || newPin.length !== 6 || !/^\d+$/.test(newPin)) {
+        if (!isValidPin(newPin)) {
             e.pinRecoveryError.textContent = "Nowy PIN musi mieć 6 cyfr.";
             return;
         }
@@ -196,20 +207,14 @@ export function initE2E() {
                 throw new Error("Kod zawiera niedozwolone znaki.");
             }
 
-            const saltHex = getUserSalt();
-            const wrapped = await wrapCloudKey(unformattedCode, newPin, saltHex);
+            // C4: rotacja w policy
+            await recoverWithCode(
+                { uid: user.uid, cleanCode: unformattedCode, newPin, salt: saltForUid(user.uid) },
+                cloudVault(),
+                { setRamKey: setCloudKeyFromHex },
+            );
 
-            await setDoc(doc(db, "user_keys", user.uid), {
-                encryptedMasterKey: wrapped.encryptedKey,
-                iv: wrapped.iv,
-                updatedAt: new Date().toISOString()
-            });
-
-            await setCloudKeyFromHex(unformattedCode);
-
-            if (window.electronAPI && window.electronAPI.setE2EKey) {
-                await window.electronAPI.setE2EKey(unformattedCode);
-            }
+            await getPlatform().keys.setE2EKey(unformattedCode);
 
             e.pinRecoveryModal.classList.add('hidden');
 
@@ -229,19 +234,7 @@ export function initE2E() {
 }
 
 /**
- * Zwraca sól dla KDF dla obecnego usera
- */
-function getUserSalt() {
-    const user = auth.currentUser;
-    if (!user) throw new Error("Brak uzytkownika");
-    return Array.from(user.uid).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Check if the user has E2E setup in Firebase.
- * Shows PIN enter or PIN setup accordingly.
- * @param {Object} user - Firebase user object
- * @param {Function} onSuccess - Callback called when Cloud Key is loaded to RAM
+ * Stan zdalnego klucza (C4: decyzja w session/e2ePolicy.js, tu tylko modale).
  */
 export async function verifyE2E(user, onSuccess) {
     if (hasCloudKey()) {
@@ -257,13 +250,12 @@ export async function verifyE2E(user, onSuccess) {
     _onCloseCallback = onSuccess;
 
     try {
-        if (window.electronAPI && window.electronAPI.getE2EKey) {
-            const savedHexKey = await window.electronAPI.getE2EKey();
-            if (savedHexKey) {
-                await setCloudKeyFromHex(savedHexKey);
-                if (onSuccess) onSuccess();
-                return;
-            }
+        // C1: odczyt klucza przez seam (Web zwraca null → spada do modali PIN, jak wcześniej)
+        const savedHexKey = await getPlatform().keys.getE2EKey();
+        if (savedHexKey) {
+            await setCloudKeyFromHex(savedHexKey);
+            if (onSuccess) onSuccess();
+            return;
         }
     } catch (e) {
         console.warn("Failed to load local E2E key via safeStorage:", e);
@@ -271,22 +263,22 @@ export async function verifyE2E(user, onSuccess) {
 
     const e = _getEls();
 
-    try {
-        const keyDoc = await getDoc(doc(db, "user_keys", user.uid));
-        if (keyDoc.exists() && keyDoc.data().encryptedMasterKey) {
-            e.pinEnterInput.value = "";
-            e.pinEnterError.textContent = "";
-            e.pinEnterModal.classList.remove('hidden');
-        } else {
-            e.pinSetupInput.value = "";
-            e.pinSetupError.textContent = "";
-            e.pinSetupModal.classList.remove('hidden');
-        }
-    } catch (e) {
-        console.error("Failed to check user_keys", e);
+    const remoteState = await describeRemoteKey(user.uid, (uid) => cloudVault().fetchMeta(uid));
+    if (remoteState === "error") {
+        console.error("Failed to check user_keys");
         import('./dialog.js').then(({ Dialog }) => {
-            Dialog.alert("Błąd połączenia z bazą kluczy E2E. Prawdopodobnie brak wymaganych reguł w Firestore (collections: user_keys). Zgłoś to administratorowi. Szczegóły: " + e.message, 'error');
+            Dialog.alert("Błąd połączenia z bazą kluczy E2E. Prawdopodobnie brak wymaganych reguł w Firestore (collections: user_keys). Zgłoś to administratorowi.", 'error');
         });
         if (onSuccess) onSuccess();
+        return;
+    }
+    if (remoteState === "present") {
+        e.pinEnterInput.value = "";
+        e.pinEnterError.textContent = "";
+        e.pinEnterModal.classList.remove('hidden');
+    } else {
+        e.pinSetupInput.value = "";
+        e.pinSetupError.textContent = "";
+        e.pinSetupModal.classList.remove('hidden');
     }
 }

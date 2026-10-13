@@ -6,6 +6,7 @@ import {
 } from "./database.js";
 import { getResearcherUid } from "./auth.js";
 import { Dialog } from "./dialog.js";
+import { escapeHtml } from "./utils.js";
 
 // Callback to fill the demographics form — set by demographics.js
 let _fillFormCallback = null;
@@ -178,15 +179,4 @@ async function handleDeleteParticipant(participant) {
   } catch (e) {
     await Dialog.alert("Błąd usuwania: " + e.message, "error");
   }
-}
-
-/**
- * Minimal HTML escape helper (avoids importing entire utils.js for this).
- */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

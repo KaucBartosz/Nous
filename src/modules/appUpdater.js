@@ -4,12 +4,16 @@
  */
 
 import { updateUpdatesBadge } from './utils.js';
+import { getPlatform } from '../platform/index.js';
+import { toast } from '../notify/notify.js';
 
 // Tracks whether an app update is available (so we can add/remove +1 from badge)
 let _appUpdateAvailable = false;
 
 export function initAppUpdater() {
-    const api = window.electronAPI;
+    // C1: cały moduł przez seam (wcześniej 1x window.electronAPI + 15x api.*)
+    const platform = getPlatform();
+    const api = platform.updates;
 
     // Elements
     const versionSpan = document.getElementById('app-current-version');
@@ -27,7 +31,7 @@ export function initAppUpdater() {
     const actionContainer = document.getElementById('app-update-actions');
 
 
-    if (!api) {
+    if (platform.kind !== 'electron') {
         if (versionSpan) versionSpan.textContent = "Web Mode";
         if (statusDiv) statusDiv.textContent = "Aktualizacje dostępne tylko w aplikacji desktopowej.";
         if (actionContainer) actionContainer.style.display = 'none';
@@ -63,8 +67,8 @@ export function initAppUpdater() {
 
     if (btnDownload) {
         btnDownload.addEventListener('click', () => {
-            if (api.isMac) {
-                api.openExternal('https://github.com/KaucBartosz/Nous/releases/latest');
+            if (platform.isMac) {
+                platform.links.openExternal('https://github.com/KaucBartosz/Nous/releases/latest');
                 return;
             }
             hide(btnDownload); // Hide download button to prevent double click
@@ -90,7 +94,7 @@ export function initAppUpdater() {
     api.onAppUpdateAvailable((info) => {
         setStatus(`Dostępna nowa wersja: v${info.version}`, '#4caf50');
 
-        if (api.isMac) {
+        if (platform.isMac) {
             btnDownload.innerHTML = '<span class="material-icons">open_in_new</span> Otwórz GitHub (Pobierz)';
         }
 
@@ -112,51 +116,30 @@ export function initAppUpdater() {
         console.log("Update available:", info);
     });
 
-    // --- Helper: Create and Show Toast ---
+    // --- Helper: Create and Show Toast (C5: konstrukcja w notify, te same ID/klasy/teksty) ---
     function showUpdateToast(newVersion) {
-        // Prevent duplicates
-        if (document.getElementById('update-toast')) return;
-
-        const toast = document.createElement('div');
-        toast.id = 'update-toast';
-        toast.className = 'toast-notification';
-        toast.innerHTML = `
-            <div class="toast-content">
-                <div class="toast-header">
-                    <h4 class="toast-title">Dostępna Aktualizacja</h4>
-                    <button class="toast-close">&times;</button>
-                </div>
-                <p class="toast-message">Dostępna jest nowa wersja programu Nous (v${newVersion}).${api.isMac ? ' (Wymaga ręcznego pobrania na Mac)' : ''}</p>
-                <div class="toast-actions">
-                    <button class="toast-btn" id="btn-toast-dismiss">Później</button>
-                    <button class="toast-btn primary" id="btn-toast-update">${api.isMac ? 'Pobierz z GitHub' : 'Idź do Aktualizacji'}</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(toast);
-
-        // Animate in
-        setTimeout(() => toast.classList.add('show'), 100);
-
-        // Handlers
-        const close = () => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 400); // Wait for transition
-        };
-
-        toast.querySelector('.toast-close').addEventListener('click', close);
-        toast.querySelector('#btn-toast-dismiss').addEventListener('click', close);
-
-        toast.querySelector('#btn-toast-update').addEventListener('click', () => {
-            close();
-            if (api.isMac) {
-                api.openExternal('https://github.com/KaucBartosz/Nous/releases/latest');
-            } else {
-                // Switch to Updates Tab
-                const updatesBtn = document.getElementById('nav-updates');
-                if (updatesBtn) updatesBtn.click();
-            }
+        toast({
+            id: "update-toast",
+            titleHtml: "Dostępna Aktualizacja",
+            messageHtml: `Dostępna jest nowa wersja programu Nous (v${newVersion}).${platform.isMac ? ' (Wymaga ręcznego pobrania na Mac)' : ''}`,
+            actions: [
+                { id: "btn-toast-dismiss", label: "Później" },
+                {
+                    id: "btn-toast-update",
+                    label: platform.isMac ? 'Pobierz z GitHub' : 'Idź do Aktualizacji',
+                    primary: true,
+                    onClick: (close) => {
+                        close();
+                        if (platform.isMac) {
+                            platform.links.openExternal('https://github.com/KaucBartosz/Nous/releases/latest');
+                        } else {
+                            // Switch to Updates Tab
+                            const updatesBtn = document.getElementById('nav-updates');
+                            if (updatesBtn) updatesBtn.click();
+                        }
+                    },
+                },
+            ],
         });
     }
 

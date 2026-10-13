@@ -7,6 +7,13 @@ import { syncNow } from "./sync.js";
 import { Dialog } from "./dialog.js";
 import { loadTestsList, getTrainingMode } from "./library.js";
 import { escapeHtml } from "./utils.js";
+import { getPlatform } from "../platform/index.js";
+import {
+  resultRow,
+  toKeyValueCSV,
+  downloadFile,
+  WEB_RESULT_IGNORE_KEYS,
+} from "../results/resultExporter.js";
 
 let currentResultPackage = null;
 
@@ -23,36 +30,20 @@ function validateTestResults(raw) {
 }
 
 export function initResultsHandler() {
-  if (window.electronAPI) {
-    window.electronAPI.onTestResults((raw) => {
-      console.log("Odebrano wyniki z testu. Przetwarzanie...");
-      try {
-        const validatedData = validateTestResults(raw);
-        handleTestResults(validatedData);
-      } catch (e) {
-        console.error("Błąd walidacji wyników:", e);
-        import("./dialog.js").then(({ Dialog }) => {
-          Dialog.alert(`Błąd walidacji wyników testu: ${e.message}`, "error");
-        });
-      }
-    });
-  } else {
-    window.addEventListener("message", (event) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data && event.data.type === "test-results") {
-        console.log("Web: Odebrano wyniki z testu. Przetwarzanie...");
-        try {
-          const validatedData = validateTestResults(event.data.data);
-          handleTestResults(validatedData);
-        } catch (e) {
-          console.error("Web: Błąd walidacji wyników:", e);
-          import("./dialog.js").then(({ Dialog }) => {
-            Dialog.alert(`Błąd walidacji wyników testu: ${e.message}`, "error");
-          });
-        }
-      }
-    });
-  }
+  // C1: subskrypcja wyników przez seam — Electron słucha IPC,
+  // Web słucha postMessage; moduł nie zna różnicy.
+  getPlatform().tests.onResults((raw) => {
+    console.log("Odebrano wyniki z testu. Przetwarzanie...");
+    try {
+      const validatedData = validateTestResults(raw);
+      handleTestResults(validatedData);
+    } catch (e) {
+      console.error("Błąd walidacji wyników:", e);
+      import("./dialog.js").then(({ Dialog }) => {
+        Dialog.alert(`Błąd walidacji wyników testu: ${e.message}`, "error");
+      });
+    }
+  });
 
   elements.btnCloseModal.addEventListener("click", () => {
     elements.modalOverlay.classList.add("hidden");
@@ -193,7 +184,7 @@ async function saveResultToSystem() {
 
     await saveResult(currentResultPackage, currentUserId);
 
-    if (!window.electronAPI) {
+    if (getPlatform().kind === "web") {
       generateWebResultCSV(currentResultPackage);
     }
 
@@ -211,44 +202,12 @@ async function saveResultToSystem() {
 }
 
 function generateWebResultCSV(pkg) {
-  const flat = {};
-  flat["Data"] = new Date(pkg.timestamp).toLocaleString();
-  flat["Test ID"] = pkg.test_id;
-  flat["ID Badanego"] = pkg.subject_id;
-
-  if (pkg.demographics && pkg.demographics.data) {
-    for (const [key, value] of Object.entries(pkg.demographics.data)) {
-      flat[`Metryczka - ${key}`] = value;
-    }
-  }
-
-  if (pkg.wyniki) {
-    const ignoreKeys = ["testId", "subjectId", "timestamp", "test_id", "subject_id", "researcher_uid", "demographics", "__hpm_context", "participant", "psychopyVersion", "frameRate"];
-    for (const [key, value] of Object.entries(pkg.wyniki)) {
-      if (!ignoreKeys.includes(key) && value !== undefined && value !== null) {
-        flat[`Wynik - ${key}`] = value;
-      }
-    }
-  }
-
-  const bom = "\uFEFF";
-  let csvContent = bom + "Parametr;Wartość\r\n";
-  for (const [key, value] of Object.entries(flat)) {
-    let valStr = String(value);
-    if (valStr.includes(";") || valStr.includes("\n")) {
-      valStr = `"${valStr.replace(/"/g, '""')}"`;
-    }
-    csvContent += `${key};${valStr}\r\n`;
-  }
-
+  // C3: formatowanie w results/resultExporter.js (4. wariant CSV scalony)
+  const flat = resultRow(pkg, {
+    includeResearcher: false,
+    deep: false,
+    ignoreKeys: WEB_RESULT_IGNORE_KEYS,
+  });
   const filename = `Wynik_${pkg.test_id}_${Date.now()}.csv`;
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 100);
+  downloadFile(filename, toKeyValueCSV(flat), "text/csv;charset=utf-8;");
 }

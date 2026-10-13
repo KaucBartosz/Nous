@@ -5,6 +5,8 @@ import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
 import { Dialog } from './dialog.js';
 import { sortByInstallStatus, debounce, getLocalVersionsCached, updateUpdatesBadge } from './utils.js';
+import { getPlatform } from '../platform/index.js';
+import { loadCatalog, countUpdates } from '../catalog/testCatalog.js';
 
 let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
@@ -13,9 +15,10 @@ let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracj
  * Inicjalizuje listenery Electron API dla updates (wywołaj raz).
  */
 export function initUpdatesListeners() {
-    if (listenersRegistered || !window.electronAPI) return;
+    if (listenersRegistered) return;
+    const platform = getPlatform();
 
-    window.electronAPI.onDownloadProgress(({ test_id, percent }) => {
+    platform.tests.onProgress(({ test_id, percent }) => {
         const btn = document.getElementById(`force-update-${test_id}`);
         if (btn) {
             const progressText = btn.querySelector('.progress-text');
@@ -32,7 +35,7 @@ export function initUpdatesListeners() {
         }
     });
 
-    window.electronAPI.onTestInstalled((data) => {
+    platform.tests.onInstalled((data) => {
         console.log("Test installed (update), refreshing...", data);
         loadUpdatesData();
         loadTestsList(undefined, true);
@@ -60,23 +63,25 @@ export async function loadUpdatesData(filterText = '') {
 
     elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Skanowanie...</td></tr>';
     try {
-        const remoteSnap = await getDocs(collection(db, "tests"));
-        const localVersions = await getLocalVersionsCached();
+        // C5: rejestr + merge wersji z katalogu (bez backfillu/cache jak wcześniej);
+        // na Web Firestore bezpośrednio (jak wcześniej — widok i tak zablokowany).
+        const res = await loadCatalog({
+            cloudEnabled: true,
+            fetchRemote: () => getDocs(collection(db, "tests")),
+            isOnline: () => true,
+            getLocalVersions: getLocalVersionsCached,
+            getSettings: () => ({}),
+            backfill: false,
+        });
+        if (res.offline) throw new Error("Brak połączenia internetowego");
 
         elements.updatesTableBody.innerHTML = '';
-        if (remoteSnap.empty) {
+        if (res.empty) {
             elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak testów.</td></tr>';
             return;
         }
 
-        let tests = [];
-        remoteSnap.forEach(doc => {
-            const r = doc.data();
-            r.id = doc.id;
-            r.local_ver = localVersions[r.id] ? Number(localVersions[r.id].version) : 0;
-            r.remote_ver = Number(r.version);
-            tests.push(r);
-        });
+        let tests = res.tests;
 
         // 1. Filter
         if (filterText) {
@@ -87,9 +92,8 @@ export async function loadUpdatesData(filterText = '') {
         // 2. Sort (using shared utility)
         tests = sortByInstallStatus(tests);
 
-        // #12: Update badge count with number of tests needing update
-        const updatesCount = tests.filter(t => t.local_ver > 0 && t.local_ver < t.remote_ver).length;
-        updateUpdatesBadge(updatesCount);
+        // #12: Update badge count with number of tests needing update (C5: jedno źródło)
+        updateUpdatesBadge(countUpdates(tests));
 
         if (tests.length === 0) {
             elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak wyników wyszukiwania.</td></tr>';
@@ -218,7 +222,10 @@ export async function loadUpdatesData(filterText = '') {
 }
 
 export function forceUpdate(url, id, ver) {
-    if (window.electronAPI) {
+    // C1: na Web update leci przez Bibliotekę (tu był silent no-op — zachowane)
+    if (getPlatform().kind !== 'electron') return;
+    const platform = getPlatform();
+    {
         // Change button state
         const btn = document.getElementById(`force-update-${id}`);
         if (btn) {
@@ -229,16 +236,18 @@ export function forceUpdate(url, id, ver) {
             `;
         }
 
-        window.electronAPI.downloadAndRun(url, id, ver, true);
+        platform.tests.run({ url, id, ver, onlyDownload: true });
     }
 }
 
 export async function deleteLocalTest(test_id) {
-    if (window.electronAPI) {
+    // C1: usuwanie tylko na Desktop (na Web był silent no-op — zachowane)
+    if (getPlatform().kind !== 'electron') return;
+    {
         const confirmed = await Dialog.confirm("Czy na pewno chcesz usunąć ten test?");
         if (!confirmed) return;
 
-        const res = await window.electronAPI.deleteTest(test_id);
+        const res = await getPlatform().tests.deleteTest(test_id);
         if (res.success) {
             loadUpdatesData();
             loadTestsList();

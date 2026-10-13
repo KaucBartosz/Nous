@@ -4,6 +4,7 @@
 import { getAllLocalAccounts } from './database.js';
 import { adminResetLocalPassword, getUserStatus } from './auth.js';
 import { Dialog } from './dialog.js';
+import { escapeHtml } from './utils.js';
 
 /**
  * Ładuje i renderuje listę kont lokalnych w widoku admina.
@@ -105,12 +106,4 @@ async function handleAdminResetPassword(username) {
   } else {
     await Dialog.alert(`Błąd: ${result.error}`, 'error');
   }
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

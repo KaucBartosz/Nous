@@ -23,6 +23,9 @@ import {
   createLocalAccount,
   updateLocalAccountLastLogin,
 } from "./database.js";
+import { generateSalt, hashPassword } from "../session/passwordHash.js";
+import { createSession } from "../session/session.js";
+import { getPlatform } from "../platform/index.js";
 
 // ─── Prywatny stan modułu ────────────────────────────────────────────────────
 
@@ -56,34 +59,6 @@ function checkRateLimit(channel) {
   }
   _lastAttemptTime = now;
   return true;
-}
-
-// ─── Hashowanie haseł ────────────────────────────────────────────────────────
-
-/**
- * Generuje kryptograficznie bezpieczny salt (16 bajtów hex).
- */
-function generateSalt() {
-  const arr = new Uint8Array(16);
-  crypto.getRandomValues(arr);
-  return Array.from(arr)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-/**
- * Hashuje hasło z saltem (SHA-256).
- * @param {string} salt
- * @param {string} password
- * @returns {Promise<string>} hex string
- */
-async function hashPassword(salt, password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(salt + password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 // ─── Firebase Auth ───────────────────────────────────────────────────────────
@@ -178,9 +153,8 @@ export async function register(email, password) {
  * Wylogowanie z konta Firebase.
  */
 export async function logout() {
-  if (window.electronAPI && window.electronAPI.clearE2EKey) {
-    await window.electronAPI.clearE2EKey();
-  }
+  // C1: czyszczenie klucza przez seam (Web/Fake: noop)
+  await getPlatform().keys.clearE2EKey();
   await signOut(auth);
   location.reload();
 }
@@ -401,18 +375,18 @@ export function getCurrentLocalUser() {
 }
 
 /**
- * Zwraca researcher_uid odpowiedni dla aktualnego kontekstu:
+ * Zwraca researcher_uid odpowiedni dla aktualnego kontekstu (shim C4 —
+ * reguła w session/session.js, wołający bez zmian):
  * - Firebase: user.uid
  * - Lokalny: 'LOCAL::' + username
  * - Gość: 'GUEST'
  */
 export function getResearcherUid() {
-  const firebaseUser = auth.currentUser;
-  if (firebaseUser) return firebaseUser.uid;
-  if (_currentUserStatus === "LOCAL" && _currentLocalUsername) {
-    return `LOCAL::${_currentLocalUsername}`;
-  }
-  return "GUEST";
+  return createSession({
+    firebaseUid: (auth.currentUser && auth.currentUser.uid) || null,
+    kind: _currentUserStatus,
+    localUsername: _currentLocalUsername,
+  }).researcherUid;
 }
 
 /**

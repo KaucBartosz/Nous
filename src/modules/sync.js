@@ -8,6 +8,7 @@ import {
 import { getPendingResults, markAsSynced } from "./database.js";
 import { getCurrentUser, getUserStatus } from "./auth.js";
 import { Dialog } from "./dialog.js";
+import { toast, syncCountMessage } from "../notify/notify.js";
 
 let isAutoSyncEnabled = (() => {
   try {
@@ -305,35 +306,13 @@ function updateSyncUI(syncing, remaining) {
 }
 
 /**
- * #13 — Pokazuje toast po pomyślnej synchronizacji.
- * @param {number} count - Liczba zsynchronizowanych wyników
+ * #13 — Pokazuje toast po pomyślnej synchronizacji (C5: konstrukcja w notify).
  */
 function showSyncToast(count) {
-  // Prevent duplicates
-  if (document.getElementById("sync-toast")) return;
-
-  const toast = document.createElement("div");
-  toast.id = "sync-toast";
-  toast.className = "toast-notification";
-  toast.innerHTML = `
-        <div class="toast-content">
-            <div class="toast-header">
-                <h4 class="toast-title"><span class="material-icons" style="font-size:18px;vertical-align:middle;margin-right:6px;">cloud_done</span>Synchronizacja</h4>
-                <button class="toast-close">&times;</button>
-            </div>
-            <p class="toast-message">Zsynchronizowano ${count} ${count === 1 ? "wynik" : count < 5 ? "wyniki" : "wyników"}.</p>
-        </div>
-    `;
-
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add("show"), 50);
-
-  const close = () => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 400);
-  };
-
-  toast.querySelector(".toast-close").addEventListener("click", close);
-  // Auto-dismiss after 4 seconds
-  setTimeout(close, 4000);
+  toast({
+    id: "sync-toast",
+    titleHtml: `<span class="material-icons" style="font-size:18px;vertical-align:middle;margin-right:6px;">cloud_done</span>Synchronizacja`,
+    messageHtml: syncCountMessage(count),
+    autoDismissMs: 4000,
+  });
 }

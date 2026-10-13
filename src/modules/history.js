@@ -18,8 +18,29 @@ import { getCurrentUser, getUserStatus, getResearcherUid } from "./auth.js";
 import { elements } from "./ui.js";
 import { syncSingleResult } from "./sync.js";
 import { Dialog } from "./dialog.js";
-import { flattenObject } from "./utils.js";
 import { decryptCloudData, hasCloudKey } from "./cryptoService.js";
+import { testIdOf, subjectIdOf } from "../results/resultPackage.js";
+import {
+  resolveStatusLabel,
+  hasActiveFilters,
+  filterResults,
+  paginate,
+} from "../results/historyQuery.js";
+import {
+  resultRow,
+  toKeyValueCSV,
+  toMatrixCSV,
+  downloadFile,
+} from "../results/resultExporter.js";
+import {
+  buildLocalKeys,
+  isAlreadyImported,
+  cloudRecordToLocal,
+  decryptCloudRecords,
+  importPreparedList,
+  prepareGuestImport,
+} from "../results/cloudResults.js";
+import { getPlatform } from "../platform/index.js";
 
 let isGuestViewActive = false;
 let isCloudViewActive = false;
@@ -140,10 +161,9 @@ function clearAllFilters() {
 }
 
 function updateClearFiltersBar() {
-  const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
   const bar = document.getElementById('active-filters-bar');
   if (bar) {
-    bar.classList.toggle('hidden', !hasFilters);
+    bar.classList.toggle('hidden', !hasActiveFilters(activeFilters));
   }
 }
 
@@ -219,15 +239,7 @@ function countBy(results, keyFn) {
   return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
 }
 
-function statusLabel(r) {
-  const sync_status = r.sync_status || r.syncStatus;
-  if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) return 'Konto lokalne';
-  if (sync_status === 'LOCAL') return 'Konto lokalne';
-  if (r.researcher_uid === 'GUEST') return 'Tryb Gościa';
-  if (sync_status === 'SYNCED') return 'Zsynchronizowano';
-  if (sync_status === 'PENDING') return 'Oczekuje';
-  return 'Lokalne';
-}
+// (statusLabel usunięty w C3 — jedyny resolver: resolveStatusLabel w results/historyQuery.js)
 
 function buildFilterValues(type) {
   const results = currentAllResults;
@@ -249,13 +261,13 @@ function buildFilterValues(type) {
     return tree;
   }
   if (type === 'test_id') {
-    return countBy(results, r => r.test_id || r.testId || 'Nieznany');
+    return countBy(results, testIdOf);
   }
   if (type === 'subject_id') {
-    return countBy(results, r => r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany');
+    return countBy(results, subjectIdOf);
   }
   if (type === 'status') {
-    return countBy(results, statusLabel);
+    return countBy(results, resolveStatusLabel);
   }
   return [];
 }
@@ -606,53 +618,8 @@ function applyFilters() {
 }
 
 function getFilteredResults() {
-  const results = currentAllResults;
-  const hasActiveFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
-  if (!hasActiveFilters) return results;
-
-  return results.filter(r => {
-    // Date filter
-    if (activeFilters.date.size > 0) {
-      const d = new Date(r.timestamp);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const day = d.getDate();
-      const dayKey = `day:${year}:${month}:${day}`;
-      if (!activeFilters.date.has(dayKey)) return false;
-    }
-
-    // Test ID filter
-    if (activeFilters.test_id.size > 0) {
-      const testId = r.test_id || r.testId || 'Nieznany';
-      if (!activeFilters.test_id.has(testId)) return false;
-    }
-
-    // Subject ID filter
-    if (activeFilters.subject_id.size > 0) {
-      const subjectId = r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany';
-      if (!activeFilters.subject_id.has(subjectId)) return false;
-    }
-
-    // Status filter
-    if (activeFilters.status.size > 0) {
-      let statusLabel = 'Lokalne';
-      const sync_status = r.sync_status || r.syncStatus;
-      if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) {
-        statusLabel = 'Konto lokalne';
-      } else if (sync_status === 'LOCAL') {
-        statusLabel = 'Konto lokalne';
-      } else if (r.researcher_uid === 'GUEST') {
-        statusLabel = 'Tryb Gościa';
-      } else if (sync_status === 'SYNCED') {
-        statusLabel = 'Zsynchronizowano';
-      } else if (sync_status === 'PENDING') {
-        statusLabel = 'Oczekuje';
-      }
-      if (!activeFilters.status.has(statusLabel)) return false;
-    }
-
-    return true;
-  });
+  // C3: czysty query-model (logika w results/historyQuery.js)
+  return filterResults(currentAllResults, activeFilters);
 }
 
 function updateFilterBadges() {
@@ -699,17 +666,18 @@ function renderHistoryPage() {
   const filteredResults = getFilteredResults();
   const user = getCurrentUser();
   const researcherUid = getResearcherUid();
-  const totalPages = Math.ceil(filteredResults.length / PAGE_SIZE);
+
+  // C3: stronicowanie w query-modelu
+  const { items: pageResults, totalPages } = paginate(filteredResults, currentPage, PAGE_SIZE);
 
   // Update/create pagination controls
   updatePaginationControls(filteredResults.length, totalPages);
 
   if (filteredResults.length === 0) {
-    const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
     let msg = isGuestViewActive
       ? "Brak wyników w trybie Gościa."
       : "Brak wyników.";
-    if (hasFilters) {
+    if (hasActiveFilters(activeFilters)) {
       msg = "Brak wyników pasujących do aktywnych filtrów.";
     }
     const tr = document.createElement("tr");
@@ -721,9 +689,7 @@ function renderHistoryPage() {
     return;
   }
 
-  const startIdx = (currentPage - 1) * PAGE_SIZE;
-  const pageResults = filteredResults.slice(startIdx, startIdx + PAGE_SIZE);
-
+  // C3: stronicowanie w query-modelu (pageResults z góry funkcji)
   pageResults.forEach((r) => {
     const resultData = r.wyniki || r.data || {};
     const score = resultData.czas_reakcji
@@ -984,49 +950,13 @@ function downloadSingleResult(result) {
 }
 
 function downloadSingleResultAsCSV(result) {
-  const flat = {};
-  flat["Data"] = new Date(result.timestamp).toLocaleString();
-  flat["Test ID"] = result.test_id || result.testId;
-  flat["ID Badanego"] = result.subject_id || "-";
-  flat["Badacz UID"] = result.researcher_uid;
-
-  const demo = result.demographics || {};
-  if (demo.data) {
-    Object.keys(demo.data).forEach((k) => {
-      flat[`Metryczka - ${k}`] = demo.data[k];
-    });
-  }
-
-  // #4 FIX: Use flattenObject from utils.js (no local duplicate)
-  const resData = result.wyniki || result.data || {};
-  flattenObject(resData, flat, "Wynik");
-
-  const bom = "\uFEFF";
-  let csvContent = bom + "Parametr;Wartość\r\n";
-
-  for (const [key, value] of Object.entries(flat)) {
-    let valStr = String(value);
-    if (valStr.includes(";") || valStr.includes("\n")) {
-      valStr = `"${valStr.replace(/"/g, '""')}"`;
-    }
-    csvContent += `${key};${valStr}\r\n`;
-  }
+  // C3: formatowanie w results/resultExporter.js (bajtowo zgodne)
+  const flat = resultRow(result, { deep: true });
+  const csvContent = toKeyValueCSV(flat);
 
   const test_id = result.test_id || result.testId;
   const filename = `wynik_${test_id}_${new Date(result.timestamp).getTime()}.csv`;
   downloadFile(filename, csvContent, "text/csv;charset=utf-8;");
-}
-
-function downloadFile(filename, content, type) {
-  const blob = new Blob([content], { type: type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 // ===================================================
@@ -1057,29 +987,11 @@ async function loadCloudResults() {
     );
 
     const snap = await getDocs(q);
-    cachedCloudResults = [];
-    for (const docSnap of snap.docs) {
-      const data = docSnap.data();
-      data.firestore_id = docSnap.id;
-
-      if (data.is_encrypted && data.iv) {
-        if (!hasCloudKey()) {
-          data.data = { score: "Zaszyfrowane (Brak Klucza Chmury)" };
-        } else {
-          try {
-            const decrypted = await decryptCloudData(data.data, data.iv);
-            data.data = decrypted.data;
-            data.demographics = decrypted.demographics;
-            data.is_encrypted = false; // Po odszyfrowaniu w RAM zachowuje się jak zwykły obiekt
-          } catch (e) {
-            console.error("Failed to decrypt cloud result:", e);
-            data.data = { score: "Błąd Deszyfracji" };
-          }
-        }
-      }
-
-      cachedCloudResults.push(data);
-    }
+    // C3: deszyfracja równoległa w results/cloudResults.js (kolejność zachowana)
+    cachedCloudResults = await decryptCloudRecords(
+      snap.docs.map((docSnap) => ({ ...docSnap.data(), firestore_id: docSnap.id })),
+      { hasKey: hasCloudKey, decrypt: decryptCloudData },
+    );
 
     await renderCloudResultsTable(cachedCloudResults);
   } catch (e) {
@@ -1109,12 +1021,9 @@ async function renderCloudResultsTable(results) {
     return;
   }
 
+  // C3: klucze już-zaimportowanych w results/cloudResults.js
   const localResults = await getAllResults();
-  const localKeys = new Set();
-  localResults.forEach((r) => {
-    if (r.firestore_id) localKeys.add(r.firestore_id);
-    localKeys.add(`${r.timestamp}_${r.test_id}_${r.subject_id}`);
-  });
+  const localKeys = buildLocalKeys(localResults);
 
   results.forEach((data) => {
     const row = document.createElement("tr");
@@ -1155,9 +1064,8 @@ async function renderCloudResultsTable(results) {
     const tdStatus = document.createElement("td");
     tdStatus.style.textAlign = "center";
 
-    const cloudKeyMeta = `${data.timestamp}_${data.test_id}_${data.subject_id}`;
-    const alreadyExists =
-      localKeys.has(data.firestore_id) || localKeys.has(cloudKeyMeta);
+    // C3: decyzja zaimportowany/nowy w results/cloudResults.js
+    const alreadyExists = isAlreadyImported(data, localKeys);
 
     if (alreadyExists) {
       const statusBox = document.createElement("div");
@@ -1214,16 +1122,7 @@ async function handleImportResult(cloudResult) {
     }
 
     const user = getCurrentUser();
-    const localData = {
-      test_id: cloudResult.test_id,
-      subject_id: cloudResult.subject_id,
-      timestamp: cloudResult.timestamp,
-      researcher_uid: user.uid,
-      demographics: cloudResult.demographics,
-      wyniki: cloudResult.data,
-      firestore_id: cloudResult.firestore_id,
-      sync_status: "SYNCED",
-    };
+    const localData = cloudRecordToLocal(cloudResult, user.uid);
 
     await saveResult(localData, user.uid);
     Dialog.alert("Wynik został zaimportowany!", "success");
@@ -1237,39 +1136,21 @@ async function handleImportAll() {
   if (cachedCloudResults.length === 0) return;
 
   const user = getCurrentUser();
-  let count = 0;
-  let skipped = 0;
 
   try {
+    // C3: klucze + mapowanie w results/cloudResults.js, zapis równoległy
     const localResults = await getAllResults();
-    const localKeys = new Set();
-    localResults.forEach((r) => {
-      if (r.firestore_id) localKeys.add(r.firestore_id);
-      localKeys.add(`${r.timestamp}_${r.test_id}_${r.subject_id}`);
-    });
+    const localKeys = buildLocalKeys(localResults);
 
-    for (const cloudResult of cachedCloudResults) {
-      const cloudKeyMeta = `${cloudResult.timestamp}_${cloudResult.test_id}_${cloudResult.subject_id}`;
-      const exists =
-        localKeys.has(cloudResult.firestore_id) || localKeys.has(cloudKeyMeta);
-
-      if (!exists) {
-        const localData = {
-          test_id: cloudResult.test_id,
-          subject_id: cloudResult.subject_id,
-          timestamp: cloudResult.timestamp,
-          researcher_uid: user.uid,
-          demographics: cloudResult.demographics,
-          wyniki: cloudResult.data,
-          firestore_id: cloudResult.firestore_id,
-          sync_status: "SYNCED",
-        };
-        await saveResult(localData, user.uid);
-        count++;
-      } else {
-        skipped++;
-      }
-    }
+    const toImport = cachedCloudResults.filter(
+      (cloudResult) => !isAlreadyImported(cloudResult, localKeys),
+    );
+    const skipped = cachedCloudResults.length - toImport.length;
+    const count = await importPreparedList(
+      toImport.map((cloudResult) => cloudRecordToLocal(cloudResult, user.uid)),
+      user.uid,
+      saveResult,
+    );
 
     Dialog.alert(
       `Import zakończony. Dodano: ${count}, Pominięto (duplikaty): ${skipped}`,
@@ -1315,7 +1196,7 @@ async function handleDownloadAll() {
     }
 
     // Downloads selected or ALL cloud results (pagination does not affect this)
-    const result = await window.electronAPI.downloadBulkZip({
+    const result = await getPlatform().files.bulkZip({
       results: resultsToDownload,
       filename: filename,
       format: format,
@@ -1366,24 +1247,12 @@ async function handleImportGuestResults() {
 
     if (!choice || choice === "cancel") return;
 
-    let syncCount = 0;
-    for (const res of guestResults) {
-      if (choice === "move") {
-        res.researcher_uid = user.uid;
-        res.sync_status = "PENDING";
-        await saveResult(res, user.uid);
-      } else {
-        const newRes = {
-          ...res,
-          id: crypto.randomUUID(),
-          researcher_uid: user.uid,
-          sync_status: "PENDING",
-        };
-        delete newRes.firestore_id;
-        await saveResult(newRes, user.uid);
-      }
-      syncCount++;
-    }
+    // C3: przygotowanie move/duplicate w results/cloudResults.js, zapis równoległy
+    const syncCount = await importPreparedList(
+      prepareGuestImport(guestResults, user.uid, choice),
+      user.uid,
+      saveResult,
+    );
 
     Dialog.alert(
       `Zakończono! ${choice === "move" ? "Przeniesiono" : "Zduplikowano"} ${syncCount} wyników.`,
@@ -1397,53 +1266,13 @@ async function handleImportGuestResults() {
 
 async function handleDownloadAllLocal(targetUid) {
   try {
-    const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
-
     // Downloads ALL results for the user (not just current page)
     const allLocal = await getAllResults();
     let results = allLocal.filter((r) => r.researcher_uid === targetUid);
 
-    // Apply filters if active
-    if (hasFilters) {
-      results = results.filter(r => {
-        // Date filter
-        if (activeFilters.date.size > 0) {
-          const d = new Date(r.timestamp);
-          const year = d.getFullYear();
-          const month = d.getMonth();
-          const day = d.getDate();
-          const dayKey = `day:${year}:${month}:${day}`;
-          if (!activeFilters.date.has(dayKey)) return false;
-        }
-        // Test ID filter
-        if (activeFilters.test_id.size > 0) {
-          const testId = r.test_id || r.testId || 'Nieznany';
-          if (!activeFilters.test_id.has(testId)) return false;
-        }
-        // Subject ID filter
-        if (activeFilters.subject_id.size > 0) {
-          const subjectId = r.subject_id || (r.wyniki && r.wyniki.subjectId) || (r.data && r.data.subjectId) || 'Nieznany';
-          if (!activeFilters.subject_id.has(subjectId)) return false;
-        }
-        // Status filter
-        if (activeFilters.status.size > 0) {
-          let statusLabel = 'Lokalne';
-          const sync_status = r.sync_status || r.syncStatus;
-          if (r.researcher_uid && r.researcher_uid.startsWith('LOCAL::')) {
-            statusLabel = 'Konto lokalne';
-          } else if (sync_status === 'LOCAL') {
-            statusLabel = 'Konto lokalne';
-          } else if (r.researcher_uid === 'GUEST') {
-            statusLabel = 'Tryb Gościa';
-          } else if (sync_status === 'SYNCED') {
-            statusLabel = 'Zsynchronizowano';
-          } else if (sync_status === 'PENDING') {
-            statusLabel = 'Oczekuje';
-          }
-          if (!activeFilters.status.has(statusLabel)) return false;
-        }
-        return true;
-      });
+    // Apply filters if active (C3: query-model)
+    if (hasActiveFilters(activeFilters)) {
+      results = filterResults(results, activeFilters);
     }
 
     if (selectedResultIds.size > 0) {
@@ -1492,7 +1321,7 @@ async function handleDownloadAllLocal(targetUid) {
     const format = formatEl ? formatEl.value : 'json';
     const filename = `Wyniki_${isGuest ? "Gosc" : "Uzytkownik"}_${Date.now()}.zip`;
 
-    const result = await window.electronAPI.downloadBulkZip({
+    const result = await getPlatform().files.bulkZip({
       results,
       filename,
       format,
@@ -1516,76 +1345,17 @@ async function handleDownloadAllLocal(targetUid) {
 }
 
 function downloadResultsAsCSV(results, filename) {
+  // C3: formatowanie w results/resultExporter.js (bajtowo zgodne)
   if (results.length === 0) return;
-
-  const allFlats = results.map((r) => {
-    const flat = {};
-    flat["Data"] = new Date(r.timestamp || r.synced_at).toLocaleString();
-    flat["Test ID"] = r.test_id || r.testId;
-    flat["ID Badanego"] = r.subject_id || "-";
-    flat["Badacz UID"] = r.researcher_uid;
-
-    const demo = r.demographics || {};
-    const dData = demo.data || demo;
-    if (typeof dData === "object") {
-      Object.keys(dData).forEach((k) => {
-        flat[`Metryczka - ${k}`] = dData[k];
-      });
-    }
-
-    const resData = r.wyniki || r.data || {};
-    // #4 FIX: Use flattenObject from utils.js
-    flattenObject(resData, flat, "Wynik");
-    return flat;
-  });
-
-  const allKeys = new Set();
-  allFlats.forEach((f) => Object.keys(f).forEach((k) => allKeys.add(k)));
-  const headerKeys = Array.from(allKeys);
-
-  const bom = "\uFEFF";
-  let csvContent = bom + headerKeys.join(";") + "\r\n";
-
-  allFlats.forEach((flat) => {
-    const row = headerKeys.map((key) => {
-      let val = flat[key] !== undefined ? String(flat[key]) : "";
-      if (val.includes(";") || val.includes("\n")) {
-        val = `"${val.replace(/"/g, '""')}"`;
-      }
-      return val;
-    });
-    csvContent += row.join(";") + "\r\n";
-  });
-
-  downloadFile(filename, csvContent, "text/csv;charset=utf-8;");
+  const flats = results.map((r) => resultRow(r, { deep: true }));
+  downloadFile(filename, toMatrixCSV(flats), "text/csv;charset=utf-8;");
 }
 
 export function exportHistoryToCSV() {
-  const bom = "\uFEFF";
-  let csv = bom;
-
-  document.querySelectorAll("#history-table tr").forEach((row) => {
-    const cells = Array.from(row.querySelectorAll("th, td"));
-    const rowData = cells.map((cell) => {
-      const clone = cell.cloneNode(true);
-      clone
-        .querySelectorAll(".material-icons")
-        .forEach((icon) => icon.remove());
-      clone.querySelectorAll("button").forEach((btn) => btn.remove());
-      let text = clone.textContent.trim();
-      if (text.includes(",") || text.includes('"') || text.includes("\n")) {
-        text = `"${text.replace(/"/g, '""')}"`;
-      }
-      return text;
-    });
-    csv += rowData.join(",") + "\r\n";
-  });
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "historia_wynikow.csv";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 100);
+  // C3: eksport bieżącego widoku (filtr + strona) z query-modelu zamiast scrapowania DOM.
+  // Te same widoczne dane, bez czytania wyrenderowanej tabeli.
+  const { items } = paginate(filterResults(currentAllResults, activeFilters), currentPage, PAGE_SIZE);
+  if (items.length === 0) return;
+  const flats = items.map((r) => resultRow(r, { deep: true }));
+  downloadFile("historia_wynikow.csv", toMatrixCSV(flats), "text/csv;charset=utf-8;");
 }

@@ -1,4 +1,5 @@
 // src/modules/settings.js
+import { getPlatform } from '../platform/index.js';
 
 const SETTINGS_KEY = 'nous-app-settings';
 const CUSTOM_CACHE_KEY = 'nous-app-settings-custom-cache';
@@ -555,9 +556,10 @@ export function initSettings() {
         });
     }
 
-    if (window.electronAPI && elements.localTestsPathStr) {
-        window.electronAPI.getLocalVersions().then(localVersions => {
-            elements.localTestsPathStr.textContent = localVersions.__scannedDir || 'Nieznana lokalizacja';
+    // C1: ścieżka testów przez seam (na Web brak __scannedDir → 'Nieznana lokalizacja')
+    if (elements.localTestsPathStr) {
+        getPlatform().tests.getLocalVersions().then(localVersions => {
+            elements.localTestsPathStr.textContent = (localVersions && localVersions.__scannedDir) || 'Nieznana lokalizacja';
         }).catch(err => {
             console.error("Błąd pobierania ścieżki:", err);
             elements.localTestsPathStr.textContent = 'Błąd pobierania ścieżki';

@@ -74,7 +74,14 @@ export function debounce(fn, delay = 200) {
  * @returns {Promise<Object>} - Obiekt {testId: version}
  */
 export async function getLocalVersionsCached() {
-    // Pobierz świeże dane
+    // C1: delegacja do seama platform/ (jedyne miejsce z polityką Electron/Web).
+    try {
+        const { getPlatform } = await import("../platform/index.js");
+        return await getPlatform().tests.getLocalVersions();
+    } catch (e) {
+        console.error("Error fetching local versions via platform:", e);
+    }
+    // Fallback legacy (gdyby seam był niedostępny)
     if (window.electronAPI) {
         try {
             return await window.electronAPI.getLocalVersions();

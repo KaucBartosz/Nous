@@ -46,6 +46,8 @@ import { initSettings } from "./modules/settings.js";
 import { initAppUpdater } from "./modules/appUpdater.js";
 import { initWhatsNew, loadWhatsNewView } from "./modules/whatsNew.js";
 import { renderParticipantsList } from "./modules/participants.js";
+import { getPlatform } from "./platform/index.js";
+import { setCryptoWarningHandler } from "./db/cryptoPolicy.js";
 
 // --- INITIALIZATION ---
 
@@ -53,8 +55,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // 0. Initialize Settings (must be first to apply saved theme/colors)
   initSettings();
 
-  // 1. Auth Setup
-  if (!window.electronAPI) {
+  // C2: ostrzeżenia szyfrowania (z warstwy DB) pokazuj jako Dialog — DB nie zna UI
+  setCryptoWarningHandler((message, level) => {
+    import("./modules/dialog.js").then(({ Dialog }) =>
+      Dialog.alert(message, level),
+    );
+  });
+
+  // 1. Auth Setup (C1: wybór platformy przez seam, nie if na window)
+  if (getPlatform().kind === "web") {
     // --- WEB MODE ---
     // Zablokuj przyciski tagów globalnie przez nadpisanie stylów CSS
     const webStyles = document.createElement("style");
@@ -361,11 +370,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-about-project").addEventListener("click", () => {
     const url = "https://kaucbartosz.github.io/Nous/";
-    if (window.electronAPI && window.electronAPI.openExternal) {
-      window.electronAPI.openExternal(url);
-    } else {
-      window.open(url, "_blank");
-    }
+    // C1: Electron otwiera zewnętrznie, Web w nowej karcie (w adapterze)
+    getPlatform().links.openExternal(url);
   });
 
   // 5.5. History View Init
@@ -397,21 +403,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 8. Global Status/Error Handling
-  if (window.electronAPI) {
-    window.electronAPI.onStatusUpdate((message) => {
-      console.log("[Electron Status]:", message);
+  // 8. Global Status/Error Handling (C1: Web = noop w adapterze)
+  getPlatform().tests.onStatus((message) => {
+    console.log("[Electron Status]:", message);
 
-      // Simple heuristic to detect errors
-      if (message.startsWith("BŁĄD") || message.includes("Error")) {
-        import("./modules/dialog.js").then(({ Dialog }) => {
-          Dialog.alert(message, "error");
-        });
-      } else {
-        // For non-error messages, we might just log them or show a toast if we had one.
-        // Currently, many messages are handled by the button state updates in library.js (download progress/state).
-        // However, some global messages might be useful to see.
-      }
-    });
-  }
+    // Simple heuristic to detect errors
+    if (message.startsWith("BŁĄD") || message.includes("Error")) {
+      import("./modules/dialog.js").then(({ Dialog }) => {
+        Dialog.alert(message, "error");
+      });
+    } else {
+      // For non-error messages, we might just log them or show a toast if we had one.
+      // Currently, many messages are handled by the button state updates in library.js (download progress/state).
+      // However, some global messages might be useful to see.
+    }
+  });
 });

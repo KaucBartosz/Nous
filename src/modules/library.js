@@ -7,7 +7,6 @@ import {
 import { elements } from "./ui.js";
 import { Dialog } from "./dialog.js";
 import {
-  sortByInstallStatus,
   debounce,
   getLocalVersionsCached,
   escapeHtml,
@@ -15,6 +14,8 @@ import {
 import * as Tags from "./tags.js";
 import { getSettings } from "./settings.js";
 import { getResearcherUid } from "./auth.js";
+import { getPlatform } from "../platform/index.js";
+import { loadCatalog, queryTests } from "../catalog/testCatalog.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
@@ -50,9 +51,10 @@ const viewButtons = {
  * Inicjalizuje listenery Electron API (wywołaj raz).
  */
 export function initLibraryListeners() {
-  if (listenersRegistered || !window.electronAPI) return;
+  if (listenersRegistered) return;
+  const platform = getPlatform();
 
-  window.electronAPI.onDownloadProgress(({ test_id, percent }) => {
+  platform.tests.onProgress(({ test_id, percent }) => {
     const btn = document.getElementById(`start-test-${test_id}`);
     if (btn) {
       const progressText = btn.querySelector(".progress-text");
@@ -79,12 +81,12 @@ export function initLibraryListeners() {
     }
   });
 
-  window.electronAPI.onTestInstalled((data) => {
+  platform.tests.onInstalled((data) => {
     console.log("Test installed, refreshing library:", data);
     loadTestsList(undefined, true); // Force refresh
   });
 
-  window.electronAPI.onTestProcessStopped(() => {
+  platform.tests.onProcessStopped(() => {
     console.log("Test process stopped, refreshing UI");
     loadTestsList(); // Re-render triggers UI reset
   });
@@ -185,129 +187,51 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
     filterText = searchInput ? searchInput.value : "";
   }
 
-  // 1. Fetch from Cloud if needed
+  // 1-3. Rejestr + merge wersji + backfill (C5: catalog; wcześniej ~120 linii inline)
+  // Web: cloudEnabled=false — nigdy Firestore, lista z backfillu rejestru (jak wcześniej)
   if (!cachedTests.length || forceRefresh) {
     isLoading = true;
     elements.testsGrid.innerHTML =
       '<p style="color:#888;">Ładowanie biblioteki...</p>';
-    cachedTests = []; // Clear cache przed pobraniem
 
     try {
-      if (window.electronAPI) {
-        // Check if online before trying cloud fetch to avoid long timeouts
-        if (!navigator.onLine) {
-          throw new Error("Brak połączenia internetowego (navigator.onLine)");
-        }
-
-        // #14 FIX: Wrap Firestore call in a timeout to avoid hanging on slow networks
-        let timeoutId;
-        const fetchTimeout = new Promise((_, reject) => {
-          timeoutId = setTimeout(
-            () => reject(new Error("Timeout: Firestore nie odpowiada (>8s)")),
-            8000,
-          );
-        });
-
-        let snap;
-        try {
-          snap = await Promise.race([
-            getDocs(collection(db, "tests")),
-            fetchTimeout,
-          ]);
-          clearTimeout(timeoutId); // Anuluj timer po udanym fetch
-        } catch (e) {
-          clearTimeout(timeoutId);
-          throw e; // Re-throw do zewnętrznego catch
-        }
-
-        if (snap.empty) {
-          elements.testsGrid.innerHTML = "<p>Brak testów w chmurze.</p>";
-          return; // finally zresetuje isLoading
-        }
-
-        snap.forEach((doc) => {
-          const t = doc.data();
-          t.id = doc.id;
-          t.local_ver = 0; // Will be updated below
-          t.remote_ver = Number(t.version) || 0; // Zabezpieczenie przed NaN gdy brak pola
-          cachedTests.push(t);
-        });
-
-        // Save to local cache for offline usage
-        localStorage.setItem(
-          "cached_tests_metadata",
-          JSON.stringify(cachedTests),
-        );
+      const res = await loadCatalog({
+        forceRefresh,
+        cached: cachedTests,
+        cloudEnabled: getPlatform().kind === "electron",
+        fetchRemote: () => getDocs(collection(db, "tests")),
+        isOnline: () => (typeof navigator !== "undefined" ? navigator.onLine : true),
+        getLocalVersions: getLocalVersionsCached,
+        getSettings,
+      });
+      if (res.empty && !res.offline) {
+        elements.testsGrid.innerHTML = "<p>Brak testów w chmurze.</p>";
+        return; // isLoading zresetowane w finally
+      }
+      cachedTests = res.tests;
+      if (res.empty && res.offline) {
+        showOfflinePanel(res.scannedDir);
+        return;
       }
     } catch (e) {
-      console.warn(
-        "Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):",
-        e,
-      );
-
-      // Try to load from local storage cache
-      const saved = localStorage.getItem("cached_tests_metadata");
-      if (saved) {
-        try {
-          cachedTests = JSON.parse(saved);
-          console.log("Załadowano listę testów z cache lokalnego.");
-        } catch (jsonErr) {
-          console.error("Błąd parsowania cache lokalnego:", jsonErr);
-        }
-      }
+      console.warn("Błąd ładowania biblioteki:", e);
+      showOfflinePanel("nieznana");
+      return;
     } finally {
       isLoading = false; // Zawsze resetuj flagę, niezależnie od ścieżki wykonania
     }
   }
 
-  // 2. Always update local versions (using cached getter)
-  const localVersions = await getLocalVersionsCached();
-  const scannedPath = localVersions.__scannedDir || "nieznana";
-
-  cachedTests.forEach((t) => {
-    const local = localVersions[t.id];
-    if (local) {
-      t.local_ver = Number(local.version);
-      t.isLocalDev = local.isLocalDev || false;
-    } else {
-      t.local_ver = 0;
-      t.isLocalDev = false;
-    }
-  });
-
-  // 3. Backfill tests from disk that are missing from metadata
-  // This allows showing already downloaded tests even if they are not in the cloud/cache list.
-  // Najpierw usuń poprzednie backfille, żeby uniknąć duplikatów przy kolejnych wywołaniach.
-  cachedTests = cachedTests.filter((t) => !t._isBackfill);
-
-  Object.keys(localVersions).forEach((testId) => {
-    if (testId === "__scannedDir") return; // Skip debug field
-
-    const local = localVersions[testId];
-    const isLocalDev = local.isLocalDev || false;
-
-    // Skip local tests if the setting is disabled
-    if (isLocalDev && !getSettings().showLocalTests) return;
-
-    if (!cachedTests.find((t) => t.id === testId)) {
-      if (local.version >= 0) {
-        cachedTests.push({
-          id: testId,
-          name: local.name || `Test lokalny (${testId})`,
-          description: local.description || "Pobrano wcześniej.",
-          version: local.version || 0,
-          local_ver: Number(local.version || 0),
-          remote_ver: Number(local.version || 0),
-          isLocalDev: local.isLocalDev || false,
-          download_url: "",
-          _isBackfill: true, // Marker do czyszczenia przy kolejnym wywołaniu
-        });
-      }
-    }
-  });
-
   if (cachedTests.length === 0) {
-    elements.testsGrid.innerHTML = `
+    const localVersions = await getLocalVersionsCached();
+    showOfflinePanel(localVersions.__scannedDir || "nieznana");
+  } else {
+    renderTests(cachedTests, filterText);
+  }
+}
+
+function showOfflinePanel(scannedPath) {
+  elements.testsGrid.innerHTML = `
             <div style="text-align:center; padding:40px; color:#888;">
                 <span class="material-icons" style="font-size:48px; margin-bottom:15px;">signal_wifi_off</span>
                 <p>Brak połączenia z Internetem i nie znaleziono pobranych testów.</p>
@@ -315,9 +239,6 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
                 <button class="btn secondary small" onclick="location.reload()" style="margin-top:20px;">Spróbuj ponownie</button>
             </div>
         `;
-  } else {
-    renderTests(cachedTests, filterText);
-  }
 }
 
 function getTestStatus(t) {
@@ -376,36 +297,13 @@ function getTestStatus(t) {
 function renderTests(testsSource, filterText) {
   elements.testsGrid.innerHTML = "";
 
-  let tests = [...testsSource];
-
-  // 1. Filter
-  if (filterText) {
-    const { textFilters, tagGroups } = Tags.parseTagSearchQuery(filterText);
-
-    tests = tests.filter((t) => {
-      // Filtr tekstowy (nazwa)
-      const nameMatch =
-        textFilters.length === 0 ||
-        textFilters.every((word) =>
-          (t.name || "").toLowerCase().includes(word),
-        );
-      if (!nameMatch) return false;
-
-      if (tagGroups.length === 0) return true;
-
-      // Logika tagów (AND > OR)
-      const testTags = Tags.getTagsForTest(t.id);
-      return Tags.matchesTagGroups(testTags, tagGroups);
-    });
-  }
+  // 1-2. Filtr (tekst + @tagi) i sort (C5: catalog; logika identyczna)
+  const tests = queryTests(testsSource, filterText, Tags);
 
   if (tests.length === 0) {
     elements.testsGrid.innerHTML = "<p>Brak wyników wyszukiwania.</p>";
     return;
   }
-
-  // 2. Sort (using shared utility)
-  tests = sortByInstallStatus(tests);
 
   // 3. Render based on current view mode
   switch (currentViewMode) {
@@ -882,7 +780,8 @@ export async function startTestProcess(
   description = "",
   isLocalDev = false,
 ) {
-  if (window.electronAPI) {
+  const platform = getPlatform();
+  if (platform.kind === "electron") {
     // Change button state immediately
     const btn = document.getElementById(`start-test-${id}`);
     if (btn) {
@@ -916,16 +815,16 @@ export async function startTestProcess(
     }
 
     try {
-      window.electronAPI.downloadAndRun(
+      platform.tests.run({
         url,
         id,
         ver,
         onlyDownload,
-        isTrainingMode,
+        trainingMode: isTrainingMode,
         name,
         description,
         isLocalDev,
-      );
+      });
     } catch (err) {
       console.error("Błąd uruchamiania testu:", err);
       Dialog.alert("Wystąpił błąd podczas uruchamiania testu.", "error");
@@ -950,17 +849,9 @@ export async function startTestProcess(
       btn.disabled = true;
     }
 
-    const localVersions = await getLocalVersionsCached();
-    const testInfo = localVersions[id];
+    const result = await platform.tests.run({ id, trainingMode: isTrainingMode });
 
-    if (testInfo && testInfo.webPath) {
-      // Przykładowe zapisanie metadanych sesji w localStorage, by ewentualnie odczytał to sam test JS
-      sessionStorage.setItem("nous_web_current_test_id", id);
-      sessionStorage.setItem("nous_web_training_mode", isTrainingMode);
-
-      // Przejście na adres pliku HTML testu w NOWEJ KARCIE
-      window.open(testInfo.webPath, "_blank");
-
+    if (result && result.opened) {
       // Odblokowujemy przycisk na liście Launcher'a po otwarciu testu
       if (btn) {
         btn.disabled = false;
