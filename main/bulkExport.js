@@ -69,4 +69,54 @@ function buildBulkCsv(res) {
   return out;
 }
 
-module.exports = { buildBulkRow, buildBulkCsv, escapeCell, CSV_BOM };
+/**
+ * Fabryka C6: handler download-bulk-zip przeniesiony 1:1 z main.js.
+ * dialog/AdmZip/okno wstrzyknięte (wzorzec jak main/templates.js).
+ */
+function createBulkExport({ dialog, AdmZip }) {
+  async function downloadBulkZip(getMainWindow, { results, filename, format }) {
+    const zip = new AdmZip();
+
+    try {
+      results.forEach((res) => {
+        const dateStr = new Date(res.timestamp || res.synced_at).toISOString().replace(/[:.]/g, '-');
+        const testId = res.test_id || res.testId || 'unknown';
+        const subjectId = res.subject_id || 'unknown';
+        const baseName = `Wynik_${testId}_${subjectId}_${dateStr}`;
+
+        if (format === 'csv') {
+          const csvContent = buildBulkCsv(res);
+          zip.addFile(`${baseName}.csv`, Buffer.from(csvContent, 'utf8'));
+        } else {
+          const jsonStr = JSON.stringify(res, null, 2);
+          zip.addFile(`${baseName}.json`, Buffer.from(jsonStr, 'utf8'));
+        }
+      });
+
+      const { filePath } = await dialog.showSaveDialog(getMainWindow(), {
+        title: 'Zapisz paczkę wyników (ZIP)',
+        defaultPath: filename,
+        filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
+      });
+
+      if (filePath) {
+        zip.writeZip(filePath);
+        return { success: true };
+      }
+      return { success: false, cancelled: true };
+    } catch (e) {
+      console.error("Bulk Zip Error:", e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  function registerIpc(ipcMain, getMainWindow) {
+    ipcMain.handle('download-bulk-zip', async (event, payload) =>
+      downloadBulkZip(getMainWindow, payload),
+    );
+  }
+
+  return { buildBulkRow, buildBulkCsv, escapeCell, CSV_BOM, downloadBulkZip, registerIpc };
+}
+
+module.exports = { createBulkExport, buildBulkRow, buildBulkCsv, escapeCell, CSV_BOM };
