@@ -12,6 +12,28 @@ CONTEXT.md
 docs/adr/
 architecture-review-*.html
 
+# Pliki typowo używane tylko przez AI (lokalne, niecommitowane)
+AGENTS.md
+NASTEPNE-KROKI.md
+CLAUDE.md
+GEMINI.md
+CODEX.md
+CURSOR.md
+.cursorrules
+.cursor/
+.claude/
+.claude.json
+.codex/
+.opencode/
+opencode.json
+opencode.jsonc
+.aider*
+.windsurf/
+.copilot/
+.mcp.json
+mcp.json
+HANDOFF.md
+
 # Zależności
 node_modules/
 .venv/
