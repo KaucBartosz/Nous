@@ -9,6 +9,16 @@ import { getPendingResults, markAsSynced } from "./database.js";
 import { getCurrentUser, getUserStatus } from "./auth.js";
 import { Dialog } from "./dialog.js";
 import { toast, syncCountMessage } from "../notify/notify.js";
+import { hasCloudKey, encryptCloudData } from "./cryptoService.js";
+import { isCloudSyncAllowed } from "../session/session.js";
+import {
+  selectSyncable,
+  syncBlockReason,
+  manualSyncBlockReason,
+  packRecord,
+  syncOneRecord,
+  syncAll,
+} from "../sync/syncEngine.js";
 
 let isAutoSyncEnabled = (() => {
   try {
@@ -34,7 +44,7 @@ export function initSyncService() {
 
 export function enforceSyncPolicy(status) {
   // Synchronizować mogą wyłącznie zatwierdzeni użytkownicy (konta lokalne/goście nigdy).
-  if (status !== "APPROVED") {
+  if (!isCloudSyncAllowed(status)) {
     if (isAutoSyncEnabled) {
       console.log("AutoSync disabled due to status:", status);
       isAutoSyncEnabled = false;
@@ -52,7 +62,7 @@ export function setAutoSync(enabled) {
 
   if (enabled) {
     const userStatus = getUserStatus();
-    if (userStatus !== "APPROVED") {
+    if (!isCloudSyncAllowed(userStatus)) {
       const toggleSync = document.getElementById("toggle-sync");
       if (toggleSync) toggleSync.checked = false;
 
@@ -90,42 +100,48 @@ export function isSyncInProgress() {
   return isSyncing;
 }
 
+// Komunikaty skipów — te same co wcześniej (kolejność guardów w SyncEngine).
+const SYNC_SKIP_LOG = {
+  disabled: "Sync skipped: Auto-Sync is disabled by user.",
+  "local-session": "Sync skipped: konto lokalne/gość nie synchronizuje z chmurą.",
+  offline: "Sync skipped: Offline.",
+  "no-user": "Sync skipped: No user logged in.",
+  "in-progress": "Sync skipped: Already in progress.",
+};
+
+// Prawdziwe I/O wstrzykiwane do SyncEngine (Firestore + klucz chmurowy E2E).
+const cloudCrypto = {
+  hasKey: () => hasCloudKey(),
+  encrypt: (payload) => encryptCloudData(payload),
+};
+const firestoreIo = {
+  packRecord: (record) =>
+    packRecord(record, cloudCrypto, {
+      onUnencrypted: () =>
+        console.warn("Wysyłanie nieszyfrowanych danych! Brak klucza chmurowego."),
+    }),
+  saveRemote: (doc) => addDoc(collection(db, "results"), doc),
+  markSynced: (localId, remoteId) => markAsSynced(localId, remoteId),
+};
+
 export async function syncNow() {
-  if (!isAutoSyncEnabled) {
-    console.log("Sync skipped: Auto-Sync is disabled by user.");
-    return;
-  }
-
-  // Konto lokalne lub gość — nigdy nie łączymy się z Firebase
-  const userStatus = getUserStatus();
-  if (userStatus === "LOCAL" || userStatus === "GUEST") {
-    console.log("Sync skipped: konto lokalne/gość nie synchronizuje z chmurą.");
-    return;
-  }
-
-  if (!navigator.onLine) {
-    console.log("Sync skipped: Offline.");
-    return;
-  }
-
+  // D: guardy w SyncEngine (ta sama kolejność, te same logi)
   const user = getCurrentUser();
-  if (!user) {
-    console.log("Sync skipped: No user logged in.");
-    return;
-  }
-
-  if (isSyncing) {
-    console.log("Sync skipped: Already in progress.");
+  const reason = syncBlockReason({
+    autoSyncEnabled: isAutoSyncEnabled,
+    status: getUserStatus(),
+    online: navigator.onLine,
+    user,
+    syncing: isSyncing,
+  });
+  if (reason) {
+    console.log(SYNC_SKIP_LOG[reason]);
     return;
   }
 
   const allPending = await getPendingResults(user.uid);
   // Bezpiecznik: pomijamy wyniki kont lokalnych nawet jeśli trafiły do PENDING
-  const pending = allPending.filter(
-    (r) =>
-      r.sync_status !== "LOCAL" &&
-      !(r.researcher_uid && r.researcher_uid.startsWith("LOCAL::")),
-  );
+  const pending = selectSyncable(allPending);
   if (pending.length === 0) {
     console.log("Nothing to sync for user:", user.uid);
     return;
@@ -137,30 +153,21 @@ export async function syncNow() {
 
   console.log(`Syncing ${pending.length} results...`);
 
-  let synced_count = 0;
+  let result = { synced: [], failed: [], halted: false };
 
   try {
-    for (const record of pending) {
-      try {
-        await syncSingleResultInternal(record); // Użyj wspólnej funkcji wewn.
-        synced_count++;
-
-        // Aktualizuj progress
-        updateSyncUI(true, pending.length - synced_count);
-      } catch (e) {
-        console.error(`Failed to sync record ${record.id}:`, e);
-
-        if (e.code === "permission-denied") {
-          updateSyncUI(false, 0);
-          import("./dialog.js").then(({ Dialog }) => {
-            Dialog.alert(
-              `Błąd synchronizacji: Brak uprawnień. Sprawdź czy Twój status to 'APPROVED' i czy reguły bazy danych są poprawne.`,
-              "error",
-            );
-          });
-          break; // Stop syncing on perm error
-        }
-      }
+    result = await syncAll(pending, firestoreIo, {
+      onProgress: (done, total) => updateSyncUI(true, total - done),
+    });
+    for (const f of result.failed) {
+      console.error(`Failed to sync record ${f.id}:`, f.error);
+    }
+    if (result.halted) {
+      updateSyncUI(false, 0);
+      Dialog.alert(
+        `Błąd synchronizacji: Brak uprawnień. Sprawdź czy Twój status to 'APPROVED' i czy reguły bazy danych są poprawne.`,
+        "error",
+      );
     }
   } finally {
     // Zakończ synchronizację — zawsze resetuj flagę
@@ -169,104 +176,52 @@ export async function syncNow() {
   }
 
   // #13: Show toast after successful sync
-  if (synced_count > 0) {
-    showSyncToast(synced_count);
+  if (result.synced.length > 0) {
+    showSyncToast(result.synced.length);
   }
 
   // Notify UI to refresh history table if visible
   window.dispatchEvent(new Event("sync-complete"));
 }
 
-import { hasCloudKey, encryptCloudData } from "./cryptoService.js";
-
 /**
  * Wewnętrzna funkcja wysyłająca pojedyńczy rekord (bez obsługi UI globalnego sync).
  * Wyrzuca błąd w przypadku niepowodzenia.
  */
 async function syncSingleResultInternal(record) {
-  // Nigdy nie synchronizuj wyników z kont lokalnych do chmury
-  if (
-    record.sync_status === "LOCAL" ||
-    (record.researcher_uid && record.researcher_uid.startsWith("LOCAL::"))
-  ) {
+  const res = await syncOneRecord(record, firestoreIo);
+  if (res.skipped) {
     console.warn(
       `syncSingleResultInternal: Pomijam wynik LOCAL (${record.id})`,
     );
     return;
   }
-
-  let finalData = record.wyniki || record.data;
-  let finalDemographics = record.demographics;
-  let isEncrypted = false;
-  let iv = null;
-
-  // Szyfruj logiką chmurową E2E jeśli klucz jest dostępny (a powinien zawsze być dla zalogowanego)
-  if (hasCloudKey()) {
-    const payloadToEncrypt = {
-      data: finalData,
-      demographics: finalDemographics,
-    };
-    const encrypted = await encryptCloudData(payloadToEncrypt);
-    finalData = encrypted.payload;
-    finalDemographics = null; // Ukrywamy dane wrażliwe (są wewnątrz szyfrogramu)
-    iv = encrypted.iv;
-    isEncrypted = true;
-  } else {
-    console.warn("Wysyłanie nieszyfrowanych danych! Brak klucza chmurowego.");
-  }
-
-  const docRef = await addDoc(collection(db, "results"), {
-    researcher_uid: record.researcher_uid,
-    test_id: record.test_id || record.testId,
-    subject_id: record.subject_id,
-    demographics: finalDemographics,
-    data: finalData,
-    iv: iv,
-    is_encrypted: isEncrypted,
-    timestamp: record.timestamp,
-    synced_at: new Date().toISOString(),
-  });
-
-  await markAsSynced(record.id, docRef.id);
-  console.log(`Synced record ${record.id} -> ${docRef.id}`);
+  console.log(`Synced record ${record.id} -> ${res.remoteId}`);
 }
 
 /**
  * Manualna synchronizacja pojedynczego wyniku (wywoływana z UI).
  */
+// Komunikaty ręcznej wysyłki — te same co wcześniej.
+const MANUAL_BLOCK_MESSAGE = {
+  "local-session":
+    "Synchronizacja z chmurą nie jest dostępna dla kont lokalnych i trybu Gościa.",
+  "local-record":
+    "Ten wynik pochodzi z konta lokalnego i nie może być synchronizowany z chmurą.",
+  offline: "Brak połączenia z internetem.",
+  "no-user": "Użytkownik nie jest zalogowany.",
+  "foreign-record": "Nie możesz wysłać wyniku należącego do innego użytkownika.",
+};
+
 export async function syncSingleResult(record) {
-  // Konta lokalne nie synchronizują z chmurą
-  const userStatus = getUserStatus();
-  if (userStatus === "LOCAL" || userStatus === "GUEST") {
-    throw new Error(
-      "Synchronizacja z chmurą nie jest dostępna dla kont lokalnych i trybu Gościa.",
-    );
-  }
-
-  // Jawna blokada po stronie rekordu (ochrona przed wywołaniem z nieprawidłowym rekordem)
-  if (
-    record.sync_status === "LOCAL" ||
-    (record.researcher_uid && record.researcher_uid.startsWith("LOCAL::"))
-  ) {
-    throw new Error(
-      "Ten wynik pochodzi z konta lokalnego i nie może być synchronizowany z chmurą.",
-    );
-  }
-
-  if (!navigator.onLine) {
-    throw new Error("Brak połączenia z internetem.");
-  }
-
+  // D: guardy w SyncEngine (ta sama kolejność, te same komunikaty)
   const user = getCurrentUser();
-  if (!user) {
-    throw new Error("Użytkownik nie jest zalogowany.");
-  }
-
-  if (record.researcher_uid !== user.uid) {
-    throw new Error(
-      "Nie możesz wysłać wyniku należącego do innego użytkownika.",
-    );
-  }
+  const reason = manualSyncBlockReason(record, {
+    status: getUserStatus(),
+    online: navigator.onLine,
+    user,
+  });
+  if (reason) throw new Error(MANUAL_BLOCK_MESSAGE[reason]);
 
   try {
     await syncSingleResultInternal(record);

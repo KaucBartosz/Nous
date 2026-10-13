@@ -37,3 +37,8 @@ export function canUploadResult(kind) {
 export function isCloudSyncAllowed(kind) {
   return kind === "APPROVED";
 }
+
+/** Konto bez chmury: lokalne lub gość (reguła z sync.syncNow/syncSingleResult). */
+export function isLocalSessionKind(kind) {
+  return kind === "LOCAL" || kind === "GUEST";
+}

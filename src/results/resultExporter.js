@@ -22,10 +22,14 @@ export const WEB_RESULT_IGNORE_KEYS = [
   "frameRate",
 ];
 
-/** Jedyny escaper CSV w kodzie (były 3 kopie). */
+/**
+ * Jedyny escaper CSV w kodzie (były 3 kopie).
+ * Decyzja 2b/b: reguła maina (cytuj też przy `"`) — poprawniejsza niż stara
+ * (sam cudzysłów bez `;` psuł CSV).
+ */
 export function escapeCsvCell(value) {
   const s = String(value);
-  return s.includes(";") || s.includes("\n")
+  return s.includes(";") || s.includes("\n") || s.includes('"')
     ? `"${s.replace(/"/g, '""')}"`
     : s;
 }
@@ -40,12 +44,17 @@ export function resultRow(pkgLike, { includeResearcher = true, ignoreKeys = [], 
   flat["Data"] = new Date(pkg.timestamp).toLocaleString();
   flat["Test ID"] = pkg.test_id;
   flat["ID Badanego"] = pkg.subject_id || "-";
-  if (includeResearcher) flat["Badacz UID"] = pkg.researcher_uid;
+  // Decyzja 2b/b: brakujący badacz to "-" jak badany (wcześniej literalne "null").
+  if (includeResearcher) flat["Badacz UID"] = pkg.researcher_uid ?? "-";
 
   const demo = pkg.demographics || {};
   const dData = demo.data || demo;
   if (dData && typeof dData === "object") {
-    for (const k of Object.keys(dData)) flat[`Metryczka - ${k}`] = dData[k];
+    // Decyzja 2b/b: metryczkę spłaszczamy jak wyniki (ten sam ` - `),
+    // zamiast wpisywać obiekty (kończyły jako "[object Object]").
+    const demoFlat = {};
+    flattenObject(dData, demoFlat, "Metryczka");
+    Object.assign(flat, demoFlat);
   }
 
   const resData = pkg.wyniki || {};

@@ -40,6 +40,7 @@ import {
   importPreparedList,
   prepareGuestImport,
 } from "../results/cloudResults.js";
+import { canUploadResult } from "../session/session.js";
 import { getPlatform } from "../platform/index.js";
 
 let isGuestViewActive = false;
@@ -780,8 +781,8 @@ function renderHistoryPage() {
         icon.title = "Zsynchronizowano";
       } else if (sync_status === "PENDING") {
         // #3 FIX: Use getUserStatus() from module, not from DOM
-        const userStatus = getUserStatus();
-        const canUpload = userStatus === "APPROVED" || userStatus === "ADMIN";
+        // C4-followup: reguła wysyłki z session.js
+        const canUpload = canUploadResult(getUserStatus());
 
         if (canUpload) {
           icon.textContent = "cloud_upload";

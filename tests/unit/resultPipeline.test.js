@@ -56,11 +56,12 @@ describe('resultPackage', () => {
 });
 
 describe('resultExporter', () => {
-  it('escapeCsvCell cytuje tylko przy ; i nowej linii, podwaja cudzysłowy', () => {
+  it('escapeCsvCell cytuje przy ;, nowej linii i cudzysłowie (reguła maina, 2b/b)', () => {
     expect(escapeCsvCell('abc')).toBe('abc');
     expect(escapeCsvCell('a;b')).toBe('"a;b"');
     expect(escapeCsvCell('a\nb')).toBe('"a\nb"');
     expect(escapeCsvCell('say "hi";ok')).toBe('"say ""hi"";ok"');
+    expect(escapeCsvCell('say "hi"')).toBe('"say ""hi"""');
     expect(escapeCsvCell(10)).toBe('10');
   });
 
@@ -72,6 +73,23 @@ describe('resultExporter', () => {
     ]);
     expect(row['Test ID']).toBe('stroop');
     expect(row['ID Badanego']).toBe('P1');
+  });
+
+  it('resultRow: zagnieżdżona metryczka spłaszczana (2b/b), brak [object Object]', () => {
+    const row = resultRow({
+      ...pkg(),
+      demographics: { data: { wiek: 30, adres: { miasto: 'Łódź' }, tagi: ['a', 'b'] } },
+    });
+    expect(row['Metryczka - wiek']).toBe(30);
+    expect(row['Metryczka - adres - miasto']).toBe('Łódź');
+    expect(row['Metryczka - tagi']).toBe('["a","b"]');
+    expect(JSON.stringify(row)).not.toContain('[object Object]');
+  });
+
+  it('resultRow: brak badanego/badacza to "-" (2b/b)', () => {
+    const row = resultRow({ ...pkg(), subject_id: null, researcher_uid: null });
+    expect(row['ID Badanego']).toBe('-');
+    expect(row['Badacz UID']).toBe('-');
   });
 
   it('resultRow shallow + ignoreKeys jak stary Web (results.js)', () => {

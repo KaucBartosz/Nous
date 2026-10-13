@@ -200,4 +200,93 @@ describe("Library Module", () => {
       expect(localStorage.getItem("libraryViewMode_user-2")).toBe("table");
     });
   });
+
+  // ─── Parytet 4 widoków (A: wspólne cardParts) ──────────
+  describe("View parity (cardParts)", () => {
+    const skeleton = `
+      <div id="tests-grid"></div>
+      <button id="view-grid"></button>
+      <button id="view-list"></button>
+      <button id="view-table"></button>
+      <button id="view-compact"></button>
+      <input type="checkbox" id="toggle-training-mode" />
+      <input type="text" id="library-search" />
+    `;
+    const twoTests = [
+      {
+        id: "test-1",
+        data: () => ({ name: "Test A", description: "Opis A", version: 1 }),
+      },
+      {
+        id: "test-2",
+        data: () => ({ name: "Test B", description: "Opis B", version: 2 }),
+      },
+    ];
+
+    async function renderAs(mode) {
+      document.body.innerHTML = skeleton;
+      const { getDocs } =
+        await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+      const { getResearcherUid } = await import("../../src/modules/auth.js");
+      const { initViewSwitcher, loadTestsList } =
+        await import("../../src/modules/library.js");
+      getResearcherUid.mockReturnValue("parity-user");
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (cb) => twoTests.forEach(cb),
+      });
+      localStorage.setItem("libraryViewMode_parity-user", mode);
+      initViewSwitcher();
+      await loadTestsList(null, true);
+      return document.getElementById("tests-grid");
+    }
+
+    it("każdy widok renderuje tyle kart i przycisków ile testów", async () => {
+      const cardSel = {
+        grid: ".test-card",
+        list: ".test-list-item",
+        table: "tbody tr",
+        compact: ".test-card-compact",
+      };
+      const seen = {};
+      for (const mode of Object.keys(cardSel)) {
+        const grid = await renderAs(mode);
+        seen[mode] = {
+          cards: grid.querySelectorAll(cardSel[mode]).length,
+          buttons: grid.querySelectorAll('[id^="start-test-"]').length,
+        };
+      }
+      expect(seen).toEqual({
+        grid: { cards: 2, buttons: 2 },
+        list: { cards: 2, buttons: 2 },
+        table: { cards: 2, buttons: 2 },
+        compact: { cards: 2, buttons: 2 },
+      });
+    });
+
+    it("wszystkie widoki pokazują ten sam status (jedno źródło)", async () => {
+      const statusNames = [
+        "cloud_download",
+        "system_update",
+        "check_circle",
+        "code",
+      ];
+      const icons = {};
+      for (const mode of ["grid", "list", "table", "compact"]) {
+        const grid = await renderAs(mode);
+        icons[mode] = [...grid.querySelectorAll(".material-icons")]
+          .map((el) => el.textContent)
+          .filter((t) => statusNames.includes(t))
+          .sort();
+      }
+      // getLocalVersionsCached zwróci {} → local_ver 0 → „Nie pobrano" ×2
+      const expected = ["cloud_download", "cloud_download"];
+      expect(icons).toEqual({
+        grid: expected,
+        list: expected,
+        table: expected,
+        compact: expected,
+      });
+    });
+  });
 });

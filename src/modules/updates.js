@@ -4,9 +4,10 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/f
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
 import { Dialog } from './dialog.js';
-import { sortByInstallStatus, debounce, getLocalVersionsCached, updateUpdatesBadge } from './utils.js';
+import { debounce, getLocalVersionsCached, updateUpdatesBadge } from './utils.js';
 import { getPlatform } from '../platform/index.js';
-import { loadCatalog, countUpdates } from '../catalog/testCatalog.js';
+import { loadCatalog, countUpdates, selectUpdatesView } from '../catalog/testCatalog.js';
+import { setTestButtonState, setTestButtonProgress } from '../catalog/testCard.js';
 
 let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
@@ -20,19 +21,8 @@ export function initUpdatesListeners() {
 
     platform.tests.onProgress(({ test_id, percent }) => {
         const btn = document.getElementById(`force-update-${test_id}`);
-        if (btn) {
-            const progressText = btn.querySelector('.progress-text');
-
-            if (progressText) {
-                progressText.textContent = `${percent}%`;
-            } else {
-                btn.innerHTML = `
-                    <span class="material-icons spin" style="font-size:16px;">sync</span> 
-                    <span class="progress-text">${percent}%</span>
-                `;
-                btn.disabled = true;
-            }
-        }
+        // B: ten sam szablon co w bibliotece (wcześniej osobna kopia bez paska)
+        if (btn) setTestButtonProgress(btn, percent);
     });
 
     platform.tests.onInstalled((data) => {
@@ -81,16 +71,8 @@ export async function loadUpdatesData(filterText = '') {
             return;
         }
 
-        let tests = res.tests;
-
-        // 1. Filter
-        if (filterText) {
-            const lower = filterText.toLowerCase();
-            tests = tests.filter(t => (t.name || '').toLowerCase().includes(lower));
-        }
-
-        // 2. Sort (using shared utility)
-        tests = sortByInstallStatus(tests);
+        // 1-2. Filtr po nazwie + sort (F: czysty selektor w katalogu)
+        let tests = selectUpdatesView(res.tests, filterText);
 
         // #12: Update badge count with number of tests needing update (C5: jedno źródło)
         updateUpdatesBadge(countUpdates(tests));
@@ -226,15 +208,9 @@ export function forceUpdate(url, id, ver) {
     if (getPlatform().kind !== 'electron') return;
     const platform = getPlatform();
     {
-        // Change button state
+        // Change button state (B: kanoniczny szablon)
         const btn = document.getElementById(`force-update-${id}`);
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `
-                <span class="material-icons spin" style="font-size:16px;">sync</span> 
-                <span class="progress-text">...</span>
-            `;
-        }
+        if (btn) setTestButtonState(btn, { label: "..." });
 
         platform.tests.run({ url, id, ver, onlyDownload: true });
     }

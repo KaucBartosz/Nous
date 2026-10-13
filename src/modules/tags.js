@@ -1,28 +1,34 @@
-// src/modules/tags.js
+// src/modules/tags.js — cienki adapter: auth/DOM + menu; logika w `src/catalog/tagsStore.js`.
 import { getCurrentUser, getUserStatus, getResearcherUid } from "./auth.js";
+import {
+  storageKeyFor,
+  createTagsStore,
+  parseTagSearchQuery as parseQuery,
+  matchesTagGroups as matchesGroups,
+} from "../catalog/tagsStore.js";
+
+// Re-eksport czystej logiki — dotychczasowi importerzy (`library.js` via Tags.*,
+// `testCatalog.queryTests` przez wstrzyknięcie) działają bez zmian.
+export { parseQuery as parseTagSearchQuery, matchesGroups as matchesTagGroups };
+
+let activeCloseHandler = null;
 
 /**
  * Zwraca klucz localStorage specyficzny dla aktualnego użytkownika.
  * @returns {string}
  */
-let activeCloseHandler = null;
-
 function getStorageKey() {
   const user = getCurrentUser();
-  const status = getUserStatus();
+  return storageKeyFor({
+    uid: user && user.uid ? user.uid : null,
+    status: getUserStatus(),
+    researcherUid: getResearcherUid(),
+  });
+}
 
-  if (user && user.uid) {
-    // Konto Firebase — klucz po UID
-    return `test_tags_${user.uid}`;
-  } else if (status === "LOCAL") {
-    // Konto lokalne — klucz po researcher UID (LOCAL::username)
-    // Zamieniamy '::' na '__' bo localStorage nie lubi niestandardowych znaków w kluczach
-    const uid = getResearcherUid().replace("::", "__");
-    return `test_tags_${uid}`;
-  } else if (status === "GUEST") {
-    return "test_tags_guest";
-  }
-  return "test_tags_anonymous";
+/** Store powiązany z bieżącym użytkownikiem (klucz liczony per wywołanie). */
+function getStore() {
+  return createTagsStore({ storage: localStorage, key: getStorageKey() });
 }
 
 /**
@@ -30,14 +36,7 @@ function getStorageKey() {
  * @returns {Object} { testId: [tags] }
  */
 function getAllTags() {
-  const key = getStorageKey();
-  const data = localStorage.getItem(key);
-  try {
-    return data ? JSON.parse(data) : {};
-  } catch (e) {
-    console.error("Error parsing tags from localStorage", e);
-    return {};
-  }
+  return getStore().getAll();
 }
 
 /**
@@ -45,8 +44,7 @@ function getAllTags() {
  * @param {Object} allTags
  */
 function saveAllTags(allTags) {
-  const key = getStorageKey();
-  localStorage.setItem(key, JSON.stringify(allTags));
+  getStore().saveAll(allTags);
 }
 
 /**
@@ -55,8 +53,7 @@ function saveAllTags(allTags) {
  * @returns {string[]}
  */
 export function getTagsForTest(testId) {
-  const all = getAllTags();
-  return all[testId] || [];
+  return getStore().getTagsForTest(testId);
 }
 
 /**
@@ -65,24 +62,7 @@ export function getTagsForTest(testId) {
  * @param {string} tagsInput
  */
 export function addTagsToTest(testId, tagsInput) {
-  if (!tagsInput) return;
-
-  const newTags = tagsInput
-    .split(",")
-    .map((t) => t.trim().toLowerCase())
-    .filter((t) => t.length > 0 && t.length <= 25); // Limit 25 znaków
-
-  if (newTags.length === 0) return;
-
-  const all = getAllTags();
-  const currentTags = all[testId] || [];
-
-  // Unikalne dodawanie
-  const updatedTags = [...new Set([...currentTags, ...newTags])];
-  all[testId] = updatedTags;
-
-  saveAllTags(all);
-  return updatedTags;
+  return getStore().addTagsToTest(testId, tagsInput);
 }
 
 /**
@@ -91,21 +71,7 @@ export function addTagsToTest(testId, tagsInput) {
  * @param {string} tagToRemove
  */
 export function removeTagFromTest(testId, tagToRemove) {
-  const all = getAllTags();
-  const currentTags = all[testId] || [];
-
-  const updatedTags = currentTags.filter(
-    (t) => t !== tagToRemove.toLowerCase(),
-  );
-
-  if (updatedTags.length === 0) {
-    delete all[testId];
-  } else {
-    all[testId] = updatedTags;
-  }
-
-  saveAllTags(all);
-  return updatedTags;
+  return getStore().removeTagFromTest(testId, tagToRemove);
 }
 
 /**
@@ -113,14 +79,7 @@ export function removeTagFromTest(testId, tagToRemove) {
  * @returns {string[]}
  */
 export function getAllUsedTags() {
-  const all = getAllTags();
-  const tagsSet = new Set();
-
-  Object.values(all).forEach((tags) => {
-    tags.forEach((t) => tagsSet.add(t));
-  });
-
-  return Array.from(tagsSet).sort();
+  return getStore().getAllUsedTags();
 }
 
 /**
@@ -301,70 +260,4 @@ function removeExistingMenu() {
   }
 }
 
-/**
- * Parsuje zapytanie tekstowe na strukturę filtrów tagów i tekstu.
- * Obsługuje precedencję: AND ma wyższy priorytet niż OR.
- * @param {string} filterText
- * @returns {Object} { textFilters: string[], tagGroups: string[][] }
- */
-export function parseTagSearchQuery(filterText) {
-  const lower = filterText.toLowerCase();
-  const words = lower.split(/\s+/).filter((w) => w.length > 0);
-
-  const textFilters = [];
-  const tagFilters = []; // Elementy: string lub operator
-
-  let currentOp = "AND";
-  for (const word of words) {
-    if (word === "and") {
-      currentOp = "AND";
-    } else if (word === "or") {
-      currentOp = "OR";
-    } else if (word.startsWith("@")) {
-      tagFilters.push({ tag: word.substring(1), op: currentOp });
-      currentOp = "AND"; // Domyślnie AND dla kolejnego
-    } else {
-      textFilters.push(word);
-    }
-  }
-
-  if (tagFilters.length === 0) return { textFilters, tagGroups: [] };
-
-  // Implementacja precedencji: AND > OR
-  // Grupowanie tagów połączonych za pomocą AND.
-  // Wynikowe grupy są połączone operatorem OR.
-  // Przykład: @a OR @b @c OR @d -> [[@a], [@b, @c], [@d]]
-  const tagGroups = [];
-  let currentGroup = [tagFilters[0].tag];
-
-  for (let i = 1; i < tagFilters.length; i++) {
-    const item = tagFilters[i];
-    if (item.op === "OR") {
-      tagGroups.push(currentGroup);
-      currentGroup = [item.tag];
-    } else {
-      currentGroup.push(item.tag);
-    }
-  }
-  tagGroups.push(currentGroup);
-
-  return { textFilters, tagGroups };
-}
-
-/**
- * Sprawdza czy dany test (jego tagi) pasuje do sparsowanych grup tagów.
- * @param {string[]} testTags
- * @param {string[][]} tagGroups
- * @returns {boolean}
- */
-export function matchesTagGroups(testTags, tagGroups) {
-  if (tagGroups.length === 0) return true;
-
-  const lowerTestTags = testTags.map((t) => t.toLowerCase());
-
-  // OR między grupami
-  return tagGroups.some((group) => {
-    // AND wewnątrz grupy
-    return group.every((tag) => lowerTestTags.includes(tag));
-  });
-}
+// Parser i matcher żyją w `src/catalog/tagsStore.js` (re-eksport na górze pliku).

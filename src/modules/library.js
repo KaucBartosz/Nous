@@ -16,6 +16,11 @@ import { getSettings } from "./settings.js";
 import { getResearcherUid } from "./auth.js";
 import { getPlatform } from "../platform/index.js";
 import { loadCatalog, queryTests } from "../catalog/testCatalog.js";
+import {
+  cardParts,
+  setTestButtonState,
+  setTestButtonProgress,
+} from "../catalog/testCard.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
@@ -56,29 +61,8 @@ export function initLibraryListeners() {
 
   platform.tests.onProgress(({ test_id, percent }) => {
     const btn = document.getElementById(`start-test-${test_id}`);
-    if (btn) {
-      const progressText = btn.querySelector(".progress-text");
-      const progressBar = btn.querySelector(".progress-bar");
-
-      if (progressText && progressBar) {
-        progressText.textContent = `${percent}%`;
-        progressBar.style.width = `${percent}%`;
-      } else {
-        // Fallback / Initial structure
-        btn.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:5px; z-index:1; position:relative;">
-                         <span class="material-icons spin">sync</span>
-                         <span class="progress-text">${percent}%</span>
-                    </div>
-                    <div style="position:absolute; bottom:0; left:0; width:100%; height:4px; background:rgba(0,0,0,0.3);">
-                        <div class="progress-bar" style="width:${percent}%; height:100%; background:#4caf50;"></div>
-                    </div>
-                `;
-        btn.style.position = "relative";
-        btn.style.overflow = "hidden";
-        btn.disabled = true;
-      }
-    }
+    // B: kanoniczny stan przycisku (szablon w testCard.js)
+    if (btn) setTestButtonProgress(btn, percent);
   });
 
   platform.tests.onInstalled((data) => {
@@ -241,57 +225,18 @@ function showOfflinePanel(scannedPath) {
         `;
 }
 
-function getTestStatus(t) {
-  const local_ver = t.local_ver;
-  const remote_ver = t.remote_ver;
-
-  if (t.isLocalDev) {
-    return {
-      iconName: "code",
-      iconColor: "#2196f3",
-      iconTitle: "Wersja Lokalna (Deweloperska)",
-      btnText: "Uruchom (Dev)",
-      btnClass: "secondary",
-      statusText: "Lokalny",
-      versionParam: local_ver,
-      isDownloadOnly: false,
-    };
-  }
-
-  if (local_ver === 0) {
-    return {
-      iconName: "cloud_download",
-      iconColor: "#888",
-      iconTitle: "Nie pobrano",
-      btnText: "Pobierz",
-      btnClass: "primary",
-      statusText: "Nie pobrano",
-      versionParam: remote_ver,
-      isDownloadOnly: true,
-    };
-  } else if (local_ver < remote_ver) {
-    return {
-      iconName: "system_update",
-      iconColor: "#ff9800",
-      iconTitle: "Dostępna aktualizacja",
-      btnText: "Uruchom",
-      btnClass: "outline",
-      statusText: "Aktualizacja dostępna",
-      versionParam: local_ver,
-      isDownloadOnly: false,
-    };
-  } else {
-    return {
-      iconName: "check_circle",
-      iconColor: "#4caf50",
-      iconTitle: "Zainstalowano",
-      btnText: "Uruchom",
-      btnClass: "primary",
-      statusText: "Zainstalowano",
-      versionParam: local_ver,
-      isDownloadOnly: false,
-    };
-  }
+// Deskryptor statusu żyje w `src/catalog/testCard.js` (getTestStatus).
+// Jedno wiązanie startu dla wszystkich widoków (wcześniej 4 identyczne kopie).
+function handleStart(t, status) {
+  startTestProcess(
+    t.download_url || t.downloadUrl,
+    t.id,
+    status.versionParam,
+    status.isDownloadOnly,
+    t.name,
+    t.description,
+    t.isLocalDev,
+  );
 }
 
 function renderTests(testsSource, filterText) {
@@ -372,90 +317,35 @@ function renderGridView(tests) {
   elements.testsGrid.className = "grid-container";
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
+    // A: klocki z Karty Katalogu; renderer tylko układa + 3 tweaki layoutu
+    const parts = cardParts(t, {
+      iconSize: "24px",
+      appIcon: "40px",
+      tagBtn: createTagBtn(t.id, t.name),
+      onStart: handleStart,
+    });
 
-    // Create card structure safely
     const card = document.createElement("div");
     card.className = "test-card";
 
-    // Top section with icons
     const topDiv = document.createElement("div");
     topDiv.style.cssText =
       "display:flex; justify-content:space-between; align-items:start;";
 
     const iconsDiv = document.createElement("div");
     iconsDiv.style.cssText = "display:flex; align-items:center; gap:10px;";
+    iconsDiv.append(parts.appIcon, parts.statusIcon, parts.tagBtn);
 
-    const assignmentIcon = document.createElement("span");
-    assignmentIcon.className = "material-icons";
-    assignmentIcon.style.cssText = "font-size:40px; color:#444;";
-    assignmentIcon.textContent = "assignment";
-
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.cssText = `color:${status.iconColor}; font-size:24px;`;
-    statusIcon.title = status.iconTitle;
-    statusIcon.textContent = status.iconName;
-
-    const tagBtn = createTagBtn(test_id, t.name);
-
-    iconsDiv.appendChild(assignmentIcon);
-    iconsDiv.appendChild(statusIcon);
-    iconsDiv.appendChild(tagBtn);
-
-    const versionSpan = document.createElement("span");
-    versionSpan.className = "meta";
-    versionSpan.style.cssText =
+    parts.versionEl.className = "meta";
+    parts.versionEl.style.cssText =
       "color: #666; display: flex; align-items: center; gap: 8px;";
+    topDiv.append(iconsDiv, parts.versionEl);
 
-    versionSpan.appendChild(document.createTextNode(`v${t.version}`));
-
-    topDiv.appendChild(iconsDiv);
-    topDiv.appendChild(versionSpan);
-
-    // Title
-    const title = document.createElement("h4");
-    title.style.marginTop = "10px";
-    title.textContent = t.name || "Bez nazwy";
-
-    // Description
-    const description = document.createElement("p");
-    description.textContent = t.description || "Brak opisu";
-
-    // Button
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} small`;
-    button.style.marginTop = "auto";
-    button.id = `start-test-${test_id}`;
-
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-    button.appendChild(document.createTextNode(` ${status.btnText}`));
-
-    // Assemble card
-    card.appendChild(topDiv);
-    card.appendChild(title);
-    card.appendChild(description);
-    card.appendChild(button);
+    parts.titleEl.style.marginTop = "10px";
+    parts.button.style.marginTop = "auto";
+    card.append(topDiv, parts.titleEl, parts.descEl, parts.button);
 
     elements.testsGrid.appendChild(card);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 }
 
@@ -463,27 +353,10 @@ function renderListView(tests) {
   elements.testsGrid.className = "list-container";
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
-
     const item = document.createElement("div");
     item.className = "test-list-item";
 
-    // Icon section
-    const iconDiv = document.createElement("div");
-    iconDiv.className = "list-icon";
-
-    const assignmentIcon = document.createElement("span");
-    assignmentIcon.className = "material-icons";
-    assignmentIcon.textContent = "assignment";
-
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.color = status.iconColor;
-    statusIcon.style.fontSize = "20px";
-    statusIcon.title = status.iconTitle;
-    statusIcon.textContent = status.iconName;
-
+    // Chipy tagów — jedyny kawałek specyficzny dla listy
     const tagContainer = document.createElement("div");
     tagContainer.className = "list-tag-container";
 
@@ -496,86 +369,44 @@ function renderListView(tests) {
         tagContainer.appendChild(chip);
       });
     };
-    renderChips(Tags.getTagsForTest(test_id));
+    renderChips(Tags.getTagsForTest(t.id));
 
-    const tagBtn = createTagBtn(test_id, t.name, {
-      fontSize: "20px",
-      onUpdate: renderChips,
+    const parts = cardParts(t, {
+      iconSize: "20px",
+      appIcon: true,
+      tagBtn: createTagBtn(t.id, t.name, {
+        fontSize: "20px",
+        onUpdate: renderChips,
+      }),
+      onStart: handleStart,
     });
 
-    iconDiv.appendChild(assignmentIcon);
-    iconDiv.appendChild(statusIcon);
-    iconDiv.appendChild(tagBtn);
+    // Icon section
+    const iconDiv = document.createElement("div");
+    iconDiv.className = "list-icon";
+    iconDiv.append(parts.appIcon, parts.statusIcon, parts.tagBtn);
 
     // Info section
     const infoDiv = document.createElement("div");
     infoDiv.className = "list-info";
-
-    const title = document.createElement("h4");
-    title.textContent = t.name || "Bez nazwy";
-
-    const desc = document.createElement("p");
-    desc.textContent = t.description || "Brak opisu";
-
-    infoDiv.appendChild(title);
-    infoDiv.appendChild(desc);
-    infoDiv.appendChild(tagContainer);
+    infoDiv.append(parts.titleEl, parts.descEl, tagContainer);
 
     // Meta section
     const metaDiv = document.createElement("div");
     metaDiv.className = "list-meta";
 
-    const versionSpan = document.createElement("span");
-    versionSpan.style.display = "flex";
-    versionSpan.style.alignItems = "center";
-    versionSpan.style.gap = "8px";
-
-    versionSpan.appendChild(document.createTextNode(`v${t.version}`));
-
-    const statusSpan = document.createElement("span");
-    statusSpan.style.color = status.iconColor;
-    statusSpan.textContent = status.statusText;
-
-    metaDiv.appendChild(versionSpan);
-    metaDiv.appendChild(statusSpan);
+    parts.versionEl.style.display = "flex";
+    parts.versionEl.style.alignItems = "center";
+    parts.versionEl.style.gap = "8px";
+    metaDiv.append(parts.versionEl, parts.statusText);
 
     // Actions section
     const actionsDiv = document.createElement("div");
     actionsDiv.className = "list-actions";
+    actionsDiv.appendChild(parts.button);
 
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} small`;
-    button.id = `start-test-${test_id}`;
-
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-    button.appendChild(document.createTextNode(` ${status.btnText}`));
-
-    actionsDiv.appendChild(button);
-
-    // Assemble item
-    item.appendChild(iconDiv);
-    item.appendChild(infoDiv);
-    item.appendChild(metaDiv);
-    item.appendChild(actionsDiv);
-
+    item.append(iconDiv, infoDiv, metaDiv, actionsDiv);
     elements.testsGrid.appendChild(item);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 }
 
@@ -602,8 +433,14 @@ function renderTableView(tests) {
   const tbody = document.createElement("tbody");
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
+    const parts = cardParts(t, {
+      iconSize: "18px",
+      tagBtn: createTagBtn(t.id, t.name, {
+        fontSize: "18px",
+        marginLeft: "8px",
+      }),
+      onStart: handleStart,
+    });
 
     const row = document.createElement("tr");
 
@@ -629,62 +466,15 @@ function renderTableView(tests) {
     const statusCell = document.createElement("td");
     const statusDiv = document.createElement("div");
     statusDiv.className = "status-cell";
-
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.color = status.iconColor;
-    statusIcon.style.fontSize = "18px";
-    statusIcon.textContent = status.iconName;
-
-    const statusText = document.createElement("span");
-    statusText.style.color = status.iconColor;
-    statusText.textContent = status.statusText;
-
-    const tagBtn = createTagBtn(test_id, t.name, {
-      fontSize: "18px",
-      marginLeft: "8px",
-    });
-
-    statusDiv.appendChild(statusIcon);
-    statusDiv.appendChild(statusText);
-    statusDiv.appendChild(tagBtn);
+    statusDiv.append(parts.statusIcon, parts.statusText, parts.tagBtn);
     statusCell.appendChild(statusDiv);
 
     // Action cell
     const actionCell = document.createElement("td");
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} small`;
-    button.id = `start-test-${test_id}`;
+    actionCell.appendChild(parts.button);
 
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-    button.appendChild(document.createTextNode(` ${status.btnText}`));
-    actionCell.appendChild(button);
-
-    // Assemble row
-    row.appendChild(nameCell);
-    row.appendChild(descCell);
-    row.appendChild(versionCell);
-    row.appendChild(statusCell);
-    row.appendChild(actionCell);
-
+    row.append(nameCell, descCell, versionCell, statusCell, actionCell);
     tbody.appendChild(row);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 
   table.appendChild(tbody);
@@ -695,79 +485,33 @@ function renderCompactView(tests) {
   elements.testsGrid.className = "compact-grid";
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
+    const parts = cardParts(t, {
+      tagBtn: createTagBtn(t.id, t.name, {
+        fontSize: "18px",
+        marginLeft: "auto",
+      }),
+      compactButton: true,
+      onStart: handleStart,
+    });
 
     const card = document.createElement("div");
     card.className = "test-card-compact";
 
-    // Header with status icon
     const headerDiv = document.createElement("div");
     headerDiv.className = "compact-header";
+    headerDiv.append(parts.statusIcon, parts.tagBtn);
 
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.color = status.iconColor;
-    statusIcon.title = status.iconTitle;
-    statusIcon.textContent = status.iconName;
-
-    const tagBtn = createTagBtn(test_id, t.name, {
-      fontSize: "18px",
-      marginLeft: "auto",
-    });
-
-    headerDiv.appendChild(statusIcon);
-    headerDiv.appendChild(tagBtn);
-
-    // Title
-    const title = document.createElement("h4");
-    title.textContent = t.name || "Bez nazwy";
-
-    // Footer with version and button
     const footerDiv = document.createElement("div");
     footerDiv.className = "compact-footer";
 
-    const versionSpan = document.createElement("span");
-    versionSpan.className = "compact-version";
-    versionSpan.style.display = "flex";
-    versionSpan.style.alignItems = "center";
-    versionSpan.style.gap = "4px";
+    parts.versionEl.className = "compact-version";
+    parts.versionEl.style.display = "flex";
+    parts.versionEl.style.alignItems = "center";
+    parts.versionEl.style.gap = "4px";
+    footerDiv.append(parts.versionEl, parts.button);
 
-    versionSpan.appendChild(document.createTextNode(`v${t.version}`));
-
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} compact`;
-    button.id = `start-test-${test_id}`;
-
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.style.fontSize = "14px";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-
-    footerDiv.appendChild(versionSpan);
-    footerDiv.appendChild(button);
-
-    // Assemble card
-    card.appendChild(headerDiv);
-    card.appendChild(title);
-    card.appendChild(footerDiv);
-
+    card.append(headerDiv, parts.titleEl, footerDiv);
     elements.testsGrid.appendChild(card);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 }
 
@@ -782,22 +526,9 @@ export async function startTestProcess(
 ) {
   const platform = getPlatform();
   if (platform.kind === "electron") {
-    // Change button state immediately
+    // Change button state immediately (B: kanoniczny szablon)
     const btn = document.getElementById(`start-test-${id}`);
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = `
-                <div style="display:flex; align-items:center; gap:5px; z-index:1; position:relative;">
-                    <span class="material-icons spin">sync</span>
-                    <span class="progress-text">Inicjowanie...</span>
-                </div>
-                <div style="position:absolute; bottom:0; left:0; width:100%; height:4px; background:rgba(0,0,0,0.3);">
-                    <div class="progress-bar" style="width:0%; height:100%; background:#4caf50;"></div>
-                </div>
-            `;
-      btn.style.position = "relative";
-      btn.style.overflow = "hidden";
-    }
+    if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
 
     if (isLocalDev) {
       const confirmed = await Dialog.confirm(
@@ -843,11 +574,9 @@ export async function startTestProcess(
       return;
     }
 
+    // B: ten sam szablon co na Desktop (wcześniej osobny łańcuch HTML)
     const btn = document.getElementById(`start-test-${id}`);
-    if (btn) {
-      btn.innerHTML = `<span class="material-icons spin" style="font-size:16px;">sync</span> Ładowanie...`;
-      btn.disabled = true;
-    }
+    if (btn) setTestButtonState(btn, { label: "Ładowanie..." });
 
     const result = await platform.tests.run({ id, trainingMode: isTrainingMode });
 

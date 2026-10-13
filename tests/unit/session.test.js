@@ -59,6 +59,15 @@ describe('session', () => {
     expect(isCloudSyncAllowed('ADMIN')).toBe(false);
     expect(isCloudSyncAllowed('GUEST')).toBe(false);
   });
+
+  it('isLocalSessionKind: LOCAL i GUEST bez chmury', async () => {
+    const { isLocalSessionKind } = await import('../../src/session/session.js');
+    expect(isLocalSessionKind('LOCAL')).toBe(true);
+    expect(isLocalSessionKind('GUEST')).toBe(true);
+    expect(isLocalSessionKind('APPROVED')).toBe(false);
+    expect(isLocalSessionKind('ADMIN')).toBe(false);
+    expect(isLocalSessionKind('UNKNOWN')).toBe(false);
+  });
 });
 
 describe('keyVault', () => {

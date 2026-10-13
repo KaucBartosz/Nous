@@ -146,6 +146,22 @@ export function queryTests(tests, filterText, tags) {
 }
 
 /**
+ * Widok Aktualizacji: filtr po nazwie (bez @tagów — tak jak wcześniej
+ * w `loadUpdatesData`) + sort wg statusu instalacji. Czysta funkcja,
+ * testowana na fejkach; widok tylko renderuje wynik.
+ * @param {array} tests — po merge wersji (local_ver/remote_ver)
+ * @param {string} filterText
+ */
+export function selectUpdatesView(tests, filterText) {
+  let out = [...tests];
+  if (filterText) {
+    const lower = String(filterText).toLowerCase();
+    out = out.filter((t) => (t.name || "").toLowerCase().includes(lower));
+  }
+  return sortByInstallStatus(out);
+}
+
+/**
  * Pełny load: rejestr (chmura → cache) + merge wersji. Osobno, żeby widoki
  * zachowały własne guardy (isLoading) i komunikaty.
  */
