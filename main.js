@@ -4,7 +4,8 @@ const fs = require('fs');
 const https = require('https');
 const crypto = require('crypto');
 const AdmZip = require('adm-zip');
-const { buildBulkCsv } = require('./main/bulkExport');
+const { createBulkExport } = require('./main/bulkExport');
+const { createShell } = require('./main/shell');
 const { createPaths } = require('./main/paths');
 const { createKeyStore } = require('./main/keyStore');
 const { createTestRunner } = require('./main/testRunner');
@@ -40,33 +41,27 @@ const testRunner = createTestRunner({
     fs,
     crypto,
     getMainWindow: () => mainWindow,
-    getMasterKey: () => getOrGenerateMasterKey(),
+    getMasterKey: () => keyStore.getOrGenerateMasterKey(),
     preloadPath: path.join(__dirname, 'preload_test.js'),
 });
 testRunner.registerIpc(ipcMain);
 
-function isTestRunning() {
-    return testRunner.isTestRunning();
-}
-
 // E5: kolejka pobierania + skan + usuwanie w main/downloads.js
+// (funkcje fabryk podpięte leniwie — aliasy-wrappery usunięte w C6).
 const downloader = createDownloader({
     fs,
     path,
     https,
     AdmZip,
-    getUserDataPath,
-    findStartFile,
-    openTestWindow,
-    isTestRunning,
+    getUserDataPath: () => nodePaths.getUserDataPath(app),
+    findStartFile: (folderPath) => nodePaths.findStartFile(folderPath),
+    openTestWindow: (htmlPath) => testRunner.openTestWindow(htmlPath),
+    isTestRunning: () => testRunner.isTestRunning(),
 });
 downloader.registerIpc(ipcMain);
 
 // E1: ścieżki w main/paths.js (te same sygnatury — reszta pliku bez zmian)
 const nodePaths = createPaths({ fs, path });
-function getUserDataPath() {
-    return nodePaths.getUserDataPath(app);
-}
 
 function createWindow() {
     // Dobierz ikonę odpowiednią dla platformy
@@ -95,96 +90,21 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 }
 
-// E1: szukanie plików w main/paths.js (te same sygnatury)
-function findFileInSubfolders(folderPath, filename) {
-    return nodePaths.findFileInSubfolders(folderPath, filename);
-}
-
-function findStartFile(folderPath) {
-    return nodePaths.findStartFile(folderPath);
-}
-
-// ==========================================================
-// 1. OBSŁUGA POBIERANIA (ZIP) I URUCHAMIANIA
-// ==========================================================
-
-// E5: download-and-run w main/downloads.js (rejestracja wyżej).
-
-// E5: executeDownloadTask w main/downloads.js (bez zmian, ze wstrzykniętymi deps).
-
-
-// ==========================================================
-// 2. SKANOWANIE LOKALNEJ BIBLIOTEKI
-// ==========================================================
-
-// E5: get-local-versions w main/downloads.js (scanLocalVersions, rejestracja wyżej).
-
-
-// ==========================================================
-// 3. USUWANIE TESTÓW
-// ==========================================================
-
-// E5: delete-test w main/downloads.js (deleteTestById, rejestracja wyżej).
-
-
-// ==========================================================
-// 4. OKNO TESTOWE (PEŁNY EKRAN)
-// ==========================================================
-
 // --- SZYFROWANIE (Key Management) — E1: main/keyStore.js ---
 // getUserDataPath wołane lazy wewnątrz store'a (app.getPath() dopiero po whenReady).
-const keyStore = createKeyStore({ getUserDataPath, fs, path, safeStorage, crypto });
-function getOrGenerateMasterKey() {
-    return keyStore.getOrGenerateMasterKey();
-}
+const keyStore = createKeyStore({ getUserDataPath: () => nodePaths.getUserDataPath(app), fs, path, safeStorage, crypto });
 keyStore.registerIpc(ipcMain);
 
-// E2: okno testu + test-finished/close w main/testRunner.js (rejestracja wyżej).
-// Alias dla kodu kolejki pobierania (do E5).
-function openTestWindow(htmlPath) {
-    return testRunner.openTestWindow(htmlPath);
-}
+// E2: okno testu + test-finished/close w main/testRunner.js (rejestracja wyżej;
+// downloader dostaje (htmlPath) => testRunner.openTestWindow(htmlPath) wprost).
 
 
 // E2: zapis lokalny z HMAC w main/testRunner.js (onSaveLocalResult, rejestracja wyżej).
 
-ipcMain.handle('download-bulk-zip', async (event, { results, filename, format }) => {
-    const dialog = require('electron').dialog;
-    const zip = new AdmZip();
-
-    try {
-        results.forEach((res, index) => {
-            const dateStr = new Date(res.timestamp || res.synced_at).toISOString().replace(/[:.]/g, '-');
-            const testId = res.test_id || res.testId || 'unknown';
-            const subjectId = res.subject_id || 'unknown';
-            const baseName = `Wynik_${testId}_${subjectId}_${dateStr}`;
-
-            if (format === 'csv') {
-                let csvContent = buildBulkCsv(res); // C (2b/b): wiersz jak ResultExporter (main/bulkExport.js)
-                // (wiersz w buildBulkCsv: nagłówki ` - `, `Badacz UID`, braki `-`)
-                zip.addFile(`${baseName}.csv`, Buffer.from(csvContent, 'utf8'));
-            } else {
-                const jsonStr = JSON.stringify(res, null, 2);
-                zip.addFile(`${baseName}.json`, Buffer.from(jsonStr, 'utf8'));
-            }
-        });
-
-        const { filePath } = await dialog.showSaveDialog(mainWindow, {
-            title: 'Zapisz paczkę wyników (ZIP)',
-            defaultPath: filename,
-            filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
-        });
-
-        if (filePath) {
-            zip.writeZip(filePath);
-            return { success: true };
-        }
-        return { success: false, cancelled: true };
-    } catch (e) {
-        console.error("Bulk Zip Error:", e);
-        return { success: false, error: e.message };
-    }
-});
+// C6: paczka wyników (ZIP) w main/bulkExport.js (createBulkExport + registerIpc).
+// Kanał 'download-bulk-zip' i format CSV (2b/b) bez zmian.
+const bulkExport = createBulkExport({ dialog: require('electron').dialog, AdmZip });
+bulkExport.registerIpc(ipcMain, () => mainWindow);
 
 app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
@@ -224,16 +144,6 @@ updater.registerFeedEvents(() => mainWindow);
 const templates = createTemplates({ dialog: require('electron').dialog, fs });
 templates.registerIpc(ipcMain, () => mainWindow);
 
-ipcMain.on('open-external', (event, url) => {
-    // Walidacja: tylko bezpieczne protokoły (zapobieganie SSRF przez shell.openExternal)
-    try {
-        const parsed = new URL(url);
-        if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol)) {
-            console.error(`[Security] Zablokowano open-external dla protokołu: ${parsed.protocol}`);
-            return;
-        }
-        shell.openExternal(url);
-    } catch (e) {
-        console.error(`[Security] Nieprawidłowy URL w open-external: ${url}`);
-    }
-});
+// C6: linki zewnętrzne w main/shell.js (allowlista protokołów, kanał bez zmian).
+const appShell = createShell({ shell });
+appShell.registerIpc(ipcMain);
