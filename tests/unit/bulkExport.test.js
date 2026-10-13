@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import bulkExport from "../../main/bulkExport.js";
-import { resultRow } from "../../src/results/resultExporter.js";
+import { resultRow, toKeyValueCSV } from "../../src/results/resultExporter.js";
 
 // main/ to CommonJS (proces Electrona) — nie może importować ESM z src/.
 // Prawdą jest TEN test: buildBulkRow(f) deep-equals resultRow(f).
@@ -61,15 +61,22 @@ describe("bulkExport parity (2b/b)", () => {
     expect(keys).not.toContain("Badacz ID");
   });
 
-  it("CSV: BOM + nagłówki = klucze wiersza + quoting", () => {
+  it("CSV key-value jak pojedyncze pobranie (wariant A: ZIP = N x single)", () => {
     const csv = buildBulkCsv(nested);
-    const keys = Object.keys(resultRow(nested));
-    const [headerLine, dataLine] = csv.split("\r\n");
-    expect(headerLine).toBe(`﻿${keys.join(";")}`);
+    const lines = csv.split("\r\n");
+    expect(lines[0]).toBe("﻿Parametr;Wartość");
+    expect(lines).toContain("Metryczka - wiek;30");
     // 'a;b"c\nD' → cytowane, cudzysłów podwojony
-    expect(dataLine).toContain('"a;b""c\nd"');
+    expect(csv).toContain('"a;b""c\nd"');
     expect(csv.endsWith("\r\n")).toBe(true);
   });
+
+  it.each([["basic", basic], ["nested", nested], ["legacy", legacy]])(
+    "buildBulkCsv(%s) bajtowo równe pojedynczemu pobraniu",
+    (_name, fixture) => {
+      expect(buildBulkCsv(fixture)).toBe(toKeyValueCSV(resultRow(fixture)));
+    },
+  );
 
   it("escapeCell jak escapeCsvCell (reguła maina)", () => {
     expect(escapeCell('say "hi"')).toBe('"say ""hi"""');

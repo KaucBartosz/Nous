@@ -57,15 +57,16 @@ function buildBulkRow(res) {
   return flat;
 }
 
-/** Jeden CSV na wynik (nagłówek + 1 wiersz), jak dotąd w download-bulk-zip. */
+/** Jeden CSV na wynik w układzie key-value — BAJTOWO jak pojedyncze pobranie
+ * tego samego wyniku (src/results/resultExporter.js: toKeyValueCSV(resultRow)).
+ * Decyzja: ZIP = N x single (wariant A). Kopia zamiast importu — main nie
+ * importuje ESM z src/; prawdą jest test parytetu serializacji. */
 function buildBulkCsv(res) {
   const flat = buildBulkRow(res);
-  const headers = Object.keys(flat);
-  let out = CSV_BOM;
-  out += headers.join(";") + "\r\n";
-  out +=
-    headers.map((h) => escapeCell(flat[h] === undefined ? "" : flat[h])).join(";") +
-    "\r\n";
+  let out = `${CSV_BOM}Parametr;Wartość\r\n`;
+  for (const [key, value] of Object.entries(flat)) {
+    out += `${key};${escapeCell(value)}\r\n`;
+  }
   return out;
 }
 
