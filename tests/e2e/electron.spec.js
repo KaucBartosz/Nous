@@ -1,5 +1,7 @@
 import { test, expect, _electron as electron } from '@playwright/test';
 import path from 'path';
+import os from 'os';
+import { readFile, rm, stat } from 'fs/promises';
 
 // ==========================================================
 // Testy E2E dla Electron Desktop App (2-panelowe logowanie:
@@ -222,5 +224,68 @@ test.describe('Electron App - Konto lokalne i zmiana hasła (passwordModal + Ses
     await expect(page.locator('#user-email-display')).toContainText(username);
     await page.click('#btn-logout');
     await expect(page.locator('#login-choice-panel')).toBeVisible();
+  });
+});
+
+test.describe('Electron App - Eksport CSV (historyExport)', () => {
+  // Seeduje jawny (nieszyfrowany) wynik gościa wprost do IndexedDB.
+  // Stałe id = idempotentne między przebiegami (put nadpisuje).
+  async function seedGuestResult() {
+    await page.evaluate(() => new Promise((resolve, reject) => {
+      const open = indexedDB.open('NousDB');
+      open.onsuccess = () => {
+        const db = open.result;
+        const now = new Date().toISOString();
+        const tx = db.transaction('results', 'readwrite');
+        tx.objectStore('results').put({
+          id: 'e2e-seed-csv-1',
+          test_id: 'stroop',
+          timestamp: now,
+          created_at: now,
+          subject_id: 'P1',
+          researcher_uid: 'GUEST',
+          wyniki: { score: 5 },
+          sync_status: 'LOCAL',
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      };
+      open.onerror = () => reject(open.error);
+    }));
+  }
+
+  test('eksport CSV bieżącego widoku zapisuje plik z danymi', async () => {
+    await loginAsGuest();
+    await seedGuestResult();
+
+    await page.click('#nav-history');
+    await expect(page.locator('#history-view')).toBeVisible();
+    // Seeded wiersz renderuje tabela (split 3/3 w żywej aplikacji)
+    await expect(page.locator('#history-view td', { hasText: 'stroop' }).first())
+      .toBeVisible({ timeout: 15000 });
+
+    // Electron nie emituje eventu 'download' do Playwright — asercja na pliku.
+    // (downloadFile() to czysty Blob + anchor, bez dialogu systemowego.)
+    const downloadsDir = await electronApp.evaluate(({ app }) => app.getPath('downloads'))
+      .catch(() => path.join(os.homedir(), 'Downloads'));
+    const csvPath = path.join(downloadsDir, 'historia_wynikow.csv');
+    await rm(csvPath, { force: true });
+
+    await page.click('#btn-export-csv');
+    await expect.poll(async () => {
+      try {
+        await stat(csvPath);
+        return true;
+      } catch {
+        return false;
+      }
+    }, { timeout: 15000 }).toBe(true);
+
+    const content = await readFile(csvPath, 'utf-8');
+    // CSV macierzowy bieżącego widoku (nagłówek = unia kluczy)
+    expect(content).toContain('Test ID');
+    expect(content).toContain('stroop');
+    expect(content).toContain('P1');
+    await rm(csvPath, { force: true });
   });
 });
