@@ -47,6 +47,9 @@ import { initAppUpdater } from "./modules/appUpdater.js";
 import { initWhatsNew, loadWhatsNewView } from "./modules/whatsNew.js";
 import { renderParticipantsList } from "./modules/participants.js";
 import { getPlatform } from "./platform/index.js";
+import { shellPolicyFor, applyShellPolicy } from "./platform/shell.js";
+import { initLocalPasswordModal } from "./session/passwordModal.js";
+import { Notify } from "./notify/notify.js";
 import { setCryptoWarningHandler } from "./db/cryptoPolicy.js";
 
 // --- INITIALIZATION ---
@@ -55,97 +58,23 @@ document.addEventListener("DOMContentLoaded", () => {
   // 0. Initialize Settings (must be first to apply saved theme/colors)
   initSettings();
 
-  // C2: ostrzeżenia szyfrowania (z warstwy DB) pokazuj jako Dialog — DB nie zna UI
+  // C2: ostrzeżenia szyfrowania (z warstwy DB) pokazuj jako Notify — DB nie zna UI
   setCryptoWarningHandler((message, level) => {
-    import("./modules/dialog.js").then(({ Dialog }) =>
-      Dialog.alert(message, level),
-    );
+    if (level === "error") Notify.error(message);
+    else if (level === "warning") Notify.warning(message);
+    else Notify.info(message);
   });
 
-  // 1. Auth Setup (C1: wybór platformy przez seam, nie if na window)
-  if (getPlatform().kind === "web") {
-    // --- WEB MODE ---
-    // Zablokuj przyciski tagów globalnie przez nadpisanie stylów CSS
-    const webStyles = document.createElement("style");
-    webStyles.innerHTML = `.tag-btn { opacity: 0.3 !important; pointer-events: none !important; }`;
-    document.head.appendChild(webStyles);
-
-    // Ostrzeżenie do nagłówka
-    const titleDiv = document.querySelector(".header-title");
-    if (titleDiv) {
-      const warning = document.createElement("span");
-      warning.style.cssText =
-        "color: #ff9800; font-size: 11px; margin-left: 10px; font-weight: normal;";
-      warning.textContent =
-        "[Wersja Przeglądarkowa - Wyniki mogą być mniej precyzyjne]";
-      titleDiv.appendChild(warning);
-    }
-
-    // Zablokuj funkcje desktopowe w menu głównym
-    const disableNav = (el, msg) => {
-      if (el) {
-        el.style.opacity = "0.5";
-        el.style.cursor = "not-allowed";
-        el.title = msg;
-        // Bezpośrednio zatrzymaj kliknięcie na przycisku
-        el.addEventListener(
-          "click",
-          (e) => {
-            // Sprawdzamy czy to na pewno ten element (zapobiega bleed-through)
-            if (e.currentTarget === el) {
-              e.stopImmediatePropagation();
-              e.preventDefault();
-              import("./modules/dialog.js").then(({ Dialog }) =>
-                Dialog.alert(msg, "info"),
-              );
-            }
-          },
-          true,
-        );
-      }
-    };
-
-    disableNav(
-      elements.navHistory,
-      "Historia wyników dostępna jest tylko w aplikacji Desktopowej. Z poziomu przeglądarki plik .csv jest generowany od razu po badaniu.",
-    );
-    disableNav(
-      elements.navUpdates,
-      "Zarządzanie aktualizacjami dotyczy wyłącznie aplikacji Desktopowej.",
-    );
-
-    // Ukryj wylogowanie i synchronizację w wersji WEB
-    if (elements.btnLogout) elements.btnLogout.style.display = "none";
-    if (elements.syncToggleContainer)
-      elements.syncToggleContainer.style.display = "none";
-
-    // Ukryj Kartotekę Badanych w wersji WEB (funkcja tylko dla aplikacji Desktop)
-    const participantsPanel = document.querySelector(".participants-panel");
-    if (participantsPanel) participantsPanel.style.display = "none";
-    const btnSaveRegistry = document.getElementById("btn-save-to-registry");
-    if (btnSaveRegistry) btnSaveRegistry.style.display = "none";
-
-    // Blokada urządzeń mobilnych (ekranów dotykowych)
-    if (
-      "ontouchstart" in window ||
-      navigator.maxTouchPoints > 0 ||
-      navigator.msMaxTouchPoints > 0
-    ) {
-      document.body.innerHTML = `
-                <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#0f172a; color:white; padding:40px; text-align:center; font-family:sans-serif;">
-                    <span class="material-icons" style="font-size:64px; color:#ff9800; margin-bottom:20px;">mouse</span>
-                    <h2 style="margin-bottom:10px;">Aplikacja niedostępna na ekranach dotykowych</h2>
-                    <p style="color:#94a3b8; max-width:400px; line-height:1.5;">Wersja przeglądarkowa platformy Nous wymaga użycia komputera z kursorem myszy i/lub klawiaturą ze względu na specyfikę testów psychometrycznych.</p>
-                </div>
-            `;
-      return;
-    }
-
-    // W wersji WEB od razu logujemy jako Gość i ładujemy bibliotekę (pomijając ekran logowania)
+  // 1. Auth Setup przez seam powłoki (A2: polityka trybu w shell.js,
+  // app.js tylko stosuje + wybiera ścieżkę logowania)
+  const shellPolicy = shellPolicyFor(getPlatform().kind);
+  if (applyShellPolicy(shellPolicy, { elements })) return;
+  if (shellPolicy.guestAutoLogin) {
+    // Wersja WEB: od razu Gość + biblioteka (bez ekranu logowania)
     loginGuest();
     switchView("library", { onLibrary: loadTestsList });
   } else {
-    // --- DESKTOP MODE ---
+    // Wersja DESKTOP
     initE2E();
     initAuth(() => {
       onAppStart();
@@ -277,76 +206,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- Zmiana hasła dla konta LOCAL ---
-  const btnChangePassword = document.getElementById(
-    "btn-change-local-password",
-  );
-  if (btnChangePassword) {
-    btnChangePassword.addEventListener("click", () => {
-      const modal = document.getElementById("change-password-modal");
-      if (modal) {
-        modal.classList.remove("hidden");
-        document.getElementById("cp-old-password").value = "";
-        document.getElementById("cp-new-password").value = "";
-        document.getElementById("cp-confirm-password").value = "";
-        document.getElementById("cp-error").textContent = "";
-      }
-    });
-  }
-
-  const btnSubmitChangePassword = document.getElementById(
-    "btn-submit-change-password",
-  );
-  if (btnSubmitChangePassword) {
-    btnSubmitChangePassword.addEventListener("click", async () => {
-      const oldPwd = document.getElementById("cp-old-password").value;
-      const newPwd = document.getElementById("cp-new-password").value;
-      const confirmPwd = document.getElementById("cp-confirm-password").value;
-      const errorEl = document.getElementById("cp-error");
-
-      if (newPwd !== confirmPwd) {
-        errorEl.textContent = "Nowe hasła nie są zgodne.";
-        return;
-      }
-
-      btnSubmitChangePassword.disabled = true;
-      btnSubmitChangePassword.textContent = "Zapisywanie...";
-
-      const result = await changeLocalPassword(oldPwd, newPwd);
-
-      btnSubmitChangePassword.disabled = false;
-      btnSubmitChangePassword.textContent = "Zmień hasło";
-
-      if (result.ok) {
-        document
-          .getElementById("change-password-modal")
-          .classList.add("hidden");
-        import("./modules/dialog.js").then(({ Dialog }) => {
-          Dialog.alert("Hasło zostało zmienione pomyślnie.", "success");
-        });
-      } else {
-        errorEl.textContent = result.error;
-      }
-    });
-  }
-
-  const btnCancelChangePassword = document.getElementById(
-    "btn-cancel-change-password",
-  );
-  if (btnCancelChangePassword) {
-    btnCancelChangePassword.addEventListener("click", () => {
-      document.getElementById("change-password-modal").classList.add("hidden");
-    });
-  }
-
-  const btnCloseChangePassword = document.getElementById(
-    "btn-close-change-password",
-  );
-  if (btnCloseChangePassword) {
-    btnCloseChangePassword.addEventListener("click", () => {
-      document.getElementById("change-password-modal").classList.add("hidden");
-    });
-  }
+  // --- Zmiana hasła dla konta LOCAL (A2: formularz w session/passwordModal.js) ---
+  initLocalPasswordModal({ changePassword: changeLocalPassword });
 
   // 4. Feature Buttons
   document
@@ -409,9 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Simple heuristic to detect errors
     if (message.startsWith("BŁĄD") || message.includes("Error")) {
-      import("./modules/dialog.js").then(({ Dialog }) => {
-        Dialog.alert(message, "error");
-      });
+      Notify.error(message);
     } else {
       // For non-error messages, we might just log them or show a toast if we had one.
       // Currently, many messages are handled by the button state updates in library.js (download progress/state).
