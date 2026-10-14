@@ -5,7 +5,7 @@ import {
   getDocs,
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { elements } from "./ui.js";
-import { Dialog } from "./dialog.js";
+import { Notify } from "../notify/notify.js";
 import {
   debounce,
   getLocalVersionsCached,
@@ -534,9 +534,8 @@ export async function startTestProcess(
 
   // Pobieranie plików tylko tam, gdzie platforma umie pobierać.
   if (onlyDownload && !caps.canDownload) {
-    await Dialog.alert(
+    await Notify.info(
       "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
-      "info",
     );
     return;
   }
@@ -545,7 +544,7 @@ export async function startTestProcess(
   if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
 
   if (isLocalDev && caps.canRunLocalDev) {
-    const confirmed = await Dialog.confirm(
+    const confirmed = await Notify.confirm(
       "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
         "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
         "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
@@ -572,15 +571,14 @@ export async function startTestProcess(
     // Web adapter sygnalizuje brak webPath jako { opened: false };
     // Electron/fake nic nie zwracają (undefined) = sukces.
     if (result && result.opened === false) {
-      await Dialog.alert(
+      await Notify.error(
         "Ten test nie posiada jeszcze odpowiedniej ścieżki (webPath) w rejestrze Web.",
-        "error",
       );
       loadTestsList();
     }
   } catch (err) {
     console.error("Błąd uruchamiania testu:", err);
-    await Dialog.alert("Wystąpił błąd podczas uruchamiania testu.", "error");
+    await Notify.error("Wystąpił błąd podczas uruchamiania testu.");
     loadTestsList();
   }
 }

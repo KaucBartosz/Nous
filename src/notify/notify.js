@@ -1,5 +1,9 @@
 // src/notify/notify.js — Notify (C5): głęboki moduł powiadomień.
 // 1 konstruktor toastów (te same klasy/ID co wcześniej), adapter DOM + headless do testów.
+// A5: seam modalny — Dialog jako domyślny adapter DOM, fake w testach.
+// Domena woła Notify.*, nigdy Dialog wprost.
+import { Dialog } from "../modules/dialog.js";
+
 let adapter = null; // null = prawdziwy DOM
 
 export function setNotifyAdapter(a) {
@@ -74,3 +78,42 @@ export function toast({ id, titleHtml, messageHtml, actions = [], autoDismissMs 
 export function syncCountMessage(count) {
   return `Zsynchronizowano ${count} ${count === 1 ? "wynik" : count < 5 ? "wyniki" : "wyników"}.`;
 }
+
+// ==========================================================
+// Seam modalny (A5): domena woła Notify.*, adapter realizuje.
+// Domyślny adapter = Dialog (DOM). Testy podpinają fake przez
+// setNotifyModalAdapter — zero mockowania DOM w logice.
+// ==========================================================
+
+let modalAdapter = null;
+
+function domModals() {
+  return {
+    alert: (message, type) => Dialog.alert(message, type),
+    confirm: (message, type) => Dialog.confirm(message, type),
+    prompt: (message, defaultValue) => Dialog.prompt(message, defaultValue),
+  };
+}
+
+function modals() {
+  return modalAdapter || domModals();
+}
+
+export function setNotifyModalAdapter(a) {
+  modalAdapter = a;
+}
+
+export function resetNotifyModalAdapter() {
+  modalAdapter = null;
+}
+
+/** Jedyny punkt kontaktu domeny z powiadomieniami modalnymi. */
+export const Notify = {
+  info: (message) => modals().alert(message, "info"),
+  success: (message) => modals().alert(message, "success"),
+  warning: (message) => modals().alert(message, "warning"),
+  error: (message) => modals().alert(message, "error"),
+  confirm: (message, type = "question") => modals().confirm(message, type),
+  prompt: (message, defaultValue = "") => modals().prompt(message, defaultValue),
+  toast: (spec) => toast(spec),
+};

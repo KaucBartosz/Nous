@@ -3,7 +3,7 @@ import { db } from '../firebaseConfig.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
-import { Dialog } from './dialog.js';
+import { Notify } from '../notify/notify.js';
 import { debounce, getLocalVersionsCached, updateUpdatesBadge } from './utils.js';
 import { getPlatform } from '../platform/index.js';
 import { loadCatalog, countUpdates, selectUpdatesView } from '../catalog/testCatalog.js';
@@ -206,9 +206,8 @@ export async function loadUpdatesData(filterText = '') {
 export async function forceUpdate(url, id, ver) {
   // A1: jawny komunikat zamiast silent no-op — użytkownik wie dlaczego nic się nie dzieje.
   if (!getPlatform().capabilities?.canDownload) {
-    await Dialog.alert(
+    await Notify.info(
       "Pobieranie testów jest niedostępne w wersji Web. Użyj aplikacji Desktopowej.",
-      "info",
     );
     return;
   }
@@ -225,14 +224,13 @@ export async function forceUpdate(url, id, ver) {
 export async function deleteLocalTest(test_id) {
   // A1: jawny komunikat zamiast silent no-op.
   if (!getPlatform().capabilities?.canDelete) {
-    await Dialog.alert(
+    await Notify.info(
       "Usuwanie testów jest niedostępne w wersji Web. Użyj aplikacji Desktopowej.",
-      "info",
     );
     return;
   }
   {
-        const confirmed = await Dialog.confirm("Czy na pewno chcesz usunąć ten test?");
+        const confirmed = await Notify.confirm("Czy na pewno chcesz usunąć ten test?");
         if (!confirmed) return;
 
         const res = await getPlatform().tests.deleteTest(test_id);
@@ -240,7 +238,7 @@ export async function deleteLocalTest(test_id) {
             loadUpdatesData();
             loadTestsList();
         } else {
-            await Dialog.alert("Błąd: " + res.error, 'error');
+            await Notify.error("Błąd: " + res.error);
         }
     }
 }

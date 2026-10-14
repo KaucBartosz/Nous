@@ -9,6 +9,7 @@ import {
   loadCatalog,
 } from '../../src/catalog/testCatalog.js';
 import { toast, setNotifyAdapter, resetNotifyAdapter, syncCountMessage } from '../../src/notify/notify.js';
+import { Notify, setNotifyModalAdapter, resetNotifyModalAdapter } from '../../src/notify/notify.js';
 
 const tagsFake = {
   parseTagSearchQuery: (text) => {
@@ -162,5 +163,24 @@ describe('notify', () => {
     expect(clicked).toBe('go');
     document.body.innerHTML = '';
     resetNotifyAdapter();
+  });
+});
+
+describe('notify modal seam (A5)', () => {
+  it('Notify deleguje do adaptera — domena nie zna DOM', async () => {
+    const calls = [];
+    setNotifyModalAdapter({
+      alert: async (m, t) => { calls.push(['alert', m, t]); },
+      confirm: async (m, t) => { calls.push(['confirm', m, t]); return true; },
+      prompt: async (m, d) => { calls.push(['prompt', m, d]); return 'x'; },
+    });
+    await Notify.info('hello');
+    expect(calls).toEqual([['alert', 'hello', 'info']]);
+    await Notify.error('boom');
+    expect(calls[1]).toEqual(['alert', 'boom', 'error']);
+    expect(await Notify.confirm('sure?')).toBe(true);
+    expect(calls[2]).toEqual(['confirm', 'sure?', 'question']);
+    expect(await Notify.prompt('imię', 'jan')).toBe('x');
+    resetNotifyModalAdapter();
   });
 });
