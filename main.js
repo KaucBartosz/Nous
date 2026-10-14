@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, Menu, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, safeStorage, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -103,8 +103,10 @@ keyStore.registerIpc(ipcMain);
 
 // C6: paczka wyników (ZIP) w main/bulkExport.js (createBulkExport + registerIpc).
 // Kanał 'download-bulk-zip' i format CSV (2b/b) bez zmian.
-// Zapis cicho do Downloads (bez natywnego okna) — jak CSV w rendererze.
+// Domyślnie natywne okno (default w Downloads); cicho tylko gdy renderer
+// poda destDir (opcja "Ciche pobieranie" w Ustawieniach).
 const bulkExport = createBulkExport({
+  dialog,
   AdmZip,
   path,
   getDownloadsDir: () => app.getPath('downloads'),

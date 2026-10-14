@@ -72,12 +72,13 @@ function buildBulkCsv(res) {
 
 /**
  * Fabryka C6: handler download-bulk-zip przeniesiony 1:1 z main.js.
- * ZIP zapisuje CICHO do folderu Downloads (jak CSV w rendererze) —
- * bez natywnego okna zapisu. dialog/AdmZip/okno wstrzyknięte
- * (wzorzec jak main/templates.js).
+ * Dwa tryby (decyzja użytkownika w Ustawieniach):
+ * - destDir == null (domyślnie): natywne okno zapisu, default w Downloads;
+ * - destDir ustawiony ("Ciche pobieranie"): zapis wprost, bez okna.
+ * dialog/AdmZip/path/folder-downloads wstrzyknięte (wzorzec jak main/templates.js).
  */
-function createBulkExport({ AdmZip, path, getDownloadsDir }) {
-  async function downloadBulkZip(getMainWindow, { results, filename, format }) {
+function createBulkExport({ dialog, AdmZip, path, getDownloadsDir }) {
+  async function downloadBulkZip(getMainWindow, { results, filename, format, destDir = null }) {
     try {
       const zip = new AdmZip();
 
@@ -98,9 +99,24 @@ function createBulkExport({ AdmZip, path, getDownloadsDir }) {
 
       // SEC: sama nazwa pliku (bez podkatalogów z ładunku).
       const safeName = path.basename(filename || `Wyniki_${Date.now()}.zip`);
-      const filePath = path.join(getDownloadsDir(), safeName);
-      zip.writeZip(filePath);
-      return { success: true, filePath };
+
+      if (destDir) {
+        const filePath = path.join(destDir, safeName);
+        zip.writeZip(filePath);
+        return { success: true, filePath };
+      }
+
+      const { filePath } = await dialog.showSaveDialog(getMainWindow(), {
+        title: 'Zapisz paczkę wyników (ZIP)',
+        defaultPath: path.join(getDownloadsDir(), safeName),
+        filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
+      });
+
+      if (filePath) {
+        zip.writeZip(filePath);
+        return { success: true, filePath };
+      }
+      return { success: false, cancelled: true };
     } catch (e) {
       console.error("Bulk Zip Error:", e);
       return { success: false, error: e.message };
