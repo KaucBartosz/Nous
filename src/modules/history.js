@@ -638,19 +638,18 @@ async function handleDownloadAll() {
 
   const format = selectedDownloadFormat();
   // F3a: choreografia przycisku w historyExport (1 reguła zamiast kopii).
-  const dl = beginDownloadButton(
-    {
-      button: "btn-cloud-download-all",
-      text: "btn-cloud-download-text",
-      progress: "btn-cloud-download-progress",
-    },
-    "Pobieranie wyników...",
-  );
-  if (!dl) return;
-
+  // `dl` przed try: const w bloku try nie widać w finally (osobny scope).
+  let dl = null;
   try {
-    const timestamp = new Date().getTime();
-    const filename = `Paczka_Wynikow_${timestamp}.zip`;
+    dl = beginDownloadButton(
+      {
+        button: "btn-cloud-download-all",
+        text: "btn-cloud-download-text",
+        progress: "btn-cloud-download-progress",
+      },
+      "Pobieranie wyników...",
+    );
+    if (!dl) return;
     dl.progress("50%");
 
     let resultsToDownload = state.cloudResults;
@@ -680,7 +679,7 @@ async function handleDownloadAll() {
   } catch (e) {
     Notify.alert("Wystąpił nieoczekiwany błąd: " + e.message, "error");
   } finally {
-    dl.restore();
+    dl?.restore();
   }
 }
 
@@ -726,6 +725,8 @@ async function handleImportGuestResults() {
 }
 
 async function handleDownloadAllLocal(targetUid) {
+  // `dl` przed try: const w bloku try nie widać w finally (osobny scope).
+  let dl = null;
   try {
     // Downloads ALL results for the user (not just current page)
     const allLocal = await getAllResults();
@@ -758,7 +759,7 @@ async function handleDownloadAllLocal(targetUid) {
     });
 
     // F3a: choreografia przycisku w historyExport (1 reguła zamiast kopii).
-    const dl = beginDownloadButton(
+    dl = beginDownloadButton(
       {
         button: `btn-${prefix}-download-all`,
         text: `btn-${prefix}-download-text`,
@@ -787,7 +788,7 @@ async function handleDownloadAllLocal(targetUid) {
     Notify.alert("Błąd: " + e.message, "error");
   } finally {
     // Poprawka: przycisk wraca też po wyjątku (wcześniej zostawał wisy).
-    dl.restore();
+    dl?.restore();
   }
 }
 

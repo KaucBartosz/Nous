@@ -316,6 +316,9 @@ test.describe('Electron App - Eksport CSV (historyExport)', () => {
 
     const zipStat = await stat(path.join(downloadsDir, newZip));
     expect(zipStat.size).toBeGreaterThan(0);
+    // Animacja przycisku gaśnie po zakończeniu (restore ~1 s).
+    await expect(page.locator('#btn-local-download-all')).toBeEnabled({ timeout: 10000 });
+    await expect(page.locator('#btn-local-download-all.downloading')).toHaveCount(0);
     await rm(path.join(downloadsDir, newZip), { force: true });
   });
 });
