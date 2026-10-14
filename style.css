@@ -760,6 +760,20 @@ header {
     flex-direction: column;
 }
 
+/* F3b: warianty rozmiaru/wyrównania modali (1 reguła zamiast
+   powtarzanych inline style="width:..." w index.html). */
+.modal-content--sm {
+    width: 400px;
+}
+
+.modal-content--md {
+    width: 450px;
+}
+
+.modal-content--center {
+    text-align: center;
+}
+
 .modal-header {
     padding: 15px 20px;
     border-bottom: 1px solid #333;
