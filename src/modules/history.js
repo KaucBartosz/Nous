@@ -18,9 +18,7 @@ import { elements } from "./ui.js";
 import { syncSingleResult } from "./sync.js";
 import { Notify } from "../notify/notify.js";
 import { decryptCloudData, hasCloudKey } from "./cryptoService.js";
-import { testIdOf, subjectIdOf } from "../results/resultPackage.js";
 import {
-  resolveStatusLabel,
   hasActiveFilters,
   filterResults,
   paginate,
@@ -47,12 +45,18 @@ import {
   createHistoryState,
   resetHistoryFilters,
 } from "../history/historyState.js";
+import { createFilterUi } from "../history/historyFilters.js";
 import { getPlatform } from "../platform/index.js";
 
 // Jeden stan widoku (mutowany tylko przez orkiestrator + fabryki UI).
 const state = createHistoryState();
 
-let openFilterDropdown = null;
+// UI filtrów: dane ze stanu, decyzje z orkiestratora (applyFilters poniżej).
+const filterUi = createFilterUi({
+  getResults: () => state.allResults,
+  getFilters: () => state.filters,
+  applyFilters: () => applyFilters(),
+});
 
 export function initHistoryView() {
   document
@@ -113,41 +117,14 @@ export function initHistoryView() {
 
   updateToggleButtonsState();
 
-  // Filter button click handlers
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const type = btn.dataset.filterType;
-      if (openFilterDropdown && openFilterDropdown.dataset.filterType === type) {
-        closeFilterDropdown();
-      } else {
-        openFilterDropdownFor(type, btn);
-      }
-    });
-  });
-
-  // Close dropdown on outside click
-  document.addEventListener('click', (e) => {
-    if (openFilterDropdown && !e.target.closest('.filter-dropdown') && !e.target.closest('.filter-btn')) {
-      closeFilterDropdown();
-    }
-  });
-
-  // Close dropdown on scroll (fixed position doesn't track button)
-  document.addEventListener('scroll', () => {
-    closeFilterDropdown();
-  }, { capture: true });
-
-  // Clear all filters button
-  if (elements.btnClearAllFilters) {
-    elements.btnClearAllFilters.addEventListener('click', clearAllFilters);
-  }
+  // Filtry: przyciski, zamykanie, czyszczenie (logika w historyFilters.js)
+  filterUi.bind({ onClear: clearAllFilters });
 }
 
 function clearAllFilters() {
   resetHistoryFilters(state);
-  closeFilterDropdown();
-  updateFilterBadges();
+  filterUi.close();
+  filterUi.refreshBadges();
   state.page = 1;
   state.selectedIds.clear();
   const selectAll = document.getElementById('selectAllHistory');
@@ -156,251 +133,17 @@ function clearAllFilters() {
   renderHistoryPage();
 }
 
-function updateClearFiltersBar() {
-  const bar = document.getElementById('active-filters-bar');
-  if (bar) {
-    bar.classList.toggle('hidden', !hasActiveFilters(state.filters));
-  }
-}
+// (logika dropdownów/filtrów: ../history/historyFilters.js)
 
-function closeFilterDropdown() {
-  if (openFilterDropdown) {
-    openFilterDropdown.remove();
-    openFilterDropdown = null;
-  }
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-}
+// (buildFilterValues: ../history/historyFilters.js)
 
-function openFilterDropdownFor(type, btn) {
-  closeFilterDropdown();
-  btn.classList.add('active');
-
-  const dropdown = document.createElement('div');
-  dropdown.className = 'filter-dropdown';
-  dropdown.dataset.filterType = type;
-
-  const label = btn.closest('th').querySelector('span').textContent;
-  dropdown.innerHTML = `
-    <div class="filter-dropdown-header">
-      <span>${label}</span>
-      <div class="filter-dropdown-actions">
-        <button class="filter-select-all">Zaznacz wszystko</button>
-        <button class="filter-deselect-all">Wyczyść</button>
-      </div>
-    </div>
-    <div class="filter-dropdown-body"></div>
-  `;
-
-  const body = dropdown.querySelector('.filter-dropdown-body');
-  const values = buildFilterValues(type);
-  renderFilterOptions(body, type, values);
-
-  // Attach to document.body with fixed positioning
-  document.body.appendChild(dropdown);
-
-  const rect = btn.getBoundingClientRect();
-  dropdown.style.top = `${rect.bottom + 6}px`;
-  dropdown.style.left = `${rect.left}px`;
-
-  // Ensure dropdown doesn't go off-screen right edge
-  const dropdownWidth = 220;
-  if (rect.left + dropdownWidth > window.innerWidth) {
-    dropdown.style.left = `${window.innerWidth - dropdownWidth - 10}px`;
-  }
-
-  openFilterDropdown = dropdown;
-
-  // Bind select all / deselect all
-  dropdown.querySelector('.filter-select-all').addEventListener('click', () => {
-    const cbAll = dropdown.querySelectorAll('.filter-option input[type="checkbox"]');
-    cbAll.forEach(cb => { if (!cb.disabled) cb.checked = true; });
-    applyFilters();
-  });
-
-  dropdown.querySelector('.filter-deselect-all').addEventListener('click', () => {
-    const cbAll = dropdown.querySelectorAll('.filter-option input[type="checkbox"]');
-    cbAll.forEach(cb => { if (!cb.disabled) cb.checked = false; });
-    applyFilters();
-  });
-}
-
-// Jedna funkcja licząca zamiast 3 kopii pętli
-// (test_id/subject_id/status różniły się tylko wyciąganiem klucza).
-function countBy(results, keyFn) {
-  const counts = {};
-  results.forEach(r => {
-    const val = keyFn(r);
-    counts[val] = (counts[val] || 0) + 1;
-  });
-  return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'pl'));
-}
-
-// (statusLabel usunięty w C3 — jedyny resolver: resolveStatusLabel w results/historyQuery.js)
-
-function buildFilterValues(type) {
-  const results = state.allResults;
-  if (type === 'date') {
-    // Build hierarchy: year -> month -> day
-    const tree = {};
-    results.forEach(r => {
-      const d = new Date(r.timestamp);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const day = d.getDate();
-      const dateStr = `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
-      const monthName = d.toLocaleString('pl-PL', { month: 'long' });
-      if (!tree[year]) tree[year] = {};
-      if (!tree[year][month]) tree[year][month] = { name: monthName, days: {} };
-      if (!tree[year][month].days[day]) tree[year][month].days[day] = { label: dateStr, count: 0 };
-      tree[year][month].days[day].count++;
-    });
-    return tree;
-  }
-  if (type === 'test_id') {
-    return countBy(results, testIdOf);
-  }
-  if (type === 'subject_id') {
-    return countBy(results, subjectIdOf);
-  }
-  if (type === 'status') {
-    return countBy(results, resolveStatusLabel);
-  }
-  return [];
-}
-
-function renderFilterOptions(body, type, values) {
-  body.innerHTML = '';
-  if (type === 'date') {
-    // Hierarchical rendering
-    const activeDates = state.filters.date;
-    const years = Object.keys(values).sort((a, b) => b - a);
-    years.forEach(year => {
-      // Year option
-      const yearDiv = document.createElement('div');
-      yearDiv.className = 'filter-option filter-date-year';
-      const yearCb = document.createElement('input');
-      yearCb.type = 'checkbox';
-      yearCb.value = `year:${year}`;
-      yearCb.checked = Object.keys(values[year]).every(m =>
-        Object.keys(values[year][m].days).every(d => activeDates.has(`day:${year}:${m}:${d}`))
-      );
-      yearDiv.appendChild(yearCb);
-      yearDiv.appendChild(document.createTextNode(year));
-      yearCb.addEventListener('change', () => {
-        // Toggle all months and days for this year
-        const allDaysForYear = [];
-        Object.keys(values[year]).forEach(m => {
-          Object.keys(values[year][m].days).forEach(d => {
-            allDaysForYear.push(`day:${year}:${m}:${d}`);
-          });
-        });
-        if (yearCb.checked) {
-          allDaysForYear.forEach(k => state.filters.date.add(k));
-        } else {
-          allDaysForYear.forEach(k => state.filters.date.delete(k));
-        }
-        applyFilters();
-        // Re-render to update parent checkboxes
-        closeFilterDropdown();
-        openFilterDropdownFor('date', document.querySelector('.filter-btn[data-filter-type="date"]'));
-      });
-      body.appendChild(yearDiv);
-
-      // Months
-      const months = Object.keys(values[year]).sort((a, b) => b - a);
-      months.forEach(month => {
-        const monthData = values[year][month];
-        const monthDiv = document.createElement('div');
-        monthDiv.className = 'filter-option filter-date-month';
-        const monthCb = document.createElement('input');
-        monthCb.type = 'checkbox';
-        monthCb.value = `month:${year}:${month}`;
-        monthCb.checked = Object.keys(monthData.days).every(d => activeDates.has(`day:${year}:${month}:${d}`));
-        monthDiv.appendChild(monthCb);
-        monthDiv.appendChild(document.createTextNode(monthData.name));
-        monthCb.addEventListener('change', () => {
-          const allDaysForMonth = Object.keys(monthData.days).map(d => `day:${year}:${month}:${d}`);
-          if (monthCb.checked) {
-            allDaysForMonth.forEach(k => state.filters.date.add(k));
-          } else {
-            allDaysForMonth.forEach(k => state.filters.date.delete(k));
-          }
-          applyFilters();
-          closeFilterDropdown();
-          openFilterDropdownFor('date', document.querySelector('.filter-btn[data-filter-type="date"]'));
-        });
-        body.appendChild(monthDiv);
-
-        // Days
-        const days = Object.keys(monthData.days).sort((a, b) => b - a);
-        days.forEach(day => {
-          const dayData = monthData.days[day];
-          const dayDiv = document.createElement('div');
-          dayDiv.className = 'filter-option filter-date-day';
-          const dayCb = document.createElement('input');
-          dayCb.type = 'checkbox';
-          dayCb.value = `day:${year}:${month}:${day}`;
-          dayCb.checked = activeDates.has(dayCb.value);
-          dayDiv.appendChild(dayCb);
-          dayDiv.appendChild(document.createTextNode(dayData.label));
-          const countSpan = document.createElement('span');
-          countSpan.className = 'filter-count';
-          countSpan.textContent = dayData.count;
-          dayDiv.appendChild(countSpan);
-          dayCb.addEventListener('change', () => {
-            if (dayCb.checked) {
-              state.filters.date.add(dayCb.value);
-            } else {
-              state.filters.date.delete(dayCb.value);
-            }
-            applyFilters();
-            closeFilterDropdown();
-            openFilterDropdownFor('date', document.querySelector('.filter-btn[data-filter-type="date"]'));
-          });
-          body.appendChild(dayDiv);
-        });
-      });
-    });
-  } else {
-    // Flat list for test_id, subject_id, status
-    const activeSet = state.filters[type];
-    values.forEach(([value, count]) => {
-      const opt = document.createElement('div');
-      opt.className = 'filter-option';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = value;
-      cb.checked = activeSet.has(value);
-      opt.appendChild(cb);
-      const label = document.createElement('span');
-      label.textContent = value;
-      label.style.flex = '1';
-      label.style.overflow = 'hidden';
-      label.style.textOverflow = 'ellipsis';
-      opt.appendChild(label);
-      const countSpan = document.createElement('span');
-      countSpan.className = 'filter-count';
-      countSpan.textContent = count;
-      opt.appendChild(countSpan);
-      cb.addEventListener('change', () => {
-        if (cb.checked) {
-          activeSet.add(value);
-        } else {
-          activeSet.delete(value);
-        }
-        applyFilters();
-        updateFilterBadges();
-      });
-      body.appendChild(opt);
-    });
-  }
-}
+// (renderFilterOptions: ../history/historyFilters.js)
 
 function updateToggleButtonsState() {
   // Reset filters when switching views
   resetHistoryFilters(state);
-  closeFilterDropdown();
-  updateFilterBadges();
+  filterUi.close();
+  filterUi.refreshBadges();
 
   state.selectedIds.clear();
   const selectAll = document.getElementById("selectAllHistory");
@@ -494,7 +237,7 @@ export async function loadHistoryData() {
     state.page = 1;
     // Reset filters on data reload
     resetHistoryFilters(state);
-    updateFilterBadges();
+    filterUi.refreshBadges();
     renderHistoryPage();
   } catch (e) {
     console.error("Error loading history:", e);
@@ -618,37 +361,7 @@ function getFilteredResults() {
   return filterResults(state.allResults, state.filters);
 }
 
-function updateFilterBadges() {
-  const total = state.filters.date.size + state.filters.test_id.size + state.filters.subject_id.size + state.filters.status.size;
-  updateClearFiltersBar();
-  // Show total badge or per-column badges
-  document.querySelectorAll('.filterable-header').forEach(th => {
-    const col = th.dataset.filterColumn;
-    const badge = th.querySelector('.filter-badge');
-    if (!badge) return;
-    if (col === 'date') {
-      const count = state.filters.date.size;
-      badge.textContent = count;
-      badge.classList.toggle('hidden', count === 0);
-      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
-    } else if (col === 'test') {
-      const count = state.filters.test_id.size;
-      badge.textContent = count;
-      badge.classList.toggle('hidden', count === 0);
-      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
-    } else if (col === 'subject') {
-      const count = state.filters.subject_id.size;
-      badge.textContent = count;
-      badge.classList.toggle('hidden', count === 0);
-      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
-    } else if (col === 'status') {
-      const count = state.filters.status.size;
-      badge.textContent = count;
-      badge.classList.toggle('hidden', count === 0);
-      th.querySelector('.filter-btn').classList.toggle('active', count > 0);
-    }
-  });
-}
+// (updateFilterBadges: ../history/historyFilters.js — wołane przez filterUi.refreshBadges())
 
 // ===================================================
 // PAGINATION
