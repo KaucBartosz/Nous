@@ -525,76 +525,62 @@ export async function startTestProcess(
   isLocalDev = false,
 ) {
   const platform = getPlatform();
-  if (platform.kind === "electron") {
-    // Change button state immediately (B: kanoniczny szablon)
-    const btn = document.getElementById(`start-test-${id}`);
-    if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
+  // A1: pytamy o zdolności, nie o kind — gałąź electron/web znika.
+  const caps = platform.capabilities || {
+    canDownload: platform.kind === "electron",
+    canRunLocalDev: platform.kind === "electron",
+  };
+  const btn = document.getElementById(`start-test-${id}`);
 
-    if (isLocalDev) {
-      const confirmed = await Dialog.confirm(
-        "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
-          "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
-          "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
-          "Czy na pewno chcesz kontynuować?",
-        "warning",
-      );
-      if (!confirmed) {
-        // Reset button state
-        loadTestsList();
-        return;
-      }
-    }
+  // Pobieranie plików tylko tam, gdzie platforma umie pobierać.
+  if (onlyDownload && !caps.canDownload) {
+    await Dialog.alert(
+      "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
+      "info",
+    );
+    return;
+  }
 
-    try {
-      platform.tests.run({
-        url,
-        id,
-        ver,
-        onlyDownload,
-        trainingMode: isTrainingMode,
-        name,
-        description,
-        isLocalDev,
-      });
-    } catch (err) {
-      console.error("Błąd uruchamiania testu:", err);
-      Dialog.alert("Wystąpił błąd podczas uruchamiania testu.", "error");
-      if (btn) {
-        btn.disabled = false;
-        loadTestsList();
-      }
-    }
-  } else {
-    // --- WERSJA PRZEGLĄDARKOWA ---
-    if (onlyDownload) {
-      await Dialog.alert(
-        "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
-        "info",
-      );
+  // Kanoniczny stan przycisku (B: jeden szablon zamiast osobnych łańcuchów HTML).
+  if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
+
+  if (isLocalDev && caps.canRunLocalDev) {
+    const confirmed = await Dialog.confirm(
+      "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
+        "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
+        "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
+        "Czy na pewno chcesz kontynuować?",
+      "warning",
+    );
+    if (!confirmed) {
+      loadTestsList();
       return;
     }
+  }
 
-    // B: ten sam szablon co na Desktop (wcześniej osobny łańcuch HTML)
-    const btn = document.getElementById(`start-test-${id}`);
-    if (btn) setTestButtonState(btn, { label: "Ładowanie..." });
-
-    const result = await platform.tests.run({ id, trainingMode: isTrainingMode });
-
-    if (result && result.opened) {
-      // Odblokowujemy przycisk na liście Launcher'a po otwarciu testu
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `<span class="material-icons">play_arrow</span> Uruchom`;
-      }
-    } else {
+  try {
+    const result = await platform.tests.run({
+      url,
+      id,
+      ver,
+      onlyDownload,
+      trainingMode: isTrainingMode,
+      name,
+      description,
+      isLocalDev,
+    });
+    // Web adapter sygnalizuje brak webPath jako { opened: false };
+    // Electron/fake nic nie zwracają (undefined) = sukces.
+    if (result && result.opened === false) {
       await Dialog.alert(
         "Ten test nie posiada jeszcze odpowiedniej ścieżki (webPath) w rejestrze Web.",
         "error",
       );
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `<span class="material-icons">play_arrow</span> Uruchom`;
-      }
+      loadTestsList();
     }
+  } catch (err) {
+    console.error("Błąd uruchamiania testu:", err);
+    await Dialog.alert("Wystąpił błąd podczas uruchamiania testu.", "error");
+    loadTestsList();
   }
 }

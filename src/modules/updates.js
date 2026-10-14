@@ -203,23 +203,35 @@ export async function loadUpdatesData(filterText = '') {
     }
 }
 
-export function forceUpdate(url, id, ver) {
-    // C1: na Web update leci przez Bibliotekę (tu był silent no-op — zachowane)
-    if (getPlatform().kind !== 'electron') return;
-    const platform = getPlatform();
-    {
-        // Change button state (B: kanoniczny szablon)
-        const btn = document.getElementById(`force-update-${id}`);
-        if (btn) setTestButtonState(btn, { label: "..." });
+export async function forceUpdate(url, id, ver) {
+  // A1: jawny komunikat zamiast silent no-op — użytkownik wie dlaczego nic się nie dzieje.
+  if (!getPlatform().capabilities?.canDownload) {
+    await Dialog.alert(
+      "Pobieranie testów jest niedostępne w wersji Web. Użyj aplikacji Desktopowej.",
+      "info",
+    );
+    return;
+  }
+  const platform = getPlatform();
+  {
+    // Change button state (B: kanoniczny szablon)
+    const btn = document.getElementById(`force-update-${id}`);
+    if (btn) setTestButtonState(btn, { label: "..." });
 
-        platform.tests.run({ url, id, ver, onlyDownload: true });
-    }
+    platform.tests.run({ url, id, ver, onlyDownload: true });
+  }
 }
 
 export async function deleteLocalTest(test_id) {
-    // C1: usuwanie tylko na Desktop (na Web był silent no-op — zachowane)
-    if (getPlatform().kind !== 'electron') return;
-    {
+  // A1: jawny komunikat zamiast silent no-op.
+  if (!getPlatform().capabilities?.canDelete) {
+    await Dialog.alert(
+      "Usuwanie testów jest niedostępne w wersji Web. Użyj aplikacji Desktopowej.",
+      "info",
+    );
+    return;
+  }
+  {
         const confirmed = await Dialog.confirm("Czy na pewno chcesz usunąć ten test?");
         if (!confirmed) return;
 

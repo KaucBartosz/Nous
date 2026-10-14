@@ -34,6 +34,13 @@ export function createWebPlatform(deps = {}) {
     isLinux: false,
     isWeb: true,
 
+    // A1: Web serwuje testy dynamicznie — brak pobierania/usuwania/local-dev.
+    capabilities: {
+      canDownload: false,
+      canDelete: false,
+      canRunLocalDev: false,
+    },
+
     tests: {
       run: async ({ id, trainingMode } = {}) => {
         const versions = await getLocalVersions();

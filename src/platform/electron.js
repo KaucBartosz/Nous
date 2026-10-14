@@ -12,6 +12,13 @@ export function createElectronPlatform(api) {
     isLinux: !!a.isLinux,
     isWeb: false,
 
+    // A1: deklaratywne zdolności platformy — wołający pytają caps, nie kind.
+    capabilities: {
+      canDownload: true,
+      canDelete: true,
+      canRunLocalDev: true,
+    },
+
     tests: {
       run: (o) =>
         a.downloadAndRun(o.url, o.id, o.ver, !!o.onlyDownload, !!o.trainingMode, o.name || "", o.description || "", !!o.isLocalDev),

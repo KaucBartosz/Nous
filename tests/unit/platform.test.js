@@ -37,4 +37,22 @@ describe('platform seam (C1)', () => {
     expect(getPlatform()).toBe(fake);
     expect(getPlatform().kind).toBe('fake');
   });
+
+  it('A1 capabilities: electron/fake umieją pobierać, web nie', async () => {
+    const { createElectronPlatform } = await import('../../src/platform/electron.js');
+    const fakeApi = {
+      downloadAndRun: () => {}, getLocalVersions: async () => ({}),
+      deleteTest: async () => ({ success: true }),
+    };
+    expect(createElectronPlatform(fakeApi).capabilities).toMatchObject({
+      canDownload: true, canDelete: true, canRunLocalDev: true,
+    });
+    expect(createFakePlatform().capabilities).toMatchObject({
+      canDownload: true, canDelete: true, canRunLocalDev: true,
+    });
+    const web = createWebPlatform({ fetchFn: async () => ({ ok: false }) });
+    expect(web.capabilities).toMatchObject({
+      canDownload: false, canDelete: false, canRunLocalDev: false,
+    });
+  });
 });

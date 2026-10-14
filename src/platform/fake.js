@@ -16,6 +16,13 @@ export function createFakePlatform(seed = {}) {
     calls,
     versions,
 
+    // A1: fake umie wszystko (testy weryfikują flow desktopowy).
+    capabilities: {
+      canDownload: true,
+      canDelete: true,
+      canRunLocalDev: true,
+    },
+
     tests: {
       run: async (o) => { rec("tests.run", o); return { opened: true, fake: true }; },
       getLocalVersions: async () => { rec("tests.getLocalVersions", null); return { ...versions }; },
