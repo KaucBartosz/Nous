@@ -1,7 +1,7 @@
 import { test, expect, _electron as electron } from '@playwright/test';
 import path from 'path';
 import os from 'os';
-import { readFile, rm, stat } from 'fs/promises';
+import { readFile, rm, stat, readdir } from 'fs/promises';
 
 // ==========================================================
 // Testy E2E dla Electron Desktop App (2-panelowe logowanie:
@@ -287,5 +287,35 @@ test.describe('Electron App - Eksport CSV (historyExport)', () => {
     expect(content).toContain('stroop');
     expect(content).toContain('P1');
     await rm(csvPath, { force: true });
+  });
+
+  test('eksport ZIP zapisuje cicho do Downloads (bez okna systemowego)', async () => {
+    await loginAsGuest();
+    await seedGuestResult();
+
+    await page.click('#nav-history');
+    await expect(page.locator('#history-view')).toBeVisible();
+    await expect(page.locator('#history-view td', { hasText: 'stroop' }).first())
+      .toBeVisible({ timeout: 15000 });
+
+    const downloadsDir = await electronApp.evaluate(({ app }) => app.getPath('downloads'))
+      .catch(() => path.join(os.homedir(), 'Downloads'));
+    const zipsBefore = new Set(
+      (await readdir(downloadsDir)).filter((f) => f.endsWith('.zip')),
+    );
+
+    // handleDownloadAllLocal('GUEST') → bulkZip → cichy zapis, brak dialogu.
+    await page.click('#btn-local-download-all');
+
+    let newZip = null;
+    await expect.poll(async () => {
+      const after = (await readdir(downloadsDir)).filter((f) => f.endsWith('.zip'));
+      newZip = after.find((f) => !zipsBefore.has(f) && f.startsWith('Wyniki_')) || null;
+      return newZip;
+    }, { timeout: 20000 }).not.toBeNull();
+
+    const zipStat = await stat(path.join(downloadsDir, newZip));
+    expect(zipStat.size).toBeGreaterThan(0);
+    await rm(path.join(downloadsDir, newZip), { force: true });
   });
 });

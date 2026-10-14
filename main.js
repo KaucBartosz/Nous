@@ -103,7 +103,12 @@ keyStore.registerIpc(ipcMain);
 
 // C6: paczka wyników (ZIP) w main/bulkExport.js (createBulkExport + registerIpc).
 // Kanał 'download-bulk-zip' i format CSV (2b/b) bez zmian.
-const bulkExport = createBulkExport({ dialog: require('electron').dialog, AdmZip });
+// Zapis cicho do Downloads (bez natywnego okna) — jak CSV w rendererze.
+const bulkExport = createBulkExport({
+  AdmZip,
+  path,
+  getDownloadsDir: () => app.getPath('downloads'),
+});
 bulkExport.registerIpc(ipcMain, () => mainWindow);
 
 app.whenReady().then(() => {

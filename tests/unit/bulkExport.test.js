@@ -92,6 +92,11 @@ describe("bulkExport ipc (C6)", () => {
     filename: "paczka.zip",
     format,
   });
+  const deps = (zip) => ({
+    AdmZip: function () { return zip; },
+    path: { basename: (n) => n.split("/").pop(), join: (...p) => p.join("/") },
+    getDownloadsDir: () => "C:/Downloads",
+  });
 
   function fakeZip() {
     const files = {};
@@ -109,51 +114,44 @@ describe("bulkExport ipc (C6)", () => {
   it("registerIpc: podpina kanał download-bulk-zip", () => {
     const handlers = {};
     const ipcMain = { handle: (ch, fn) => (handlers[ch] = fn) };
-    const { registerIpc } = createBulkExport({ dialog: {}, AdmZip: function () {} });
+    const { registerIpc } = createBulkExport(deps(fakeZip()));
     registerIpc(ipcMain, getMainWindow);
     expect(typeof handlers["download-bulk-zip"]).toBe("function");
   });
 
-  it("csv: 1 plik na wynik + zapis ZIP", async () => {
+  it("csv: 1 plik na wynik + cichy zapis do Downloads (bez dialogu)", async () => {
     const zip = fakeZip();
-    const dialog = { showSaveDialog: vi.fn(async () => ({ filePath: "C:/tmp/paczka.zip" })) };
-    const { downloadBulkZip } = createBulkExport({ dialog, AdmZip: function () { return zip; } });
+    const { downloadBulkZip } = createBulkExport(deps(zip));
 
     const out = await downloadBulkZip(getMainWindow, payload("csv"));
-    expect(out).toEqual({ success: true });
+    expect(out).toEqual({ success: true, filePath: "C:/Downloads/paczka.zip" });
     expect(Object.keys(zip.files).filter((n) => n.endsWith(".csv"))).toHaveLength(2);
-    expect(zip.files.__writtenTo).toBe("C:/tmp/paczka.zip");
-    expect(dialog.showSaveDialog.mock.calls[0][1]).toMatchObject({
-      defaultPath: "paczka.zip",
-    });
+    expect(zip.files.__writtenTo).toBe("C:/Downloads/paczka.zip");
   });
 
   it("json: surowe wyniki bez CSV", async () => {
     const zip = fakeZip();
-    const dialog = { showSaveDialog: vi.fn(async () => ({ filePath: "C:/tmp/p.zip" })) };
-    const { downloadBulkZip } = createBulkExport({ dialog, AdmZip: function () { return zip; } });
+    const { downloadBulkZip } = createBulkExport(deps(zip));
 
-    expect(await downloadBulkZip(getMainWindow, payload("json"))).toEqual({ success: true });
+    const out = await downloadBulkZip(getMainWindow, payload("json"));
+    expect(out.success).toBe(true);
     expect(Object.keys(zip.files).filter((n) => n.endsWith(".json"))).toHaveLength(2);
     expect(JSON.parse(zip.files[Object.keys(zip.files)[0]].toString("utf8")).test_id).toBe("stroop");
   });
 
-  it("anulowanie dialogu i błąd zwracają payload jak w main.js", async () => {
+  it("SEC: nazwa pliku bez podkatalogów; błąd zwraca payload", async () => {
     const zip = fakeZip();
-    const cancelled = createBulkExport({
-      dialog: { showSaveDialog: async () => ({}) },
-      AdmZip: function () { return zip; },
+    const { downloadBulkZip } = createBulkExport({
+      ...deps(zip),
+      path: { basename: (n) => n.split("/").pop().split("\\").pop(), join: (...p) => p.join("/") },
     });
-    expect(await cancelled.downloadBulkZip(getMainWindow, payload("csv"))).toEqual({
-      success: false,
-      cancelled: true,
-    });
+    const out = await downloadBulkZip(getMainWindow, { ...payload("csv"), filename: "../evil.zip" });
+    expect(out.success).toBe(true);
+    expect(zip.files.__writtenTo).toBe("C:/Downloads/evil.zip");
 
     const broken = createBulkExport({
-      dialog: {
-        showSaveDialog: async () => { throw new Error("boom"); },
-      },
-      AdmZip: function () { return zip; },
+      ...deps(zip),
+      AdmZip: function () { throw new Error("boom"); },
     });
     const err = await broken.downloadBulkZip(getMainWindow, payload("csv"));
     expect(err.success).toBe(false);
