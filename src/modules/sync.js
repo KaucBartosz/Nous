@@ -7,8 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { getPendingResults, markAsSynced } from "./database.js";
 import { getCurrentUser, getUserStatus } from "./auth.js";
-import { Dialog } from "./dialog.js";
-import { toast, syncCountMessage } from "../notify/notify.js";
+import { Notify, toast, syncCountMessage } from "../notify/notify.js";
 import { hasCloudKey, encryptCloudData } from "./cryptoService.js";
 import { isCloudSyncAllowed } from "../session/session.js";
 import {
@@ -66,9 +65,8 @@ export function setAutoSync(enabled) {
       const toggleSync = document.getElementById("toggle-sync");
       if (toggleSync) toggleSync.checked = false;
 
-      Dialog.alert(
+      Notify.error(
         "Tryb Sync jest dostępny tylko dla zatwierdzonych użytkowników. Aby nim zostać skontaktuj się z Administratorem (Bartosz Kauc)",
-        "error",
       );
       return;
     }
@@ -164,9 +162,8 @@ export async function syncNow() {
     }
     if (result.halted) {
       updateSyncUI(false, 0);
-      Dialog.alert(
+      Notify.error(
         `Błąd synchronizacji: Brak uprawnień. Sprawdź czy Twój status to 'APPROVED' i czy reguły bazy danych są poprawne.`,
-        "error",
       );
     }
   } finally {
