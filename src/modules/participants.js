@@ -5,7 +5,7 @@ import {
   deleteParticipant,
 } from "./database.js";
 import { getResearcherUid } from "./auth.js";
-import { Dialog } from "./dialog.js";
+import { Notify } from "../notify/notify.js";
 import { escapeHtml } from "./utils.js";
 
 // Callback to fill the demographics form — set by demographics.js
@@ -127,15 +127,14 @@ function loadParticipantToForm(participant) {
  */
 export async function saveCurrentAsParticipant(demographicsData) {
   if (!demographicsData || !demographicsData.templateId) {
-    await Dialog.alert(
+    await Notify.warning(
       "Wybierz szablon i wypełnij metryczkę przed zapisem do kartoteki.",
-      "warning",
     );
     return;
   }
 
   // Ask user for a display name
-  const displayName = await Dialog.prompt(
+  const displayName = await Notify.prompt(
     "Podaj nazwę profilu badanego (np. imię i nazwisko lub kod):",
     "",
   );
@@ -153,13 +152,12 @@ export async function saveCurrentAsParticipant(demographicsData) {
 
   try {
     await saveParticipant(participant, uid);
-    await Dialog.alert(
+    await Notify.success(
       `Profil "${displayName.trim()}" został zapisany do kartoteki.`,
-      "success",
     );
     await renderParticipantsList();
   } catch (e) {
-    await Dialog.alert("Błąd zapisu do kartoteki: " + e.message, "error");
+    await Notify.error("Błąd zapisu do kartoteki: " + e.message);
   }
 }
 
@@ -168,7 +166,7 @@ export async function saveCurrentAsParticipant(demographicsData) {
  * @param {Object} participant
  */
 async function handleDeleteParticipant(participant) {
-  const confirmed = await Dialog.confirm(
+  const confirmed = await Notify.confirm(
     `Czy na pewno chcesz usunąć profil "${participant.display_name}" z kartoteki?\n\nStare wyniki badań NIE zostaną usunięte.`,
   );
   if (!confirmed) return;
@@ -177,6 +175,6 @@ async function handleDeleteParticipant(participant) {
     await deleteParticipant(participant.id);
     await renderParticipantsList();
   } catch (e) {
-    await Dialog.alert("Błąd usuwania: " + e.message, "error");
+    await Notify.error("Błąd usuwania: " + e.message);
   }
 }
