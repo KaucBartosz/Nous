@@ -47,6 +47,28 @@ async function loginAsGuest() {
   await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
 }
 
+// Rejestracja konta lokalnego (unikalny login) + auto-login na dashboard.
+async function registerLocalAccount(username, password) {
+  await gotoLoginChoice();
+  await page.click('#btn-choose-local');
+  await expect(page.locator('#login-local-panel')).toBeVisible();
+  await page.fill('#local-username', username);
+  await page.fill('#local-password', password);
+  await page.click('#btn-register-local');
+  await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#user-email-display')).toContainText(username);
+}
+
+async function loginLocalAccount(username, password) {
+  await gotoLoginChoice();
+  await page.click('#btn-choose-local');
+  await expect(page.locator('#login-local-panel')).toBeVisible();
+  await page.fill('#local-username', username);
+  await page.fill('#local-password', password);
+  await page.click('#btn-login-local');
+  await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
+}
+
 test.describe('Electron App - Autoryzacja', () => {
 
   test('aplikacja uruchamia się poprawnie', async () => {
@@ -132,6 +154,73 @@ test.describe('Electron App - Tryb Gość', () => {
 
     // Sprawdź czy wróciliśmy do ekranu wyboru logowania
     await expect(page.locator('#login-screen')).toBeVisible();
+    await expect(page.locator('#login-choice-panel')).toBeVisible();
+  });
+});
+
+test.describe('Electron App - Widoki Gość (CatalogView)', () => {
+
+  test('biblioteka renderuje siatkę (karty albo panel offline)', async () => {
+    await loginAsGuest();
+    await expect(page.locator('#library-view')).toBeVisible();
+    // loadTestsList jest asynchroniczne (Firestore EFI backfill) — czekaj na treść
+    await page.waitForFunction(
+      () => document.getElementById('tests-grid')?.childElementCount > 0,
+      { timeout: 20000 },
+    );
+  });
+
+  test('widoki aktualizacji i metryczki otwierają się', async () => {
+    await loginAsGuest();
+
+    await page.click('#nav-updates');
+    await expect(page.locator('#updates-view')).toBeVisible();
+
+    await page.click('#nav-demographics');
+    await expect(page.locator('#demographics-view')).toBeVisible();
+  });
+});
+
+test.describe('Electron App - Konto lokalne i zmiana hasła (passwordModal + Session)', () => {
+  const username = `e2e${Date.now().toString().slice(-6)}`;
+  const password = 'start1234';
+  const newPassword = 'nowe5678';
+
+  test('rejestracja konta lokalnego loguje automatycznie', async () => {
+    await registerLocalAccount(username, password);
+    // Przycisk zmiany hasła widoczny tylko dla LOCAL
+    await expect(page.locator('#btn-change-local-password')).toBeVisible();
+  });
+
+  test('modal zmiany hasła: mismatch blokuje, poprawne hasło zapisuje', async () => {
+    await loginLocalAccount(username, password);
+
+    await page.click('#btn-change-local-password');
+    await expect(page.locator('#change-password-modal')).toBeVisible();
+
+    // 1. Niezgodne hasła → błąd w formularzu, serwis nie wołany (modal zostaje)
+    await page.fill('#cp-old-password', password);
+    await page.fill('#cp-new-password', 'aaa111');
+    await page.fill('#cp-confirm-password', 'bbb222');
+    await page.click('#btn-submit-change-password');
+    await expect(page.locator('#cp-error')).toContainText('Nowe hasła nie są zgodne');
+    await expect(page.locator('#change-password-modal')).toBeVisible();
+
+    // 2. Zgodne hasła → sukces (Dialog) i zamknięcie modala
+    await page.fill('#cp-new-password', newPassword);
+    await page.fill('#cp-confirm-password', newPassword);
+    await page.click('#btn-submit-change-password');
+    await expect(page.locator('#custom-dialog-modal')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#custom-dialog-title')).toContainText('Sukces');
+    await page.locator('#custom-dialog-modal button:has-text("OK")').click();
+    await expect(page.locator('#change-password-modal')).toBeHidden();
+  });
+
+  test('nowe hasło działa przy kolejnym logowaniu', async () => {
+    // Wyloguj z sesji po zmianie hasła
+    await loginLocalAccount(username, newPassword);
+    await expect(page.locator('#user-email-display')).toContainText(username);
+    await page.click('#btn-logout');
     await expect(page.locator('#login-choice-panel')).toBeVisible();
   });
 });
