@@ -7,7 +7,6 @@ import {
 import { elements } from "./ui.js";
 import { Notify } from "../notify/notify.js";
 import {
-  debounce,
   getLocalVersionsCached,
   escapeHtml,
 } from "./utils.js";
@@ -20,8 +19,11 @@ import { loadCatalog, queryTests } from "../catalog/testCatalog.js";
 import {
   cardParts,
   setTestButtonState,
-  setTestButtonProgress,
 } from "../catalog/testCard.js";
+import {
+  bindSearchInput,
+  bindCatalogProgress,
+} from "../catalog/catalogView.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
@@ -54,21 +56,20 @@ const viewButtons = {
 };
 
 /**
- * Inicjalizuje listenery Electron API (wywołaj raz).
+ * Inicjalizuje listenery platformy (wywołaj raz).
+ * A4: postęp/instalacja przez CatalogView; zatrzymanie procesu to
+ * specyfika biblioteki (reset UI), więc zostaje tutaj.
  */
 export function initLibraryListeners() {
   if (listenersRegistered) return;
   const platform = getPlatform();
 
-  platform.tests.onProgress(({ test_id, percent }) => {
-    const btn = document.getElementById(`start-test-${test_id}`);
-    // B: kanoniczny stan przycisku (szablon w testCard.js)
-    if (btn) setTestButtonProgress(btn, percent);
-  });
-
-  platform.tests.onInstalled((data) => {
-    console.log("Test installed, refreshing library:", data);
-    loadTestsList(undefined, true); // Force refresh
+  bindCatalogProgress(platform, {
+    progressIdPrefix: "start-test-",
+    onInstalled: (data) => {
+      console.log("Test installed, refreshing library:", data);
+      loadTestsList(undefined, true); // Force refresh
+    },
   });
 
   platform.tests.onProcessStopped(() => {
@@ -109,19 +110,11 @@ export function initViewSwitcher() {
     }
   });
 
-  // Bind search input event with DEBOUNCE (only once)
+  // A4: wspólne wiązanie wyszukiwarki (debounce-once w CatalogView)
   if (!isSearchBound) {
-    const searchInput = document.getElementById("library-search");
-    if (searchInput) {
-      const debouncedSearch = debounce((filterText) => {
-        renderTests(cachedTests, filterText);
-      }, 200);
-
-      searchInput.addEventListener("input", (e) => {
-        debouncedSearch(e.target.value);
-      });
-      isSearchBound = true;
-    }
+    isSearchBound = bindSearchInput("library-search", (filterText) => {
+      renderTests(cachedTests, filterText);
+    });
   }
 
   // Bind Training Mode toggle
