@@ -92,6 +92,7 @@ function domModals() {
     alert: (message, type) => Dialog.alert(message, type),
     confirm: (message, type) => Dialog.confirm(message, type),
     prompt: (message, defaultValue) => Dialog.prompt(message, defaultValue),
+    custom: (message, buttons) => Dialog.custom(message, buttons),
   };
 }
 
@@ -109,11 +110,15 @@ export function resetNotifyModalAdapter() {
 
 /** Jedyny punkt kontaktu domeny z powiadomieniami modalnymi. */
 export const Notify = {
+  /** Kompatybilny router (stare wołania Dialog.alert(msg, type)). Nowy kod woli .info/.error/. */
+  alert: (message, type = "info") => modals().alert(message, type),
   info: (message) => modals().alert(message, "info"),
   success: (message) => modals().alert(message, "success"),
   warning: (message) => modals().alert(message, "warning"),
   error: (message) => modals().alert(message, "error"),
   confirm: (message, type = "question") => modals().confirm(message, type),
   prompt: (message, defaultValue = "") => modals().prompt(message, defaultValue),
+  /** Wybór z listy przycisków (np. przenieś/kopiuj wynik gościa). */
+  custom: (message, buttons) => modals().custom(message, buttons),
   toast: (spec) => toast(spec),
 };

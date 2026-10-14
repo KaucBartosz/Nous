@@ -183,4 +183,21 @@ describe('notify modal seam (A5)', () => {
     expect(await Notify.prompt('imię', 'jan')).toBe('x');
     resetNotifyModalAdapter();
   });
+
+  it('Notify.custom deleguje wybór przycisków', async () => {
+    const calls = [];
+    setNotifyModalAdapter({
+      alert: async () => {},
+      confirm: async () => false,
+      prompt: async () => null,
+      custom: async (m, buttons) => { calls.push([m, buttons.map((b) => b.value)]); return 'move'; },
+    });
+    const buttons = [
+      { label: 'Przenieś', value: 'move', class: 'btn primary' },
+      { label: 'Anuluj', value: false, class: 'btn outline' },
+    ];
+    expect(await Notify.custom('Co robić?', buttons)).toBe('move');
+    expect(calls).toEqual([['Co robić?', ['move', false]]]);
+    resetNotifyModalAdapter();
+  });
 });

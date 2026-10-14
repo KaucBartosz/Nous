@@ -17,7 +17,7 @@ import {
 import { getCurrentUser, getUserStatus, getResearcherUid } from "./auth.js";
 import { elements } from "./ui.js";
 import { syncSingleResult } from "./sync.js";
-import { Dialog } from "./dialog.js";
+import { Notify } from "../notify/notify.js";
 import { decryptCloudData, hasCloudKey } from "./cryptoService.js";
 import { testIdOf, subjectIdOf } from "../results/resultPackage.js";
 import {
@@ -27,11 +27,12 @@ import {
   paginate,
 } from "../results/historyQuery.js";
 import {
-  resultRow,
-  toKeyValueCSV,
-  toMatrixCSV,
-  downloadFile,
-} from "../results/resultExporter.js";
+  exportHistoryToCSV as exportViewToCSV,
+  downloadSingleResult as downloadSingle,
+  beginDownloadButton,
+  selectedDownloadFormat,
+  downloadButtonPrefix,
+} from "../history/historyExport.js";
 import {
   buildLocalKeys,
   isAlreadyImported,
@@ -582,7 +583,7 @@ async function handleDeleteSelected() {
   if (selectedResultIds.size === 0) return;
 
   const count = selectedResultIds.size;
-  const choice = await Dialog.custom(
+  const choice = await Notify.custom(
     `Czy na pewno chcesz usunąć ${count} wyników testów z historii? Jest to proces nieodwracalny.`,
     [
       { label: "Tak, usuń", value: true, class: "btn danger" },
@@ -594,14 +595,14 @@ async function handleDeleteSelected() {
 
   try {
     await deleteResults(Array.from(selectedResultIds));
-    await Dialog.alert("Wyniki zostały pomyślnie usunięte.", "success");
+    await Notify.alert("Wyniki zostały pomyślnie usunięte.", "success");
     selectedResultIds.clear();
     const selectAll = document.getElementById("selectAllHistory");
     if (selectAll) selectAll.checked = false;
     updateDownloadButtonState();
     loadHistoryData();
   } catch (e) {
-    await Dialog.alert("Błąd podczas usuwania: " + e.message, "error");
+    await Notify.alert("Błąd podczas usuwania: " + e.message, "error");
   }
 }
 
@@ -803,7 +804,7 @@ function renderHistoryPage() {
               icon.classList.remove("spin");
               icon.textContent = "error";
               icon.style.color = "red";
-              await Dialog.alert("Błąd wysyłania: " + err.message, "error");
+              await Notify.alert("Błąd wysyłania: " + err.message, "error");
               loadHistoryData();
             }
           };
@@ -834,7 +835,7 @@ function renderHistoryPage() {
     btnIcon.style.fontSize = "18px";
     btnIcon.textContent = "download";
     btn.appendChild(btnIcon);
-    btn.addEventListener("click", () => downloadSingleResult(r));
+    btn.addEventListener("click", () => downloadSingle(r));
 
     tdAction.appendChild(btn);
     row.appendChild(tdAction);
@@ -907,7 +908,7 @@ function updatePaginationControls(totalItems, totalPages) {
 // ===================================================
 
 async function handleClaimResult(result, userUid) {
-  const choice = await Dialog.custom(
+  const choice = await Notify.custom(
     "Czy chcesz przenieść ten wynik (zniknie z konta Gościa) czy skopiować (zostanie na koncie Gościa)?",
     [
       { label: "Przenieś (Wytnij)", value: "move", class: "btn primary" },
@@ -921,44 +922,20 @@ async function handleClaimResult(result, userUid) {
   try {
     const keepOriginal = choice === "copy";
     await claimGuestResult(result, userUid, keepOriginal);
-    await Dialog.alert(
+    await Notify.alert(
       "Wynik został pomyślnie przypisany do Twojego konta!",
       "success",
     );
     loadHistoryData();
   } catch (e) {
-    await Dialog.alert(
+    await Notify.alert(
       "Błąd podczas przejmowania wyniku: " + e.message,
       "error",
     );
   }
 }
 
-function downloadSingleResult(result) {
-  const formatEl = document.querySelector(
-    'input[name="dl-format"]:checked',
-  );
-  const format = formatEl ? formatEl.value : 'json';
-
-  if (format === "csv") {
-    downloadSingleResultAsCSV(result);
-  } else {
-    const test_id = result.test_id || result.testId;
-    const filename = `wynik_${test_id}_${new Date(result.timestamp).getTime()}.json`;
-    const jsonStr = JSON.stringify(result, null, 2);
-    downloadFile(filename, jsonStr, "application/json");
-  }
-}
-
-function downloadSingleResultAsCSV(result) {
-  // C3: formatowanie w results/resultExporter.js (bajtowo zgodne)
-  const flat = resultRow(result, { deep: true });
-  const csvContent = toKeyValueCSV(flat);
-
-  const test_id = result.test_id || result.testId;
-  const filename = `wynik_${test_id}_${new Date(result.timestamp).getTime()}.csv`;
-  downloadFile(filename, csvContent, "text/csv;charset=utf-8;");
-}
+// Pobranie pojedynczego wyniku + CSV: ../history/historyExport.js (downloadSingle).
 
 // ===================================================
 // CLOUD RESULTS
@@ -1096,7 +1073,7 @@ async function renderCloudResultsTable(results) {
       '<span class="material-icons" style="font-size:18px;">download</span>';
     btnDl.onclick = () => {
       const formatted = { ...data, wyniki: data.data };
-      downloadSingleResult(formatted);
+      downloadSingle(formatted);
     };
     tdAction.appendChild(btnDl);
     row.appendChild(tdAction);
@@ -1115,7 +1092,7 @@ async function handleImportResult(cloudResult) {
     );
 
     if (exists) {
-      Dialog.alert(
+      Notify.alert(
         "Ten wynik znajduje się już w Twojej lokalnej bazie danych.",
         "info",
       );
@@ -1126,10 +1103,10 @@ async function handleImportResult(cloudResult) {
     const localData = cloudRecordToLocal(cloudResult, user.uid);
 
     await saveResult(localData, user.uid);
-    Dialog.alert("Wynik został zaimportowany!", "success");
+    Notify.alert("Wynik został zaimportowany!", "success");
     renderCloudResultsTable(cachedCloudResults);
   } catch (e) {
-    Dialog.alert("Błąd importu: " + e.message, "error");
+    Notify.alert("Błąd importu: " + e.message, "error");
   }
 }
 
@@ -1153,40 +1130,35 @@ async function handleImportAll() {
       saveResult,
     );
 
-    Dialog.alert(
+    Notify.alert(
       `Import zakończony. Dodano: ${count}, Pominięto (duplikaty): ${skipped}`,
       "success",
     );
     renderCloudResultsTable(cachedCloudResults);
   } catch (e) {
-    Dialog.alert("Błąd masowego importu: " + e.message, "error");
+    Notify.alert("Błąd masowego importu: " + e.message, "error");
   }
 }
 
 async function handleDownloadAll() {
   if (cachedCloudResults.length === 0) return;
 
-    const formatEl = document.querySelector(
-      'input[name="dl-format"]:checked',
-    );
-    const format = formatEl ? formatEl.value : 'json';
-    const btn = elements.btnCloudDownloadAll;
-  const btnText = document.getElementById("btn-cloud-download-text");
-  const btnProgress = document.getElementById("btn-cloud-download-progress");
-
-  if (!btn || !btnText || !btnProgress) return;
-
-  btn.classList.add("downloading");
-  btn.disabled = true;
-  const originalContent = btnText.innerHTML;
-  btnText.innerHTML =
-    '<span class="material-icons spin" style="font-size:16px;">sync</span> Pobieranie wyników...';
-  btnProgress.style.width = "0%";
+  const format = selectedDownloadFormat();
+  // F3a: choreografia przycisku w historyExport (1 reguła zamiast kopii).
+  const dl = beginDownloadButton(
+    {
+      button: "btn-cloud-download-all",
+      text: "btn-cloud-download-text",
+      progress: "btn-cloud-download-progress",
+    },
+    "Pobieranie wyników...",
+  );
+  if (!dl) return;
 
   try {
     const timestamp = new Date().getTime();
     const filename = `Paczka_Wynikow_${timestamp}.zip`;
-    btnProgress.style.width = "50%";
+    dl.progress("50%");
 
     let resultsToDownload = cachedCloudResults;
     if (selectedResultIds.size > 0) {
@@ -1204,23 +1176,18 @@ async function handleDownloadAll() {
     });
 
     if (result.success) {
-      btnProgress.style.width = "100%";
+      dl.progress("100%");
       setTimeout(
-        () => Dialog.alert("Archiwum ZIP zostało wygenerowane!", "success"),
+        () => Notify.alert("Archiwum ZIP zostało wygenerowane!", "success"),
         500,
       );
     } else if (!result.cancelled) {
-      Dialog.alert("Błąd podczas generowania ZIP: " + result.error, "error");
+      Notify.alert("Błąd podczas generowania ZIP: " + result.error, "error");
     }
   } catch (e) {
-    Dialog.alert("Wystąpił nieoczekiwany błąd: " + e.message, "error");
+    Notify.alert("Wystąpił nieoczekiwany błąd: " + e.message, "error");
   } finally {
-    setTimeout(() => {
-      btn.classList.remove("downloading");
-      btn.disabled = false;
-      btnText.innerHTML = originalContent;
-      btnProgress.style.width = "0%";
-    }, 1000);
+    dl.restore();
   }
 }
 
@@ -1233,11 +1200,11 @@ async function handleImportGuestResults() {
     const guestResults = allLocal.filter((r) => r.researcher_uid === "GUEST");
 
     if (guestResults.length === 0) {
-      Dialog.alert("Brak wyników Gościa do zaimportowania.", "info");
+      Notify.alert("Brak wyników Gościa do zaimportowania.", "info");
       return;
     }
 
-    const choice = await Dialog.custom(
+    const choice = await Notify.custom(
       `Znaleziono ${guestResults.length} wyników Gościa. Czy chcesz je przenieść na swoje konto (znikną z konta Gościa) czy duplikować?`,
       [
         { label: "Przenieś", value: "move", class: "btn primary" },
@@ -1255,13 +1222,13 @@ async function handleImportGuestResults() {
       saveResult,
     );
 
-    Dialog.alert(
+    Notify.alert(
       `Zakończono! ${choice === "move" ? "Przeniesiono" : "Zduplikowano"} ${syncCount} wyników.`,
       "success",
     );
     loadHistoryData();
   } catch (e) {
-    Dialog.alert("Błąd importu: " + e.message, "error");
+    Notify.alert("Błąd importu: " + e.message, "error");
   }
 }
 
@@ -1284,7 +1251,7 @@ async function handleDownloadAllLocal(targetUid) {
     }
 
     if (results.length === 0) {
-      Dialog.alert("Brak wyników do pobrania.", "info");
+      Notify.alert("Brak wyników do pobrania.", "info");
       return;
     }
 
@@ -1292,34 +1259,24 @@ async function handleDownloadAllLocal(targetUid) {
 
     // Wybierz prefix na podstawie WIDOCZNEGO kontenera, nie typu użytkownika
     // GUEST widzi local-actions-container, nie guest-actions-container
-    let prefix;
-    if (!elements.cloudActionsContainer?.classList.contains("hidden")) {
-      prefix = "cloud";
-    } else if (!elements.guestActionsContainer?.classList.contains("hidden")) {
-      prefix = "guest";
-    } else {
-      prefix = "local";
-    }
+    const prefix = downloadButtonPrefix({
+      cloudHidden: elements.cloudActionsContainer?.classList.contains("hidden"),
+      guestHidden: elements.guestActionsContainer?.classList.contains("hidden"),
+    });
 
-    const btn = document.getElementById(`btn-${prefix}-download-all`);
-    const btnText = document.getElementById(`btn-${prefix}-download-text`);
-    const btnProgress = document.getElementById(
-      `btn-${prefix}-download-progress`,
+    // F3a: choreografia przycisku w historyExport (1 reguła zamiast kopii).
+    const dl = beginDownloadButton(
+      {
+        button: `btn-${prefix}-download-all`,
+        text: `btn-${prefix}-download-text`,
+        progress: `btn-${prefix}-download-progress`,
+      },
+      "Pobieranie...",
     );
+    if (!dl) return;
+    dl.progress("30%");
 
-    if (!btn || !btnText || !btnProgress) return;
-
-    btn.classList.add("downloading");
-    btn.disabled = true;
-    const originalContent = btnText.innerHTML;
-    btnText.innerHTML =
-      '<span class="material-icons spin" style="font-size:16px;">sync</span> Pobieranie...';
-    btnProgress.style.width = "30%";
-
-    const formatEl = document.querySelector(
-      'input[name="dl-format"]:checked',
-    );
-    const format = formatEl ? formatEl.value : 'json';
+    const format = selectedDownloadFormat();
     const filename = `Wyniki_${isGuest ? "Gosc" : "Uzytkownik"}_${Date.now()}.zip`;
 
     const result = await getPlatform().files.bulkZip({
@@ -1329,34 +1286,25 @@ async function handleDownloadAllLocal(targetUid) {
     });
 
     if (result.success) {
-      btnProgress.style.width = "100%";
+      dl.progress("100%");
     } else if (!result.cancelled) {
-      Dialog.alert("Błąd ZIP: " + result.error, "error");
+      Notify.alert("Błąd ZIP: " + result.error, "error");
     }
-
-    setTimeout(() => {
-      btn.classList.remove("downloading");
-      btn.disabled = false;
-      btnText.innerHTML = originalContent;
-      btnProgress.style.width = "0%";
-    }, 1000);
   } catch (e) {
-    Dialog.alert("Błąd: " + e.message, "error");
+    Notify.alert("Błąd: " + e.message, "error");
+  } finally {
+    // Poprawka: przycisk wraca też po wyjątku (wcześniej zostawał wisy).
+    dl.restore();
   }
 }
 
-function downloadResultsAsCSV(results, filename) {
-  // C3: formatowanie w results/resultExporter.js (bajtowo zgodne)
-  if (results.length === 0) return;
-  const flats = results.map((r) => resultRow(r, { deep: true }));
-  downloadFile(filename, toMatrixCSV(flats), "text/csv;charset=utf-8;");
-}
-
+// CSV bieżącego widoku: ../history/historyExport.js (F3a: format z danych,
+// nie ze scrapowania DOM — ta sama reguła co wcześniej).
 export function exportHistoryToCSV() {
-  // C3: eksport bieżącego widoku (filtr + strona) z query-modelu zamiast scrapowania DOM.
-  // Te same widoczne dane, bez czytania wyrenderowanej tabeli.
-  const { items } = paginate(filterResults(currentAllResults, activeFilters), currentPage, PAGE_SIZE);
-  if (items.length === 0) return;
-  const flats = items.map((r) => resultRow(r, { deep: true }));
-  downloadFile("historia_wynikow.csv", toMatrixCSV(flats), "text/csv;charset=utf-8;");
+  exportViewToCSV({
+    all: currentAllResults,
+    filters: activeFilters,
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+  });
 }
