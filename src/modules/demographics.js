@@ -8,13 +8,14 @@ import {
   renderParticipantsList,
 } from "./participants.js";
 import { getResearcherUid } from "./auth.js";
+import { storageKeySuffix } from "../session/session.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
  * Zapobiega przeciekaniu danych demograficznych między kontami.
  */
 function getDemoStorageKeys() {
-  const uid = getResearcherUid().replace("::", "__");
+  const uid = storageKeySuffix(getResearcherUid());
   return {
     templateId: `activeTemplateId_${uid}`,
     demographics: `activeDemographics_${uid}`,

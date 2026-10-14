@@ -5,6 +5,7 @@ import {
   researcherUidFor,
   canUploadResult,
   isCloudSyncAllowed,
+  storageKeySuffix,
 } from '../../src/session/session.js';
 import {
   createMemoryVault,
@@ -67,6 +68,14 @@ describe('session', () => {
     expect(isLocalSessionKind('APPROVED')).toBe(false);
     expect(isLocalSessionKind('ADMIN')).toBe(false);
     expect(isLocalSessionKind('UNKNOWN')).toBe(false);
+  });
+
+  it('storageKeySuffix: jedna reguła :: → __ (jak stare klucze)', () => {
+    expect(storageKeySuffix('LOCAL::Jan')).toBe('LOCAL__Jan');
+    expect(storageKeySuffix('uid-123')).toBe('uid-123');
+    expect(storageKeySuffix('GUEST')).toBe('GUEST');
+    expect(storageKeySuffix(null)).toBe('');
+    expect(storageKeySuffix(undefined)).toBe('');
   });
 });
 

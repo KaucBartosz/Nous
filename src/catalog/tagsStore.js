@@ -2,6 +2,7 @@
 // Własność: klucz storage per użytkownik + CRUD tagów + parser @tagów (AND>OR) + matcher.
 // Czysty (storage i tożsamość użytkownika wstrzyknięte) — testowalny bez auth/DOM.
 // Adapter DOM/auth zostaje w `src/modules/tags.js`, który deleguje tutaj.
+import { storageKeySuffix } from "../session/session.js";
 
 export const MAX_TAG_LENGTH = 25;
 
@@ -17,8 +18,7 @@ export function storageKeyFor({ uid, status, researcherUid } = {}) {
   }
   if (status === "LOCAL") {
     // Konto lokalne — klucz po researcher UID (LOCAL::username)
-    const safe = String(researcherUid || "").replace("::", "__");
-    return `test_tags_${safe}`;
+    return `test_tags_${storageKeySuffix(researcherUid)}`;
   }
   if (status === "GUEST") {
     return "test_tags_guest";

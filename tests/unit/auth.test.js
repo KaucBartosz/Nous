@@ -55,7 +55,7 @@ describe('Auth Module — Konta Lokalne', () => {
   let getLocalAccount, createLocalAccount, updateLocalAccountLastLogin;
   let updateAuthUI, showErrorLocal, enforceSyncPolicy;
   let loginLocal, registerLocal, logoutLocal, loginGuest;
-  let getResearcherUid, getUserStatus, getCurrentLocalUser;
+  let getResearcherUid, getUserStatus, getSession, getCurrentLocalUser;
   let changeLocalPassword, adminResetLocalPassword;
 
   beforeEach(async () => {
@@ -82,6 +82,7 @@ describe('Auth Module — Konta Lokalne', () => {
     loginGuest = auth.loginGuest;
     getResearcherUid = auth.getResearcherUid;
     getUserStatus = auth.getUserStatus;
+    getSession = auth.getSession;
     getCurrentLocalUser = auth.getCurrentLocalUser;
     changeLocalPassword = auth.changeLocalPassword;
     adminResetLocalPassword = auth.adminResetLocalPassword;
@@ -112,6 +113,39 @@ describe('Auth Module — Konta Lokalne', () => {
       await loginLocal('Jan', 'test1234', vi.fn());
 
       expect(getResearcherUid()).toBe('LOCAL::Jan');
+    });
+  });
+
+  // ─── getSession (A3: jeden obiekt zamiast tria getterów) ──────
+  describe('getSession', () => {
+    it('spójny z getterami: GUEST na starcie', async () => {
+      const s = getSession();
+      expect(s.kind).toBe(getUserStatus());
+      expect(s.researcherUid).toBe(getResearcherUid());
+      expect(s.researcherUid).toBe('GUEST');
+      expect(s.canUpload).toBe(false);
+      expect(s.isCloudSyncAllowed).toBe(false);
+    });
+
+    it('LOCAL po zalogowaniu lokalnym (polityki bez chmury)', async () => {
+      const salt = 'aabbccdd00112233aabbccdd00112233';
+      const encoder = new TextEncoder();
+      const data = encoder.encode(salt + 'test1234');
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hash = Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+
+      getLocalAccount.mockResolvedValue({ username: 'Jan', salt, passwordHash: hash });
+      updateLocalAccountLastLogin.mockResolvedValue(undefined);
+
+      await loginLocal('Jan', 'test1234', vi.fn());
+
+      const s = getSession();
+      expect(s.kind).toBe('LOCAL');
+      expect(s.localUsername).toBe('Jan');
+      expect(s.researcherUid).toBe('LOCAL::Jan');
+      expect(s.canUpload).toBe(false);
+      expect(s.isCloudSyncAllowed).toBe(false);
     });
   });
 

@@ -42,3 +42,12 @@ export function isCloudSyncAllowed(kind) {
 export function isLocalSessionKind(kind) {
   return kind === "LOCAL" || kind === "GUEST";
 }
+
+/**
+ * Bezpieczny sufiks kluczy storage per użytkownik (A3: 1 reguła `::` → `__`
+ * zamiast 3 rozproszonych kopii w library/demographics/tagsStore).
+ * Zachowuje 1:1 starą semantykę (pierwsze wystąpienie).
+ */
+export function storageKeySuffix(researcherUid) {
+  return String(researcherUid || "").replace("::", "__");
+}

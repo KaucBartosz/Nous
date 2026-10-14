@@ -24,7 +24,7 @@ import {
   updateLocalAccountLastLogin,
 } from "./database.js";
 import { generateSalt, hashPassword } from "../session/passwordHash.js";
-import { createSession } from "../session/session.js";
+import { createSession, canUploadResult, isCloudSyncAllowed } from "../session/session.js";
 import { getPlatform } from "../platform/index.js";
 
 // ─── Prywatny stan modułu ────────────────────────────────────────────────────
@@ -395,4 +395,22 @@ export function getResearcherUid() {
  */
 export function getUserStatus() {
   return _currentUserStatus;
+}
+
+/**
+ * Jednolity widok sesji (A3: thin slice — 1 obiekt zamiast tria getterów).
+ * Stare gettery zostają (mockowane w testach); nowy kod woli getSession().
+ * @returns {{uid, kind, localUsername, researcherUid, canUpload, isCloudSyncAllowed}}
+ */
+export function getSession() {
+  const session = createSession({
+    firebaseUid: (auth.currentUser && auth.currentUser.uid) || null,
+    kind: _currentUserStatus,
+    localUsername: _currentLocalUsername,
+  });
+  return {
+    ...session,
+    canUpload: canUploadResult(_currentUserStatus),
+    isCloudSyncAllowed: isCloudSyncAllowed(_currentUserStatus),
+  };
 }

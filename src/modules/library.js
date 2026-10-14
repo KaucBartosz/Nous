@@ -14,6 +14,7 @@ import {
 import * as Tags from "./tags.js";
 import { getSettings } from "./settings.js";
 import { getResearcherUid } from "./auth.js";
+import { storageKeySuffix } from "../session/session.js";
 import { getPlatform } from "../platform/index.js";
 import { loadCatalog, queryTests } from "../catalog/testCatalog.js";
 import {
@@ -26,7 +27,7 @@ import {
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
  */
 function getLibraryStorageKeys() {
-  const uid = getResearcherUid().replace("::", "__");
+  const uid = storageKeySuffix(getResearcherUid());
   return {
     viewMode: `libraryViewMode_${uid}`,
     trainingMode: `trainingMode_${uid}`,
