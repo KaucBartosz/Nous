@@ -71,6 +71,23 @@ async function loginLocalAccount(username, password) {
   await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
 }
 
+// Włącza "Ciche pobieranie" w Ustawieniach (bez tego natywne okno
+// systemu blokuje testy eksportu). Idempotentne między przebiegami.
+async function enableSilentDownloads() {
+  await page.click('#nav-settings');
+  await expect(page.locator('#settings-view')).toBeVisible();
+  // Input switcha ma zerowy rozmiar (CSS .switch) — stan przez property,
+  // klik Realny w widoczny suwak jak użytkownik.
+  await expect(page.locator('#download-settings-section')).toBeVisible();
+  await page.locator('#download-settings-section').scrollIntoViewIfNeeded();
+  const toggle = page.locator('#silent-download-toggle');
+  const slider = page.locator('label.switch[title="Ciche pobieranie do folderu"]');
+  if (!(await toggle.isChecked())) {
+    await slider.click();
+  }
+  await expect(page.locator('#download-dir-path')).not.toContainText('Wczytywanie', { timeout: 10000 });
+}
+
 test.describe('Electron App - Autoryzacja', () => {
 
   test('aplikacja uruchamia się poprawnie', async () => {
@@ -256,6 +273,7 @@ test.describe('Electron App - Eksport CSV (historyExport)', () => {
 
   test('eksport CSV bieżącego widoku zapisuje plik z danymi', async () => {
     await loginAsGuest();
+    await enableSilentDownloads();
     await seedGuestResult();
 
     await page.click('#nav-history');
@@ -289,8 +307,9 @@ test.describe('Electron App - Eksport CSV (historyExport)', () => {
     await rm(csvPath, { force: true });
   });
 
-  test('eksport ZIP zapisuje cicho do Downloads (bez okna systemowego)', async () => {
+  test('eksport ZIP w trybie cichym zapisuje do Downloads (bez okna)', async () => {
     await loginAsGuest();
+    await enableSilentDownloads();
     await seedGuestResult();
 
     await page.click('#nav-history');
