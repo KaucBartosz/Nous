@@ -1,7 +1,7 @@
 import { saveTemplate, getAllTemplates, deleteTemplate, getTemplate } from './database.js';
 import { elements } from './ui.js';
 import { refreshTemplatesDropdown } from './demographics.js';
-import { Dialog } from './dialog.js';
+import { Notify } from '../notify/notify.js';
 import { getPlatform } from '../platform/index.js';
 import { escapeHtml } from './utils.js';
 
@@ -119,7 +119,7 @@ function addFieldUI(initialData = null) {
 
     // Remove field button
     fieldDiv.querySelector('.btn-remove-field').addEventListener('click', async () => {
-        if (await Dialog.confirm("Usunąć to pole?")) {
+        if (await Notify.confirm("Usunąć to pole?")) {
             fieldDiv.remove();
         }
     });
@@ -140,7 +140,7 @@ async function saveCurrentTemplate() {
     const name = nameInput.value.trim();
 
     if (!name) {
-        await Dialog.alert("Podaj nazwę szablonu!", 'warning');
+        await Notify.alert("Podaj nazwę szablonu!", 'warning');
         return;
     }
 
@@ -162,7 +162,7 @@ async function saveCurrentTemplate() {
     });
 
     if (fields.length === 0) {
-        await Dialog.alert("Dodaj przynajmniej jedno pole!", 'warning');
+        await Notify.alert("Dodaj przynajmniej jedno pole!", 'warning');
         return;
     }
 
@@ -193,7 +193,7 @@ async function saveCurrentTemplate() {
         refreshTemplatesList();
 
     } catch (e) {
-        await Dialog.alert("Błąd zapisu: " + e.message, 'error');
+        await Notify.alert("Błąd zapisu: " + e.message, 'error');
     }
 }
 
@@ -237,13 +237,13 @@ async function exportCurrentTemplate(template) {
         // C1: eksport przez seam (Electron: dialog systemowy, Web: Blob w adapterze)
         const result = await getPlatform().files.exportTemplate(template);
         if (result.success) {
-            await Dialog.alert(`Szablon "${template.name}" został wyeksportowany pomyślnie.`, 'info');
+            await Notify.alert(`Szablon "${template.name}" został wyeksportowany pomyślnie.`, 'info');
         } else if (!result.cancelled) {
-            await Dialog.alert("Błąd eksportu: " + result.error, 'error');
+            await Notify.alert("Błąd eksportu: " + result.error, 'error');
         }
     } catch (e) {
         console.error("Export error:", e);
-        await Dialog.alert("Błąd eksportu: " + e.message, 'error');
+        await Notify.alert("Błąd eksportu: " + e.message, 'error');
     }
 }
 
@@ -262,16 +262,16 @@ async function importTemplateFromFile() {
                 imported.fields.forEach(field => addFieldUI(field));
             }
 
-            await Dialog.alert("Szablon został zaimportowany do kreatora. Możesz go teraz zapisać.", 'info');
+            await Notify.alert("Szablon został zaimportowany do kreatora. Możesz go teraz zapisać.", 'info');
 
             document.getElementById('demo-creator-view').scrollIntoView({ behavior: 'smooth' });
 
         } else if (!result.cancelled) {
-            await Dialog.alert("Błąd importu: " + result.error, 'error');
+            await Notify.alert("Błąd importu: " + result.error, 'error');
         }
     } catch (e) {
         console.error("Import error:", e);
-        await Dialog.alert("Błąd importu: " + e.message, 'error');
+        await Notify.alert("Błąd importu: " + e.message, 'error');
     }
 }
 
@@ -325,7 +325,7 @@ export async function refreshTemplatesList() {
             });
 
             card.querySelector('.btn-delete-template').addEventListener('click', async () => {
-                const confirmed = await Dialog.confirm(`Usunąć szablon "${t.name}"?`);
+                const confirmed = await Notify.confirm(`Usunąć szablon "${t.name}"?`);
                 if (confirmed) {
                     await deleteTemplate(t.id);
                     await refreshTemplatesDropdown(); // Sync dropdown
