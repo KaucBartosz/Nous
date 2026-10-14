@@ -71,50 +71,17 @@ export function debounce(fn, delay = 200) {
 
 /**
  * Pobiera wersje lokalne (zawsze świeże).
+ * Dyscyplina seama: jedyny dostęp przez platform/, bez fallbacku na
+ * surowe API preloadu i bez kopiowania logiki Web (mieszka w web.js).
  * @returns {Promise<Object>} - Obiekt {testId: version}
  */
 export async function getLocalVersionsCached() {
-    // C1: delegacja do seama platform/ (jedyne miejsce z polityką Electron/Web).
     try {
         const { getPlatform } = await import("../platform/index.js");
         return await getPlatform().tests.getLocalVersions();
     } catch (e) {
         console.error("Error fetching local versions via platform:", e);
-    }
-    // Fallback legacy (gdyby seam był niedostępny)
-    if (window.electronAPI) {
-        try {
-            return await window.electronAPI.getLocalVersions();
-        } catch (e) {
-            console.error("Error fetching local versions:", e);
-            return {};
-        }
-    } else {
-        // Tryb Web (Aplikacja w przeglądarce)
-        try {
-            const res = await fetch('tests-registry.json');
-            if (res.ok) {
-                const registry = await res.json();
-                const webVersions = {};
-                // Konwertuje strukturę JSON na lokalny format (local_ver)
-                // Zakładamy, że w registry np: { id: "bystreOczko", version: 1, name: "...", webPath: "tests/bystreOczko/index.html" }
-                registry.forEach(test => {
-                    webVersions[test.id] = {
-                        version: test.version || 1,
-                        isLocalDev: false,
-                        name: test.name,
-                        description: test.description,
-                        webPath: test.path || ''
-                    };
-                });
-                return webVersions;
-            } else {
-                return {};
-            }
-        } catch (err) {
-            console.warn("Tryb Web: Błąd pobierania tests-registry.json", err);
-            return {};
-        }
+        return {};
     }
 }
 
