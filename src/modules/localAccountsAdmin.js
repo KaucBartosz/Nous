@@ -3,7 +3,7 @@
 
 import { getAllLocalAccounts } from './database.js';
 import { adminResetLocalPassword, getUserStatus } from './auth.js';
-import { Dialog } from './dialog.js';
+import { Notify } from '../notify/notify.js';
 import { escapeHtml } from './utils.js';
 
 /**
@@ -76,14 +76,14 @@ export async function loadLocalAccountsAdmin() {
  */
 async function handleAdminResetPassword(username) {
   // Krok 1: Potwierdź zamiar
-  const confirmed = await Dialog.confirm(
+  const confirmed = await Notify.confirm(
     `Czy na pewno chcesz zresetować hasło dla konta "${username}"?\n\nUżytkownik zostanie powiadomiony o nowym haśle.`,
     'warning'
   );
   if (!confirmed) return;
 
-  // Krok 2: Poproś o nowe hasło (przez Dialog.prompt)
-  const newPassword = await Dialog.prompt(
+  // Krok 2: Poproś o nowe hasło
+  const newPassword = await Notify.prompt(
     `Podaj nowe hasło dla konta "${username}" (min. 4, max. 30 znaków):`,
     ''
   );
@@ -91,19 +91,19 @@ async function handleAdminResetPassword(username) {
   if (!newPassword || !newPassword.trim()) return;
 
   if (newPassword.trim().length < 4) {
-    await Dialog.alert('Hasło musi mieć min. 4 znaki.', 'error');
+    await Notify.error('Hasło musi mieć min. 4 znaki.');
     return;
   }
   if (newPassword.trim().length > 30) {
-    await Dialog.alert('Hasło max. 30 znaków.', 'error');
+    await Notify.error('Hasło max. 30 znaków.');
     return;
   }
 
   const result = await adminResetLocalPassword(username, newPassword.trim());
 
   if (result.ok) {
-    await Dialog.alert(`Hasło dla konta "${username}" zostało zresetowane.`, 'success');
+    await Notify.success(`Hasło dla konta "${username}" zostało zresetowane.`);
   } else {
-    await Dialog.alert(`Błąd: ${result.error}`, 'error');
+    await Notify.error(`Błąd: ${result.error}`);
   }
 }
