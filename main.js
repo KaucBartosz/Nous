@@ -1,10 +1,11 @@
-const { app, BrowserWindow, ipcMain, shell, Menu, safeStorage, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, safeStorage, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const crypto = require('crypto');
 const AdmZip = require('adm-zip');
 const { createBulkExport } = require('./main/bulkExport');
+const { createSilentDownloads } = require('./main/silentDownloads');
 const { createShell } = require('./main/shell');
 const { createPaths } = require('./main/paths');
 const { createKeyStore } = require('./main/keyStore');
@@ -113,8 +114,14 @@ const bulkExport = createBulkExport({
 });
 bulkExport.registerIpc(ipcMain, () => mainWindow);
 
+// Ciche pobieranie (opcja w Ustawieniach): will-download + wybór folderu.
+// Domyślnie natywne okno systemu; tryb z pamięci main (push z renderera).
+const silentDownloads = createSilentDownloads({ session, dialog, app, fs, path });
+silentDownloads.registerIpc(ipcMain, () => mainWindow);
+
 app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
+    silentDownloads.attachWillDownload();
     createWindow();
 
     mainWindow.webContents.on('before-input-event', (event, input) => {

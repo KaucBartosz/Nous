@@ -47,6 +47,9 @@ export function createFakePlatform(seed = {}) {
       bulkZip: async (o) => { rec("files.bulkZip", o); return { success: true, fake: true }; },
       exportTemplate: async (d) => { rec("files.exportTemplate", d); return { success: true }; },
       importTemplate: async () => { rec("files.importTemplate", null); return { success: true, data: null }; },
+      getDownloadsDir: async () => { rec("files.getDownloadsDir", null); return "/tmp/fake-downloads"; },
+      pickDownloadFolder: async () => ({ cancelled: true }),
+      setSilentMode: (mode) => { rec("files.setSilentMode", mode); },
     },
 
     links: {

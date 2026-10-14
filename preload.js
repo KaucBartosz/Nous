@@ -46,6 +46,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 8. ZAPIS PACZKI ZIP
     downloadBulkZip: (data) => ipcRenderer.invoke('download-bulk-zip', data),
 
+    // 8b. CICHE POBIERANIE (opcja w Ustawieniach; domyślnie dialog systemowy)
+    getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
+    pickDownloadFolder: (current) => ipcRenderer.invoke('pick-download-folder', current),
+    setSilentDownloads: (mode) => ipcRenderer.send('set-silent-downloads', mode),
+
     // 9. OTWIERANIE LINKÓW
     openExternal: (url) => ipcRenderer.send('open-external', url),
 

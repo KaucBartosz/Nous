@@ -43,6 +43,10 @@ export function createElectronPlatform(api) {
       bulkZip: (o) => a.downloadBulkZip(o),
       exportTemplate: (d) => a.exportTemplate(d),
       importTemplate: () => a.importTemplate(),
+      // Ciche pobieranie (opcja w Ustawieniach; preload + main/silentDownloads).
+      getDownloadsDir: () => a.getDownloadsPath(),
+      pickDownloadFolder: (current) => a.pickDownloadFolder(current),
+      setSilentMode: (mode) => a.setSilentDownloads(mode),
     },
 
     links: {

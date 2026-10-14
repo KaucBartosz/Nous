@@ -112,6 +112,10 @@ export function createWebPlatform(deps = {}) {
         };
         input.click();
       }),
+      // Web: brak main-procesu — ciche pobieranie nie dotyczy (przeglądarka pyta sama).
+      getDownloadsDir: async () => null,
+      pickDownloadFolder: async () => ({ cancelled: true }),
+      setSilentMode: () => {},
     },
 
     links: {
