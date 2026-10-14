@@ -5,7 +5,6 @@ import {
   saveResult,
   deleteResults,
 } from "./database.js";
-let selectedResultIds = new Set();
 import { db as firebaseDb } from "../firebaseConfig.js";
 import {
   collection,
@@ -42,23 +41,18 @@ import {
   prepareGuestImport,
 } from "../results/cloudResults.js";
 import { canUploadResult } from "../session/session.js";
+import {
+  PAGE_SIZE,
+  CLOUD_FETCH_THROTTLE_MS,
+  createHistoryState,
+  resetHistoryFilters,
+} from "../history/historyState.js";
 import { getPlatform } from "../platform/index.js";
 
-let isGuestViewActive = false;
-let isCloudViewActive = false;
-let cachedCloudResults = [];
-let lastCloudFetchTime = 0;
-const CLOUD_FETCH_THROTTLE_MS = 2000;
+// Jeden stan widoku (mutowany tylko przez orkiestrator + fabryki UI).
+const state = createHistoryState();
 
-// --- FILTER STATE ---
-let activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
-let filterValuesCache = { date: [], test_id: [], subject_id: [], status: [] };
 let openFilterDropdown = null;
-
-// --- PAGINATION STATE ---
-const PAGE_SIZE = 50;
-let currentPage = 1;
-let currentAllResults = []; // full sorted list for current view
 
 export function initHistoryView() {
   document
@@ -69,9 +63,9 @@ export function initHistoryView() {
       checkboxes.forEach((cb) => {
         cb.checked = checked;
         if (checked) {
-          selectedResultIds.add(cb.dataset.id);
+          state.selectedIds.add(cb.dataset.id);
         } else {
-          selectedResultIds.delete(cb.dataset.id);
+          state.selectedIds.delete(cb.dataset.id);
         }
       });
       updateDownloadButtonState();
@@ -86,8 +80,8 @@ export function initHistoryView() {
 
   if (elements.btnToggleGuestView) {
     elements.btnToggleGuestView.addEventListener("click", () => {
-      isGuestViewActive = !isGuestViewActive;
-      isCloudViewActive = false;
+      state.guestView = !state.guestView;
+      state.cloudView = false;
       updateToggleButtonsState();
       loadHistoryData();
     });
@@ -95,8 +89,8 @@ export function initHistoryView() {
 
   if (elements.btnToggleCloudView) {
     elements.btnToggleCloudView.addEventListener("click", () => {
-      isCloudViewActive = !isCloudViewActive;
-      isGuestViewActive = false;
+      state.cloudView = !state.cloudView;
+      state.guestView = false;
       updateToggleButtonsState();
       loadHistoryData();
     });
@@ -151,11 +145,11 @@ export function initHistoryView() {
 }
 
 function clearAllFilters() {
-  activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
+  resetHistoryFilters(state);
   closeFilterDropdown();
   updateFilterBadges();
-  currentPage = 1;
-  selectedResultIds.clear();
+  state.page = 1;
+  state.selectedIds.clear();
   const selectAll = document.getElementById('selectAllHistory');
   if (selectAll) selectAll.checked = false;
   updateDownloadButtonState();
@@ -165,7 +159,7 @@ function clearAllFilters() {
 function updateClearFiltersBar() {
   const bar = document.getElementById('active-filters-bar');
   if (bar) {
-    bar.classList.toggle('hidden', !hasActiveFilters(activeFilters));
+    bar.classList.toggle('hidden', !hasActiveFilters(state.filters));
   }
 }
 
@@ -244,7 +238,7 @@ function countBy(results, keyFn) {
 // (statusLabel usunięty w C3 — jedyny resolver: resolveStatusLabel w results/historyQuery.js)
 
 function buildFilterValues(type) {
-  const results = currentAllResults;
+  const results = state.allResults;
   if (type === 'date') {
     // Build hierarchy: year -> month -> day
     const tree = {};
@@ -278,7 +272,7 @@ function renderFilterOptions(body, type, values) {
   body.innerHTML = '';
   if (type === 'date') {
     // Hierarchical rendering
-    const activeDates = activeFilters.date;
+    const activeDates = state.filters.date;
     const years = Object.keys(values).sort((a, b) => b - a);
     years.forEach(year => {
       // Year option
@@ -301,9 +295,9 @@ function renderFilterOptions(body, type, values) {
           });
         });
         if (yearCb.checked) {
-          allDaysForYear.forEach(k => activeFilters.date.add(k));
+          allDaysForYear.forEach(k => state.filters.date.add(k));
         } else {
-          allDaysForYear.forEach(k => activeFilters.date.delete(k));
+          allDaysForYear.forEach(k => state.filters.date.delete(k));
         }
         applyFilters();
         // Re-render to update parent checkboxes
@@ -327,9 +321,9 @@ function renderFilterOptions(body, type, values) {
         monthCb.addEventListener('change', () => {
           const allDaysForMonth = Object.keys(monthData.days).map(d => `day:${year}:${month}:${d}`);
           if (monthCb.checked) {
-            allDaysForMonth.forEach(k => activeFilters.date.add(k));
+            allDaysForMonth.forEach(k => state.filters.date.add(k));
           } else {
-            allDaysForMonth.forEach(k => activeFilters.date.delete(k));
+            allDaysForMonth.forEach(k => state.filters.date.delete(k));
           }
           applyFilters();
           closeFilterDropdown();
@@ -355,9 +349,9 @@ function renderFilterOptions(body, type, values) {
           dayDiv.appendChild(countSpan);
           dayCb.addEventListener('change', () => {
             if (dayCb.checked) {
-              activeFilters.date.add(dayCb.value);
+              state.filters.date.add(dayCb.value);
             } else {
-              activeFilters.date.delete(dayCb.value);
+              state.filters.date.delete(dayCb.value);
             }
             applyFilters();
             closeFilterDropdown();
@@ -369,7 +363,7 @@ function renderFilterOptions(body, type, values) {
     });
   } else {
     // Flat list for test_id, subject_id, status
-    const activeSet = activeFilters[type];
+    const activeSet = state.filters[type];
     values.forEach(([value, count]) => {
       const opt = document.createElement('div');
       opt.className = 'filter-option';
@@ -404,11 +398,11 @@ function renderFilterOptions(body, type, values) {
 
 function updateToggleButtonsState() {
   // Reset filters when switching views
-  activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
+  resetHistoryFilters(state);
   closeFilterDropdown();
   updateFilterBadges();
 
-  selectedResultIds.clear();
+  state.selectedIds.clear();
   const selectAll = document.getElementById("selectAllHistory");
   if (selectAll) selectAll.checked = false;
   updateDownloadButtonState();
@@ -417,7 +411,7 @@ function updateToggleButtonsState() {
   elements.guestActionsContainer?.classList.add("hidden");
   elements.localActionsContainer?.classList.add("hidden");
 
-  if (isCloudViewActive) {
+  if (state.cloudView) {
     elements.cloudActionsContainer?.classList.remove("hidden");
     if (elements.btnToggleGuestView) {
       elements.btnToggleGuestView.classList.remove("active");
@@ -429,7 +423,7 @@ function updateToggleButtonsState() {
       elements.btnToggleCloudView.innerHTML =
         '<span class="material-icons">storage</span> Pokaż wyniki Lokalne';
     }
-  } else if (isGuestViewActive) {
+  } else if (state.guestView) {
     elements.guestActionsContainer?.classList.remove("hidden");
     if (elements.btnToggleGuestView) {
       elements.btnToggleGuestView.classList.add("active");
@@ -473,18 +467,18 @@ export async function loadHistoryData() {
     } else {
       elements.btnToggleGuestView.classList.add("hidden");
       elements.btnToggleCloudView?.classList.add("hidden");
-      isGuestViewActive = false;
-      isCloudViewActive = false;
+      state.guestView = false;
+      state.cloudView = false;
     }
   }
 
-  if (isCloudViewActive) {
+  if (state.cloudView) {
     return loadCloudResults();
   }
 
   // Ustal targetUid uwzględniając konta lokalne (LOCAL::username)
   let targetUid = getResearcherUid();
-  if (user && isGuestViewActive) {
+  if (user && state.guestView) {
     targetUid = "GUEST";
   }
 
@@ -496,10 +490,10 @@ export async function loadHistoryData() {
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     // Store for pagination
-    currentAllResults = myResults;
-    currentPage = 1;
+    state.allResults = myResults;
+    state.page = 1;
     // Reset filters on data reload
-    activeFilters = { date: new Set(), test_id: new Set(), subject_id: new Set(), status: new Set() };
+    resetHistoryFilters(state);
     updateFilterBadges();
     renderHistoryPage();
   } catch (e) {
@@ -524,8 +518,8 @@ export async function loadHistoryData() {
 // ===================================================
 
 function updateDownloadButtonState() {
-  const count = selectedResultIds.size;
-  const hasFilters = activeFilters.date.size > 0 || activeFilters.test_id.size > 0 || activeFilters.subject_id.size > 0 || activeFilters.status.size > 0;
+  const count = state.selectedIds.size;
+  const hasFilters = state.filters.date.size > 0 || state.filters.test_id.size > 0 || state.filters.subject_id.size > 0 || state.filters.status.size > 0;
   const filteredCount = getFilteredResults().length;
   const btnTextLocal = document.getElementById("btn-local-download-text");
   const btnTextGuest = document.getElementById("btn-guest-download-text");
@@ -555,13 +549,13 @@ function updateDownloadButtonState() {
   const btnGuestDelete = document.getElementById("btn-guest-delete-selected");
 
   if (btnLocalDelete) {
-    if (count > 0 && !isCloudViewActive && !isGuestViewActive)
+    if (count > 0 && !state.cloudView && !state.guestView)
       btnLocalDelete.classList.remove("hidden");
     else btnLocalDelete.classList.add("hidden");
   }
 
   if (btnGuestDelete) {
-    if (count > 0 && isGuestViewActive)
+    if (count > 0 && state.guestView)
       btnGuestDelete.classList.remove("hidden");
     else btnGuestDelete.classList.add("hidden");
   }
@@ -570,9 +564,9 @@ function updateDownloadButtonState() {
 function handleCheckboxChange(e) {
   const id = e.target.dataset.id;
   if (e.target.checked) {
-    selectedResultIds.add(id);
+    state.selectedIds.add(id);
   } else {
-    selectedResultIds.delete(id);
+    state.selectedIds.delete(id);
     const selectAll = document.getElementById("selectAllHistory");
     if (selectAll) selectAll.checked = false;
   }
@@ -580,9 +574,9 @@ function handleCheckboxChange(e) {
 }
 
 async function handleDeleteSelected() {
-  if (selectedResultIds.size === 0) return;
+  if (state.selectedIds.size === 0) return;
 
-  const count = selectedResultIds.size;
+  const count = state.selectedIds.size;
   const choice = await Notify.custom(
     `Czy na pewno chcesz usunąć ${count} wyników testów z historii? Jest to proces nieodwracalny.`,
     [
@@ -594,9 +588,9 @@ async function handleDeleteSelected() {
   if (!choice) return;
 
   try {
-    await deleteResults(Array.from(selectedResultIds));
+    await deleteResults(Array.from(state.selectedIds));
     await Notify.alert("Wyniki zostały pomyślnie usunięte.", "success");
-    selectedResultIds.clear();
+    state.selectedIds.clear();
     const selectAll = document.getElementById("selectAllHistory");
     if (selectAll) selectAll.checked = false;
     updateDownloadButtonState();
@@ -611,8 +605,8 @@ async function handleDeleteSelected() {
 // ===================================================
 
 function applyFilters() {
-  currentPage = 1;
-  selectedResultIds.clear();
+  state.page = 1;
+  state.selectedIds.clear();
   const selectAll = document.getElementById('selectAllHistory');
   if (selectAll) selectAll.checked = false;
   updateDownloadButtonState();
@@ -621,11 +615,11 @@ function applyFilters() {
 
 function getFilteredResults() {
   // C3: czysty query-model (logika w results/historyQuery.js)
-  return filterResults(currentAllResults, activeFilters);
+  return filterResults(state.allResults, state.filters);
 }
 
 function updateFilterBadges() {
-  const total = activeFilters.date.size + activeFilters.test_id.size + activeFilters.subject_id.size + activeFilters.status.size;
+  const total = state.filters.date.size + state.filters.test_id.size + state.filters.subject_id.size + state.filters.status.size;
   updateClearFiltersBar();
   // Show total badge or per-column badges
   document.querySelectorAll('.filterable-header').forEach(th => {
@@ -633,22 +627,22 @@ function updateFilterBadges() {
     const badge = th.querySelector('.filter-badge');
     if (!badge) return;
     if (col === 'date') {
-      const count = activeFilters.date.size;
+      const count = state.filters.date.size;
       badge.textContent = count;
       badge.classList.toggle('hidden', count === 0);
       th.querySelector('.filter-btn').classList.toggle('active', count > 0);
     } else if (col === 'test') {
-      const count = activeFilters.test_id.size;
+      const count = state.filters.test_id.size;
       badge.textContent = count;
       badge.classList.toggle('hidden', count === 0);
       th.querySelector('.filter-btn').classList.toggle('active', count > 0);
     } else if (col === 'subject') {
-      const count = activeFilters.subject_id.size;
+      const count = state.filters.subject_id.size;
       badge.textContent = count;
       badge.classList.toggle('hidden', count === 0);
       th.querySelector('.filter-btn').classList.toggle('active', count > 0);
     } else if (col === 'status') {
-      const count = activeFilters.status.size;
+      const count = state.filters.status.size;
       badge.textContent = count;
       badge.classList.toggle('hidden', count === 0);
       th.querySelector('.filter-btn').classList.toggle('active', count > 0);
@@ -670,16 +664,16 @@ function renderHistoryPage() {
   const researcherUid = getResearcherUid();
 
   // C3: stronicowanie w query-modelu
-  const { items: pageResults, totalPages } = paginate(filteredResults, currentPage, PAGE_SIZE);
+  const { items: pageResults, totalPages } = paginate(filteredResults, state.page, PAGE_SIZE);
 
   // Update/create pagination controls
   updatePaginationControls(filteredResults.length, totalPages);
 
   if (filteredResults.length === 0) {
-    let msg = isGuestViewActive
+    let msg = state.guestView
       ? "Brak wyników w trybie Gościa."
       : "Brak wyników.";
-    if (hasActiveFilters(activeFilters)) {
+    if (hasActiveFilters(state.filters)) {
       msg = "Brak wyników pasujących do aktywnych filtrów.";
     }
     const tr = document.createElement("tr");
@@ -709,7 +703,7 @@ function renderHistoryPage() {
     cb.type = "checkbox";
     cb.className = "result-checkbox";
     cb.dataset.id = r.id || r.firestore_id;
-    cb.checked = selectedResultIds.has(cb.dataset.id);
+    cb.checked = state.selectedIds.has(cb.dataset.id);
     cb.addEventListener("change", handleCheckboxChange);
     tdCheckbox.appendChild(cb);
     row.appendChild(tdCheckbox);
@@ -741,7 +735,7 @@ function renderHistoryPage() {
     tdStatus.style.textAlign = "center";
 
     // CLAIMS MODE: tylko zalogowani użytkownicy konta online mogą przejmować wyniki Gościa
-    if (isGuestViewActive && user && researcherUid === user.uid) {
+    if (state.guestView && user && researcherUid === user.uid) {
       const btnClaim = document.createElement("button");
       btnClaim.className = "btn small primary";
       btnClaim.style.padding = "2px 8px";
@@ -873,10 +867,10 @@ function updatePaginationControls(totalItems, totalPages) {
   const btnPrev = document.createElement("button");
   btnPrev.className = "btn outline small";
   btnPrev.textContent = "← Poprzednia";
-  btnPrev.disabled = currentPage <= 1;
+  btnPrev.disabled = state.page <= 1;
   btnPrev.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
+    if (state.page > 1) {
+      state.page--;
       renderHistoryPage();
     }
   });
@@ -884,16 +878,16 @@ function updatePaginationControls(totalItems, totalPages) {
   // Page info
   const pageInfo = document.createElement("span");
   pageInfo.className = "pagination-info";
-  pageInfo.textContent = `Strona ${currentPage} z ${totalPages} (${totalItems} wyników)`;
+  pageInfo.textContent = `Strona ${state.page} z ${totalPages} (${totalItems} wyników)`;
 
   // Next button
   const btnNext = document.createElement("button");
   btnNext.className = "btn outline small";
   btnNext.textContent = "Następna →";
-  btnNext.disabled = currentPage >= totalPages;
+  btnNext.disabled = state.page >= totalPages;
   btnNext.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage++;
+    if (state.page < totalPages) {
+      state.page++;
       renderHistoryPage();
     }
   });
@@ -946,13 +940,13 @@ async function loadCloudResults() {
   if (!user) return;
 
   const now = Date.now();
-  if (now - lastCloudFetchTime < CLOUD_FETCH_THROTTLE_MS) {
-    if (cachedCloudResults.length > 0) {
-      return renderCloudResultsTable(cachedCloudResults);
+  if (now - state.lastCloudFetch < CLOUD_FETCH_THROTTLE_MS) {
+    if (state.cloudResults.length > 0) {
+      return renderCloudResultsTable(state.cloudResults);
     }
     return;
   }
-  lastCloudFetchTime = now;
+  state.lastCloudFetch = now;
 
   elements.historyTableBody.innerHTML =
     '<tr><td colspan="6">Pobieranie danych z chmury...</td></tr>';
@@ -966,12 +960,12 @@ async function loadCloudResults() {
 
     const snap = await getDocs(q);
     // C3: deszyfracja równoległa w results/cloudResults.js (kolejność zachowana)
-    cachedCloudResults = await decryptCloudRecords(
+    state.cloudResults = await decryptCloudRecords(
       snap.docs.map((docSnap) => ({ ...docSnap.data(), firestore_id: docSnap.id })),
       { hasKey: hasCloudKey, decrypt: decryptCloudData },
     );
 
-    await renderCloudResultsTable(cachedCloudResults);
+    await renderCloudResultsTable(state.cloudResults);
   } catch (e) {
     console.error("Cloud Fetch Error:", e);
     const tr = document.createElement("tr");
@@ -1012,7 +1006,7 @@ async function renderCloudResultsTable(results) {
     cb.type = "checkbox";
     cb.className = "result-checkbox";
     cb.dataset.id = data.firestore_id || data.id;
-    cb.checked = selectedResultIds.has(cb.dataset.id);
+    cb.checked = state.selectedIds.has(cb.dataset.id);
     cb.addEventListener("change", handleCheckboxChange);
     tdCheckbox.appendChild(cb);
     row.appendChild(tdCheckbox);
@@ -1104,14 +1098,14 @@ async function handleImportResult(cloudResult) {
 
     await saveResult(localData, user.uid);
     Notify.alert("Wynik został zaimportowany!", "success");
-    renderCloudResultsTable(cachedCloudResults);
+    renderCloudResultsTable(state.cloudResults);
   } catch (e) {
     Notify.alert("Błąd importu: " + e.message, "error");
   }
 }
 
 async function handleImportAll() {
-  if (cachedCloudResults.length === 0) return;
+  if (state.cloudResults.length === 0) return;
 
   const user = getCurrentUser();
 
@@ -1120,10 +1114,10 @@ async function handleImportAll() {
     const localResults = await getAllResults();
     const localKeys = buildLocalKeys(localResults);
 
-    const toImport = cachedCloudResults.filter(
+    const toImport = state.cloudResults.filter(
       (cloudResult) => !isAlreadyImported(cloudResult, localKeys),
     );
-    const skipped = cachedCloudResults.length - toImport.length;
+    const skipped = state.cloudResults.length - toImport.length;
     const count = await importPreparedList(
       toImport.map((cloudResult) => cloudRecordToLocal(cloudResult, user.uid)),
       user.uid,
@@ -1134,14 +1128,14 @@ async function handleImportAll() {
       `Import zakończony. Dodano: ${count}, Pominięto (duplikaty): ${skipped}`,
       "success",
     );
-    renderCloudResultsTable(cachedCloudResults);
+    renderCloudResultsTable(state.cloudResults);
   } catch (e) {
     Notify.alert("Błąd masowego importu: " + e.message, "error");
   }
 }
 
 async function handleDownloadAll() {
-  if (cachedCloudResults.length === 0) return;
+  if (state.cloudResults.length === 0) return;
 
   const format = selectedDownloadFormat();
   // F3a: choreografia przycisku w historyExport (1 reguła zamiast kopii).
@@ -1160,11 +1154,11 @@ async function handleDownloadAll() {
     const filename = `Paczka_Wynikow_${timestamp}.zip`;
     dl.progress("50%");
 
-    let resultsToDownload = cachedCloudResults;
-    if (selectedResultIds.size > 0) {
-      resultsToDownload = cachedCloudResults.filter(
+    let resultsToDownload = state.cloudResults;
+    if (state.selectedIds.size > 0) {
+      resultsToDownload = state.cloudResults.filter(
         (r) =>
-          selectedResultIds.has(r.firestore_id) || selectedResultIds.has(r.id),
+          state.selectedIds.has(r.firestore_id) || state.selectedIds.has(r.id),
       );
     }
 
@@ -1239,14 +1233,14 @@ async function handleDownloadAllLocal(targetUid) {
     let results = allLocal.filter((r) => r.researcher_uid === targetUid);
 
     // Apply filters if active (C3: query-model)
-    if (hasActiveFilters(activeFilters)) {
-      results = filterResults(results, activeFilters);
+    if (hasActiveFilters(state.filters)) {
+      results = filterResults(results, state.filters);
     }
 
-    if (selectedResultIds.size > 0) {
+    if (state.selectedIds.size > 0) {
       results = results.filter(
         (r) =>
-          selectedResultIds.has(r.id) || selectedResultIds.has(r.firestore_id),
+          state.selectedIds.has(r.id) || state.selectedIds.has(r.firestore_id),
       );
     }
 
@@ -1302,9 +1296,9 @@ async function handleDownloadAllLocal(targetUid) {
 // nie ze scrapowania DOM — ta sama reguła co wcześniej).
 export function exportHistoryToCSV() {
   exportViewToCSV({
-    all: currentAllResults,
-    filters: activeFilters,
-    page: currentPage,
+    all: state.allResults,
+    filters: state.filters,
+    page: state.page,
     pageSize: PAGE_SIZE,
   });
 }
