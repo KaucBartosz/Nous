@@ -9,7 +9,9 @@ import {
   beginDownloadButton,
   selectedDownloadFormat,
   downloadButtonPrefix,
+  silentDestDir,
 } from '../../src/history/historyExport.js';
+import { saveDownloadPrefs } from '../../src/platform/downloadPrefs.js';
 import { emptyFilters } from '../../src/results/historyQuery.js';
 
 const r = (id) => ({
@@ -103,5 +105,21 @@ describe('downloadResultsAsCSV', () => {
   it('false bez danych (wołający pokazuje Notify), true po pobraniu', () => {
     expect(downloadResultsAsCSV([], 'x.csv')).toBe(false);
     expect(downloadResultsAsCSV([r('P1')], 'x.csv')).toBe(true);
+  });
+});
+
+describe('silentDestDir', () => {
+  it('domyślnie null (= natywne okno)', async () => {
+    saveDownloadPrefs({ silent: false, dir: null });
+    expect(await silentDestDir()).toBeNull();
+  });
+
+  it('cicho z folderem → folder; cicho bez folderu → null (brak API w mocku)', async () => {
+    saveDownloadPrefs({ silent: true, dir: 'D:/Ciche' });
+    expect(await silentDestDir()).toBe('D:/Ciche');
+    saveDownloadPrefs({ silent: true, dir: null });
+    // setup.js mock electronAPI nie ma getDownloadsPath → fallback null
+    expect(await silentDestDir()).toBeNull();
+    saveDownloadPrefs({ silent: false, dir: null });
   });
 });

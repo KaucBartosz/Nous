@@ -9,6 +9,11 @@ import {
   downloadFile,
 } from "../results/resultExporter.js";
 import { filterResults, paginate } from "../results/historyQuery.js";
+import {
+  loadDownloadPrefs,
+  isSilentDownload,
+} from "../platform/downloadPrefs.js";
+import { getPlatform } from "../platform/index.js";
 
 /** CSV macierzowy z listy wyników (pusta lista → ""). */
 export function csvOfResults(results) {
@@ -95,6 +100,21 @@ export function beginDownloadButton(ids, busyLabel) {
 export function selectedDownloadFormat() {
   const formatEl = document.querySelector('input[name="dl-format"]:checked');
   return formatEl ? formatEl.value : "json";
+}
+
+/**
+ * Folder cichego ZIP-a albo null (= natywne okno).
+ * Nie rzuca: brak seama / Web / tryb dialogu → null.
+ */
+export async function silentDestDir() {
+  try {
+    const prefs = loadDownloadPrefs();
+    if (!isSilentDownload(prefs, getPlatform().kind)) return null;
+    if (prefs.dir) return prefs.dir;
+    return (await getPlatform().files.getDownloadsDir()) || null;
+  } catch {
+    return null;
+  }
 }
 
 /** Prefix przycisku ZIP wg widocznego kontenera (cloud/guest/local). */

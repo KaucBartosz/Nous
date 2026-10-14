@@ -1,5 +1,11 @@
 // src/modules/settings.js
 import { getPlatform } from '../platform/index.js';
+import {
+  loadDownloadPrefs,
+  saveDownloadPrefs,
+  resolveDownloadDir,
+} from '../platform/downloadPrefs.js';
+import { Notify } from '../notify/notify.js';
 
 const SETTINGS_KEY = 'nous-app-settings';
 const CUSTOM_CACHE_KEY = 'nous-app-settings-custom-cache';
@@ -565,6 +571,73 @@ export function initSettings() {
             elements.localTestsPathStr.textContent = 'Błąd pobierania ścieżki';
         });
     }
+
+    // --- Ciche pobieranie (opcja w Ustawieniach; domyślnie dialog systemowy) ---
+    // Stan poza motywem (osobny klucz): zmiana motywu nie kasuje folderu.
+    const dlSection = document.getElementById('download-settings-section');
+    const silentToggle = document.getElementById('silent-download-toggle');
+    const dirLabel = document.getElementById('download-dir-path');
+    const btnPickDir = document.getElementById('btn-pick-download-dir');
+    const isDesktopDownloads = getPlatform().kind === 'electron';
+    let dlPrefs = loadDownloadPrefs();
+
+    if (dlSection && !isDesktopDownloads) dlSection.style.display = 'none';
+
+    async function pushDownloadMode() {
+        if (!isDesktopDownloads) return;
+        try {
+            await getPlatform().files.setSilentMode({ silent: dlPrefs.silent, dir: dlPrefs.dir });
+        } catch (e) {
+            console.warn('Nie przekazano trybu pobierania do main:', e);
+        }
+    }
+
+    async function refreshDownloadForm() {
+        if (silentToggle) silentToggle.checked = dlPrefs.silent === true;
+        if (btnPickDir) btnPickDir.disabled = !dlPrefs.silent;
+        if (dirLabel) {
+            if (!isDesktopDownloads) {
+                dirLabel.textContent = 'Niedostępne w przeglądarce';
+                return;
+            }
+            try {
+                const fallback = await getPlatform().files.getDownloadsDir();
+                dirLabel.textContent = resolveDownloadDir(dlPrefs, fallback) || 'Nieznany folder';
+            } catch (e) {
+                dirLabel.textContent = dlPrefs.dir || 'Domyślny folder pobierania';
+            }
+        }
+    }
+
+    if (silentToggle) {
+        silentToggle.addEventListener('change', async (e) => {
+            dlPrefs = { ...dlPrefs, silent: e.target.checked === true };
+            saveDownloadPrefs(dlPrefs);
+            await pushDownloadMode();
+            await refreshDownloadForm();
+        });
+    }
+
+    if (btnPickDir) {
+        btnPickDir.addEventListener('click', async () => {
+            try {
+                const res = await getPlatform().files.pickDownloadFolder(dlPrefs.dir);
+                if (res && !res.cancelled && res.dir) {
+                    dlPrefs = { ...dlPrefs, dir: res.dir };
+                    saveDownloadPrefs(dlPrefs);
+                    await pushDownloadMode();
+                    await refreshDownloadForm();
+                }
+            } catch (e) {
+                console.error('Błąd wyboru folderu:', e);
+                Notify.error('Nie udało się wybrać folderu: ' + e.message);
+            }
+        });
+    }
+
+    // Boot: przekaż tryb do main i pokaż formularz
+    pushDownloadMode();
+    refreshDownloadForm();
 
     console.log('Settings module initialized with:', settings);
 }

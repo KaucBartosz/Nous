@@ -29,6 +29,7 @@ import {
   beginDownloadButton,
   selectedDownloadFormat,
   downloadButtonPrefix,
+  silentDestDir,
 } from "../history/historyExport.js";
 import {
   buildLocalKeys,
@@ -661,10 +662,12 @@ async function handleDownloadAll() {
     }
 
     // Downloads selected or ALL cloud results (pagination does not affect this)
+    // destDir null = natywne okno; ustawiony = ciche pobieranie (Ustawienia).
     const result = await getPlatform().files.bulkZip({
       results: resultsToDownload,
       filename: filename,
       format: format,
+      destDir: await silentDestDir(),
     });
 
     if (result.success) {
@@ -777,6 +780,7 @@ async function handleDownloadAllLocal(targetUid) {
       results,
       filename,
       format,
+      destDir: await silentDestDir(),
     });
 
     if (result.success) {
