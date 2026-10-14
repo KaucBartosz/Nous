@@ -25,6 +25,11 @@ import {
   importPreparedList,
   prepareGuestImport,
 } from '../../src/results/cloudResults.js';
+import {
+  needsInstantCsv,
+  webResultCsv,
+  savePipeline,
+} from '../../src/results/resultPipeline.js';
 
 const pkg = () => ({
   test_id: 'stroop',
@@ -209,5 +214,56 @@ describe('cloudResults', () => {
     expect(dup[0].id).not.toBe('g1');
     expect(dup[0].firestore_id).toBeUndefined();
     expect(guests[0].researcher_uid).toBe('GUEST');
+  });
+});
+
+describe('resultPipeline (A6: save → export → sync)', () => {
+  it('needsInstantCsv tylko na Web', () => {
+    expect(needsInstantCsv('web')).toBe(true);
+    expect(needsInstantCsv('electron')).toBe(false);
+    expect(needsInstantCsv('fake')).toBe(false);
+  });
+
+  it('webResultCsv: nazwa + BOM + brak Badacz UID (jak stary Web)', () => {
+    const { filename, csv } = webResultCsv(pkg());
+    expect(filename).toMatch(/^Wynik_stroop_\d+\.csv$/);
+    expect(csv.startsWith('﻿Parametr;Wartość')).toBe(true);
+    expect(csv).not.toContain('Badacz UID');
+    expect(csv).toContain('Wynik - poprawne');
+  });
+
+  it('electron: zapis + sync w tle, bez CSV', async () => {
+    const saveResult = vi.fn(async () => 'id1');
+    const syncNow = vi.fn(async () => {});
+    const onSyncError = vi.fn();
+    const res = await savePipeline(pkg(), {
+      researcherUid: 'u1', platformKind: 'electron', saveResult, syncNow, onSyncError,
+    });
+    expect(res).toEqual({ csvDownloaded: false });
+    expect(saveResult).toHaveBeenCalledWith(pkg(), 'u1');
+    expect(syncNow).toHaveBeenCalled();
+    await Promise.resolve();
+    expect(onSyncError).not.toHaveBeenCalled();
+  });
+
+  it('błąd sync nie cofa zapisu (odrzucony promise → onSyncError)', async () => {
+    const saveResult = vi.fn(async () => 'id1');
+    const syncNow = vi.fn(async () => { throw new Error('offline'); });
+    const onSyncError = vi.fn();
+    await savePipeline(pkg(), {
+      researcherUid: 'u1', platformKind: 'electron', saveResult, syncNow, onSyncError,
+    });
+    expect(saveResult).toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(onSyncError).toHaveBeenCalled();
+  });
+
+  it('błąd zapisu propaguje (UI pokaże błąd, sync nie startuje)', async () => {
+    const saveResult = vi.fn(async () => { throw new Error('db down'); });
+    const syncNow = vi.fn();
+    await expect(savePipeline(pkg(), {
+      researcherUid: 'u1', platformKind: 'electron', saveResult, syncNow,
+    })).rejects.toThrow('db down');
+    expect(syncNow).not.toHaveBeenCalled();
   });
 });

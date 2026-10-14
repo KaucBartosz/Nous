@@ -4,16 +4,11 @@ import { elements } from "./ui.js";
 import { getActiveDemographics } from "./demographics.js";
 import { saveResult } from "./database.js";
 import { syncNow } from "./sync.js";
-import { Dialog } from "./dialog.js";
+import { Notify } from "../notify/notify.js";
 import { loadTestsList, getTrainingMode } from "./library.js";
 import { escapeHtml } from "./utils.js";
 import { getPlatform } from "../platform/index.js";
-import {
-  resultRow,
-  toKeyValueCSV,
-  downloadFile,
-  WEB_RESULT_IGNORE_KEYS,
-} from "../results/resultExporter.js";
+import { savePipeline } from "../results/resultPipeline.js";
 
 let currentResultPackage = null;
 
@@ -39,9 +34,7 @@ export function initResultsHandler() {
       handleTestResults(validatedData);
     } catch (e) {
       console.error("Błąd walidacji wyników:", e);
-      import("./dialog.js").then(({ Dialog }) => {
-        Dialog.alert(`Błąd walidacji wyników testu: ${e.message}`, "error");
-      });
+      Notify.error(`Błąd walidacji wyników testu: ${e.message}`);
     }
   });
 
@@ -182,32 +175,22 @@ async function saveResultToSystem() {
 
     const currentUserId = getResearcherUid();
 
-    await saveResult(currentResultPackage, currentUserId);
-
-    if (getPlatform().kind === "web") {
-      generateWebResultCSV(currentResultPackage);
-    }
+    // A6: zapis → eksport → sync w pipeline; UI tylko reaguje na wynik.
+    await savePipeline(currentResultPackage, {
+      researcherUid: currentUserId,
+      platformKind: getPlatform().kind,
+      saveResult,
+      syncNow,
+      onSyncError: (err) => console.error("Sync after save failed:", err),
+    });
 
     elements.btnUploadCloud.textContent = "Zapisano!";
     elements.modalOverlay.classList.add("hidden");
     loadTestsList();
-
-    syncNow().catch(err => console.error("Sync after save failed:", err));
   } catch (e) {
-    await Dialog.alert("Błąd zapisu bazy: " + e.message, "error");
+    await Notify.error("Błąd zapisu bazy: " + e.message);
     elements.btnUploadCloud.textContent = "Błąd";
   } finally {
     elements.btnUploadCloud.disabled = false;
   }
-}
-
-function generateWebResultCSV(pkg) {
-  // C3: formatowanie w results/resultExporter.js (4. wariant CSV scalony)
-  const flat = resultRow(pkg, {
-    includeResearcher: false,
-    deep: false,
-    ignoreKeys: WEB_RESULT_IGNORE_KEYS,
-  });
-  const filename = `Wynik_${pkg.test_id}_${Date.now()}.csv`;
-  downloadFile(filename, toKeyValueCSV(flat), "text/csv;charset=utf-8;");
 }
