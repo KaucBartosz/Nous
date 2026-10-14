@@ -46,6 +46,12 @@ import {
   resetHistoryFilters,
 } from "../history/historyState.js";
 import { createFilterUi } from "../history/historyFilters.js";
+import {
+  emptyMessage,
+  refreshDownloadButtons,
+  renderHistoryRows,
+  renderPagination,
+} from "../history/historyTable.js";
 import { getPlatform } from "../platform/index.js";
 
 // Jeden stan widoku (mutowany tylko przez orkiestrator + fabryki UI).
@@ -261,47 +267,13 @@ export async function loadHistoryData() {
 // ===================================================
 
 function updateDownloadButtonState() {
-  const count = state.selectedIds.size;
-  const hasFilters = state.filters.date.size > 0 || state.filters.test_id.size > 0 || state.filters.subject_id.size > 0 || state.filters.status.size > 0;
-  const filteredCount = getFilteredResults().length;
-  const btnTextLocal = document.getElementById("btn-local-download-text");
-  const btnTextGuest = document.getElementById("btn-guest-download-text");
-  const btnTextCloud = document.getElementById("btn-cloud-download-text");
-
-  if (btnTextLocal)
-    btnTextLocal.innerHTML =
-      count > 0
-        ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})`
-        : hasFilters
-          ? `<span class="material-icons">download</span> Pobierz przefiltrowane (${filteredCount})`
-          : `<span class="material-icons">download</span> Pobierz wszystkie wyniki`;
-  if (btnTextGuest)
-    btnTextGuest.innerHTML =
-      count > 0
-        ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})`
-        : hasFilters
-          ? `<span class="material-icons">download</span> Pobierz przefiltrowane (${filteredCount})`
-          : `<span class="material-icons">download</span> Pobierz wszystkie`;
-  if (btnTextCloud)
-    btnTextCloud.innerHTML =
-      count > 0
-        ? `<span class="material-icons">download</span> Pobierz zaznaczone (${count})`
-        : `<span class="material-icons">download</span> Pobierz wszystkie`;
-
-  const btnLocalDelete = document.getElementById("btn-local-delete-selected");
-  const btnGuestDelete = document.getElementById("btn-guest-delete-selected");
-
-  if (btnLocalDelete) {
-    if (count > 0 && !state.cloudView && !state.guestView)
-      btnLocalDelete.classList.remove("hidden");
-    else btnLocalDelete.classList.add("hidden");
-  }
-
-  if (btnGuestDelete) {
-    if (count > 0 && state.guestView)
-      btnGuestDelete.classList.remove("hidden");
-    else btnGuestDelete.classList.add("hidden");
-  }
+  refreshDownloadButtons({
+    count: state.selectedIds.size,
+    hasFilters: hasActiveFilters(state.filters),
+    filteredCount: getFilteredResults().length,
+    guestView: state.guestView,
+    cloudView: state.cloudView,
+  });
 }
 
 function handleCheckboxChange(e) {
@@ -368,7 +340,8 @@ function getFilteredResults() {
 // ===================================================
 
 function renderHistoryPage() {
-  elements.historyTableBody.innerHTML = "";
+  const tbody = elements.historyTableBody;
+  tbody.innerHTML = "";
   const selectAll = document.getElementById("selectAllHistory");
   if (selectAll) selectAll.checked = false;
 
@@ -376,239 +349,52 @@ function renderHistoryPage() {
   const user = getCurrentUser();
   const researcherUid = getResearcherUid();
 
-  // C3: stronicowanie w query-modelu
+  // C3: stronicowanie w query-modelu + kontrolki w historyTable.js
   const { items: pageResults, totalPages } = paginate(filteredResults, state.page, PAGE_SIZE);
-
-  // Update/create pagination controls
-  updatePaginationControls(filteredResults.length, totalPages);
+  renderPagination({
+    page: state.page,
+    totalPages,
+    totalItems: filteredResults.length,
+    onPage: (p) => {
+      state.page = p;
+      renderHistoryPage();
+    },
+  });
 
   if (filteredResults.length === 0) {
-    let msg = state.guestView
-      ? "Brak wyników w trybie Gościa."
-      : "Brak wyników.";
-    if (hasActiveFilters(state.filters)) {
-      msg = "Brak wyników pasujących do aktywnych filtrów.";
-    }
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = 7;
-    td.textContent = msg;
+    td.textContent = emptyMessage({
+      guestView: state.guestView,
+      hasFilters: hasActiveFilters(state.filters),
+    });
     tr.appendChild(td);
-    elements.historyTableBody.appendChild(tr);
+    tbody.appendChild(tr);
     return;
   }
 
-  // C3: stronicowanie w query-modelu (pageResults z góry funkcji)
-  pageResults.forEach((r) => {
-    const resultData = r.wyniki || r.data || {};
-    const score = resultData.czas_reakcji
-      ? `${resultData.czas_reakcji} ms`
-      : resultData.score || "JSON";
-    const patient_id =
-      r.subject_id || resultData.subject_id || resultData.subjectId || "-";
+  // CLAIMS MODE: tylko zalogowani online mogą przejmować wyniki Gościa.
+  const claim =
+    state.guestView && user && researcherUid === user.uid
+      ? { userUid: user.uid, onClaim: handleClaimResult }
+      : null;
 
-    const row = document.createElement("tr");
-
-    // Checkbox
-    const tdCheckbox = document.createElement("td");
-    tdCheckbox.style.textAlign = "center";
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.className = "result-checkbox";
-    cb.dataset.id = r.id || r.firestore_id;
-    cb.checked = state.selectedIds.has(cb.dataset.id);
-    cb.addEventListener("change", handleCheckboxChange);
-    tdCheckbox.appendChild(cb);
-    row.appendChild(tdCheckbox);
-
-    // 1. Date
-    const tdDate = document.createElement("td");
-    tdDate.textContent = new Date(r.timestamp).toLocaleString();
-    row.appendChild(tdDate);
-
-    // 2. Test ID
-    const tdTestId = document.createElement("td");
-    tdTestId.textContent = r.test_id || r.testId;
-    row.appendChild(tdTestId);
-
-    // 3. Patient ID
-    const tdPatient = document.createElement("td");
-    tdPatient.textContent = patient_id;
-    row.appendChild(tdPatient);
-
-    // 4. Score
-    const tdScore = document.createElement("td");
-    const strongScore = document.createElement("strong");
-    strongScore.textContent = score;
-    tdScore.appendChild(strongScore);
-    row.appendChild(tdScore);
-
-    // 5. Sync Status / Actions
-    const tdStatus = document.createElement("td");
-    tdStatus.style.textAlign = "center";
-
-    // CLAIMS MODE: tylko zalogowani użytkownicy konta online mogą przejmować wyniki Gościa
-    if (state.guestView && user && researcherUid === user.uid) {
-      const btnClaim = document.createElement("button");
-      btnClaim.className = "btn small primary";
-      btnClaim.style.padding = "2px 8px";
-      btnClaim.style.fontSize = "12px";
-      btnClaim.innerHTML =
-        '<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> Przejmij';
-      btnClaim.title = "Przypisz ten wynik do swojego konta";
-      btnClaim.onclick = async (e) => {
-        e.stopPropagation();
-        await handleClaimResult(r, user.uid);
-      };
-      tdStatus.appendChild(btnClaim);
-    } else {
-      // NORMAL MODE (Sync Status)
-      const icon = document.createElement("span");
-      icon.className = "material-icons";
-      icon.style.fontSize = "18px";
-
-      const sync_status = r.sync_status || r.syncStatus;
-
-      if (r.researcher_uid && r.researcher_uid.startsWith("LOCAL::")) {
-        // Konto lokalne — nie synchronizuje z chmurą
-        icon.textContent = "computer";
-        icon.style.color = "#64b5f6";
-        icon.title = "Konto lokalne";
-      } else if (sync_status === "LOCAL") {
-        // Wynik z konta lokalnego (fallback dla starszych rekordów)
-        icon.textContent = "computer";
-        icon.style.color = "#64b5f6";
-        icon.title = "Konto lokalne";
-      } else if (r.researcher_uid === "GUEST") {
-        icon.textContent = "dns";
-        icon.style.color = "#888";
-        icon.title = "Lokalne (Tryb Gościa)";
-      } else if (sync_status === "SYNCED") {
-        icon.textContent = "cloud_done";
-        icon.style.color = "#4caf50";
-        icon.title = "Zsynchronizowano";
-      } else if (sync_status === "PENDING") {
-        // #3 FIX: Use getUserStatus() from module, not from DOM
-        // C4-followup: reguła wysyłki z session.js
-        const canUpload = canUploadResult(getUserStatus());
-
-        if (canUpload) {
-          icon.textContent = "cloud_upload";
-          icon.style.color = "#ff9800";
-          icon.style.cursor = "pointer";
-          icon.title = "Kliknij, aby wysłać do chmury";
-
-          icon.onclick = async (e) => {
-            e.stopPropagation();
-            icon.textContent = "sync";
-            icon.classList.add("spin");
-            icon.style.color = "#2196f3";
-            icon.onclick = null;
-
-            try {
-              await syncSingleResult(r);
-            } catch (err) {
-              icon.classList.remove("spin");
-              icon.textContent = "error";
-              icon.style.color = "red";
-              await Notify.alert("Błąd wysyłania: " + err.message, "error");
-              loadHistoryData();
-            }
-          };
-        } else {
-          icon.textContent = "cloud_off";
-          icon.style.color = "#aaa";
-          icon.title = "Czeka na wysyłkę (Wymagany status APPROVED)";
-        }
-      } else {
-        icon.textContent = "error";
-        icon.style.color = "red";
-        icon.title = `Status nieznany: ${sync_status}`;
-      }
-      tdStatus.appendChild(icon);
-    }
-    row.appendChild(tdStatus);
-
-    // 6. Action (Download)
-    const tdAction = document.createElement("td");
-    tdAction.style.textAlign = "center";
-
-    const btn = document.createElement("button");
-    btn.className = "btn-download-result icon-btn";
-    btn.title = "Pobierz JSON";
-
-    const btnIcon = document.createElement("span");
-    btnIcon.className = "material-icons";
-    btnIcon.style.fontSize = "18px";
-    btnIcon.textContent = "download";
-    btn.appendChild(btnIcon);
-    btn.addEventListener("click", () => downloadSingle(r));
-
-    tdAction.appendChild(btn);
-    row.appendChild(tdAction);
-
-    elements.historyTableBody.appendChild(row);
+  renderHistoryRows(tbody, pageResults, {
+    selectedIds: state.selectedIds,
+    claim,
+    canUpload: canUploadResult(getUserStatus()),
+    onCheck: handleCheckboxChange,
+    syncRecord: (r) => syncSingleResult(r),
+    onSyncError: async (err) => {
+      await Notify.alert("Błąd wysyłania: " + err.message, "error");
+      loadHistoryData();
+    },
+    onDownload: downloadSingle,
   });
 }
 
-function updatePaginationControls(totalItems, totalPages) {
-  // Find or create pagination container
-  let paginationContainer = document.getElementById("history-pagination");
-  if (!paginationContainer) {
-    // Create it and insert after table-container
-    paginationContainer = document.createElement("div");
-    paginationContainer.id = "history-pagination";
-    paginationContainer.className = "history-pagination";
-    const tableContainer = document.querySelector(
-      "#history-view .table-container",
-    );
-    if (tableContainer) {
-      tableContainer.insertAdjacentElement("afterend", paginationContainer);
-    }
-  }
-
-  // Hide pagination altogether if only 1 page
-  if (totalPages <= 1) {
-    paginationContainer.style.display = "none";
-    return;
-  }
-
-  paginationContainer.style.display = "flex";
-  paginationContainer.innerHTML = "";
-
-  // Prev button
-  const btnPrev = document.createElement("button");
-  btnPrev.className = "btn outline small";
-  btnPrev.textContent = "← Poprzednia";
-  btnPrev.disabled = state.page <= 1;
-  btnPrev.addEventListener("click", () => {
-    if (state.page > 1) {
-      state.page--;
-      renderHistoryPage();
-    }
-  });
-
-  // Page info
-  const pageInfo = document.createElement("span");
-  pageInfo.className = "pagination-info";
-  pageInfo.textContent = `Strona ${state.page} z ${totalPages} (${totalItems} wyników)`;
-
-  // Next button
-  const btnNext = document.createElement("button");
-  btnNext.className = "btn outline small";
-  btnNext.textContent = "Następna →";
-  btnNext.disabled = state.page >= totalPages;
-  btnNext.addEventListener("click", () => {
-    if (state.page < totalPages) {
-      state.page++;
-      renderHistoryPage();
-    }
-  });
-
-  paginationContainer.appendChild(btnPrev);
-  paginationContainer.appendChild(pageInfo);
-  paginationContainer.appendChild(btnNext);
-}
+// (renderHistoryPage: orkiestrator powyżej; wiersze + paginacja w ../history/historyTable.js)
 
 // ===================================================
 // CLAIMS / HISTORY HELPERS
