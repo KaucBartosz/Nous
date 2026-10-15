@@ -6,7 +6,9 @@
 
 /**
  * Deskryptor statusu testu (dane dla renderu, nie elementy).
- * Przeniesione 1:1 z `library.js` — jedyne źródło prawdy o ikonie/przycisku/tekście.
+ * Polityka: `action` mówi wprost co robi przycisk — download XOR run, nigdy AND.
+ * Uruchom zawsze uruchamia lokalną wersję (aktualizacja tylko z zakładki
+ * Aktualizacje), więc outdated celowo nie wozi wersji zdalnej.
  */
 export function getTestStatus(t) {
   const local_ver = t.local_ver;
@@ -20,8 +22,7 @@ export function getTestStatus(t) {
       btnText: "Uruchom (Dev)",
       btnClass: "secondary",
       statusText: "Lokalny",
-      versionParam: local_ver,
-      isDownloadOnly: false,
+      action: "run",
     };
   }
 
@@ -33,19 +34,17 @@ export function getTestStatus(t) {
       btnText: "Pobierz",
       btnClass: "primary",
       statusText: "Nie pobrano",
-      versionParam: remote_ver,
-      isDownloadOnly: true,
+      action: "download",
     };
   } else if (local_ver < remote_ver) {
     return {
       iconName: "system_update",
       iconColor: "#ff9800",
       iconTitle: "Dostępna aktualizacja",
-      btnText: "Uruchom",
+      btnText: `Uruchom (v${local_ver})`,
       btnClass: "outline",
       statusText: "Aktualizacja dostępna",
-      versionParam: local_ver,
-      isDownloadOnly: false,
+      action: "run",
     };
   } else {
     return {
@@ -55,8 +54,7 @@ export function getTestStatus(t) {
       btnText: "Uruchom",
       btnClass: "primary",
       statusText: "Zainstalowano",
-      versionParam: local_ver,
-      isDownloadOnly: false,
+      action: "run",
     };
   }
 }

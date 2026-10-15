@@ -1,13 +1,13 @@
-// main/downloads.js — Downloads (E5): kolejka pobierania + allowlista URL + ZipSlip
-// + skanowanie biblioteki + usuwanie. Przeniesione 1:1 z main.js.
-// Testowane: walidatory, ZipSlip, cache, skan, usuwanie, kolejkowanie.
-// Streaming https/AdmZip przeniesiony bez zmian (cover przez E2E + ręczny test).
+// main/downloads.js — Downloads: kolejka pobierania (kanał download-test)
+// + allowlista URL + ZipSlip + skanowanie biblioteki + usuwanie.
+// Czysty download — nigdy nie uruchamia (uruchomienie to kanał run-test
+// w main/testRunner.js).
 
 const ALLOWED_OWNER = "KaucBartosz";
 const CDN_DOMAIN = "objects.githubusercontent.com";
 const ALLOWED_REPO_DOMAINS = ["github.com", "raw.githubusercontent.com"];
 
-/** null = OK, inaczej komunikat BŁĄD (reguła z download-and-run, bez zmian). */
+/** null = OK, inaczej komunikat BŁĄD (reguła kanału download-test, bez zmian). */
 function validateTestId(testId) {
   if (!/^[a-zA-Z0-9_-]+$/.test(testId || "")) {
     return "BŁĄD: Nieprawidłowe ID testu!";
@@ -16,7 +16,7 @@ function validateTestId(testId) {
 }
 
 /**
- * Allowlista URL (reguła z download-and-run; SEC: match z granicą domeny —
+ * Allowlista URL (SEC: match z granicą domeny —
  * `evilgithub.com` odpada, legalne subdomeny jak `codeload.github.com` działają).
  */
 function validateDownloadUrl(url) {
@@ -184,8 +184,6 @@ function createDownloader({
   AdmZip,
   getUserDataPath,
   findStartFile,
-  openTestWindow,
-  isTestRunning,
 }) {
   // Queue management for downloads (stan żyje tu)
   const downloadQueue = [];
@@ -201,12 +199,11 @@ function createDownloader({
   }
 
   /**
-   * Wejście do kolejki (treść początku download-and-run: te same checki,
-   * ta sama kolejność, ten sam add+push).
+   * Wejście do kolejki pobierania (tylko download — nigdy run).
    * @returns {{ ok: true } | { ok: false, message }} — handler wysyła message lub potwierdzenie
    */
   function enqueueDownload(taskData, sender) {
-    const { testId, url, isLocalDev } = taskData;
+    const { testId, url } = taskData;
 
     // --- SECURITY CHECK: RATE LIMITING ---
     if (activeDownloads.has(testId)) {
@@ -217,11 +214,8 @@ function createDownloader({
     const idError = validateTestId(testId);
     if (idError) return { ok: false, message: idError };
 
-    // Skip URL validation for local dev tests
-    if (!isLocalDev) {
-      const urlError = validateDownloadUrl(url);
-      if (urlError) return { ok: false, message: urlError };
-    }
+    const urlError = validateDownloadUrl(url);
+    if (urlError) return { ok: false, message: urlError };
 
     // Add to queue
     activeDownloads.add(testId);
@@ -230,9 +224,9 @@ function createDownloader({
   }
 
   async function executeDownloadTask(task) {
-    // TODO/Do zrobienia: usunąć "onlyDownload" gdyż jest to teraz domyślne ustawienie (nie potrzebne ify itd.)
-    // Uwaga: ładunek 'download-and-run' może nadal zawierać trainingMode (używane po stronie renderera); main go ignoruje (JS-only).
-    const { sender, url, testId, version, onlyDownload, testName, testDescription, isLocalDev } = task;
+    // download-test: czyste pobieranie. Uruchomienie to osobny kanał 'run-test'
+    // w main/testRunner.js. Żadnych flag onlyDownload/trainingMode/isLocalDev.
+    const { sender, url, testId, version, testName, testDescription } = task;
 
     const finishTask = () => {
       activeDownloads.delete(testId);
@@ -251,27 +245,20 @@ function createDownloader({
     const metaPath = path.join(testFolder, "meta.json");
 
     // --- KROK 1: SPRAWDZANIE CACHE ---
+    // download-test nigdy nie uruchamia i nigdy nie dotyczy localDev —
+    // isLocalDev zawsze false (testy dev uruchamia kanał run-test z dysku).
     const needsDownload = checkCacheNeedsDownload({
       fs,
       testFolder,
       metaPath,
       entryFile,
       version,
-      isLocalDev,
+      isLocalDev: false,
     });
 
-    // --- KROK 2: DECYZJA - URUCHOM Z DYSKU ---
+    // --- KROK 2: CACHE-HIT — nic do roboty, koniec (bez uruchamiania) ---
     if (!needsDownload) {
-      if (onlyDownload) {
-        sender.send("test-status", `Test (v${version}) jest gotowy.`);
-      } else {
-        if (isTestRunning()) {
-          sender.send("test-status", "Inny test w toku. Uruchomienie wstrzymane.");
-        } else {
-          sender.send("test-status", `Uruchamianie (v${version})...`);
-          openTestWindow(entryFile);
-        }
-      }
+      sender.send("test-status", `Test (v${version}) jest gotowy.`);
       finishTask();
       return;
     }
@@ -370,12 +357,22 @@ function createDownloader({
                 // Use async file operations (non-blocking)
                 await fs.promises.unlink(zipPath); // Usuń ZIP
 
-                // Aktualizacja meta
+                // Aktualizacja meta (preserve: pusty testName/description z ładunku
+                // nie nadpisuje istniejącej mety — np. update z zakładki
+                // Aktualizacje woła bez nazwy i nie może jej wyzerować).
+                let prevMeta = {};
+                try {
+                  if (fs.existsSync(metaPath)) {
+                    prevMeta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+                  }
+                } catch (e) {
+                  console.log("Błąd odczytu starej meta.json, nadpisuję.");
+                }
                 const metaData = {
                   version: Number(version),
                   lastUpdated: new Date().toISOString(),
-                  name: testName || "",
-                  description: testDescription || "",
+                  name: testName || prevMeta.name || "",
+                  description: testDescription || prevMeta.description || "",
                 };
                 await fs.promises.writeFile(metaPath, JSON.stringify(metaData));
 
@@ -391,16 +388,8 @@ function createDownloader({
                   return;
                 }
 
-                if (onlyDownload) {
-                  sender.send("test-status", "Zainstalowano pomyślnie.");
-                } else {
-                  if (isTestRunning()) {
-                    sender.send("test-status", "Pobrano. Uruchomienie wstrzymane - inny test w toku.");
-                  } else {
-                    sender.send("test-status", "Uruchamianie...");
-                    openTestWindow(entryFile);
-                  }
-                }
+                // Czysty download: po instalacji tylko status, nigdy run.
+                sender.send("test-status", "Zainstalowano pomyślnie.");
 
                 finishTask();
               } catch (err) {
@@ -426,7 +415,7 @@ function createDownloader({
   }
 
   function registerIpc(ipcMain) {
-    ipcMain.on("download-and-run", (event, taskData) => {
+    ipcMain.on("download-test", (event, taskData) => {
       const res = enqueueDownload(taskData, event.sender);
       event.sender.send("test-status", res.ok ? "Dodano do kolejki..." : res.message);
       if (res.ok) processDownloadQueue();

@@ -19,10 +19,10 @@ const tDev = { id: "d", name: "N", description: "D", version: 0, local_ver: 0, r
 
 describe("testCard.getTestStatus", () => {
   it("4 gałęzie jak stare widoki", () => {
-    expect(getTestStatus(tDev)).toMatchObject({ iconName: "code", btnText: "Uruchom (Dev)" });
-    expect(getTestStatus(tMissing)).toMatchObject({ iconName: "cloud_download", btnText: "Pobierz", isDownloadOnly: true });
-    expect(getTestStatus(tOutdated)).toMatchObject({ iconName: "system_update", btnClass: "outline" });
-    expect(getTestStatus(tCurrent)).toMatchObject({ iconName: "check_circle", statusText: "Zainstalowano" });
+    expect(getTestStatus(tDev)).toMatchObject({ iconName: "code", btnText: "Uruchom (Dev)", action: "run" });
+    expect(getTestStatus(tMissing)).toMatchObject({ iconName: "cloud_download", btnText: "Pobierz", action: "download" });
+    expect(getTestStatus(tOutdated)).toMatchObject({ iconName: "system_update", btnClass: "outline", action: "run", btnText: "Uruchom (v1)" });
+    expect(getTestStatus(tCurrent)).toMatchObject({ iconName: "check_circle", statusText: "Zainstalowano", action: "run" });
   });
 });
 

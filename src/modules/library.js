@@ -221,16 +221,20 @@ function showOfflinePanel(scannedPath) {
 
 // Deskryptor statusu żyje w `src/catalog/testCard.js` (getTestStatus).
 // Jedno wiązanie startu dla wszystkich widoków (wcześniej 4 identyczne kopie).
+// Polityka: download XOR run. Uruchom zawsze uruchamia lokalnie;
+// aktualizacje robi wyłącznie kanał download (zakładka Aktualizacje).
 function handleStart(t, status) {
-  startTestProcess(
-    t.download_url || t.downloadUrl,
-    t.id,
-    status.versionParam,
-    status.isDownloadOnly,
-    t.name,
-    t.description,
-    t.isLocalDev,
-  );
+  if (status.action === "download") {
+    startDownloadProcess(
+      t.download_url || t.downloadUrl,
+      t.id,
+      t.remote_ver,
+      t.name,
+      t.description,
+    );
+  } else {
+    startRunProcess(t.id, t.isLocalDev);
+  }
 }
 
 function renderTests(testsSource, filterText) {
@@ -509,15 +513,43 @@ function renderCompactView(tests) {
   });
 }
 
-export async function startTestProcess(
-  url,
-  id,
-  ver,
-  onlyDownload = false,
-  name = "",
-  description = "",
-  isLocalDev = false,
-) {
+export async function startDownloadProcess(url, id, ver, name = "", description = "") {
+  const platform = getPlatform();
+  const caps = platform.capabilities || { canDownload: platform.kind === "electron" };
+  const btn = document.getElementById(`start-test-${id}`);
+
+  // Pobieranie plików tylko tam, gdzie platforma umie pobierać.
+  if (!caps.canDownload) {
+    await Notify.info(
+      "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
+    );
+    return;
+  }
+
+  // Kanoniczny stan przycisku (B: jeden szablon zamiast osobnych łańcuchów HTML).
+  if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
+
+  try {
+    await platform.tests.download({ url, id, ver, name, description });
+  } catch (err) {
+    console.error("Błąd pobierania testu:", err);
+    await Notify.error("Wystąpił błąd podczas pobierania testu.");
+    loadTestsList();
+  }
+}
+
+// Snapshot flagi treningowej z momentu startu (run), nie odbioru wyników.
+// Wystarczy jedna zmienna — naraz może biec tylko jeden test (isTestRunning
+// w main). Konsument: results.js:handleTestResults.
+let pendingTrainingRun = null;
+
+export function consumePendingTrainingRun() {
+  const v = pendingTrainingRun;
+  pendingTrainingRun = null;
+  return v;
+}
+
+export async function startRunProcess(id, isLocalDev = false) {
   const platform = getPlatform();
   // A1: pytamy o zdolności, nie o kind — gałąź electron/web znika.
   const caps = platform.capabilities || {
@@ -525,14 +557,6 @@ export async function startTestProcess(
     canRunLocalDev: platform.kind === "electron",
   };
   const btn = document.getElementById(`start-test-${id}`);
-
-  // Pobieranie plików tylko tam, gdzie platforma umie pobierać.
-  if (onlyDownload && !caps.canDownload) {
-    await Notify.info(
-      "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
-    );
-    return;
-  }
 
   // Kanoniczny stan przycisku (B: jeden szablon zamiast osobnych łańcuchów HTML).
   if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
@@ -551,26 +575,22 @@ export async function startTestProcess(
     }
   }
 
+  // Snapshot treningu: wynik tego uruchomienia liczy się wg stanu ze startu.
+  pendingTrainingRun = isTrainingMode;
+
   try {
-    const result = await platform.tests.run({
-      url,
-      id,
-      ver,
-      onlyDownload,
-      trainingMode: isTrainingMode,
-      name,
-      description,
-      isLocalDev,
-    });
+    const result = await platform.tests.run({ id });
     // Web adapter sygnalizuje brak webPath jako { opened: false };
     // Electron/fake nic nie zwracają (undefined) = sukces.
     if (result && result.opened === false) {
+      pendingTrainingRun = null;
       await Notify.error(
         "Ten test nie posiada jeszcze odpowiedniej ścieżki (webPath) w rejestrze Web.",
       );
       loadTestsList();
     }
   } catch (err) {
+    pendingTrainingRun = null;
     console.error("Błąd uruchamiania testu:", err);
     await Notify.error("Wystąpił błąd podczas uruchamiania testu.");
     loadTestsList();

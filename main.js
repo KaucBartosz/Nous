@@ -33,7 +33,7 @@ autoUpdater.logger.transports.file.level = "info";
 
 let mainWindow;
 
-// E2: okno testu w main/testRunner.js (stan activeTestWindow żyje tam)
+// TestRunner: okno testu + kanał run-test (uruchomienie z dysku, nigdy download)
 const testRunner = createTestRunner({
     BrowserWindow,
     screen: require('electron').screen,
@@ -44,11 +44,13 @@ const testRunner = createTestRunner({
     getMainWindow: () => mainWindow,
     getMasterKey: () => keyStore.getOrGenerateMasterKey(),
     preloadPath: path.join(__dirname, 'preload_test.js'),
+    getTestsLibraryDir: () => path.join(nodePaths.getUserDataPath(app), 'tests_library'),
+    findStartFile: (folderPath) => nodePaths.findStartFile(folderPath),
 });
 testRunner.registerIpc(ipcMain);
 
-// E5: kolejka pobierania + skan + usuwanie w main/downloads.js
-// (funkcje fabryk podpięte leniwie — aliasy-wrappery usunięte w C6).
+// Kolejka pobierania + skan + usuwanie w main/downloads.js
+// (czysty download-test — bez uruchamiania; run-test żyje w testRunnerze).
 const downloader = createDownloader({
     fs,
     path,
@@ -56,8 +58,6 @@ const downloader = createDownloader({
     AdmZip,
     getUserDataPath: () => nodePaths.getUserDataPath(app),
     findStartFile: (folderPath) => nodePaths.findStartFile(folderPath),
-    openTestWindow: (htmlPath) => testRunner.openTestWindow(htmlPath),
-    isTestRunning: () => testRunner.isTestRunning(),
 });
 downloader.registerIpc(ipcMain);
 

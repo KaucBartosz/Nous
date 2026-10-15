@@ -27,7 +27,6 @@ vi.mock("../../src/modules/ui.js", () => ({
     modalOverlay: { classList: { add: vi.fn(), remove: vi.fn() } },
     modalHeaderTitle: { textContent: "" },
     normalResultsContent: { classList: { add: vi.fn(), remove: vi.fn() } },
-    trainingResultsContent: { classList: { add: vi.fn(), remove: vi.fn() } },
     modalUploadInfo: { innerHTML: "" },
   },
 }));
@@ -58,6 +57,12 @@ vi.mock("../../src/modules/dialog.js", () => ({
 vi.mock("../../src/modules/library.js", () => ({
   loadTestsList: vi.fn(),
   getTrainingMode: vi.fn(),
+  consumePendingTrainingRun: vi.fn(() => null),
+}));
+
+// Mock notify (toast treningowy)
+vi.mock("../../src/notify/notify.js", () => ({
+  Notify: { error: vi.fn(), info: vi.fn(), toast: vi.fn() },
 }));
 
 // Mock utils module
@@ -123,6 +128,8 @@ describe("Results Module", () => {
         await import("../../src/modules/demographics.js");
 
       getTrainingMode.mockReturnValue(false);
+      const { consumePendingTrainingRun } = await import("../../src/modules/library.js");
+      consumePendingTrainingRun.mockReturnValue(null);
       getCurrentUser.mockReturnValue({ uid: "user-123" });
       const { getResearcherUid, getUserStatus } =
         await import("../../src/modules/auth.js");
@@ -163,36 +170,37 @@ describe("Results Module", () => {
       expect(resultsContainer.innerHTML).toContain("350 ms");
     });
 
-    it("processes training mode test results correctly", async () => {
+    it("processes training mode test results correctly (brak modala, toast, brak zapisu)", async () => {
       const { initResultsHandler } =
         await import("../../src/modules/results.js");
+      const { loadTestsList, consumePendingTrainingRun } =
+        await import("../../src/modules/library.js");
+      const { Notify } = await import("../../src/notify/notify.js");
+      const { saveResult } = await import("../../src/modules/database.js");
       const { elements } = await import("../../src/modules/ui.js");
-      const { getTrainingMode } = await import("../../src/modules/library.js");
 
-      getTrainingMode.mockReturnValue(true);
+      consumePendingTrainingRun.mockReturnValue(true);
 
       initResultsHandler();
       const callback = window.electronAPI.onTestResults.mock.calls[0][0];
 
       callback({ testId: "test-training" });
 
-      // Verify modal setup for training
-      expect(elements.modalHeaderTitle.textContent).toContain(
-        "Tryb treningowy",
-      );
-      expect(
-        elements.trainingResultsContent.classList.remove,
-      ).toHaveBeenCalledWith("hidden");
-      expect(elements.normalResultsContent.classList.add).toHaveBeenCalledWith(
+      // Brak modala decyzyjnego w treningu — tylko toast + powrót do listy
+      expect(elements.modalOverlay.classList.remove).not.toHaveBeenCalledWith(
         "hidden",
       );
-      expect(elements.btnUploadCloud.textContent).toBe("Zamknij");
+      expect(Notify.toast).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "training-no-save" }),
+      );
+      expect(loadTestsList).toHaveBeenCalled();
+      expect(saveResult).not.toHaveBeenCalled();
     });
 
-    it("displays error via Dialog on invalid results data", async () => {
+    it("displays error via Notify on invalid results data", async () => {
       const { initResultsHandler } =
         await import("../../src/modules/results.js");
-      const { Dialog } = await import("../../src/modules/dialog.js");
+      const { Notify } = await import("../../src/notify/notify.js");
 
       initResultsHandler();
       const callback = window.electronAPI.onTestResults.mock.calls[0][0];
@@ -203,9 +211,8 @@ describe("Results Module", () => {
       // Ponieważ jest try-catch i w środku dynamiczny import, poczekajmy tick event loopa
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(Dialog.alert).toHaveBeenCalledWith(
+      expect(Notify.error).toHaveBeenCalledWith(
         expect.stringContaining("Wyniki testu muszą być obiektem"),
-        "error",
       );
     });
   });
@@ -222,6 +229,8 @@ describe("Results Module", () => {
         await import("../../src/modules/demographics.js");
       const { getCurrentUser } = await import("../../src/modules/auth.js");
 
+      const { consumePendingTrainingRun } = await import("../../src/modules/library.js");
+      consumePendingTrainingRun.mockReturnValue(null);
       getTrainingMode.mockReturnValue(false);
       getActiveDemographics.mockReturnValue(null);
       getCurrentUser.mockReturnValue({ uid: "test-user-id" });

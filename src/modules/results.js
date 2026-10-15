@@ -5,7 +5,7 @@ import { getActiveDemographics } from "./demographics.js";
 import { saveResult } from "./database.js";
 import { syncNow } from "./sync.js";
 import { Notify } from "../notify/notify.js";
-import { loadTestsList, getTrainingMode } from "./library.js";
+import { loadTestsList, getTrainingMode, consumePendingTrainingRun } from "./library.js";
 import { escapeHtml } from "./utils.js";
 import { getPlatform } from "../platform/index.js";
 import { savePipeline } from "../results/resultPipeline.js";
@@ -75,33 +75,37 @@ function handleTestResults(raw) {
     subject_id: participantId,
     demographics: currentDemo,
     wyniki: raw,
-    isTraining: getTrainingMode(),
+    // Jedyna rola trainingu: nie zapisuj. Snapshot ze startu (run),
+    // fallback do bieżącego toggla dla przepływów bez startRunProcess.
+    isTraining: consumePendingTrainingRun() ?? getTrainingMode(),
     sync_status: defaultSyncStatus,
   };
+
+  // Tryb treningowy: brak modala decyzyjnego, brak zapisu do Historii.
+  // Tylko toast + powrót do listy.
+  if (currentResultPackage.isTraining) {
+    Notify.toast({
+      id: "training-no-save",
+      titleHtml: "Tryb treningowy",
+      messageHtml: "Tryb treningowy włączony. Nie zapisano wyniku",
+      autoDismissMs: 5000,
+    });
+    loadTestsList();
+    return;
+  }
 
   openModal(currentResultPackage);
 }
 
 function openModal(data) {
-  const isTraining = data.isTraining;
+  elements.modalHeaderTitle.textContent = "Badanie Zakończone";
+  elements.normalResultsContent.classList.remove("hidden");
+  elements.btnDiscard.classList.remove("hidden");
 
-  if (isTraining) {
-    elements.modalHeaderTitle.textContent =
-      "Badanie Zakończone (Tryb treningowy)";
-    elements.normalResultsContent.classList.add("hidden");
-    elements.trainingResultsContent.classList.remove("hidden");
-    elements.btnDiscard.classList.add("hidden");
-  } else {
-    elements.modalHeaderTitle.textContent = "Badanie Zakończone";
-    elements.normalResultsContent.classList.remove("hidden");
-    elements.trainingResultsContent.classList.add("hidden");
-    elements.btnDiscard.classList.remove("hidden");
+  // Render Extended Results (Labels mapping)
+  renderExtendedResults(data.wyniki);
 
-    // Render Extended Results (Labels mapping)
-    renderExtendedResults(data.wyniki);
-  }
-
-  updateSaveButtonState(isTraining);
+  updateSaveButtonState();
   elements.modalOverlay.classList.remove("hidden");
 }
 
@@ -147,22 +151,18 @@ function renderExtendedResults(wyniki) {
   container.classList.remove("hidden");
 }
 
-function updateSaveButtonState(isTraining) {
-  if (isTraining) {
-    elements.btnUploadCloud.disabled = false;
-    elements.btnUploadCloud.textContent = "Zamknij";
-    elements.modalUploadInfo.innerHTML = "";
-  } else {
-    elements.btnUploadCloud.disabled = false;
-    elements.btnUploadCloud.textContent = "Zapisz i Zamknij";
-    elements.modalUploadInfo.innerHTML = "";
-  }
+function updateSaveButtonState() {
+  elements.btnUploadCloud.disabled = false;
+  elements.btnUploadCloud.textContent = "Zapisz i Zamknij";
+  elements.modalUploadInfo.innerHTML = "";
 }
 
 async function saveResultToSystem() {
   if (!currentResultPackage) return;
   if (elements.btnUploadCloud.disabled) return;
 
+  // Siatka bezpieczeństwa: trening nigdy nie zapisuje (modal treningowy
+  // już nie istnieje, ale pakiet mógłby tu trafić starą ścieżką).
   if (currentResultPackage.isTraining) {
     elements.modalOverlay.classList.add("hidden");
     loadTestsList();

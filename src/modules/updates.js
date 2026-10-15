@@ -91,7 +91,7 @@ export async function loadUpdatesData(filterText = '') {
             // Column 4: Status + Column 5: Actions
             row.appendChild(buildUpdateStatusCell(r));
             row.appendChild(buildUpdateActionCell(r, {
-                onDownload: (t) => forceUpdate(t.download_url || t.downloadUrl, t.id, t.remote_ver),
+                onDownload: (t) => forceUpdate(t.download_url || t.downloadUrl, t.id, t.remote_ver, t.name, t.description),
                 onDelete: (testId) => deleteLocalTest(testId),
             }));
 
@@ -109,7 +109,7 @@ export async function loadUpdatesData(filterText = '') {
     }
 }
 
-export async function forceUpdate(url, id, ver) {
+export async function forceUpdate(url, id, ver, name = "", description = "") {
   // A1: jawny komunikat zamiast silent no-op — użytkownik wie dlaczego nic się nie dzieje.
   if (!getPlatform().capabilities?.canDownload) {
     await Notify.info(
@@ -123,7 +123,8 @@ export async function forceUpdate(url, id, ver) {
     const btn = document.getElementById(`force-update-${id}`);
     if (btn) setTestButtonState(btn, { label: "..." });
 
-    platform.tests.run({ url, id, ver, onlyDownload: true });
+    // Zakładka Aktualizacje to jedyne miejsce aktualizacji testów.
+    await platform.tests.download({ url, id, ver, name, description });
   }
 }
 

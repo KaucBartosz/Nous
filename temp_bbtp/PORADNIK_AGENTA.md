@@ -8,9 +8,9 @@
 - Obsługuje metryczki badanych (demografię)
 - Przechowuje wyniki: IndexedDB lokalnie + synchronizacja Firebase
 
-### Rodzaje testów
+### Rodzaj testów
 
-#### A. Testy Webowe (JS/HTML) – Standardowe
+#### Testy Webowe (JS/HTML) – jedyny wspierany format
 
 - **Plik startowy**: `index.html` (w głównym folderze lub podfolderze)
 - **Komunikacja**: `window.electronTest` (bridge)
@@ -18,22 +18,15 @@
 - **Wyjście bez zapisu**: `window.electronTest.close()` – ESC/przerwanie
 - Uruchamiane w pełnoekranowym oknie Electrona
 
-#### B. Testy Natywne (HPM - High Precision Mode) – Python
-
-- **Plik startowy**: `main.py`
-- **Zmienne środowiskowe**:
-  - `NOUS_LAUNCHER='1'` – informacja, że test działa pod kontrolą Nous
-  - `NOUS_TRAINING='1'` lub `'0'` – tryb treningowy
-- **Wyniki**: Po zakończeniu skrypt zapisuje `results.json` w folderze roboczym
-- Launcher odczytuje plik automatycznie po zamknięciu procesu
-- **WAŻNE**: `_write_results()` wywoływać TYLKO gdy `NOUS_LAUNCHER == True`
-- **WAŻNE**: Przy ESC lub wyjściu bez ukończenia: zapisz pusty wynik jeśli `NOUS_LAUNCHER`
+> Tryb HPM (Python/PsychoPy, `main.py`) został wycofany — precyzja pomiaru
+> w wersji JS jest wystarczająca. Sekcje Python w tym poradniku usunięto;
+> paczki testów zawierają wyłącznie pliki JS/HTML.
 
 ---
 
 ## 2. Standardowe Nazewnictwo Wyników (OBOWIĄZKOWE)
 
-Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
+Wszystkie testy muszą zwracać te same pola w `sendResults()`:
 
 ### Główne pola (używane w podsumowaniu zaraz po teście)
 
@@ -72,16 +65,6 @@ Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
 - [ ] ESC = wyjście bez zapisu: `if (!isCompleted) window.electronTest.close()`
 - [ ] Normalne zakończenie: `window.electronTest.sendResults({...})` z ujednoliconymi polami
 - [ ] Filtrowanie `_trialsData`: tylko wiersze z `typeof t.correct !== 'undefined'` (pomijamy welcome)
-
-### Integracja z Nous (Python)
-
-- [ ] Sprawdzenie `NOUS_LAUNCHER` i `NOUS_TRAINING` z `os.environ`
-- [ ] ESC na ekranie instrukcji: zapis pustych wyników jeśli `NOUS_LAUNCHER`
-- [ ] ESC w trakcie prób: flaga `escaped`, przerwanie zewnętrznej pętli
-- [ ] Zapis `results.json` tylko gdy `NOUS_LAUNCHER == True`
-- [ ] Ścieżki względne: `Path(__file__).resolve().parent / 'resources'`
-- [ ] Widoczność kursora: po utworzeniu `event.Mouse(win=win)` wywołać `mouse.setVisible(True)` (pełny ekran z `allowGUI=False` może domyślnie ukrywać kursor)
-- [ ] **NIE używać** `gui.Dlg` ani `core.quit()` – zakłócają integrację z Nous (patrz: problem PingPong)
 
 ### Nazewnictwo wyników
 
@@ -125,33 +108,6 @@ let allData = (psychoJS.experiment._trialsData || []).filter(
 );
 ```
 
-### Problem: W testach Python (PsychoPy) nie widać kursora myszy
-
-**Przyczyna**: W pełnym ekranie z `allowGUI=False` PsychoPy na niektórych systemach domyślnie ukrywa kursor.
-**Rozwiązanie**: Zaraz po utworzeniu obiektu myszy wywołać `mouse.setVisible(True)`:
-
-```python
-mouse = event.Mouse(win=win)
-mouse.setVisible(True)
-```
-
-### Problem: ESC nie przerywa całej serii prób
-
-**Przyczyna**: `break` tylko w wewnętrznej pętli `while`
-**Rozwiązanie**: Flaga `escaped`, sprawdzenie po zakończeniu próby:
-
-```python
-escaped = False
-for trial_idx in range(N_TRIALS):
-    while trial_clock.getTime() < TIMEOUT:
-        if event.getKeys(['escape']):
-            escaped = True
-            break
-        # ... logika próby
-    if escaped:
-        break
-```
-
 ### Problem: Dotyk nie działa
 
 **Przyczyna**: Brak konwersji współrzędnych lub błędne sprawdzanie `contains`
@@ -170,22 +126,6 @@ for trial_idx in range(N_TRIALS):
 - `ilosc_blednych_nacisniec`
 - `ogolna_ilosc_nacisniec`
 - `sredni_czas_reakcji` (tylko jeśli mierzy RT)
-
-### Problem: Test Python nie zapisuje wyników do Nous
-
-**Przyczyna**: Użycie `gui.Dlg` lub `core.quit()` powoduje zamknięcie procesu przed zapisem
-**Rozwiązanie**:
-
-- Zastąp `gui.Dlg` ekranami `visual.TextStim` z `event.waitKeys()`
-- Zastąp `core.quit()` wyjściem przez `return` z funkcji `main()`
-- Upewnij się, że `_write_results()` jest wywoływane **przed** `win.close()`
-- **Przykład złego kodu** (PingPong): `core.quit()` po ESC – test nie zapisuje wyników
-- **Poprawna struktura**: `if NOUS_LAUNCHER: _write_results(...); win.close(); return`
-
-### Problem: HPM nie startuje testu / wyniki się nie pokazują
-
-**Przyczyna**: Launcher uruchamia `main.py` i czeka na `results.json` po zamknięciu procesu. Jeśli `core.quit()` jest wywoływane zamiast naturalnego powrotu, plik może nie zostać zapisany.
-**Rozwiązanie**: Upewnij się, że kod Pythona zawsze zapisuje `results.json` przed zakończeniem, gdy `NOUS_LAUNCHER == True`.
 
 ---
 
@@ -239,70 +179,6 @@ async function quitPsychoJS(message, isCompleted) {
   psychoJS.quit({message: message, isCompleted: isCompleted});
   return Scheduler.Event.QUIT;
 }
-```
-
-### Python: main.py z Nous HPM (wzorcowy szablon)
-
-```python
-import os
-import json
-import random
-from datetime import datetime
-from pathlib import Path
-from psychopy import visual, core, event
-
-NOUS_LAUNCHER = os.environ.get('NOUS_LAUNCHER') == '1'
-NOUS_TRAINING = os.environ.get('NOUS_TRAINING') == '1'
-SCRIPT_DIR = Path(__file__).resolve().parent
-RESOURCES = SCRIPT_DIR / 'resources'
-
-def _write_results(script_dir, trials_data, poprawne, bledne, wszystkie, avg_rt_ms):
-    results = {
-        'testId': 'nazwa_testu',
-        'subjectId': f'{random.randint(0, 999999):06d}',
-        'timestamp': datetime.utcnow().isoformat() + 'Z',
-        'ilosc_poprawnych_nacisniec': poprawne,
-        'ilosc_blednych_nacisniec': bledne,
-        'ogolna_ilosc_nacisniec': wszystkie,
-        # 'sredni_czas_reakcji': avg_rt_ms,  # TYLKO jeśli mierzy RT
-        'wyniki': trials_data,
-    }
-    out_path = script_dir / 'results.json'
-    with open(out_path, 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-
-def main():
-    win = visual.Window(fullscr=True, units='height', color=(0,0,0), allowGUI=False)
-    mouse = event.Mouse(win=win)
-    mouse.setVisible(True)  # WAŻNE: zawsze po utworzeniu mouse
-    
-    # Instrukcja z ESC
-    instr = visual.TextStim(win, text='...', color='white', height=0.05)
-    instr.draw()
-    win.flip()
-    keys = event.waitKeys(keyList=['space', 'return', 'escape'])
-    first = keys[0] if keys else None
-    keyname = first[0] if first and isinstance(first, (list, tuple)) else first
-    if keyname == 'escape':
-        win.close()
-        if NOUS_LAUNCHER:
-            _write_results(SCRIPT_DIR, [], 0, 0, 0, 0)  # pusty wynik
-        return
-    
-    # ... logika testu ...
-    
-    # Wyniki
-    poprawne = sum(1 for t in trials_data if t['correct'] == 1)
-    wszystkie = len(trials_data)
-    bledne = max(0, wszystkie - poprawne)
-    avg_rt_ms = ... # jeśli mierzy RT
-    
-    win.close()  # zamknij okno PRZED zapisem wyników
-    if NOUS_LAUNCHER:
-        _write_results(SCRIPT_DIR, trials_data, poprawne, bledne, wszystkie, avg_rt_ms)
-
-if __name__ == '__main__':
-    main()
 ```
 
 ### JS: Obsługa dotyku
@@ -373,9 +249,8 @@ if (show_feedback === false && window._touchJustStarted && window._touchPsychoX 
 
 ```
 NazwaTestu/
-├── index.html              # Entry point (tylko dla JS)
+├── index.html              # Entry point
 ├── NazwaTestu.js           # Główny plik JS (lub semafor.js, Poppelv2.js itd.)
-├── main.py                 # Główny plik Python (HPM)
 ├── resources/              # Zasoby (obrazy, dźwięki)
 │   ├── obraz1.png
 │   └── obraz2.png
@@ -388,18 +263,13 @@ NazwaTestu/
 
 ## 7. Tryb Treningowy
 
-### Python (HPM)
-
-- Sprawdzanie: `NOUS_TRAINING = os.environ.get('NOUS_TRAINING') == '1'`
-- Można użyć do zmniejszenia liczby prób (np. 5 zamiast 10)
-- Przykład: `N_TRIALS = 10 if not NOUS_TRAINING else 5`
-
-### JS (Standard)
-
-- **Obecnie**: Tryb treningowy jest obsługiwany przez launcher **po zakończeniu testu**
-- Launcher sprawdza `isTraining` i blokuje zapis do bazy
-- Test JS **nie otrzymuje** informacji o trybie treningowym
-- Jeśli w przyszłości launcher zacznie przekazywać `window.electronTest.isTraining`, można użyć do zmiany liczby prób
+- Włącza się przełącznikiem w Bibliotece (per użytkownik, zapamiętany w `localStorage`).
+- Launcher zapamiętuje stan przełącznika **w momencie startu testu** (snapshot).
+- Po zakończeniu testu w trybie treningowym launcher **nie pokazuje okna wyników
+  i nie zapisuje nic do Historii** — pokazuje tylko toast
+  „Tryb treningowy włączony. Nie zapisano wyniku".
+- Test JS **nie otrzymuje** informacji o trybie treningowym — nie musi nic
+  obsługiwać ani zmieniać (np. liczby prób).
 
 ---
 
@@ -412,8 +282,6 @@ NazwaTestu/
 - **Ujednolicać** nazewnictwo wyników we wszystkich testach
 - **Filtrować** `_trialsData` aby pominąć wiersze bez `correct` (welcome itp.)
 - **ESC zawsze** = `window.electronTest.close()` (bez zapisu) gdy `isCompleted === false`
-- **Nie używać** `gui.Dlg` ani `core.quit()` w testach HPM – powodują problemy z Nous
-- **HPM toggle** – domyślnie wyłączony przy każdym uruchomieniu aplikacji (niezależnie od poprzedniego stanu)
 
 ---
 
@@ -421,8 +289,8 @@ NazwaTestu/
 
 ### "Przeanalizuj test X i popraw..."
 
-1. Przeczytaj główny plik JS/Python
-2. Sprawdź `quitPsychoJS` / `_write_results` pod kątem nazewnictwa
+1. Przeczytaj główny plik JS
+2. Sprawdź `quitPsychoJS` pod kątem nazewnictwa
 3. Sprawdź obsługę ESC
 4. Sprawdź czy są referencje do legacy scripts
 5. Sprawdź czy test mierzy RT (jeśli tak, czy `sredni_czas_reakcji` jest w wynikach)
@@ -434,41 +302,22 @@ NazwaTestu/
 2. W `trialRoutineEachFrame`: dodaj funkcję `pointInStim` i blok obsługi dotyku
 3. Pamiętaj o czyszczeniu stanu dotyku po obsłużeniu
 
-### "Stwórz wersję Python/PsychoPy"
-
-1. Skopiuj logikę z JS do Pythona
-2. Użyj `psychopy.visual`, `psychopy.core`, `psychopy.event`
-3. Dodaj `NOUS_LAUNCHER` i `NOUS_TRAINING` z `os.environ`
-4. Zapis `results.json` tylko gdy `NOUS_LAUNCHER == True`
-5. ESC na instrukcji: zapis pustych wyników
-6. ESC w próbach: flaga `escaped`, przerwanie zewnętrznej pętli
-7. Dostępne biblioteki HPM: `PsychoPy, NumPy, SciPy, Pandas, Pyglet, Pillow (PIL), wxPython`
-8. **NIE używaj** `gui.Dlg` (dialog GUI) ani `core.quit()` – użyj `visual.TextStim` + `event.waitKeys()` i `return`
-
-### "Napraw integrację testu Python z Nous"
-
-1. Usuń wszystkie wywołania `core.quit()` – zastąp `return` lub naturalnym końcem `main()`
-2. Usuń `gui.Dlg` – zastąp ekranami tekstowymi
-3. Dodaj `NOUS_LAUNCHER` i `NOUS_TRAINING` jeśli ich brakuje
-4. Przenieś `_write_results()` przed `win.close()` lub zaraz po pętli głównej
-5. Sprawdź, czy ESC zapisuje pusty wynik zamiast po prostu kończyć
-
 ---
 
 ## 10. Testy w Projekcie
 
 | Test | Typ | RT | Dotyk | Specyfika |
 |------|-----|----|-------|-----------|
-| **BystreOczko** | JS + HPM (Python) | ✅ tak | ✅ JS | Siatka sygnalizatorów; `ilosc_obiektow_do_klikniecia` (HPM) |
-| **Poppel** | JS + HPM (Python) | ❌ nie | ✅ JS | Obiekty przesuwające się; `ilosc_obiektow_do_klikniecia` |
-| **Semafor** | JS + HPM (Python) | ❌ nie | ✅ JS | Matryce logiczne; `ilosc_obiektow_do_klikniecia` |
+| **BystreOczko** | JS | ✅ tak | ✅ JS | Siatka sygnalizatorów; `ilosc_obiektow_do_klikniecia` |
+| **Poppel** | JS | ❌ nie | ✅ JS | Obiekty przesuwające się; `ilosc_obiektow_do_klikniecia` |
+| **Semafor** | JS | ❌ nie | ✅ JS | Matryce logiczne; `ilosc_obiektow_do_klikniecia` |
 | **Raven** | JS | ✅ tak | ❌ | Test matryc logicznych |
-| **GoNoGo** | JS + HPM (Python) | ✅ tak | ❌ | Go/NoGo; `poziom_trudnosci`; parzyste=GO |
-| **Stop** | JS + HPM (Python) | ✅ tak | ❌ | Samochód + znak STOP; kliknięcie myszą |
-| **Sygnalizacja** | JS + HPM (Python) | ✅ tak | ❌ | Dwa auta, dwa światła; klawisze A/D lub strzałki; "falstart" = błąd |
-| **Samochodzik** | JS + HPM (Python) | ❌ nie | ❌ | Nawigacja autem; `czas_pokonania_trasy_sek`; kolizje=błędy; używa PIL + Pyglet |
-| **Piórkowski** | JS + HPM (Python) | ✅ tak | ❌ | Kółka losowo; kliknięcie w auto; `klikniecia_bez_kolka`; wybór czasu trwania |
-| **PingPong** | JS + HPM (Python) | ❌ nie | ❌ | Odbijanie piłki 2 paletkami; `ilosc_poprawnych_nacisniec` = odbicia paletką, `ilosc_blednych_nacisniec` = przepuszczone; `poziom_trudnosci`; tryb Trudny ma progresję prędkości |
+| **GoNoGo** | JS | ✅ tak | ❌ | Go/NoGo; `poziom_trudnosci`; parzyste=GO |
+| **Stop** | JS | ✅ tak | ❌ | Samochód + znak STOP; kliknięcie myszą |
+| **Sygnalizacja** | JS | ✅ tak | ❌ | Dwa auta, dwa światła; klawisze A/D lub strzałki; "falstart" = błąd |
+| **Samochodzik** | JS | ❌ nie | ❌ | Nawigacja autem; `czas_pokonania_trasy_sek`; kolizje=błędy |
+| **Piórkowski** | JS | ✅ tak | ❌ | Kółka losowo; kliknięcie w auto; `klikniecia_bez_kolka`; wybór czasu trwania |
+| **PingPong** | JS | ❌ nie | ❌ | Odbijanie piłki 2 paletkami; `ilosc_poprawnych_nacisniec` = odbicia paletką, `ilosc_blednych_nacisniec` = przepuszczone; `poziom_trudnosci`; tryb Trudny ma progresję prędkości |
 
 ### Uwagi o specyficznych polach wynikowych
 
@@ -476,25 +325,9 @@ NazwaTestu/
 - **Piórkowski**: `ogolna_ilosc_nacisniec` = łączna liczba kółek (trafione + pominięte), `klikniecia_bez_kolka` = kliknięcia bez aktywnego kółka
 - **GoNoGo**: `ogolna_ilosc_nacisniec` = liczba naciśnięć spacji (nie łączna liczba prób), `poziom_trudnosci` = nazwa wybranego poziomu
 - **Sygnalizacja**: `ogolna_ilosc_nacisniec` = tylko aktywne kliknięcia (bez `too_slow`), RT liczone tylko od momentu pojawienia się zielonego światła
-- **PingPong**: ⚠️ wymaga refaktoryzacji – brak integracji z Nous HPM
+- **PingPong**: ⚠️ wymaga refaktoryzacji – brak integracji z Nous
 
 ---
 
-## 11. Biblioteki Dostępne w HPM
-
-Silnik HPM zawiera skompilowane środowisko Python z następującymi bibliotekami:
-
-| Biblioteka | Zastosowanie |
-|-----------|-------------|
-| `psychopy` | Główna biblioteka: `visual`, `core`, `event`, `hardware.keyboard` |
-| `numpy` | Operacje matematyczne, tablice |
-| `scipy` | Statystyki, przetwarzanie sygnałów |
-| `pandas` | Analiza danych tabelarycznych |
-| `pyglet` | System okienkowy niższego poziomu (używany przez PsychoPy; `pyglet.window.key` do ciągłego śledzenia klawiszy) |
-| `pillow (PIL)` | Przetwarzanie obrazów (np. detekcja koloru pikseli – Samochodzik) |
-| `wxPython` | GUI toolkit (odradzany – zamiast tego użyj TextStim) |
-
----
-
-**Ostatnia aktualizacja**: 2026-03-21
-**Wersja Nous**: 1.2.0
+**Ostatnia aktualizacja**: 2026-10-15
+**Wersja Nous**: 1.4.0

@@ -26,7 +26,7 @@ describe("main/downloads validators", () => {
     expect(validateTestId(null)).toBe("BŁĄD: Nieprawidłowe ID testu!");
   });
 
-  it("validateDownloadUrl: allowlista jak w download-and-run", () => {
+  it("validateDownloadUrl: allowlista kanału download-test", () => {
     expect(validateDownloadUrl("https://github.com/KaucBartosz/BBTP/archive/refs/heads/main.zip")).toBeNull();
     expect(validateDownloadUrl("https://raw.githubusercontent.com/KaucBartosz/Nous/main/x.zip")).toBeNull();
     expect(validateDownloadUrl("https://objects.githubusercontent.com/abc123")).toBeNull();
@@ -199,7 +199,16 @@ describe("main/downloads enqueue", () => {
     expect(d.queueState().length).toBe(1);
   });
 
-  it("złe ID i zły URL nie trafiają do kolejki; localDev omija URL", () => {
+  it("registerIpc: download-test zamiast download-and-run", () => {
+    const d = stub();
+    const ons = [];
+    const handles = [];
+    d.registerIpc({ on: (ch) => ons.push(ch), handle: (ch) => handles.push(ch) });
+    expect(ons).toEqual(["download-test"]);
+    expect(handles).toEqual(["get-local-versions", "delete-test"]);
+  });
+
+  it("złe ID i zły URL nie trafiają do kolejki (download nigdy nie omija URL)", () => {
     const d = stub();
     expect(d.enqueueDownload({ testId: "../x", url: "https://github.com/KaucBartosz/Nous/x.zip" }, sender)).toEqual({
       ok: false,
@@ -208,9 +217,9 @@ describe("main/downloads enqueue", () => {
     expect(
       d.enqueueDownload({ testId: "t2", url: "https://evil.com/x.zip" }, sender),
     ).toEqual({ ok: false, message: "BŁĄD: Niedozwolona domena!" });
-    expect(d.enqueueDownload({ testId: "dev1", url: "śmieć", isLocalDev: true }, sender)).toEqual({
-      ok: true,
-    });
-    expect(d.queueState().length).toBe(1);
+    expect(
+      d.enqueueDownload({ testId: "dev1", url: "śmieć" }, sender),
+    ).toEqual({ ok: false, message: "BŁĄD: Nieprawidłowy URL!" });
+    expect(d.queueState().length).toBe(0);
   });
 });

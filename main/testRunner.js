@@ -1,7 +1,6 @@
-// main/testRunner.js — TestRunner (E2): okno testu + wyniki + zapis lokalny z HMAC.
-// Przeniesione 1:1 z main.js. Stan activeTestWindow żyje tu (isTestRunning
-// współdzieli z downloads przez wstrzyknięcie). Deps wstrzyknięte; `platform`
-// domyślnie z process (testy wymuszają 'linux' dla gałęzi Cinnamon).
+// main/testRunner.js — TestRunner: okno testu (kanał run-test) + wyniki
+// + zapis lokalny z HMAC. Uruchomienie zawsze z dysku, nigdy nie pobiera
+// (pobieranie to kanał download-test w main/downloads.js).
 
 function createTestRunner({
   BrowserWindow,
@@ -14,6 +13,10 @@ function createTestRunner({
   getMasterKey,
   preloadPath,
   platform = process.platform,
+  // Wstrzyknięte leniwie przez main.js (run-test rozwiązuje entryFile z dysku).
+  // Opcjonalne — stare testy jednostkowe ich nie podają.
+  getTestsLibraryDir = null,
+  findStartFile = null,
 }) {
   let activeTestWindow = null;
 
@@ -110,6 +113,43 @@ function createTestRunner({
     if (win) win.close();
   }
 
+  /**
+   * Kanał run-test: uruchomienie testu z dysku. Nigdy nie pobiera.
+   * Polityka: Uruchom zawsze uruchamia lokalną wersję; aktualizacje
+   * robi wyłącznie kanał download-test (zakładka Aktualizacje).
+   */
+  function onRunTest(event, payload) {
+    const sender = event.sender;
+    const testId = payload && (payload.testId || payload.test_id);
+
+    // --- SECURITY CHECK: TEST ID VALIDATION (jak delete-test) ---
+    if (!/^[a-zA-Z0-9_-]+$/.test(testId || "")) {
+      sender.send("test-status", "BŁĄD: Nieprawidłowe ID testu!");
+      return;
+    }
+
+    if (!getTestsLibraryDir || !findStartFile) {
+      sender.send("test-status", "BŁĄD: Błąd konfiguracji uruchamiania!");
+      return;
+    }
+
+    const testFolder = path.join(getTestsLibraryDir(), testId);
+    const entryFile = findStartFile(testFolder);
+
+    if (!entryFile) {
+      sender.send("test-status", "BŁĄD: Test nie jest pobrany! Pobierz go najpierw.");
+      return;
+    }
+
+    if (isTestRunning()) {
+      sender.send("test-status", "Inny test w toku. Uruchomienie wstrzymane.");
+      return;
+    }
+
+    sender.send("test-status", "Uruchamianie...");
+    openTestWindow(entryFile);
+  }
+
   function onSaveLocalResult(event, dataToSave) {
     // Użyj Master Key z safeStorage zamiast hardcodowanego klucza
     const masterKey = getMasterKey();
@@ -156,6 +196,7 @@ function createTestRunner({
   }
 
   function registerIpc(ipcMain) {
+    ipcMain.on("run-test", onRunTest);
     ipcMain.on("test-finished", onTestFinished);
     ipcMain.on("test-close", onTestClose);
     ipcMain.on("save-local-result", onSaveLocalResult);
@@ -164,6 +205,7 @@ function createTestRunner({
   return {
     isTestRunning,
     openTestWindow,
+    onRunTest,
     onTestFinished,
     onTestClose,
     onSaveLocalResult,

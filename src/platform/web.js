@@ -42,12 +42,11 @@ export function createWebPlatform(deps = {}) {
     },
 
     tests: {
-      run: async ({ id, trainingMode } = {}) => {
+      download: async () => ({ success: false, error: "Niedostępne w Web" }),
+      run: async ({ id } = {}) => {
         const versions = await getLocalVersions();
         const info = versions[id];
         if (info && info.webPath) {
-          try { sessionStorage.setItem("nous_web_current_test_id", id); } catch (e) {}
-          try { sessionStorage.setItem("nous_web_training_mode", !!trainingMode); } catch (e) {}
           openFn(info.webPath, "_blank");
           return { opened: true };
         }

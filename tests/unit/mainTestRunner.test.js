@@ -216,3 +216,71 @@ describe("main/testRunner", () => {
     expect(dialog.showSaveDialog).not.toHaveBeenCalled();
   });
 });
+
+describe("main/testRunner run-test (uruchomienie z dysku, nigdy download)", () => {
+  function runHarness({ entryFile = "/lib/t1/index.html", running = false } = {}) {
+    const wins = [];
+    const win = makeWindow();
+    win.webContents = { on: vi.fn(), send: vi.fn() };
+    const FakeBW = vi.fn(function (opts) {
+      win.opts = opts;
+      wins.push(win);
+      return win;
+    });
+    FakeBW.fromWebContents = () => null;
+    const sends = [];
+    const sender = { send: (ch, msg) => sends.push([ch, msg]) };
+    const r = createTestRunner({
+      BrowserWindow: FakeBW,
+      screen: { getPrimaryDisplay: () => ({ size: { width: 1920, height: 1080 } }) },
+      path,
+      dialog: {},
+      fs,
+      crypto,
+      getMainWindow: () => null,
+      getMasterKey: () => "mk",
+      preloadPath: "/preload_test.js",
+      getTestsLibraryDir: () => "/lib",
+      findStartFile: () => entryFile,
+    });
+    if (running) r.openTestWindow("/lib/other/index.html");
+    return { r, win, FakeBW, sends, sender };
+  }
+
+  it("run-test: brak entryFile → błąd, bez otwierania okna", () => {
+    const { r, FakeBW, sends, sender } = runHarness({ entryFile: null });
+    r.onRunTest({ sender }, { testId: "t1" });
+    expect(sends).toEqual([["test-status", "BŁĄD: Test nie jest pobrany! Pobierz go najpierw."]]);
+    expect(FakeBW).not.toHaveBeenCalled();
+  });
+
+  it("run-test: nieprawidłowe ID → błąd, bez otwierania okna", () => {
+    const { r, FakeBW, sends, sender } = runHarness();
+    r.onRunTest({ sender }, { testId: "../evil" });
+    expect(sends).toEqual([["test-status", "BŁĄD: Nieprawidłowe ID testu!"]]);
+    expect(FakeBW).not.toHaveBeenCalled();
+  });
+
+  it("run-test: inny test w toku → wstrzymane, bez nowego okna", () => {
+    const { r, FakeBW, sends, sender } = runHarness({ running: true });
+    expect(FakeBW).toHaveBeenCalledTimes(1);
+    r.onRunTest({ sender }, { testId: "t1" });
+    expect(sends).toEqual([["test-status", "Inny test w toku. Uruchomienie wstrzymane."]]);
+    expect(FakeBW).toHaveBeenCalledTimes(1);
+  });
+
+  it("run-test: happy path → status + openTestWindow", () => {
+    const { r, win, sends, sender } = runHarness();
+    r.onRunTest({ sender }, { testId: "t1" });
+    expect(sends).toEqual([["test-status", "Uruchamianie..."]]);
+    expect(win.loaded).toBe("/lib/t1/index.html");
+    expect(r.isTestRunning()).toBe(true);
+  });
+
+  it("registerIpc: rejestruje run-test obok test-finished/test-close/save-local-result", () => {
+    const { r } = runHarness();
+    const channels = [];
+    r.registerIpc({ on: (ch) => channels.push(ch), handle: () => {} });
+    expect(channels).toEqual(["run-test", "test-finished", "test-close", "save-local-result"]);
+  });
+});

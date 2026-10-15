@@ -20,8 +20,15 @@ export function createElectronPlatform(api) {
     },
 
     tests: {
-      run: (o) =>
-        a.downloadAndRun(o.url, o.id, o.ver, !!o.onlyDownload, !!o.trainingMode, o.name || "", o.description || "", !!o.isLocalDev),
+      download: (o) =>
+        a.downloadTest({
+          url: o.url,
+          testId: o.id,
+          version: o.ver,
+          testName: o.name || "",
+          testDescription: o.description || "",
+        }),
+      run: (o) => a.runTest(o.id),
       getLocalVersions: () => a.getLocalVersions(),
       deleteTest: (id) => a.deleteTest(id),
       onProgress: (cb) => on(a.onDownloadProgress, cb),

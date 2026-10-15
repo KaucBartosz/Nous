@@ -24,6 +24,7 @@ export function createFakePlatform(seed = {}) {
     },
 
     tests: {
+      download: async (o) => { rec("tests.download", o); return { queued: true, fake: true }; },
       run: async (o) => { rec("tests.run", o); return { opened: true, fake: true }; },
       getLocalVersions: async () => { rec("tests.getLocalVersions", null); return { ...versions }; },
       deleteTest: async (id) => { rec("tests.deleteTest", id); delete versions[id]; return { success: true }; },

@@ -41,7 +41,7 @@ describe('platform seam (C1)', () => {
   it('A1 capabilities: electron/fake umieją pobierać, web nie', async () => {
     const { createElectronPlatform } = await import('../../src/platform/electron.js');
     const fakeApi = {
-      downloadAndRun: () => {}, getLocalVersions: async () => ({}),
+      downloadTest: () => {}, runTest: () => {}, getLocalVersions: async () => ({}),
       deleteTest: async () => ({ success: true }),
     };
     expect(createElectronPlatform(fakeApi).capabilities).toMatchObject({

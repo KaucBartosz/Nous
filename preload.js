@@ -2,9 +2,14 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    // 1. Pobieranie i uruchamianie testów (tylko JS)
-    downloadAndRun: (url, testId, version, onlyDownload = false, trainingMode = false, testName = '', testDescription = '', isLocalDev = false) =>
-        ipcRenderer.send('download-and-run', { url, testId, version, onlyDownload, trainingMode, testName, testDescription, isLocalDev }),
+    // 1. Pobieranie testów (tylko JS) — download XOR run, nigdy AND.
+    // Pobranie zapisuje paczkę na dysk, nie uruchamia. Uruchomienie robi runTest.
+    downloadTest: (payload) =>
+        ipcRenderer.send('download-test', payload),
+
+    // 1b. Uruchomienie testu z dysku (nigdy nie pobiera).
+    runTest: (testId) =>
+        ipcRenderer.send('run-test', { testId }),
 
     onStatusUpdate: (callback) => ipcRenderer.on('test-status', (event, message) => callback(message)),
     onTestResults: (callback) => ipcRenderer.on('test-results-forwarded', (event, data) => callback(data)),
