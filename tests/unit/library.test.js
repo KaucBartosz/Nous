@@ -2,19 +2,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ─── Mocki muszą być przed jakimkolwiek importem modułów produkcyjnych ──────
 
-vi.mock("../../src/firebaseConfig.js", () => ({
-  db: {},
+// Seam chmury: test nie może dotykać prawdziwego Firebase (dynamiczny import
+// gstatic nie działa w Node), więc podmieniamy jedyny moduł, który go zna.
+vi.mock("../../src/cloud/firebase.js", () => ({
+  cloudLoaded: () => false,
+  currentUid: () => null,
+  currentUser: () => null,
+  onAuthStateChanged: vi.fn(),
+  signIn: vi.fn(),
+  signUp: vi.fn(),
+  signOutRemote: vi.fn(),
+  fetchUserDoc: vi.fn(),
+  saveUserDoc: vi.fn(),
+  fetchRemoteTests: vi.fn(() => Promise.resolve({ empty: true, forEach: vi.fn() })),
+  saveRemoteResult: vi.fn(),
+  fetchResearcherResults: vi.fn(),
+  fetchUserKeys: vi.fn(),
+  saveUserKeys: vi.fn(),
 }));
-
-// Firestore — importowany jako https:// URL; Vitest nie obsługuje tego protokołu
-// natywnie, dlatego mockujemy przez alias ścieżki modułu (inline factory).
-vi.mock(
-  "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js",
-  () => ({
-    collection: vi.fn(),
-    getDocs: vi.fn(() => Promise.resolve({ empty: true, forEach: vi.fn() })),
-  }),
-);
 
 vi.mock("../../src/modules/dialog.js", () => ({
   Dialog: { alert: vi.fn(), confirm: vi.fn(() => Promise.resolve(false)) },
@@ -117,9 +122,8 @@ describe("Library Module", () => {
   // ─── loadTestsList ──────────────────────────────────────────
   describe("loadTestsList", () => {
     it("wyświetla komunikat o braku testów gdy lista jest pusta", async () => {
-      const { getDocs } =
-        await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-      getDocs.mockResolvedValue({ empty: true, forEach: vi.fn() });
+      const { fetchRemoteTests } = await import("../../src/cloud/firebase.js");
+      fetchRemoteTests.mockResolvedValue({ empty: true, forEach: vi.fn() });
 
       const { loadTestsList } = await import("../../src/modules/library.js");
       await loadTestsList();
@@ -130,8 +134,7 @@ describe("Library Module", () => {
     });
 
     it("ładuje testy z chmury gdy dostępne", async () => {
-      const { getDocs } =
-        await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+      const { fetchRemoteTests } = await import("../../src/cloud/firebase.js");
 
       const mockTests = [
         {
@@ -144,7 +147,7 @@ describe("Library Module", () => {
         },
       ];
 
-      getDocs.mockResolvedValue({
+      fetchRemoteTests.mockResolvedValue({
         empty: false,
         forEach: (cb) => mockTests.forEach(cb),
       });
@@ -157,9 +160,8 @@ describe("Library Module", () => {
     });
 
     it("używa lokalnego cache gdy brak połączenia z Firebase", async () => {
-      const { getDocs } =
-        await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-      getDocs.mockRejectedValue(new Error("Network error"));
+      const { fetchRemoteTests } = await import("../../src/cloud/firebase.js");
+      fetchRemoteTests.mockRejectedValue(new Error("Network error"));
 
       // Ustaw cache w localStorage
       const cached = [{ id: "cached-test", name: "Cached Test", version: 1 }];
@@ -225,13 +227,12 @@ describe("Library Module", () => {
 
     async function renderAs(mode) {
       document.body.innerHTML = skeleton;
-      const { getDocs } =
-        await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+      const { fetchRemoteTests } = await import("../../src/cloud/firebase.js");
       const { getResearcherUid } = await import("../../src/modules/auth.js");
       const { initViewSwitcher, loadTestsList } =
         await import("../../src/modules/library.js");
       getResearcherUid.mockReturnValue("parity-user");
-      getDocs.mockResolvedValue({
+      fetchRemoteTests.mockResolvedValue({
         empty: false,
         forEach: (cb) => twoTests.forEach(cb),
       });

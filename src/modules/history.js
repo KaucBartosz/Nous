@@ -5,14 +5,7 @@ import {
   saveResult,
   deleteResults,
 } from "./database.js";
-import { db as firebaseDb } from "../firebaseConfig.js";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { fetchResearcherResults } from "../cloud/firebase.js";
 import { getCurrentUser, getUserStatus, getResearcherUid } from "./auth.js";
 import { elements } from "./ui.js";
 import { syncSingleResult } from "./sync.js";
@@ -26,10 +19,10 @@ import {
 import {
   exportHistoryToCSV as exportViewToCSV,
   downloadSingleResult as downloadSingle,
+  archiveHistoryResults,
   beginDownloadButton,
   selectedDownloadFormat,
   downloadButtonPrefix,
-  silentDestDir,
 } from "../history/historyExport.js";
 import {
   buildLocalKeys,
@@ -452,13 +445,7 @@ async function loadCloudResults() {
     '<tr><td colspan="6">Pobieranie danych z chmury...</td></tr>';
 
   try {
-    const q = query(
-      collection(firebaseDb, "results"),
-      where("researcher_uid", "==", user.uid),
-      orderBy("timestamp", "desc"),
-    );
-
-    const snap = await getDocs(q);
+    const snap = await fetchResearcherResults(user.uid);
     // C3: deszyfracja równoległa w results/cloudResults.js (kolejność zachowana)
     state.cloudResults = await decryptCloudRecords(
       snap.docs.map((docSnap) => ({ ...docSnap.data(), firestore_id: docSnap.id })),
@@ -663,21 +650,26 @@ async function handleDownloadAll() {
 
     // Downloads selected or ALL cloud results (pagination does not affect this)
     // destDir null = natywne okno; ustawiony = ciche pobieranie (Ustawienia).
-    const result = await getPlatform().files.bulkZip({
+    const result = await archiveHistoryResults({
       results: resultsToDownload,
       filename: filename,
       format: format,
-      destDir: await silentDestDir(),
     });
 
     if (result.success) {
       dl.progress("100%");
       setTimeout(
-        () => Notify.alert("Archiwum ZIP zostało wygenerowane!", "success"),
+        () =>
+          Notify.alert(
+            result.format === "csv"
+              ? "Pobrano wszystkie wyniki jako scalony plik CSV."
+              : "Archiwum ZIP zostało wygenerowane!",
+            "success",
+          ),
         500,
       );
     } else if (!result.cancelled) {
-      Notify.alert("Błąd podczas generowania ZIP: " + result.error, "error");
+      Notify.alert("Błąd podczas generowania archiwum: " + result.error, "error");
     }
   } catch (e) {
     Notify.alert("Wystąpił nieoczekiwany błąd: " + e.message, "error");
@@ -776,17 +768,22 @@ async function handleDownloadAllLocal(targetUid) {
     const format = selectedDownloadFormat();
     const filename = `Wyniki_${isGuest ? "Gosc" : "Uzytkownik"}_${Date.now()}.zip`;
 
-    const result = await getPlatform().files.bulkZip({
+    const result = await archiveHistoryResults({
       results,
       filename,
       format,
-      destDir: await silentDestDir(),
     });
 
     if (result.success) {
       dl.progress("100%");
+      if (result.format === "csv") {
+        setTimeout(
+          () => Notify.alert("Pobrano wszystkie wyniki jako scalony plik CSV.", "success"),
+          500,
+        );
+      }
     } else if (!result.cancelled) {
-      Notify.alert("Błąd ZIP: " + result.error, "error");
+      Notify.alert("Błąd pobierania: " + result.error, "error");
     }
   } catch (e) {
     Notify.alert("Błąd: " + e.message, "error");

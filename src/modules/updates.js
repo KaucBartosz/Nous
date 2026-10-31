@@ -1,6 +1,5 @@
 // src/modules/updates.js
-import { db } from '../firebaseConfig.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { fetchRemoteTests } from '../cloud/firebase.js';
 import { elements } from './ui.js';
 import { loadTestsList } from './library.js';
 import { Notify } from '../notify/notify.js';
@@ -44,7 +43,7 @@ export async function loadUpdatesData(filterText = '') {
         // na Web Firestore bezpośrednio (jak wcześniej — widok i tak zablokowany).
         const res = await loadCatalog({
             cloudEnabled: true,
-            fetchRemote: () => getDocs(collection(db, "tests")),
+            fetchRemote: fetchRemoteTests,
             isOnline: () => true,
             getLocalVersions: getLocalVersionsCached,
             getSettings: () => ({}),

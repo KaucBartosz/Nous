@@ -1,10 +1,6 @@
 // src/modules/sync.js
 
-import { db } from "../firebaseConfig.js";
-import {
-  collection,
-  addDoc,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { saveRemoteResult } from "../cloud/firebase.js";
 import { getPendingResults, markAsSynced } from "./database.js";
 import { getCurrentUser, getUserStatus } from "./auth.js";
 import { Notify, toast, syncCountMessage } from "../notify/notify.js";
@@ -118,7 +114,7 @@ const firestoreIo = {
       onUnencrypted: () =>
         console.warn("Wysyłanie nieszyfrowanych danych! Brak klucza chmurowego."),
     }),
-  saveRemote: (doc) => addDoc(collection(db, "results"), doc),
+  saveRemote: saveRemoteResult,
   markSynced: (localId, remoteId) => markAsSynced(localId, remoteId),
 };
 

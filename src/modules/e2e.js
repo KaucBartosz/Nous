@@ -1,6 +1,5 @@
 // src/modules/e2e.js
-import { db, auth } from '../firebaseConfig.js';
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { fetchUserKeys, saveUserKeys } from '../cloud/firebase.js';
 import {
     hasCloudKey,
     setCloudKeyFromHex,
@@ -23,11 +22,8 @@ import { createCloudVault, createLocalVault } from '../session/keyVault.js';
 /** Vault chmury nad prawdziwym Firestore (zależności jawne, polityka w session/). */
 function cloudVault() {
     return createCloudVault({
-        getDocFn: async (uid) => {
-            const d = await getDoc(doc(db, "user_keys", uid));
-            return d.exists() ? d.data() : null;
-        },
-        setDocFn: (uid, payload) => setDoc(doc(db, "user_keys", uid), payload),
+        getDocFn: fetchUserKeys,
+        setDocFn: saveUserKeys,
         wrapFn: wrapCloudKey,
         unwrapFn: unwrapCloudKey,
         randomHexFn: generateRandomHexKey,

@@ -1,9 +1,5 @@
 // src/modules/library.js
-import { db } from "../firebaseConfig.js";
-import {
-  collection,
-  getDocs,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { fetchRemoteTests } from "../cloud/firebase.js";
 import { elements } from "./ui.js";
 import { Notify } from "../notify/notify.js";
 import {
@@ -177,7 +173,7 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
         forceRefresh,
         cached: cachedTests,
         cloudEnabled: getPlatform().kind === "electron",
-        fetchRemote: () => getDocs(collection(db, "tests")),
+        fetchRemote: fetchRemoteTests,
         isOnline: () => (typeof navigator !== "undefined" ? navigator.onLine : true),
         getLocalVersions: getLocalVersionsCached,
         getSettings,

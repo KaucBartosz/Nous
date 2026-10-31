@@ -1,15 +1,15 @@
 // src/modules/auth.js
-import { auth, db } from "../firebaseConfig.js";
+// C1: chmura przez seam — ten moduł nie zna Firebase ani gstatic.
 import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-import {
-  doc,
-  setDoc,
-  getDoc,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+  onAuthStateChanged,
+  signIn,
+  signUp,
+  signOutRemote,
+  fetchUserDoc,
+  saveUserDoc,
+  currentUid,
+  currentUser,
+} from "../cloud/firebase.js";
 import {
   updateAuthUI,
   showLoginScreen,
@@ -64,10 +64,10 @@ function checkRateLimit(channel) {
 // ─── Firebase Auth ───────────────────────────────────────────────────────────
 
 export function initAuth(onLoginSuccess) {
-  auth.onAuthStateChanged(async (user) => {
+  onAuthStateChanged(async (user) => {
     if (user) {
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      const status = userDoc.exists() ? userDoc.data().status : "ERROR";
+      const userData = await fetchUserDoc(user.uid);
+      const status = userData ? userData.status : "ERROR";
       _currentUserStatus = status;
       _currentLocalUsername = null;
 
@@ -101,7 +101,7 @@ export async function login(email, password) {
   if (!checkRateLimit("online")) return;
   try {
     showError("Logowanie...");
-    await signInWithEmailAndPassword(auth, email, password);
+    await signIn(email, password);
   } catch (error) {
     console.error("Login error:", error);
     if (error.code === "auth/invalid-credential") {
@@ -126,12 +126,8 @@ export async function register(email, password) {
 
   try {
     showError("Tworzenie konta...");
-    const userCred = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password,
-    );
-    await setDoc(doc(db, "users", userCred.user.uid), {
+    const userCred = await signUp(email, password);
+    await saveUserDoc(userCred.user.uid, {
       email: userCred.user.email,
       status: "PENDING",
       createdAt: new Date().toISOString(),
@@ -155,7 +151,7 @@ export async function register(email, password) {
 export async function logout() {
   // C1: czyszczenie klucza przez seam (Web/Fake: noop)
   await getPlatform().keys.clearE2EKey();
-  await signOut(auth);
+  await signOutRemote();
   location.reload();
 }
 
@@ -364,7 +360,7 @@ export function loginGuest() {
  * Zwraca aktualnie zalogowanego użytkownika Firebase (lub null).
  */
 export function getCurrentUser() {
-  return auth.currentUser;
+  return currentUser();
 }
 
 /**
@@ -383,7 +379,7 @@ export function getCurrentLocalUser() {
  */
 export function getResearcherUid() {
   return createSession({
-    firebaseUid: (auth.currentUser && auth.currentUser.uid) || null,
+    firebaseUid: currentUid(),
     kind: _currentUserStatus,
     localUsername: _currentLocalUsername,
   }).researcherUid;
@@ -404,7 +400,7 @@ export function getUserStatus() {
  */
 export function getSession() {
   const session = createSession({
-    firebaseUid: (auth.currentUser && auth.currentUser.uid) || null,
+    firebaseUid: currentUid(),
     kind: _currentUserStatus,
     localUsername: _currentLocalUsername,
   });
