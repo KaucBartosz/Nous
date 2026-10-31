@@ -89,6 +89,13 @@ function toWebShell(html) {
 
   out = patch(
     out,
+    '<button id="nav-updates" class="nav-item">',
+    '<button id="nav-updates" class="nav-item hidden" aria-hidden="true">',
+    "nav-updates",
+  );
+
+  out = patch(
+    out,
     "</body>",
     '        <script src="boot-guard.js"></script>\n    </body>',
     "body-end",
