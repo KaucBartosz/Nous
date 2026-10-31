@@ -10,7 +10,7 @@ const REGISTRY_PATH = path.join(__dirname, '..', 'docs', 'app', 'tests-registry.
 const INJECTOR_PATH = path.join(__dirname, '..', 'inject-adapter.js');
 
 // Wykluczenia - czego NIE kopiować
-const IGNORE_EXTENSIONS = ['.py', '.md', '.zip', '.psd', '.txt', '.gitignore'];
+const IGNORE_EXTENSIONS = ['.py', '.md', '.zip', '.psd', '.txt', '.gitignore', '.map'];
 const IGNORE_DIRS = ['.git', '.github', '.claude', '.vscode'];
 
 function cleanTemp() {

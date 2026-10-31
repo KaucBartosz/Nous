@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "electron .",
+    "build:web": "node build_web.js",
     "admin": "electron admin_main.js",
     "dist": "electron-builder --win --x64",
     "dist:linux": "electron-builder --linux --x64 -c.linux.target=zip",

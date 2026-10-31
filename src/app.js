@@ -70,8 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const shellPolicy = shellPolicyFor(getPlatform().kind);
   if (applyShellPolicy(shellPolicy, { elements })) return;
   if (shellPolicy.guestAutoLogin) {
-    // Wersja WEB: od razu Gość + biblioteka (bez ekranu logowania)
+    // Wersja WEB: od razu Gość + biblioteka (bez ekranu logowania).
     loginGuest();
+    // Wyniki żyją w IndexedDB — bez trwałego storage przeglądarka może je
+    // usunąć przy braku miejsca. Nie blokuje startu (best effort).
+    getPlatform().storage?.requestPersistence?.();
     switchView("library", { onLibrary: loadTestsList });
   } else {
     // Wersja DESKTOP
