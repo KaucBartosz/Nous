@@ -1,6 +1,6 @@
 import { getAllTemplates, getTemplate } from "./database.js";
 import { elements } from "./ui.js";
-import { Dialog } from "./dialog.js";
+import { Notify } from "../notify/notify.js";
 import {
   initParticipantsPanel,
   registerFillFormCallback,
@@ -8,13 +8,14 @@ import {
   renderParticipantsList,
 } from "./participants.js";
 import { getResearcherUid } from "./auth.js";
+import { storageKeySuffix } from "../session/session.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
  * Zapobiega przeciekaniu danych demograficznych między kontami.
  */
 function getDemoStorageKeys() {
-  const uid = getResearcherUid().replace("::", "__");
+  const uid = storageKeySuffix(getResearcherUid());
   return {
     templateId: `activeTemplateId_${uid}`,
     demographics: `activeDemographics_${uid}`,
@@ -63,9 +64,8 @@ export async function initDemographics() {
   if (btnSaveToRegistry) {
     btnSaveToRegistry.addEventListener("click", async () => {
       if (!activeDemographics) {
-        await Dialog.alert(
+        await Notify.warning(
           'Najpierw zapisz dane sesji (kliknij "Zapisz Dane Sesji").',
-          "warning",
         );
         return;
       }
@@ -369,7 +369,7 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
   const isForce = forceOverwrite === true; // Handle Event object from addEventListener
 
   if (!currentTemplateId) {
-    await Dialog.alert("Wybierz szablon przed zapisaniem!", "warning");
+    await Notify.warning("Wybierz szablon przed zapisaniem!");
     return;
   }
 
@@ -427,7 +427,7 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
   });
 
   if (hasInputs && isEmpty) {
-    await Dialog.alert("Wypełnij przynajmniej jedno pole!", "warning");
+    await Notify.warning("Wypełnij przynajmniej jedno pole!");
     return;
   }
 
@@ -479,13 +479,13 @@ export function getActiveDemographics() {
 
 export async function clearDemographics() {
   if (!activeDemographics) {
-    await Dialog.alert("Brak zapisanych danych do usunięcia.", "info");
+    await Notify.info("Brak zapisanych danych do usunięcia.");
     // Still clear the form visually just in case
     await renderDynamicForm(currentTemplateId);
     return;
   }
 
-  const confirmed = await Dialog.confirm(
+  const confirmed = await Notify.confirm(
     "Czy na pewno chcesz usunąć zapisane dane uczestnika?",
   );
   if (confirmed) {
@@ -496,7 +496,7 @@ export async function clearDemographics() {
     // Reload form to clear values
     await renderDynamicForm(currentTemplateId);
 
-    await Dialog.alert("Dane zostały wyczyszczone.", "info");
+    await Notify.info("Dane zostały wyczyszczone.");
   }
 }
 

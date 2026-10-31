@@ -1,40 +1,26 @@
 // src/modules/cryptoService.js
-
-// =========================================================
-// 1. LOCAL MACHINE ENCRYPTION (Data At Rest - IndexedDB)
-// =========================================================
+// C4: 1 rdzeń AES-GCM sparametryzowany kluczem (były 2 kopie ciał local/cloud).
+// Formaty drutu, komunikaty i eksporty BEZ ZMIAN.
 
 let cryptoKey = null;
+let cloudCryptoKey = null;
 
-/**
- * Initialize the crypto service with the master key from the main process.
- * @param {string} hexKey - The 32-byte master key in hex string format.
- */
-export async function initCrypto(hexKey) {
-    if (!hexKey) {
-        throw new Error("Encryption key is missing!");
-    }
+// =========================================================
+// RDZEŃ (wspólny)
+// =========================================================
 
-    // Convert hex string to Uint8Array
+async function importAesKey(hexKey) {
     const keyBytes = new Uint8Array(hexKey.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-
-    // Import key for AES-GCM
-    cryptoKey = await window.crypto.subtle.importKey(
+    return window.crypto.subtle.importKey(
         "raw",
         keyBytes,
         { name: "AES-GCM" },
         false, // not extractable
         ["encrypt", "decrypt"]
     );
-    console.log("CryptoService: Key initialized successfully.");
 }
 
-/**
- * Encrypts an object or string for local DB storage.
- */
-export async function encryptData(data) {
-    if (!cryptoKey) throw new Error("CryptoService not initialized!");
-
+async function aesEncrypt(key, data) {
     const jsonString = JSON.stringify(data);
     const encodedData = new TextEncoder().encode(jsonString);
 
@@ -46,7 +32,7 @@ export async function encryptData(data) {
             name: "AES-GCM",
             iv: iv
         },
-        cryptoKey,
+        key,
         encodedData
     );
 
@@ -56,12 +42,7 @@ export async function encryptData(data) {
     };
 }
 
-/**
- * Decrypts local DB data.
- */
-export async function decryptData(encryptedBase64, ivBase64) {
-    if (!cryptoKey) throw new Error("CryptoService not initialized!");
-
+async function aesDecrypt(key, encryptedBase64, ivBase64, failMessage) {
     const encryptedBuffer = base64ToArrayBuffer(encryptedBase64);
     const iv = base64ToArrayBuffer(ivBase64);
 
@@ -71,7 +52,7 @@ export async function decryptData(encryptedBase64, ivBase64) {
                 name: "AES-GCM",
                 iv: new Uint8Array(iv)
             },
-            cryptoKey,
+            key,
             encryptedBuffer
         );
 
@@ -79,16 +60,46 @@ export async function decryptData(encryptedBase64, ivBase64) {
         return JSON.parse(decodedString);
     } catch (e) {
         console.error("Decryption failed:", e);
-        throw new Error("Failed to decrypt data. Key mismatch or data corruption.");
+        throw new Error(failMessage);
     }
+}
+
+// =========================================================
+// 1. LOCAL MACHINE ENCRYPTION (Data At Rest - IndexedDB)
+// =========================================================
+
+/**
+ * Initialize the crypto service with the master key from the main process.
+ * @param {string} hexKey - The 32-byte master key in hex string format.
+ */
+export async function initCrypto(hexKey) {
+    if (!hexKey) {
+        throw new Error("Encryption key is missing!");
+    }
+    cryptoKey = await importAesKey(hexKey);
+    console.log("CryptoService: Key initialized successfully.");
+}
+
+/**
+ * Encrypts an object or string for local DB storage.
+ */
+export async function encryptData(data) {
+    if (!cryptoKey) throw new Error("CryptoService not initialized!");
+    return aesEncrypt(cryptoKey, data);
+}
+
+/**
+ * Decrypts local DB data.
+ */
+export async function decryptData(encryptedBase64, ivBase64) {
+    if (!cryptoKey) throw new Error("CryptoService not initialized!");
+    return aesDecrypt(cryptoKey, encryptedBase64, ivBase64, "Failed to decrypt data. Key mismatch or data corruption.");
 }
 
 
 // =========================================================
 // 2. CLOUD E2E ENCRYPTION (Firebase Sync)
 // =========================================================
-
-let cloudCryptoKey = null;
 
 export function hasCloudKey() {
     return !!cloudCryptoKey;
@@ -98,14 +109,7 @@ export async function setCloudKeyFromHex(hexKey) {
     if (!hexKey) {
         throw new Error("Cloud encryption key is missing!");
     }
-    const keyBytes = new Uint8Array(hexKey.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-    cloudCryptoKey = await window.crypto.subtle.importKey(
-        "raw",
-        keyBytes,
-        { name: "AES-GCM" },
-        false, 
-        ["encrypt", "decrypt"]
-    );
+    cloudCryptoKey = await importAesKey(hexKey);
     console.log("CryptoService: Cloud E2E Key loaded into RAM.");
 }
 
@@ -115,39 +119,12 @@ export function clearCloudKey() {
 
 export async function encryptCloudData(data) {
     if (!cloudCryptoKey) throw new Error("Cloud E2E Key not initialized!");
-    const jsonString = JSON.stringify(data);
-    const encodedData = new TextEncoder().encode(jsonString);
-    const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    
-    const encryptedBuffer = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: iv },
-        cloudCryptoKey,
-        encodedData
-    );
-    
-    return {
-        payload: await arrayBufferToBase64(encryptedBuffer),
-        iv: await arrayBufferToBase64(iv.buffer)
-    };
+    return aesEncrypt(cloudCryptoKey, data);
 }
 
 export async function decryptCloudData(encryptedBase64, ivBase64) {
     if (!cloudCryptoKey) throw new Error("Cloud E2E Key not initialized!");
-    const encryptedBuffer = base64ToArrayBuffer(encryptedBase64);
-    const iv = base64ToArrayBuffer(ivBase64);
-    
-    try {
-        const decryptedBuffer = await window.crypto.subtle.decrypt(
-            { name: "AES-GCM", iv: new Uint8Array(iv) },
-            cloudCryptoKey,
-            encryptedBuffer
-        );
-        const decodedString = new TextDecoder().decode(decryptedBuffer);
-        return JSON.parse(decodedString);
-    } catch (e) {
-        console.error("Cloud Decryption failed:", e);
-        throw new Error("Failed to decrypt cloud data. Invalid E2E Key or data corruption.");
-    }
+    return aesDecrypt(cloudCryptoKey, encryptedBase64, ivBase64, "Failed to decrypt cloud data. Invalid E2E Key or data corruption.");
 }
 
 

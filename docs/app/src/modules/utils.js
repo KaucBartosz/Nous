@@ -65,72 +65,24 @@ export function debounce(fn, delay = 200) {
 }
 
 // ==========================================================
-// CACHE WERSJI LOKALNYCH
+// WERSJE LOKALNE (bez cache — odczyt z dysku przez IPC jest tani,
+// a cache z TTL powodował nieświeże dane i wymagał ręcznego unieważniania)
 // ==========================================================
 
-let localVersionsCache = null;
-let lastFetchTime = 0;
-const CACHE_TTL = 5000; // 5 sekund
-
 /**
- * Pobiera wersje lokalne z cache lub z API (jeśli cache wygasł).
+ * Pobiera wersje lokalne (zawsze świeże).
+ * Dyscyplina seama: jedyny dostęp przez platform/, bez fallbacku na
+ * surowe API preloadu i bez kopiowania logiki Web (mieszka w web.js).
  * @returns {Promise<Object>} - Obiekt {testId: version}
  */
 export async function getLocalVersionsCached() {
-    const now = Date.now();
-
-    // Sprawdź czy cache jest aktualny
-    if (localVersionsCache && (now - lastFetchTime < CACHE_TTL)) {
-        return localVersionsCache;
+    try {
+        const { getPlatform } = await import("../platform/index.js");
+        return await getPlatform().tests.getLocalVersions();
+    } catch (e) {
+        console.error("Error fetching local versions via platform:", e);
+        return {};
     }
-
-    // Pobierz świeże dane
-    if (window.electronAPI) {
-        try {
-            localVersionsCache = await window.electronAPI.getLocalVersions();
-            lastFetchTime = now;
-        } catch (e) {
-            console.error("Error fetching local versions:", e);
-            return localVersionsCache || {};
-        }
-    } else {
-        // Tryb Web (Aplikacja w przeglądarce)
-        try {
-            const res = await fetch('tests-registry.json');
-            if (res.ok) {
-                const registry = await res.json();
-                const webVersions = {};
-                // Konwertuje strukturę JSON na lokalny format (local_ver)
-                // Zakładamy, że w registry np: { id: "bystreOczko", version: 1, name: "...", webPath: "tests/bystreOczko/index.html" }
-                registry.forEach(test => {
-                    webVersions[test.id] = {
-                        version: test.version || 1,
-                        isLocalDev: false,
-                        name: test.name,
-                        description: test.description,
-                        webPath: test.path || ''
-                    };
-                });
-                localVersionsCache = webVersions;
-                lastFetchTime = now;
-            } else {
-                localVersionsCache = {};
-            }
-        } catch (err) {
-            console.warn("Tryb Web: Błąd pobierania tests-registry.json", err);
-            localVersionsCache = {};
-        }
-    }
-
-    return localVersionsCache || {};
-}
-
-/**
- * Unieważnia cache wersji lokalnych (np. po instalacji/usunięciu testu).
- */
-export function invalidateLocalVersionsCache() {
-    localVersionsCache = null;
-    lastFetchTime = 0;
 }
 
 // ==========================================================

@@ -1,15 +1,15 @@
 // src/modules/auth.js
-import { auth, db } from "../firebaseConfig.js";
+// C1: chmura przez seam — ten moduł nie zna Firebase ani gstatic.
 import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-import {
-  doc,
-  setDoc,
-  getDoc,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+  onAuthStateChanged,
+  signIn,
+  signUp,
+  signOutRemote,
+  fetchUserDoc,
+  saveUserDoc,
+  currentUid,
+  currentUser,
+} from "../cloud/firebase.js";
 import {
   updateAuthUI,
   showLoginScreen,
@@ -23,6 +23,9 @@ import {
   createLocalAccount,
   updateLocalAccountLastLogin,
 } from "./database.js";
+import { generateSalt, hashPassword } from "../session/passwordHash.js";
+import { createSession, canUploadResult, isCloudSyncAllowed } from "../session/session.js";
+import { getPlatform } from "../platform/index.js";
 
 // ─── Prywatny stan modułu ────────────────────────────────────────────────────
 
@@ -58,41 +61,13 @@ function checkRateLimit(channel) {
   return true;
 }
 
-// ─── Hashowanie haseł ────────────────────────────────────────────────────────
-
-/**
- * Generuje kryptograficznie bezpieczny salt (16 bajtów hex).
- */
-function generateSalt() {
-  const arr = new Uint8Array(16);
-  crypto.getRandomValues(arr);
-  return Array.from(arr)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-/**
- * Hashuje hasło z saltem (SHA-256).
- * @param {string} salt
- * @param {string} password
- * @returns {Promise<string>} hex string
- */
-async function hashPassword(salt, password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(salt + password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 // ─── Firebase Auth ───────────────────────────────────────────────────────────
 
 export function initAuth(onLoginSuccess) {
-  auth.onAuthStateChanged(async (user) => {
+  onAuthStateChanged(async (user) => {
     if (user) {
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      const status = userDoc.exists() ? userDoc.data().status : "ERROR";
+      const userData = await fetchUserDoc(user.uid);
+      const status = userData ? userData.status : "ERROR";
       _currentUserStatus = status;
       _currentLocalUsername = null;
 
@@ -126,7 +101,7 @@ export async function login(email, password) {
   if (!checkRateLimit("online")) return;
   try {
     showError("Logowanie...");
-    await signInWithEmailAndPassword(auth, email, password);
+    await signIn(email, password);
   } catch (error) {
     console.error("Login error:", error);
     if (error.code === "auth/invalid-credential") {
@@ -151,12 +126,8 @@ export async function register(email, password) {
 
   try {
     showError("Tworzenie konta...");
-    const userCred = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password,
-    );
-    await setDoc(doc(db, "users", userCred.user.uid), {
+    const userCred = await signUp(email, password);
+    await saveUserDoc(userCred.user.uid, {
       email: userCred.user.email,
       status: "PENDING",
       createdAt: new Date().toISOString(),
@@ -178,10 +149,9 @@ export async function register(email, password) {
  * Wylogowanie z konta Firebase.
  */
 export async function logout() {
-  if (window.electronAPI && window.electronAPI.clearE2EKey) {
-    await window.electronAPI.clearE2EKey();
-  }
-  await signOut(auth);
+  // C1: czyszczenie klucza przez seam (Web/Fake: noop)
+  await getPlatform().keys.clearE2EKey();
+  await signOutRemote();
   location.reload();
 }
 
@@ -390,7 +360,7 @@ export function loginGuest() {
  * Zwraca aktualnie zalogowanego użytkownika Firebase (lub null).
  */
 export function getCurrentUser() {
-  return auth.currentUser;
+  return currentUser();
 }
 
 /**
@@ -401,18 +371,18 @@ export function getCurrentLocalUser() {
 }
 
 /**
- * Zwraca researcher_uid odpowiedni dla aktualnego kontekstu:
+ * Zwraca researcher_uid odpowiedni dla aktualnego kontekstu (shim C4 —
+ * reguła w session/session.js, wołający bez zmian):
  * - Firebase: user.uid
  * - Lokalny: 'LOCAL::' + username
  * - Gość: 'GUEST'
  */
 export function getResearcherUid() {
-  const firebaseUser = auth.currentUser;
-  if (firebaseUser) return firebaseUser.uid;
-  if (_currentUserStatus === "LOCAL" && _currentLocalUsername) {
-    return `LOCAL::${_currentLocalUsername}`;
-  }
-  return "GUEST";
+  return createSession({
+    firebaseUid: currentUid(),
+    kind: _currentUserStatus,
+    localUsername: _currentLocalUsername,
+  }).researcherUid;
 }
 
 /**
@@ -421,4 +391,22 @@ export function getResearcherUid() {
  */
 export function getUserStatus() {
   return _currentUserStatus;
+}
+
+/**
+ * Jednolity widok sesji (A3: thin slice — 1 obiekt zamiast tria getterów).
+ * Stare gettery zostają (mockowane w testach); nowy kod woli getSession().
+ * @returns {{uid, kind, localUsername, researcherUid, canUpload, isCloudSyncAllowed}}
+ */
+export function getSession() {
+  const session = createSession({
+    firebaseUid: currentUid(),
+    kind: _currentUserStatus,
+    localUsername: _currentLocalUsername,
+  });
+  return {
+    ...session,
+    canUpload: canUploadResult(_currentUserStatus),
+    isCloudSyncAllowed: isCloudSyncAllowed(_currentUserStatus),
+  };
 }

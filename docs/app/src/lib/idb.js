@@ -1,3 +1,8 @@
+// VENDORED COPY of npm `idb` (verbatim, v8.0.3, MIT © Jake Archibald).
+// Powód: brak bundlera i brak import-map — renderer ładuje moduły ES bezpośrednio
+// z plików (Electron file:// i wersja web docs/app), więc goły `from "idb"` by nie
+// zadziałał (tak samo firebase importujemy przez pełne URL-e CDN). Nie edytować;
+// przy aktualizacji podmienić cały plik na build/index.js z nowej wersji paczki.
 const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
 
 let idbProxyableTypes;

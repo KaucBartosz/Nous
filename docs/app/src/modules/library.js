@@ -1,27 +1,31 @@
 // src/modules/library.js
-import { db } from "../firebaseConfig.js";
-import {
-  collection,
-  getDocs,
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { fetchRemoteTests } from "../cloud/firebase.js";
 import { elements } from "./ui.js";
-import { Dialog } from "./dialog.js";
+import { Notify } from "../notify/notify.js";
 import {
-  sortByInstallStatus,
-  debounce,
   getLocalVersionsCached,
-  invalidateLocalVersionsCache,
   escapeHtml,
 } from "./utils.js";
 import * as Tags from "./tags.js";
 import { getSettings } from "./settings.js";
 import { getResearcherUid } from "./auth.js";
+import { storageKeySuffix } from "../session/session.js";
+import { getPlatform } from "../platform/index.js";
+import { loadCatalog, queryTests } from "../catalog/testCatalog.js";
+import {
+  cardParts,
+  setTestButtonState,
+} from "../catalog/testCard.js";
+import {
+  bindSearchInput,
+  bindCatalogProgress,
+} from "../catalog/catalogView.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
  */
 function getLibraryStorageKeys() {
-  const uid = getResearcherUid().replace("::", "__");
+  const uid = storageKeySuffix(getResearcherUid());
   return {
     viewMode: `libraryViewMode_${uid}`,
     trainingMode: `trainingMode_${uid}`,
@@ -48,45 +52,23 @@ const viewButtons = {
 };
 
 /**
- * Inicjalizuje listenery Electron API (wywołaj raz).
+ * Inicjalizuje listenery platformy (wywołaj raz).
+ * A4: postęp/instalacja przez CatalogView; zatrzymanie procesu to
+ * specyfika biblioteki (reset UI), więc zostaje tutaj.
  */
 export function initLibraryListeners() {
-  if (listenersRegistered || !window.electronAPI) return;
+  if (listenersRegistered) return;
+  const platform = getPlatform();
 
-  window.electronAPI.onDownloadProgress(({ test_id, percent }) => {
-    const btn = document.getElementById(`start-test-${test_id}`);
-    if (btn) {
-      const progressText = btn.querySelector(".progress-text");
-      const progressBar = btn.querySelector(".progress-bar");
-
-      if (progressText && progressBar) {
-        progressText.textContent = `${percent}%`;
-        progressBar.style.width = `${percent}%`;
-      } else {
-        // Fallback / Initial structure
-        btn.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:5px; z-index:1; position:relative;">
-                         <span class="material-icons spin">sync</span>
-                         <span class="progress-text">${percent}%</span>
-                    </div>
-                    <div style="position:absolute; bottom:0; left:0; width:100%; height:4px; background:rgba(0,0,0,0.3);">
-                        <div class="progress-bar" style="width:${percent}%; height:100%; background:#4caf50;"></div>
-                    </div>
-                `;
-        btn.style.position = "relative";
-        btn.style.overflow = "hidden";
-        btn.disabled = true;
-      }
-    }
+  bindCatalogProgress(platform, {
+    progressIdPrefix: "start-test-",
+    onInstalled: (data) => {
+      console.log("Test installed, refreshing library:", data);
+      loadTestsList(undefined, true); // Force refresh
+    },
   });
 
-  window.electronAPI.onTestInstalled((data) => {
-    console.log("Test installed, refreshing library:", data);
-    invalidateLocalVersionsCache(); // Unieważnij cache
-    loadTestsList(undefined, true); // Force refresh
-  });
-
-  window.electronAPI.onTestProcessStopped(() => {
+  platform.tests.onProcessStopped(() => {
     console.log("Test process stopped, refreshing UI");
     loadTestsList(); // Re-render triggers UI reset
   });
@@ -124,19 +106,11 @@ export function initViewSwitcher() {
     }
   });
 
-  // Bind search input event with DEBOUNCE (only once)
+  // A4: wspólne wiązanie wyszukiwarki (debounce-once w CatalogView)
   if (!isSearchBound) {
-    const searchInput = document.getElementById("library-search");
-    if (searchInput) {
-      const debouncedSearch = debounce((filterText) => {
-        renderTests(cachedTests, filterText);
-      }, 200);
-
-      searchInput.addEventListener("input", (e) => {
-        debouncedSearch(e.target.value);
-      });
-      isSearchBound = true;
-    }
+    isSearchBound = bindSearchInput("library-search", (filterText) => {
+      renderTests(cachedTests, filterText);
+    });
   }
 
   // Bind Training Mode toggle
@@ -187,129 +161,51 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
     filterText = searchInput ? searchInput.value : "";
   }
 
-  // 1. Fetch from Cloud if needed
+  // 1-3. Rejestr + merge wersji + backfill (C5: catalog; wcześniej ~120 linii inline)
+  // Web: cloudEnabled=false — nigdy Firestore, lista z backfillu rejestru (jak wcześniej)
   if (!cachedTests.length || forceRefresh) {
     isLoading = true;
     elements.testsGrid.innerHTML =
       '<p style="color:#888;">Ładowanie biblioteki...</p>';
-    cachedTests = []; // Clear cache przed pobraniem
 
     try {
-      if (window.electronAPI) {
-        // Check if online before trying cloud fetch to avoid long timeouts
-        if (!navigator.onLine) {
-          throw new Error("Brak połączenia internetowego (navigator.onLine)");
-        }
-
-        // #14 FIX: Wrap Firestore call in a timeout to avoid hanging on slow networks
-        let timeoutId;
-        const fetchTimeout = new Promise((_, reject) => {
-          timeoutId = setTimeout(
-            () => reject(new Error("Timeout: Firestore nie odpowiada (>8s)")),
-            8000,
-          );
-        });
-
-        let snap;
-        try {
-          snap = await Promise.race([
-            getDocs(collection(db, "tests")),
-            fetchTimeout,
-          ]);
-          clearTimeout(timeoutId); // Anuluj timer po udanym fetch
-        } catch (e) {
-          clearTimeout(timeoutId);
-          throw e; // Re-throw do zewnętrznego catch
-        }
-
-        if (snap.empty) {
-          elements.testsGrid.innerHTML = "<p>Brak testów w chmurze.</p>";
-          return; // finally zresetuje isLoading
-        }
-
-        snap.forEach((doc) => {
-          const t = doc.data();
-          t.id = doc.id;
-          t.local_ver = 0; // Will be updated below
-          t.remote_ver = Number(t.version) || 0; // Zabezpieczenie przed NaN gdy brak pola
-          cachedTests.push(t);
-        });
-
-        // Save to local cache for offline usage
-        localStorage.setItem(
-          "cached_tests_metadata",
-          JSON.stringify(cachedTests),
-        );
+      const res = await loadCatalog({
+        forceRefresh,
+        cached: cachedTests,
+        cloudEnabled: getPlatform().kind === "electron",
+        fetchRemote: fetchRemoteTests,
+        isOnline: () => (typeof navigator !== "undefined" ? navigator.onLine : true),
+        getLocalVersions: getLocalVersionsCached,
+        getSettings,
+      });
+      if (res.empty && !res.offline) {
+        elements.testsGrid.innerHTML = "<p>Brak testów w chmurze.</p>";
+        return; // isLoading zresetowane w finally
+      }
+      cachedTests = res.tests;
+      if (res.empty && res.offline) {
+        showOfflinePanel(res.scannedDir);
+        return;
       }
     } catch (e) {
-      console.warn(
-        "Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):",
-        e,
-      );
-
-      // Try to load from local storage cache
-      const saved = localStorage.getItem("cached_tests_metadata");
-      if (saved) {
-        try {
-          cachedTests = JSON.parse(saved);
-          console.log("Załadowano listę testów z cache lokalnego.");
-        } catch (jsonErr) {
-          console.error("Błąd parsowania cache lokalnego:", jsonErr);
-        }
-      }
+      console.warn("Błąd ładowania biblioteki:", e);
+      showOfflinePanel("nieznana");
+      return;
     } finally {
       isLoading = false; // Zawsze resetuj flagę, niezależnie od ścieżki wykonania
     }
   }
 
-  // 2. Always update local versions (using cached getter)
-  const localVersions = await getLocalVersionsCached();
-  const scannedPath = localVersions.__scannedDir || "nieznana";
-
-  cachedTests.forEach((t) => {
-    const local = localVersions[t.id];
-    if (local) {
-      t.local_ver = Number(local.version);
-      t.isLocalDev = local.isLocalDev || false;
-    } else {
-      t.local_ver = 0;
-      t.isLocalDev = false;
-    }
-  });
-
-  // 3. Backfill tests from disk that are missing from metadata
-  // This allows showing already downloaded tests even if they are not in the cloud/cache list.
-  // Najpierw usuń poprzednie backfille, żeby uniknąć duplikatów przy kolejnych wywołaniach.
-  cachedTests = cachedTests.filter((t) => !t._isBackfill);
-
-  Object.keys(localVersions).forEach((testId) => {
-    if (testId === "__scannedDir") return; // Skip debug field
-
-    const local = localVersions[testId];
-    const isLocalDev = local.isLocalDev || false;
-
-    // Skip local tests if the setting is disabled
-    if (isLocalDev && !getSettings().showLocalTests) return;
-
-    if (!cachedTests.find((t) => t.id === testId)) {
-      if (local.version >= 0) {
-        cachedTests.push({
-          id: testId,
-          name: local.name || `Test lokalny (${testId})`,
-          description: local.description || "Pobrano wcześniej.",
-          version: local.version || 0,
-          local_ver: Number(local.version || 0),
-          remote_ver: Number(local.version || 0),
-          isLocalDev: local.isLocalDev || false,
-          download_url: "",
-          _isBackfill: true, // Marker do czyszczenia przy kolejnym wywołaniu
-        });
-      }
-    }
-  });
-
   if (cachedTests.length === 0) {
-    elements.testsGrid.innerHTML = `
+    const localVersions = await getLocalVersionsCached();
+    showOfflinePanel(localVersions.__scannedDir || "nieznana");
+  } else {
+    renderTests(cachedTests, filterText);
+  }
+}
+
+function showOfflinePanel(scannedPath) {
+  elements.testsGrid.innerHTML = `
             <div style="text-align:center; padding:40px; color:#888;">
                 <span class="material-icons" style="font-size:48px; margin-bottom:15px;">signal_wifi_off</span>
                 <p>Brak połączenia z Internetem i nie znaleziono pobranych testów.</p>
@@ -317,97 +213,36 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
                 <button class="btn secondary small" onclick="location.reload()" style="margin-top:20px;">Spróbuj ponownie</button>
             </div>
         `;
-  } else {
-    renderTests(cachedTests, filterText);
-  }
 }
 
-function getTestStatus(t) {
-  const local_ver = t.local_ver;
-  const remote_ver = t.remote_ver;
-
-  if (t.isLocalDev) {
-    return {
-      iconName: "code",
-      iconColor: "#2196f3",
-      iconTitle: "Wersja Lokalna (Deweloperska)",
-      btnText: "Uruchom (Dev)",
-      btnClass: "secondary",
-      statusText: "Lokalny",
-      versionParam: local_ver,
-      isDownloadOnly: false,
-    };
-  }
-
-  if (local_ver === 0) {
-    return {
-      iconName: "cloud_download",
-      iconColor: "#888",
-      iconTitle: "Nie pobrano",
-      btnText: "Pobierz",
-      btnClass: "primary",
-      statusText: "Nie pobrano",
-      versionParam: remote_ver,
-      isDownloadOnly: true,
-    };
-  } else if (local_ver < remote_ver) {
-    return {
-      iconName: "system_update",
-      iconColor: "#ff9800",
-      iconTitle: "Dostępna aktualizacja",
-      btnText: "Uruchom",
-      btnClass: "outline",
-      statusText: "Aktualizacja dostępna",
-      versionParam: local_ver,
-      isDownloadOnly: false,
-    };
+// Deskryptor statusu żyje w `src/catalog/testCard.js` (getTestStatus).
+// Jedno wiązanie startu dla wszystkich widoków (wcześniej 4 identyczne kopie).
+// Polityka: download XOR run. Uruchom zawsze uruchamia lokalnie;
+// aktualizacje robi wyłącznie kanał download (zakładka Aktualizacje).
+function handleStart(t, status) {
+  if (status.action === "download") {
+    startDownloadProcess(
+      t.download_url || t.downloadUrl,
+      t.id,
+      t.remote_ver,
+      t.name,
+      t.description,
+    );
   } else {
-    return {
-      iconName: "check_circle",
-      iconColor: "#4caf50",
-      iconTitle: "Zainstalowano",
-      btnText: "Uruchom",
-      btnClass: "primary",
-      statusText: "Zainstalowano",
-      versionParam: local_ver,
-      isDownloadOnly: false,
-    };
+    startRunProcess(t.id, t.isLocalDev);
   }
 }
 
 function renderTests(testsSource, filterText) {
   elements.testsGrid.innerHTML = "";
 
-  let tests = [...testsSource];
-
-  // 1. Filter
-  if (filterText) {
-    const { textFilters, tagGroups } = Tags.parseTagSearchQuery(filterText);
-
-    tests = tests.filter((t) => {
-      // Filtr tekstowy (nazwa)
-      const nameMatch =
-        textFilters.length === 0 ||
-        textFilters.every((word) =>
-          (t.name || "").toLowerCase().includes(word),
-        );
-      if (!nameMatch) return false;
-
-      if (tagGroups.length === 0) return true;
-
-      // Logika tagów (AND > OR)
-      const testTags = Tags.getTagsForTest(t.id);
-      return Tags.matchesTagGroups(testTags, tagGroups);
-    });
-  }
+  // 1-2. Filtr (tekst + @tagi) i sort (C5: catalog; logika identyczna)
+  const tests = queryTests(testsSource, filterText, Tags);
 
   if (tests.length === 0) {
     elements.testsGrid.innerHTML = "<p>Brak wyników wyszukiwania.</p>";
     return;
   }
-
-  // 2. Sort (using shared utility)
-  tests = sortByInstallStatus(tests);
 
   // 3. Render based on current view mode
   switch (currentViewMode) {
@@ -476,90 +311,35 @@ function renderGridView(tests) {
   elements.testsGrid.className = "grid-container";
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
+    // A: klocki z Karty Katalogu; renderer tylko układa + 3 tweaki layoutu
+    const parts = cardParts(t, {
+      iconSize: "24px",
+      appIcon: "40px",
+      tagBtn: createTagBtn(t.id, t.name),
+      onStart: handleStart,
+    });
 
-    // Create card structure safely
     const card = document.createElement("div");
     card.className = "test-card";
 
-    // Top section with icons
     const topDiv = document.createElement("div");
     topDiv.style.cssText =
       "display:flex; justify-content:space-between; align-items:start;";
 
     const iconsDiv = document.createElement("div");
     iconsDiv.style.cssText = "display:flex; align-items:center; gap:10px;";
+    iconsDiv.append(parts.appIcon, parts.statusIcon, parts.tagBtn);
 
-    const assignmentIcon = document.createElement("span");
-    assignmentIcon.className = "material-icons";
-    assignmentIcon.style.cssText = "font-size:40px; color:#444;";
-    assignmentIcon.textContent = "assignment";
-
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.cssText = `color:${status.iconColor}; font-size:24px;`;
-    statusIcon.title = status.iconTitle;
-    statusIcon.textContent = status.iconName;
-
-    const tagBtn = createTagBtn(test_id, t.name);
-
-    iconsDiv.appendChild(assignmentIcon);
-    iconsDiv.appendChild(statusIcon);
-    iconsDiv.appendChild(tagBtn);
-
-    const versionSpan = document.createElement("span");
-    versionSpan.className = "meta";
-    versionSpan.style.cssText =
+    parts.versionEl.className = "meta";
+    parts.versionEl.style.cssText =
       "color: #666; display: flex; align-items: center; gap: 8px;";
+    topDiv.append(iconsDiv, parts.versionEl);
 
-    versionSpan.appendChild(document.createTextNode(`v${t.version}`));
-
-    topDiv.appendChild(iconsDiv);
-    topDiv.appendChild(versionSpan);
-
-    // Title
-    const title = document.createElement("h4");
-    title.style.marginTop = "10px";
-    title.textContent = t.name || "Bez nazwy";
-
-    // Description
-    const description = document.createElement("p");
-    description.textContent = t.description || "Brak opisu";
-
-    // Button
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} small`;
-    button.style.marginTop = "auto";
-    button.id = `start-test-${test_id}`;
-
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-    button.appendChild(document.createTextNode(` ${status.btnText}`));
-
-    // Assemble card
-    card.appendChild(topDiv);
-    card.appendChild(title);
-    card.appendChild(description);
-    card.appendChild(button);
+    parts.titleEl.style.marginTop = "10px";
+    parts.button.style.marginTop = "auto";
+    card.append(topDiv, parts.titleEl, parts.descEl, parts.button);
 
     elements.testsGrid.appendChild(card);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 }
 
@@ -567,27 +347,10 @@ function renderListView(tests) {
   elements.testsGrid.className = "list-container";
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
-
     const item = document.createElement("div");
     item.className = "test-list-item";
 
-    // Icon section
-    const iconDiv = document.createElement("div");
-    iconDiv.className = "list-icon";
-
-    const assignmentIcon = document.createElement("span");
-    assignmentIcon.className = "material-icons";
-    assignmentIcon.textContent = "assignment";
-
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.color = status.iconColor;
-    statusIcon.style.fontSize = "20px";
-    statusIcon.title = status.iconTitle;
-    statusIcon.textContent = status.iconName;
-
+    // Chipy tagów — jedyny kawałek specyficzny dla listy
     const tagContainer = document.createElement("div");
     tagContainer.className = "list-tag-container";
 
@@ -600,86 +363,44 @@ function renderListView(tests) {
         tagContainer.appendChild(chip);
       });
     };
-    renderChips(Tags.getTagsForTest(test_id));
+    renderChips(Tags.getTagsForTest(t.id));
 
-    const tagBtn = createTagBtn(test_id, t.name, {
-      fontSize: "20px",
-      onUpdate: renderChips,
+    const parts = cardParts(t, {
+      iconSize: "20px",
+      appIcon: true,
+      tagBtn: createTagBtn(t.id, t.name, {
+        fontSize: "20px",
+        onUpdate: renderChips,
+      }),
+      onStart: handleStart,
     });
 
-    iconDiv.appendChild(assignmentIcon);
-    iconDiv.appendChild(statusIcon);
-    iconDiv.appendChild(tagBtn);
+    // Icon section
+    const iconDiv = document.createElement("div");
+    iconDiv.className = "list-icon";
+    iconDiv.append(parts.appIcon, parts.statusIcon, parts.tagBtn);
 
     // Info section
     const infoDiv = document.createElement("div");
     infoDiv.className = "list-info";
-
-    const title = document.createElement("h4");
-    title.textContent = t.name || "Bez nazwy";
-
-    const desc = document.createElement("p");
-    desc.textContent = t.description || "Brak opisu";
-
-    infoDiv.appendChild(title);
-    infoDiv.appendChild(desc);
-    infoDiv.appendChild(tagContainer);
+    infoDiv.append(parts.titleEl, parts.descEl, tagContainer);
 
     // Meta section
     const metaDiv = document.createElement("div");
     metaDiv.className = "list-meta";
 
-    const versionSpan = document.createElement("span");
-    versionSpan.style.display = "flex";
-    versionSpan.style.alignItems = "center";
-    versionSpan.style.gap = "8px";
-
-    versionSpan.appendChild(document.createTextNode(`v${t.version}`));
-
-    const statusSpan = document.createElement("span");
-    statusSpan.style.color = status.iconColor;
-    statusSpan.textContent = status.statusText;
-
-    metaDiv.appendChild(versionSpan);
-    metaDiv.appendChild(statusSpan);
+    parts.versionEl.style.display = "flex";
+    parts.versionEl.style.alignItems = "center";
+    parts.versionEl.style.gap = "8px";
+    metaDiv.append(parts.versionEl, parts.statusText);
 
     // Actions section
     const actionsDiv = document.createElement("div");
     actionsDiv.className = "list-actions";
+    actionsDiv.appendChild(parts.button);
 
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} small`;
-    button.id = `start-test-${test_id}`;
-
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-    button.appendChild(document.createTextNode(` ${status.btnText}`));
-
-    actionsDiv.appendChild(button);
-
-    // Assemble item
-    item.appendChild(iconDiv);
-    item.appendChild(infoDiv);
-    item.appendChild(metaDiv);
-    item.appendChild(actionsDiv);
-
+    item.append(iconDiv, infoDiv, metaDiv, actionsDiv);
     elements.testsGrid.appendChild(item);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 }
 
@@ -706,8 +427,14 @@ function renderTableView(tests) {
   const tbody = document.createElement("tbody");
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
+    const parts = cardParts(t, {
+      iconSize: "18px",
+      tagBtn: createTagBtn(t.id, t.name, {
+        fontSize: "18px",
+        marginLeft: "8px",
+      }),
+      onStart: handleStart,
+    });
 
     const row = document.createElement("tr");
 
@@ -733,62 +460,15 @@ function renderTableView(tests) {
     const statusCell = document.createElement("td");
     const statusDiv = document.createElement("div");
     statusDiv.className = "status-cell";
-
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.color = status.iconColor;
-    statusIcon.style.fontSize = "18px";
-    statusIcon.textContent = status.iconName;
-
-    const statusText = document.createElement("span");
-    statusText.style.color = status.iconColor;
-    statusText.textContent = status.statusText;
-
-    const tagBtn = createTagBtn(test_id, t.name, {
-      fontSize: "18px",
-      marginLeft: "8px",
-    });
-
-    statusDiv.appendChild(statusIcon);
-    statusDiv.appendChild(statusText);
-    statusDiv.appendChild(tagBtn);
+    statusDiv.append(parts.statusIcon, parts.statusText, parts.tagBtn);
     statusCell.appendChild(statusDiv);
 
     // Action cell
     const actionCell = document.createElement("td");
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} small`;
-    button.id = `start-test-${test_id}`;
+    actionCell.appendChild(parts.button);
 
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-    button.appendChild(document.createTextNode(` ${status.btnText}`));
-    actionCell.appendChild(button);
-
-    // Assemble row
-    row.appendChild(nameCell);
-    row.appendChild(descCell);
-    row.appendChild(versionCell);
-    row.appendChild(statusCell);
-    row.appendChild(actionCell);
-
+    row.append(nameCell, descCell, versionCell, statusCell, actionCell);
     tbody.appendChild(row);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 
   table.appendChild(tbody);
@@ -799,184 +479,116 @@ function renderCompactView(tests) {
   elements.testsGrid.className = "compact-grid";
 
   tests.forEach((t) => {
-    const status = getTestStatus(t);
-    const test_id = t.id;
+    const parts = cardParts(t, {
+      tagBtn: createTagBtn(t.id, t.name, {
+        fontSize: "18px",
+        marginLeft: "auto",
+      }),
+      compactButton: true,
+      onStart: handleStart,
+    });
 
     const card = document.createElement("div");
     card.className = "test-card-compact";
 
-    // Header with status icon
     const headerDiv = document.createElement("div");
     headerDiv.className = "compact-header";
+    headerDiv.append(parts.statusIcon, parts.tagBtn);
 
-    const statusIcon = document.createElement("span");
-    statusIcon.className = "material-icons";
-    statusIcon.style.color = status.iconColor;
-    statusIcon.title = status.iconTitle;
-    statusIcon.textContent = status.iconName;
-
-    const tagBtn = createTagBtn(test_id, t.name, {
-      fontSize: "18px",
-      marginLeft: "auto",
-    });
-
-    headerDiv.appendChild(statusIcon);
-    headerDiv.appendChild(tagBtn);
-
-    // Title
-    const title = document.createElement("h4");
-    title.textContent = t.name || "Bez nazwy";
-
-    // Footer with version and button
     const footerDiv = document.createElement("div");
     footerDiv.className = "compact-footer";
 
-    const versionSpan = document.createElement("span");
-    versionSpan.className = "compact-version";
-    versionSpan.style.display = "flex";
-    versionSpan.style.alignItems = "center";
-    versionSpan.style.gap = "4px";
+    parts.versionEl.className = "compact-version";
+    parts.versionEl.style.display = "flex";
+    parts.versionEl.style.alignItems = "center";
+    parts.versionEl.style.gap = "4px";
+    footerDiv.append(parts.versionEl, parts.button);
 
-    versionSpan.appendChild(document.createTextNode(`v${t.version}`));
-
-    const button = document.createElement("button");
-    button.className = `btn ${status.btnClass} compact`;
-    button.id = `start-test-${test_id}`;
-
-    const playIcon = document.createElement("span");
-    playIcon.className = "material-icons";
-    playIcon.style.fontSize = "14px";
-    playIcon.textContent = "play_arrow";
-
-    button.appendChild(playIcon);
-
-    footerDiv.appendChild(versionSpan);
-    footerDiv.appendChild(button);
-
-    // Assemble card
-    card.appendChild(headerDiv);
-    card.appendChild(title);
-    card.appendChild(footerDiv);
-
+    card.append(headerDiv, parts.titleEl, footerDiv);
     elements.testsGrid.appendChild(card);
-
-    // Bind click event
-    button.addEventListener("click", () => {
-      startTestProcess(
-        t.download_url || t.downloadUrl,
-        test_id,
-        status.versionParam,
-        status.isDownloadOnly,
-        t.name,
-        t.description,
-        t.isLocalDev,
-      );
-    });
   });
 }
 
-export async function startTestProcess(
-  url,
-  id,
-  ver,
-  onlyDownload = false,
-  name = "",
-  description = "",
-  isLocalDev = false,
-) {
-  if (window.electronAPI) {
-    // Change button state immediately
-    const btn = document.getElementById(`start-test-${id}`);
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = `
-                <div style="display:flex; align-items:center; gap:5px; z-index:1; position:relative;">
-                    <span class="material-icons spin">sync</span>
-                    <span class="progress-text">Inicjowanie...</span>
-                </div>
-                <div style="position:absolute; bottom:0; left:0; width:100%; height:4px; background:rgba(0,0,0,0.3);">
-                    <div class="progress-bar" style="width:0%; height:100%; background:#4caf50;"></div>
-                </div>
-            `;
-      btn.style.position = "relative";
-      btn.style.overflow = "hidden";
-    }
+export async function startDownloadProcess(url, id, ver, name = "", description = "") {
+  const platform = getPlatform();
+  const caps = platform.capabilities || { canDownload: platform.kind === "electron" };
+  const btn = document.getElementById(`start-test-${id}`);
 
-    if (isLocalDev) {
-      const confirmed = await Dialog.confirm(
-        "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
-          "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
-          "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
-          "Czy na pewno chcesz kontynuować?",
-        "warning",
-      );
-      if (!confirmed) {
-        // Reset button state
-        loadTestsList();
-        return;
-      }
-    }
+  // Pobieranie plików tylko tam, gdzie platforma umie pobierać.
+  if (!caps.canDownload) {
+    await Notify.info(
+      "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
+    );
+    return;
+  }
 
-    try {
-      window.electronAPI.downloadAndRun(
-        url,
-        id,
-        ver,
-        onlyDownload,
-        isTrainingMode,
-        name,
-        description,
-        isLocalDev,
-      );
-    } catch (err) {
-      console.error("Błąd uruchamiania testu:", err);
-      Dialog.alert("Wystąpił błąd podczas uruchamiania testu.", "error");
-      if (btn) {
-        btn.disabled = false;
-        loadTestsList();
-      }
-    }
-  } else {
-    // --- WERSJA PRZEGLĄDARKOWA ---
-    if (onlyDownload) {
-      await Dialog.alert(
-        "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
-        "info",
-      );
+  // Kanoniczny stan przycisku (B: jeden szablon zamiast osobnych łańcuchów HTML).
+  if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
+
+  try {
+    await platform.tests.download({ url, id, ver, name, description });
+  } catch (err) {
+    console.error("Błąd pobierania testu:", err);
+    await Notify.error("Wystąpił błąd podczas pobierania testu.");
+    loadTestsList();
+  }
+}
+
+// Snapshot flagi treningowej z momentu startu (run), nie odbioru wyników.
+// Wystarczy jedna zmienna — naraz może biec tylko jeden test (isTestRunning
+// w main). Konsument: results.js:handleTestResults.
+let pendingTrainingRun = null;
+
+export function consumePendingTrainingRun() {
+  const v = pendingTrainingRun;
+  pendingTrainingRun = null;
+  return v;
+}
+
+export async function startRunProcess(id, isLocalDev = false) {
+  const platform = getPlatform();
+  // A1: pytamy o zdolności, nie o kind — gałąź electron/web znika.
+  const caps = platform.capabilities || {
+    canDownload: platform.kind === "electron",
+    canRunLocalDev: platform.kind === "electron",
+  };
+  const btn = document.getElementById(`start-test-${id}`);
+
+  // Kanoniczny stan przycisku (B: jeden szablon zamiast osobnych łańcuchów HTML).
+  if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
+
+  if (isLocalDev && caps.canRunLocalDev) {
+    const confirmed = await Notify.confirm(
+      "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
+        "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
+        "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
+        "Czy na pewno chcesz kontynuować?",
+      "warning",
+    );
+    if (!confirmed) {
+      loadTestsList();
       return;
     }
+  }
 
-    const btn = document.getElementById(`start-test-${id}`);
-    if (btn) {
-      btn.innerHTML = `<span class="material-icons spin" style="font-size:16px;">sync</span> Ładowanie...`;
-      btn.disabled = true;
-    }
+  // Snapshot treningu: wynik tego uruchomienia liczy się wg stanu ze startu.
+  pendingTrainingRun = isTrainingMode;
 
-    const localVersions = await getLocalVersionsCached();
-    const testInfo = localVersions[id];
-
-    if (testInfo && testInfo.webPath) {
-      // Przykładowe zapisanie metadanych sesji w localStorage, by ewentualnie odczytał to sam test JS
-      sessionStorage.setItem("nous_web_current_test_id", id);
-      sessionStorage.setItem("nous_web_training_mode", isTrainingMode);
-
-      // Przejście na adres pliku HTML testu w NOWEJ KARCIE
-      window.open(testInfo.webPath, "_blank");
-
-      // Odblokowujemy przycisk na liście Launcher'a po otwarciu testu
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `<span class="material-icons">play_arrow</span> Uruchom`;
-      }
-    } else {
-      await Dialog.alert(
+  try {
+    const result = await platform.tests.run({ id });
+    // Web adapter sygnalizuje brak webPath jako { opened: false };
+    // Electron/fake nic nie zwracają (undefined) = sukces.
+    if (result && result.opened === false) {
+      pendingTrainingRun = null;
+      await Notify.error(
         "Ten test nie posiada jeszcze odpowiedniej ścieżki (webPath) w rejestrze Web.",
-        "error",
       );
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `<span class="material-icons">play_arrow</span> Uruchom`;
-      }
+      loadTestsList();
     }
+  } catch (err) {
+    pendingTrainingRun = null;
+    console.error("Błąd uruchamiania testu:", err);
+    await Notify.error("Wystąpił błąd podczas uruchamiania testu.");
+    loadTestsList();
   }
 }
