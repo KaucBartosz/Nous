@@ -17,6 +17,7 @@ export function createElectronPlatform(api) {
       canDownload: true,
       canDelete: true,
       canRunLocalDev: true,
+      canBulkZip: true,
     },
 
     tests: {

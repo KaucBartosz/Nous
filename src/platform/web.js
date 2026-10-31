@@ -39,6 +39,25 @@ export function createWebPlatform(deps = {}) {
       canDownload: false,
       canDelete: false,
       canRunLocalDev: false,
+      // Web: brak biblioteki archiwizującej — „Pobierz wszystko” to scalony CSV.
+      canBulkZip: false,
+    },
+
+    storage: {
+      /**
+       * Prosi przeglądarkę o trwałe przechowywanie IndexedDB.
+       * Bez tego dane mogą zostać usunięte przy braku miejsca.
+       * @returns {Promise<boolean>} czy przeglądarka potwierdziła trwałość
+       */
+      requestPersistence: async () => {
+        try {
+          if (!navigator.storage || !navigator.storage.persist) return false;
+          if (await navigator.storage.persisted()) return true;
+          return await navigator.storage.persist();
+        } catch {
+          return false;
+        }
+      },
     },
 
     tests: {

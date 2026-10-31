@@ -21,6 +21,7 @@ export function createFakePlatform(seed = {}) {
       canDownload: true,
       canDelete: true,
       canRunLocalDev: true,
+      canBulkZip: true,
     },
 
     tests: {

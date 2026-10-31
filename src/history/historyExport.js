@@ -67,6 +67,29 @@ export function downloadSingleResult(result) {
 }
 
 /**
+ * „Pobierz wszystko” — jedno miejsce dla obu ścieżek (chmura / gość / konto lokalne).
+ * Platforma bez ZIP-a (Web) dostaje scalony CSV wszystkich wyników: bez
+ * biblioteki archiwizującej nie da się zbudować ZIP-a, a użytkownik ma dostać
+ * wszystkie dane, nie komunikat o błędzie.
+ * @returns {Promise<{success: boolean, format?: 'zip'|'csv', error?: string, cancelled?: boolean}>}
+ */
+export async function archiveHistoryResults({ results, filename, format }) {
+  if (!getPlatform().capabilities?.canBulkZip) {
+    const csvName = `${filename.replace(/\.zip$/i, "")}.csv`;
+    if (!downloadResultsAsCSV(results, csvName)) {
+      return { success: false, error: "brak wyników do zapisania" };
+    }
+    return { success: true, format: "csv" };
+  }
+  return getPlatform().files.bulkZip({
+    results,
+    filename,
+    format,
+    destDir: await silentDestDir(),
+  });
+}
+
+/**
  * Choreografia przycisku ZIP (busy + pasek + restore po 1s).
  * Zwraca null gdy elementów brak (wołający wychodzi jak wcześniej).
  */
