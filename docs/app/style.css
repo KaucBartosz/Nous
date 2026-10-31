@@ -2411,6 +2411,11 @@ input:checked + .slider:before {
     border-color: rgba(29, 78, 216, 0.15);
 }
 
+/* Web: Aktualizacje są ukryte już w pierwszej klatce (bez flasha przed JS). */
+html[data-platform="web"] #nav-updates {
+    display: none !important;
+}
+
 /* ==========================================================
    Powłoka: stany startowe i komunikaty platformy (web)
    ========================================================== */
