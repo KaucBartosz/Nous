@@ -2,19 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   shellPolicyFor,
   isTouchDevice,
+  touchModeFor,
+  TouchMode,
   applyShellPolicy,
 } from '../../src/platform/shell.js';
 
 describe('shellPolicyFor', () => {
-  it('web: gość + blokady, desktop: pełna powłoka', () => {
+  it('web: gość, dotyk z ostrzeżeniem, Aktualizacje ukryte, Historia dostępna', () => {
     const web = shellPolicyFor('web');
     expect(web.guestAutoLogin).toBe(true);
-    expect(web.blockTouchDevices).toBe(true);
-    expect(web.disabledNav.map((n) => n.key)).toEqual(['navHistory', 'navUpdates']);
+    expect(web.touch).toBe('warn');
+    expect(web.hiddenNav).toEqual(['navUpdates']);
+    expect(web.disabledNav).toEqual([]);
     expect(web.hiddenIds).toContain('btn-save-to-registry');
 
     const desk = shellPolicyFor('electron');
     expect(desk.guestAutoLogin).toBe(false);
+    expect(desk.touch).toBe('off');
+    expect(desk.hiddenNav).toEqual([]);
     expect(desk.disabledNav).toEqual([]);
     expect(desk.hiddenIds).toEqual([]);
   });
@@ -28,13 +33,35 @@ describe('isTouchDevice', () => {
   });
 });
 
+describe('touchModeFor (czysta polityka dotyku)', () => {
+  it('brak dotyku → brak ostrzeżeń', () => {
+    expect(touchModeFor({})).toBe(TouchMode.NONE);
+  });
+
+  it('laptop 2-w-1 (dotyk + mysz) → ostrzeżenie, nie blokada', () => {
+    expect(touchModeFor({ touch: true, coarse: false, hoverNone: false })).toBe(
+      TouchMode.WARN,
+    );
+    // nawet gdy dotyk zgłasza coarse, ale urządzenie ma hover (np. Surface z myszą)
+    expect(touchModeFor({ touch: true, coarse: true, hoverNone: false })).toBe(
+      TouchMode.WARN,
+    );
+  });
+
+  it('tablet / telefon (coarse + brak hover) → blokada', () => {
+    expect(touchModeFor({ touch: true, coarse: true, hoverNone: true })).toBe(
+      TouchMode.BLOCK,
+    );
+  });
+});
+
 describe('applyShellPolicy (happy-dom)', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.querySelectorAll('style').forEach((s) => s.remove());
   });
 
-  it('web: ukrywa, blokuje nav (klik → notify), ostrzega w nagłówku', () => {
+  it('web: ukrywa martwe elementy i Aktualizacje, zostawia Historię', () => {
     document.body.innerHTML = `
       <div class="header-title">Nous</div>
       <button id="nav-h">H</button><button id="nav-u">U</button>
@@ -53,11 +80,12 @@ describe('applyShellPolicy (happy-dom)', () => {
     expect(elements.btnLogout.style.display).toBe('none');
     expect(document.querySelector('.participants-panel').style.display).toBe('none');
     expect(document.getElementById('btn-save-to-registry').style.display).toBe('none');
-    expect(document.querySelector('.header-title').textContent).toContain('Przeglądarkowa');
-    expect(elements.navHistory.style.opacity).toBe('0.5');
 
-    elements.navHistory.click();
-    expect(notify.info).toHaveBeenCalledWith(expect.stringContaining('Desktopowej'));
+    // Aktualizacje są ukryte, a nie "martwe ale widoczne"
+    expect(elements.navUpdates.style.display).toBe('none');
+    // Historia jest w pełni funkcjonalna w Web
+    expect(elements.navHistory.style.opacity).toBe('');
+    expect(elements.navHistory.style.display).toBe('');
   });
 
   it('desktop: nic nie rusza', () => {
@@ -72,13 +100,17 @@ describe('applyShellPolicy (happy-dom)', () => {
     expect(applyShellPolicy(shellPolicyFor('web'), { elements: {} })).toBe(false);
   });
 
-  it('dotyk: przejmuje body i haltuje boot', () => {
+  it('dotyk (laptop): ostrzega, ale nie zatrzymuje aplikacji', () => {
     document.body.innerHTML = '<button id="logout">W</button>';
     window.ontouchstart = () => {};
     try {
-      const halted = applyShellPolicy(shellPolicyFor('web'), { elements: {} });
-      expect(halted).toBe(true);
-      expect(document.body.innerHTML).toContain('ekranach dotykowych');
+      const halted = applyShellPolicy(shellPolicyFor('web'), {
+        elements: {},
+        notify: { info: vi.fn() },
+      });
+      expect(halted).toBe(false);
+      expect(document.getElementById('touch-notice')).not.toBeNull();
+      expect(document.body.textContent).toContain('nie obsługuje ekranu dotykowego');
     } finally {
       delete window.ontouchstart;
     }
