@@ -12,7 +12,7 @@ const DEST = path.join(ROOT, "docs", "app");
 const WEB_SRC = path.join(ROOT, "web");
 
 // Pliki przenoszone 1:1 z korzenia repozytorium.
-const STATIC_FILES = ["style.css", "fonts.css", "logo.webp", "logo.png"];
+const STATIC_FILES = ["style.css", "fonts.css", "logo.webp", "logo-touch.png"];
 // Katalogi przenoszone 1:1.
 const STATIC_DIRS = ["assets"];
 // Pliki webowe utrzymywane ręcznie (poza src/).
@@ -134,6 +134,7 @@ function buildWeb() {
 
   // 5. Porządki w artefakcie
   rmrf(path.join(DEST, "inject-adapter.js")); // skrypt Node — nie ma czego szukać na serwerze
+  rmrf(path.join(DEST, "logo.png")); // zastąpiony przez logo.webp + logo-touch.png
   const maps = stripByExtension(DEST, ".map");
   const leftovers = ["web-adapter.js"].filter(
     (f) => !fs.existsSync(path.join(DEST, f)),
