@@ -176,7 +176,7 @@ async function saveResultToSystem() {
     const currentUserId = getResearcherUid();
 
     // A6: zapis → eksport → sync w pipeline; UI tylko reaguje na wynik.
-    await savePipeline(currentResultPackage, {
+    const { csvDownloaded } = await savePipeline(currentResultPackage, {
       researcherUid: currentUserId,
       platformKind: getPlatform().kind,
       saveResult,
@@ -187,6 +187,17 @@ async function saveResultToSystem() {
     elements.btnUploadCloud.textContent = "Zapisano!";
     elements.modalOverlay.classList.add("hidden");
     loadTestsList();
+
+    // Web: CSV pobiera się w tle — bez komunikatu użytkownik nie wie, że ma plik.
+    if (csvDownloaded) {
+      Notify.toast({
+        id: "web-result-saved",
+        titleHtml: "Wynik zapisany",
+        messageHtml:
+          "Pobrano plik CSV. Wynik jest też widoczny w zakładce <strong>Historia Wyników</strong>.",
+        autoDismissMs: 8000,
+      });
+    }
   } catch (e) {
     await Notify.error("Błąd zapisu bazy: " + e.message);
     elements.btnUploadCloud.textContent = "Błąd";

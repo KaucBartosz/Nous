@@ -9,7 +9,7 @@ import {
   WEB_RESULT_IGNORE_KEYS,
 } from "./resultExporter.js";
 
-/** Web nie ma historii — plik .csv generowany od razu po badaniu. */
+/** Web: plik .csv dla badanego — generowany od razu po badaniu. */
 export function needsInstantCsv(platformKind) {
   return platformKind === "web";
 }
@@ -18,7 +18,11 @@ export function needsInstantCsv(platformKind) {
 export function webResultCsv(pkg) {
   const flat = resultRow(pkg, {
     includeResearcher: false,
-    deep: false,
+    // Metryczka bywa danymi osobowymi — plik dla badanego jej nie zawiera.
+    includeDemographics: false,
+    // deep: zagnieżdżone pola (np. expInfo) muszą być spłaszczone,
+    // inaczej trafiały do CSV jako "[object Object]".
+    deep: true,
     ignoreKeys: WEB_RESULT_IGNORE_KEYS,
   });
   return {

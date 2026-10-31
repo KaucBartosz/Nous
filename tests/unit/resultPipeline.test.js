@@ -224,12 +224,22 @@ describe('resultPipeline (A6: save → export → sync)', () => {
     expect(needsInstantCsv('fake')).toBe(false);
   });
 
-  it('webResultCsv: nazwa + BOM + brak Badacz UID (jak stary Web)', () => {
+  it('webResultCsv: nazwa + BOM + brak Badacz UID i metryczki (plik dla badanego)', () => {
     const { filename, csv } = webResultCsv(pkg());
     expect(filename).toMatch(/^Wynik_stroop_\d+\.csv$/);
     expect(csv.startsWith('﻿Parametr;Wartość')).toBe(true);
     expect(csv).not.toContain('Badacz UID');
+    expect(csv).not.toContain('Metryczka');
     expect(csv).toContain('Wynik - poprawne');
+  });
+
+  it('webResultCsv: zagnieżdżone pola spłaszczone, zero [object Object]', () => {
+    const { csv } = webResultCsv({
+      ...pkg(),
+      wyniki: { poprawne: 10, expInfo: { session: '001', date: '2026-10-31' } },
+    });
+    expect(csv).toContain('Wynik - expInfo - session;001');
+    expect(csv).not.toContain('[object Object]');
   });
 
   it('electron: zapis + sync w tle, bez CSV', async () => {

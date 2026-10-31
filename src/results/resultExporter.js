@@ -35,10 +35,27 @@ export function escapeCsvCell(value) {
 }
 
 /**
- * Spłaszcza Wynik do wiersza {etykieta: wartość}.
- * @param {boolean} deep — true: rekurencyjny flatten (historia), false: płasko + ignoreKeys (Web)
+ * Kopiuje obiekt bez wskazanych kluczy (metadane protokołu nie trafiają do CSV).
  */
-export function resultRow(pkgLike, { includeResearcher = true, ignoreKeys = [], deep = true } = {}) {
+export function omitKeys(source, keys = []) {
+  if (!source || typeof source !== "object") return {};
+  if (keys.length === 0) return source;
+  const out = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (!keys.includes(key)) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Spłaszcza Wynik do wiersza {etykieta: wartość}.
+ * @param {boolean} deep — true: rekurencyjny flatten, false: tylko pierwszy poziom
+ * @param {boolean} includeDemographics — Web pomija metryczkę w pliku dla badanego
+ */
+export function resultRow(
+  pkgLike,
+  { includeResearcher = true, includeDemographics = true, ignoreKeys = [], deep = true } = {},
+) {
   const pkg = normalizeResult(pkgLike);
   const flat = {};
   flat["Data"] = new Date(pkg.timestamp).toLocaleString();
@@ -47,24 +64,28 @@ export function resultRow(pkgLike, { includeResearcher = true, ignoreKeys = [], 
   // Decyzja 2b/b: brakujący badacz to "-" jak badany (wcześniej literalne "null").
   if (includeResearcher) flat["Badacz UID"] = pkg.researcher_uid ?? "-";
 
-  const demo = pkg.demographics || {};
-  const dData = demo.data || demo;
-  if (dData && typeof dData === "object") {
-    // Decyzja 2b/b: metryczkę spłaszczamy jak wyniki (ten sam ` - `),
-    // zamiast wpisywać obiekty (kończyły jako "[object Object]").
-    const demoFlat = {};
-    flattenObject(dData, demoFlat, "Metryczka");
-    Object.assign(flat, demoFlat);
+  if (includeDemographics) {
+    const demo = pkg.demographics || {};
+    const dData = demo.data || demo;
+    if (dData && typeof dData === "object") {
+      // Decyzja 2b/b: metryczkę spłaszczamy jak wyniki (ten sam ` - `),
+      // zamiast wpisywać obiekty (kończyły jako "[object Object]").
+      const demoFlat = {};
+      flattenObject(dData, demoFlat, "Metryczka");
+      Object.assign(flat, demoFlat);
+    }
   }
 
-  const resData = pkg.wyniki || {};
+  // Klucze protokołu odfiltrowane PRZED spłaszczeniem — inaczej `deep`
+  // omijał filtr i obiekty trafiały do CSV jako "[object Object]".
+  const resData = omitKeys(pkg.wyniki || {}, ignoreKeys);
   if (deep) {
     const flatWyniki = {};
     flattenObject(resData, flatWyniki, "Wynik");
     Object.assign(flat, flatWyniki);
   } else {
     for (const [key, value] of Object.entries(resData)) {
-      if (!ignoreKeys.includes(key) && value !== undefined && value !== null) {
+      if (value !== undefined && value !== null) {
         flat[`Wynik - ${key}`] = value;
       }
     }
