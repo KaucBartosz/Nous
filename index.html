@@ -208,6 +208,10 @@
                         <span class="material-icons">history</span> Historia
                         Wyników
                     </button>
+                    <button id="nav-statistics" class="nav-item">
+                        <span class="material-icons">bar_chart</span>
+                        Statystyka
+                    </button>
                     <button id="nav-updates" class="nav-item">
                         <span class="material-icons">system_update</span>
                         Aktualizacje
@@ -735,6 +739,185 @@
                                 <!-- JS wstrzyknie tu wiersze -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- WIDOK 2b: Statystyka -->
+                <div id="statistics-view" class="hidden stats-view">
+                    <div class="stats-header">
+                        <div class="stats-header-title">
+                            <span class="material-icons stats-header-icon">insights</span>
+                            <div>
+                                <h3>Statystyka wyników</h3>
+                                <p class="stats-header-sub">
+                                    Porównuj wykonania i analizuj wyniki testów.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="stats-segmented" role="group" aria-label="Tryb statystyk">
+                            <button
+                                type="button"
+                                class="stats-segmented-btn is-active"
+                                data-mode="personal"
+                                aria-pressed="true"
+                            >
+                                Osobisty
+                            </button>
+                            <button
+                                type="button"
+                                class="stats-segmented-btn"
+                                data-mode="research"
+                                aria-pressed="false"
+                            >
+                                Badawczy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="stats-controls">
+                        <label class="stats-field">
+                            <span class="stats-field-label">Test</span>
+                            <select id="stats-test"></select>
+                        </label>
+
+                        <div id="stats-research-scope" class="stats-scope hidden">
+                            <label class="stats-field">
+                                <span class="stats-field-label">Zakres</span>
+                                <select id="stats-scope">
+                                    <option value="all">Wszyscy</option>
+                                    <option value="subject">Po ID badanego</option>
+                                    <option value="participant">Kartoteka</option>
+                                </select>
+                            </label>
+                            <label class="stats-field hidden" id="stats-subject-field">
+                                <span class="stats-field-label">ID badanego</span>
+                                <input
+                                    id="stats-subject-input"
+                                    type="text"
+                                    placeholder="np. A-001"
+                                />
+                            </label>
+                            <label class="stats-field hidden" id="stats-participant-field">
+                                <span class="stats-field-label">Profil z kartoteki</span>
+                                <select id="stats-participant-select"></select>
+                            </label>
+                        </div>
+
+                        <button
+                            id="stats-metrics-toggle"
+                            class="btn outline small stats-metrics-toggle"
+                            type="button"
+                        >
+                            <span class="material-icons" style="font-size: 16px">tune</span>
+                            Metryki
+                        </button>
+                    </div>
+
+                    <div id="stats-kpis" class="stats-kpis hidden"></div>
+
+                    <div id="stats-metrics-panel" class="hidden stats-section">
+                        <div class="stats-section-header">
+                            <h4>
+                                <span class="material-icons">tune</span>
+                                Metryki
+                            </h4>
+                            <p class="stats-section-sub">
+                                Wybierz metryki widoczne w tabelach.
+                            </p>
+                        </div>
+                        <div id="stats-metrics-list" class="stats-metrics-panel"></div>
+                    </div>
+
+                    <div id="stats-personal-runs" class="hidden stats-section">
+                        <div class="stats-section-header">
+                            <h4>
+                                <span class="material-icons">list_alt</span>
+                                Wykonania
+                            </h4>
+                            <p class="stats-section-sub">
+                                Zaznacz dwa wykonania, aby je porównać.
+                            </p>
+                        </div>
+                        <div class="table-container">
+                            <table id="stats-runs-table" class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 52px; text-align: center;">Wybierz</th>
+                                        <th>Data</th>
+                                        <th class="stats-num">Wynik</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="stats-compare" class="hidden stats-section">
+                        <div class="stats-section-header">
+                            <h4>
+                                <span class="material-icons">compare_arrows</span>
+                                Porównanie
+                            </h4>
+                            <p id="stats-compare-info" class="stats-section-sub"></p>
+                        </div>
+                        <div class="table-container">
+                            <table id="stats-compare-table" class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Metryka</th>
+                                        <th class="stats-num">Wykonanie A</th>
+                                        <th class="stats-num">Wykonanie B</th>
+                                        <th class="stats-num">Różnica</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="stats-trend" class="hidden stats-section">
+                        <div class="stats-section-header">
+                            <h4>
+                                <span class="material-icons">trending_up</span>
+                                Trend
+                            </h4>
+                            <div class="stats-trend-controls">
+                                <label class="stats-field stats-field-inline">
+                                    <span class="stats-field-label">Metryka</span>
+                                    <select id="stats-trend-metric"></select>
+                                </label>
+                                <span id="stats-trend-info" class="stats-section-sub"></span>
+                            </div>
+                        </div>
+                        <div id="stats-trend-chart" class="stats-chart-wrap"></div>
+                    </div>
+
+                    <div id="stats-research" class="hidden stats-section">
+                        <div class="stats-section-header">
+                            <h4>
+                                <span class="material-icons">functions</span>
+                                Średnie wyniki
+                            </h4>
+                            <p id="stats-research-count" class="stats-count"></p>
+                        </div>
+                        <div class="table-container">
+                            <table id="stats-agg-table" class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Metryka</th>
+                                        <th class="stats-num">Średnia</th>
+                                        <th class="stats-num">Min</th>
+                                        <th class="stats-num">Max</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="stats-empty" class="stats-empty hidden">
+                        <span class="material-icons stats-empty-icon">query_stats</span>
+                        <p id="stats-empty-text"></p>
                     </div>
                 </div>
 

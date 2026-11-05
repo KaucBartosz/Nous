@@ -27,6 +27,10 @@ import {
   exportHistoryToCSV,
   initHistoryView,
 } from "./modules/history.js";
+import {
+  loadStatisticsData,
+  initStatisticsView,
+} from "./modules/statistics.js";
 import { loadUpdatesData } from "./modules/updates.js";
 import {
   initDemographics,
@@ -103,6 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   elements.navHistory.addEventListener("click", () =>
     switchView("history", { onHistory: loadHistoryData }),
+  );
+  elements.navStatistics.addEventListener("click", () =>
+    switchView("statistics", { onStatistics: loadStatisticsData }),
   );
   elements.navUpdates.addEventListener("click", () =>
     switchView("updates", { onUpdates: loadUpdatesData }),
@@ -239,6 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 5.5. History View Init
+  initStatisticsView();
   initHistoryView();
 
   // 6. Subsystems

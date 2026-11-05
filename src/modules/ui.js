@@ -19,6 +19,7 @@ function getElementsLazy() {
 
     navLibrary: document.getElementById("nav-library"),
     navHistory: document.getElementById("nav-history"),
+    navStatistics: document.getElementById("nav-statistics"),
     navUpdates: document.getElementById("nav-updates"),
     navDemographics: document.getElementById("nav-demographics"),
     navDemoCreator: document.getElementById("nav-demo-creator"),
@@ -29,6 +30,7 @@ function getElementsLazy() {
     viewLibrary: document.getElementById("library-view"),
     testsGrid: document.getElementById("tests-grid"),
     viewHistory: document.getElementById("history-view"),
+    viewStatistics: document.getElementById("statistics-view"),
     viewUpdates: document.getElementById("updates-view"),
     viewDemographics: document.getElementById("demographics-view"),
     viewDemoCreator: document.getElementById("demo-creator-view"),
@@ -141,6 +143,11 @@ const VIEW_CONFIG = {
     view: "viewHistory",
     nav: "navHistory",
     callback: "onHistory",
+  },
+  statistics: {
+    view: "viewStatistics",
+    nav: "navStatistics",
+    callback: "onStatistics",
   },
   updates: {
     view: "viewUpdates",
