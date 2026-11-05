@@ -1397,7 +1397,7 @@ async function quitPsychoJS(message, isCompleted) {
           iloscKlikniecOgolem++;
           if (trial.correct === 1) poprawneTrafienia++;
           if (typeof trial.rt === "number" && trial.rt >= 0) {
-            sumRT += trial.rt;
+            sumRT += trial.rt * 1000;
             validRTCount++;
           }
         } else {
@@ -1405,7 +1405,7 @@ async function quitPsychoJS(message, isCompleted) {
         }
       }
       let sredniCzasReakcji =
-        validRTCount > 0 ? Math.round((sumRT / validRTCount) * 1000) : 0;
+        validRTCount > 0 ? Math.round(sumRT / validRTCount) : 0;
       let bledneKlikniecia = Math.max(
         0,
         iloscKlikniecOgolem - poprawneTrafienia,

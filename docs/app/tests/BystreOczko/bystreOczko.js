@@ -774,12 +774,12 @@ async function quitPsychoJS(message, isCompleted) {
           noResponseCount++;
         }
         let rtSec = (typeof trial.rt === 'number' && trial.rt >= 0) ? trial.rt : REACTION_TIME_LIMIT_SEC;
-        sumRT += rtSec;
+        sumRT += rtSec * 1000;
       }
 
       let totalClicks = correctCount + wrongCount;
       let nTrials = allData.length;
-      let avgRTms = nTrials > 0 ? Math.round((sumRT / nTrials) * 1000) : 0;
+      let avgRTms = nTrials > 0 ? Math.round(sumRT / nTrials) : 0;
 
       window.electronTest.sendResults({
         testId: expInfo['expName'],
@@ -792,6 +792,13 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_obiektow_do_klikniecia: nTrials,
         sredni_czas_reakcji: avgRTms,
         score: `Poprawne: ${correctCount} | Błędne: ${wrongCount} | Braki: ${noResponseCount} | Śr. RT: ${avgRTms} ms`,
+        statystyki: {
+          sredni_czas_ms: avgRTms,
+          poprawne_reakcje: correctCount,
+          wszystkie_proby: nTrials,
+          bledne_reakcje: wrongCount,
+          skutecznosc: Math.round((correctCount / nTrials) * 100)
+        },
         wyniki: allData
       });
     } else {

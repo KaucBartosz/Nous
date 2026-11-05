@@ -841,7 +841,7 @@ async function quitPsychoJS(message, isCompleted) {
       .map((d) => d.responseTime);
     let avgRT =
       ct.length > 0
-        ? Math.round((ct.reduce((a, b) => a + b, 0) / ct.length) * 1000)
+        ? Math.round(ct.reduce((a, b) => a + b * 1000, 0) / ct.length)
         : 0;
     let labels = [
       "",

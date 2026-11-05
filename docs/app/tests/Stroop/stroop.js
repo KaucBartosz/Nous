@@ -362,7 +362,7 @@ function trialRoutineEachFrame() {
         let key = theseKeys[0].name;
         if (key === 'escape') return quitPsychoJS('Przerwano.', false);
 
-        let rt_val = Math.round((theseKeys[0].rt - 0.5) * 1000); // RT od momentu pojawienia słowa (ms)
+        let rt_val = Math.round((theseKeys[0].rt - targetText.tStart) * 1000); // RT od momentu pojawienia słowa (ms)
         let correct = (key === correctKey) ? 1 : 0;
         psychoJS.experiment.addData('trial_n', trials_data.length + 1);
         psychoJS.experiment.addData('word', currentWord);
@@ -445,6 +445,13 @@ async function quitPsychoJS(message, isCompleted) {
         sredni_czas_reakcji: avgRT,
         poziom_trudnosci: `${n_questions} pytań`,
         score: `Poprawne: ${correct} | Błędne: ${errors} | Pominięte: ${total_trials - presses} | Śr. RT: ${avgRT} ms | Skuteczność: ${accuracy}%`,
+        statystyki: {
+          sredni_czas_ms: avgRT,
+          poprawne_reakcje: correct,
+          wszystkie_proby: total_trials,
+          bledne_reakcje: errors,
+          skutecznosc: accuracy
+        },
         wyniki: trials_data
       });
     } else {

@@ -11,7 +11,7 @@ const INJECTOR_PATH = path.join(__dirname, '..', 'inject-adapter.js');
 
 // Wykluczenia - czego NIE kopiować
 const IGNORE_EXTENSIONS = ['.py', '.md', '.zip', '.psd', '.txt', '.gitignore', '.map'];
-const IGNORE_DIRS = ['.git', '.github', '.claude', '.vscode'];
+const IGNORE_DIRS = ['.git', '.github', '.claude', '.vscode', 'out', 'tests', 'node_modules', '__pycache__'];
 
 function cleanTemp() {
     if (fs.existsSync(TEMP_DIR)) {
@@ -26,7 +26,9 @@ function copyRecursive(src, dest) {
     const entries = fs.readdirSync(src, { withFileTypes: true });
     for (let entry of entries) {
         if (IGNORE_DIRS.includes(entry.name)) continue;
-        
+        if (typeof entry.isSymbolicLink === 'function' && entry.isSymbolicLink()) continue;
+
+      
         const srcPath = path.join(src, entry.name);
         const destPath = path.join(dest, entry.name);
         
@@ -43,20 +45,32 @@ function copyRecursive(src, dest) {
 }
 
 try {
-    console.log('1. Klonowanie repozytorium BBTP...');
-    cleanTemp();
-    execSync(`git clone --depth 1 ${REPO_URL} "${TEMP_DIR}"`, { stdio: 'inherit' });
+    const defaultLocalPath = path.join('C:', 'Users', 'HARDPC', 'Desktop', 'BBTP');
+    const localSrc = process.argv[2] || (fs.existsSync(defaultLocalPath) ? defaultLocalPath : null);
+
+    let sourceDir = TEMP_DIR;
+    let isCloned = false;
+
+    if (localSrc && fs.existsSync(localSrc)) {
+        console.log(`1. Używanie lokalnego katalogu BBTP: ${localSrc}`);
+        sourceDir = localSrc;
+    } else {
+        console.log('1. Klonowanie repozytorium BBTP...');
+        cleanTemp();
+        execSync(`git clone --depth 1 ${REPO_URL} "${TEMP_DIR}"`, { stdio: 'inherit' });
+        isCloned = true;
+    }
 
     console.log('\n2. Przetwarzanie folderów testów...');
     if (!fs.existsSync(TESTS_DEST_DIR)) fs.mkdirSync(TESTS_DEST_DIR, { recursive: true });
 
-    const rootEntries = fs.readdirSync(TEMP_DIR, { withFileTypes: true });
+    const rootEntries = fs.readdirSync(sourceDir, { withFileTypes: true });
     const importedTests = [];
 
     for (let entry of rootEntries) {
         if (entry.isDirectory() && !IGNORE_DIRS.includes(entry.name)) {
             // Sprawdź czy to faktycznie test (np. czy ma index.html gdzieś w środku)
-            const srcFolder = path.join(TEMP_DIR, entry.name);
+            const srcFolder = path.join(sourceDir, entry.name);
             if (fs.existsSync(path.join(srcFolder, 'index.html'))) {
                 console.log(` -> Kopiowanie testu: ${entry.name}`);
                 const destFolder = path.join(TESTS_DEST_DIR, entry.name);
@@ -87,9 +101,6 @@ try {
         }
     }
 
-    // Opcjonalnie usuwamy z rejestru wpisy testów, których już nie ma?
-    // Zakładamy, że nie usuwamy, chyba że użytkownik o to poprosi.
-    
     // Sortujmy alfabetycznie
     registry.sort((a, b) => a.name.localeCompare(b.name));
     fs.writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2));
@@ -99,8 +110,10 @@ try {
         execSync(`node "${INJECTOR_PATH}"`, { stdio: 'inherit', cwd: path.join(__dirname, '..') });
     }
 
-    console.log('\n5. Czyszczenie plików tymczasowych...');
-    cleanTemp();
+    if (isCloned) {
+        console.log('\n5. Czyszczenie plików tymczasowych...');
+        cleanTemp();
+    }
 
     console.log('\n✅ Synchronizacja BBTP zakończona sukcesem!');
 } catch (e) {

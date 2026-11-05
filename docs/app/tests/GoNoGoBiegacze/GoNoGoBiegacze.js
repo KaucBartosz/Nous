@@ -503,11 +503,11 @@ async function quitPsychoJS(message, isCompleted) {
       if (t.anticipatory) continue;
       if (t.condition === 'go') {
         goTrials++;
-        if (t.pressed) { hits++; sumHitRT += t.rt; countHitRT++; }
+        if (t.pressed) { hits++; sumHitRT += t.rt * 1000; countHitRT++; }
         else { misses++; }
       } else {
         nogoTrials++;
-        if (t.pressed) { fa++; sumFaRT += t.rt; countFaRT++; }
+        if (t.pressed) { fa++; sumFaRT += t.rt * 1000; countFaRT++; }
         else { cr++; }
       }
     }
@@ -530,7 +530,7 @@ async function quitPsychoJS(message, isCompleted) {
     }
 
     let dPrime = (pNorm(HR_adj) - pNorm(FAR_adj)).toFixed(2);
-    let avgHitRT = countHitRT > 0 ? Math.round((sumHitRT / countHitRT) * 1000) : 0;
+    let avgHitRT = countHitRT > 0 ? Math.round(sumHitRT / countHitRT) : 0;
     let avgFaRT = countFaRT > 0 ? Math.round((sumFaRT / countFaRT) * 1000) : 0;
 
     let totalCorrect = hits + cr;

@@ -1174,7 +1174,7 @@ async function quitPsychoJS(message, isCompleted) {
         let rt = trial['key_resp.rt'] || (trial.key_resp && trial.key_resp.rt);
         if (rt !== undefined && rt !== null) {
           if (typeof rt === 'number' && rt >= 0) {
-            sumRT += rt;
+            sumRT += rt * 1000;
             validRTCount++;
           }
         }
@@ -1189,7 +1189,7 @@ async function quitPsychoJS(message, isCompleted) {
         }
       }
 
-      let sredniCzasReakcji = validRTCount > 0 ? Math.round((sumRT / validRTCount) * 1000) : 0;
+      let sredniCzasReakcji = validRTCount > 0 ? Math.round(sumRT / validRTCount) : 0;
 
       let payload = {
         testId: "NWstecz",

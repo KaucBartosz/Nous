@@ -722,7 +722,7 @@ function trialRoutineEachFrame() {
         window.rt = currentTime - window.circleOnsetTime;
         window.correctCount++;
         window.totalResponses++;
-        window.rtSum += window.rt;
+        window.rtSum += window.rt * 1000;
         window.rtList.push(window.rt);
 
         window.trialResults.push({
@@ -760,7 +760,7 @@ function trialRoutineEachFrame() {
         window.rt = currentTime - window.circleOnsetTime;
         window.correctCount++;
         window.totalResponses++;
-        window.rtSum += window.rt;
+        window.rtSum += window.rt * 1000;
         window.rtList.push(window.rt);
 
         window.trialResults.push({
@@ -864,7 +864,7 @@ function trialRoutineEnd(snapshot) {
     psychoJS.experiment.addData('trial.stopped', globalClock.getTime());
 
     // Obliczenie wyników
-    let avgRT = window.totalResponses > 0 ? (window.rtSum / window.totalResponses) * 1000 : 0;  // w ms
+    let avgRT = window.totalResponses > 0 ? (window.rtSum / window.totalResponses) : 0;  // w ms
     let totalCircles = window.correctCount + window.missCount;
     let percentCorrect = totalCircles > 0 ? (window.correctCount / totalCircles) * 100 : 0;
 
@@ -914,7 +914,7 @@ async function quitPsychoJS(message, isCompleted) {
   if (typeof window.electronTest !== 'undefined') {
     if (isCompleted) {
       // Obliczenie wyników
-      let avgRT = window.totalResponses > 0 ? Math.round((window.rtSum / window.totalResponses) * 1000) : 0;  // w ms
+      let avgRT = window.totalResponses > 0 ? Math.round(window.rtSum / window.totalResponses) : 0;  // w ms
       let totalCircles = window.correctCount + window.missCount;
 
       window.electronTest.sendResults({
@@ -927,6 +927,13 @@ async function quitPsychoJS(message, isCompleted) {
         sredni_czas_reakcji: avgRT,
         klikniecia_bez_kolka: window.clicksWithoutCircle,
         score: `Poprawne: ${window.correctCount} | Misses: ${window.missCount} | Bez kółka: ${window.clicksWithoutCircle} | Łącznie: ${totalCircles} | Śr. RT: ${avgRT} ms`,
+        statystyki: {
+          sredni_czas_ms: avgRT,
+          poprawne_reakcje: window.correctCount,
+          wszystkie_proby: totalCircles,
+          bledne_reakcje: window.missCount,
+          skutecznosc: Math.round((window.correctCount / totalCircles) * 100)
+        },
         wyniki: window.trialResults
       });
     } else {

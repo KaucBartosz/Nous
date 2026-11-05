@@ -227,7 +227,7 @@ async function loadTrackResources(path) {
     depth: 10,
   });
 
-  startTime = Date.now();
+  startTime = performance.now();
   finished = false;
 }
 
@@ -343,12 +343,12 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_poprawnych_nacisniec: 1,
         ilosc_blednych_nacisniec: collisionCount,
         ogolna_ilosc_nacisniec: 1 + collisionCount,
-        czas_pokonania_trasy_sek: Math.round((Date.now() - startTime) / 1000),
-        score: `Trasa ${expInfo["difficulty"]} | Kolizje: ${collisionCount} | Czas: ${Math.round((Date.now() - startTime) / 1000)}s`,
+        czas_pokonania_trasy_sek: Math.round((performance.now() - startTime) / 1000),
+        score: `Trasa ${expInfo["difficulty"]} | Kolizje: ${collisionCount} | Czas: ${Math.round((performance.now() - startTime) / 1000)}s`,
         statystyki: {
           trasa: expInfo["difficulty"],
           kolizje: collisionCount,
-          czas_ms: Date.now() - startTime,
+          czas_ms: Math.round(performance.now() - startTime),
         },
       });
     } else {

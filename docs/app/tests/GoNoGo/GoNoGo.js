@@ -1265,7 +1265,7 @@ async function quitPsychoJS(message, isCompleted) {
         }
         if (pressed) {
           if (typeof currentRT === 'number' && currentRT >= 0) {
-            sumRT += currentRT;
+            sumRT += currentRT * 1000;
             validRTCount++;
           }
         }
@@ -1273,7 +1273,7 @@ async function quitPsychoJS(message, isCompleted) {
 
       let totalTrials = goTrials + nogoTrials;
       let totalCorrect = hits + correctRejects;
-      let sredniCzasReakcji = validRTCount > 0 ? Math.round((sumRT / validRTCount) * 1000) : 0;
+      let sredniCzasReakcji = validRTCount > 0 ? Math.round(sumRT / validRTCount) : 0;
       let accuracy = totalTrials > 0 ? Math.round((totalCorrect / totalTrials) * 100) : 0;
       let faRate = nogoTrials > 0 ? Math.round((falseAlarms / nogoTrials) * 100) : 0;
 

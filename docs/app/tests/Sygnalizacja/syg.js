@@ -756,7 +756,7 @@ async function quitPsychoJS(message, isCompleted) {
             bledneNacisniecia++;
           }
           if (typeof trial.rt === 'number' && trial.rt >= 0) {
-            totalRT += trial.rt;
+            totalRT += trial.rt * 1000;
             validRTCount++;
           }
         }
@@ -767,7 +767,7 @@ async function quitPsychoJS(message, isCompleted) {
       }
 
       // RT w ms
-      let sredniCzasReakcji = validRTCount > 0 ? Math.round((totalRT / validRTCount) * 1000) : 0;
+      let sredniCzasReakcji = validRTCount > 0 ? Math.round(totalRT / validRTCount) : 0;
       let accuracy = totalTrials > 0 ? Math.round((correctCount / totalTrials) * 100) : 0;
 
       let payload = {
