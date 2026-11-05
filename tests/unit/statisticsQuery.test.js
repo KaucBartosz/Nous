@@ -79,6 +79,36 @@ describe("statisticsQuery", () => {
     expect(score.value).toBe(10);
   });
 
+  it("deduplikuje metryki obecne jednocześnie na poziomie głównym i w statystykach", () => {
+    const payloadWithDuplicates = {
+      wyniki: {
+        score: 15,
+        ilosc_blednych_nacisniec: 3,
+        sredni_czas_reakcji: 350,
+        ilosc_poprawnych_nacisniec: 12,
+        ogolna_ilosc_nacisniec: 15,
+        statystyki: {
+          bledne_reakcje: 3,
+          sredni_czas_ms: 350,
+          poprawne_reakcje: 12,
+          wszystkie_proby: 15,
+        },
+      },
+    };
+    const metrics = extractMetrics(payloadWithDuplicates);
+    const keys = metrics.map((m) => m.key);
+    const labels = metrics.map((m) => m.label);
+
+    // Każde pojęcie powinno występować dokładnie raz
+    expect(keys.filter((k) => k === "bledne").length).toBe(1);
+    expect(keys.filter((k) => k === "sredni_czas_ms").length).toBe(1);
+    expect(keys.filter((k) => k === "poprawne").length).toBe(1);
+    expect(keys.filter((k) => k === "wszystkie_proby").length).toBe(1);
+
+    expect(labels.filter((l) => l === "Błędy").length).toBe(1);
+    expect(labels.filter((l) => l === "Średni czas reakcji (ms)").length).toBe(1);
+  });
+
   it("distinctTestIds normalizuje aliasy", () => {
     const tests = distinctTestIds(sampleResults);
     expect(tests).toContain("Sygnalizacja");
@@ -91,10 +121,10 @@ describe("statisticsQuery", () => {
     expect(subjects).toEqual(["A", "B"]);
   });
 
-  it("filterStatisticsResults filtruje test i badanych", () => {
+  it("filterStatisticsResults filtruje test i badanych bez względu na wielkość liter", () => {
     const filtered = filterStatisticsResults(sampleResults, {
       testId: "Sygnalizacja",
-      subjectIds: ["A"],
+      subjectIds: ["a"],
     });
     expect(filtered.length).toBe(1);
     expect(filtered[0].id).toBe("r1");

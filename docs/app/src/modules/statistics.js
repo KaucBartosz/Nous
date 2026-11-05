@@ -17,7 +17,7 @@ import {
   renderRunsTable,
   renderCompareTable,
   renderAggTable,
-  renderTrendTable,
+  renderTrendChart,
   renderMetricsPanel,
 } from "../statistics/statisticsTable.js";
 import { Notify } from "../notify/notify.js";
@@ -30,6 +30,7 @@ const state = {
   selectedRunIds: new Set(),
   selectedOrder: [],
   selectedMetrics: new Set(),
+  trendMetric: null,
   scope: "all",
   subjectId: null,
   participantKey: null,
@@ -77,7 +78,7 @@ function availableMetrics(runs) {
 }
 
 function defaultMetricSelection(metrics) {
-  const preferred = /wynik|poprawne|błędne|wszystkie|skuteczność|czas/i;
+  const preferred = /wynik|punkt|błęd|błąd|wszystkie|skuteczność|czas/i;
   const chosen = metrics.filter((m) => preferred.test(m.label)).map((m) => m.key);
   if (chosen.length === 0 && metrics.length > 0) chosen.push(metrics[0].key);
   return chosen;
@@ -172,6 +173,21 @@ function populateParticipants() {
     select.appendChild(opt);
   });
   if (prev) select.value = prev;
+}
+
+function populateSubjectSuggestions() {
+  const datalist = el("stats-subject-datalist");
+  if (!datalist) return;
+  let ids = distinctSubjectIds(state.allResults, state.testId);
+  if (ids.length === 0 && state.allResults.length > 0) {
+    ids = distinctSubjectIds(state.allResults, null);
+  }
+  datalist.innerHTML = "";
+  ids.forEach((id) => {
+    const opt = document.createElement("option");
+    opt.value = id;
+    datalist.appendChild(opt);
+  });
 }
 
 function updateScopeVisibility() {
@@ -297,11 +313,13 @@ function render() {
       });
     }
 
-    // porównanie
+    // porównanie — zawsze od starszego (A) do nowszego (B), niezależnie od kolejności zaznaczenia
     if (state.selectedRunIds.size === 2) {
-      const ids = state.selectedOrder.slice(0, 2);
-      const runA = runs.find((r) => r.id === ids[0]);
-      const runB = runs.find((r) => r.id === ids[1]);
+      const selected = runs
+        .filter((r) => state.selectedRunIds.has(r.id))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      const runA = selected[0];
+      const runB = selected[1];
       if (runA && runB) {
         const rows = compareRuns(runA, runB, selectedMetricKeys);
         const ctbody = document.querySelector("#stats-compare-table tbody");
@@ -316,18 +334,40 @@ function render() {
       compare?.classList.add("hidden");
     }
 
-    // trend dla pierwszej metryki
-    if (selectedMetricKeys.length > 0) {
-      const firstKey = selectedMetricKeys[0];
-      const points = trendForMetric(runs, firstKey);
-      const ttbody = document.querySelector("#stats-trend-table tbody");
-      if (ttbody) renderTrendTable(ttbody, points);
+    // trend — metryka wybierana z listy, wykres liniowy
+    const trendSelect = el("stats-trend-metric");
+    const allKeys = metrics.map((m) => m.key);
+    if (!state.trendMetric || !allKeys.includes(state.trendMetric)) {
+      state.trendMetric =
+        selectedMetricKeys.find((k) => allKeys.includes(k)) ||
+        allKeys[0] ||
+        null;
+    }
+    if (trendSelect) {
+      trendSelect.innerHTML = "";
+      metrics.forEach((m) => {
+        const opt = document.createElement("option");
+        opt.value = m.key;
+        opt.textContent = m.label;
+        trendSelect.appendChild(opt);
+      });
+      if (state.trendMetric) trendSelect.value = state.trendMetric;
+      state.trendMetric = trendSelect.value || state.trendMetric;
+    }
+
+    if (state.trendMetric) {
+      trend?.classList.remove("hidden");
+      const points = trendForMetric(runs, state.trendMetric);
+      const chart = el("stats-trend-chart");
+      const metric = metrics.find((m) => m.key === state.trendMetric);
+      if (chart) {
+        renderTrendChart(chart, points, { metricLabel: metric?.label });
+      }
       const info = el("stats-trend-info");
       if (info) {
-        const metric = metrics.find((m) => m.key === firstKey);
-        info.textContent = metric ? metric.label : "";
+        info.textContent =
+          points.length === 1 ? "1 wykonanie" : `${points.length} wykonań`;
       }
-      trend?.classList.remove("hidden");
     } else {
       trend?.classList.add("hidden");
     }
@@ -361,7 +401,10 @@ export function initStatisticsView() {
       state.selectedOrder = [];
       const scopeSelect = el("stats-scope");
       if (scopeSelect) scopeSelect.value = "all";
+      const subjectInput = el("stats-subject-input");
+      if (subjectInput) subjectInput.value = "";
       updateScopeVisibility();
+      populateSubjectSuggestions();
       render();
     });
   });
@@ -371,6 +414,7 @@ export function initStatisticsView() {
     state.testId = e.target.value || null;
     state.selectedRunIds.clear();
     state.selectedOrder = [];
+    populateSubjectSuggestions();
     render();
   });
 
@@ -379,19 +423,39 @@ export function initStatisticsView() {
     state.scope = e.target.value;
     state.subjectId = null;
     state.participantKey = null;
+    const subjectInput = el("stats-subject-input");
+    if (subjectInput) subjectInput.value = "";
+    populateSubjectSuggestions();
     updateScopeVisibility();
     render();
   });
 
   const subjectInput = el("stats-subject-input");
-  subjectInput?.addEventListener("change", (e) => {
+  const handleSubjectChange = (e) => {
     state.subjectId = e.target.value.trim() || null;
     render();
+  };
+  subjectInput?.addEventListener("input", handleSubjectChange);
+  subjectInput?.addEventListener("change", handleSubjectChange);
+  subjectInput?.addEventListener("click", () => {
+    if (typeof subjectInput.showPicker === "function") {
+      try {
+        subjectInput.showPicker();
+      } catch {
+        // Ignoruj błąd jeśli kontekst nie zezwala na showPicker
+      }
+    }
   });
 
   const participantSelect = el("stats-participant-select");
   participantSelect?.addEventListener("change", (e) => {
     state.participantKey = e.target.value || null;
+    render();
+  });
+
+  const trendSelect = el("stats-trend-metric");
+  trendSelect?.addEventListener("change", (e) => {
+    state.trendMetric = e.target.value || null;
     render();
   });
 
@@ -406,6 +470,15 @@ export function initStatisticsView() {
 
   updateScopeVisibility();
   updateModeButtons();
+
+  // Wykres trendu jest rysowany w pikselach — przerysuj po zmianie rozmiaru.
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    const section = el("stats-trend");
+    if (!section || section.classList.contains("hidden")) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => render(), 150);
+  });
 }
 
 export async function loadStatisticsData() {
@@ -426,6 +499,7 @@ export async function loadStatisticsData() {
         state.testId = select.value;
       }
     }
+    populateSubjectSuggestions();
     render();
   } catch (e) {
     console.error("Error loading statistics:", e);

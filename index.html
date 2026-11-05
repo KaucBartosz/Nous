@@ -794,8 +794,11 @@
                                 <input
                                     id="stats-subject-input"
                                     type="text"
-                                    placeholder="np. A-001"
+                                    list="stats-subject-datalist"
+                                    placeholder="Wpisz lub wybierz ID…"
+                                    autocomplete="off"
                                 />
+                                <datalist id="stats-subject-datalist"></datalist>
                             </label>
                             <label class="stats-field hidden" id="stats-participant-field">
                                 <span class="stats-field-label">Profil z kartoteki</span>

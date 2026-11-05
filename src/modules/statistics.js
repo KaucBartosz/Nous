@@ -175,6 +175,21 @@ function populateParticipants() {
   if (prev) select.value = prev;
 }
 
+function populateSubjectSuggestions() {
+  const datalist = el("stats-subject-datalist");
+  if (!datalist) return;
+  let ids = distinctSubjectIds(state.allResults, state.testId);
+  if (ids.length === 0 && state.allResults.length > 0) {
+    ids = distinctSubjectIds(state.allResults, null);
+  }
+  datalist.innerHTML = "";
+  ids.forEach((id) => {
+    const opt = document.createElement("option");
+    opt.value = id;
+    datalist.appendChild(opt);
+  });
+}
+
 function updateScopeVisibility() {
   const scopeWrap = el("stats-research-scope");
   const subjectField = el("stats-subject-field");
@@ -386,7 +401,10 @@ export function initStatisticsView() {
       state.selectedOrder = [];
       const scopeSelect = el("stats-scope");
       if (scopeSelect) scopeSelect.value = "all";
+      const subjectInput = el("stats-subject-input");
+      if (subjectInput) subjectInput.value = "";
       updateScopeVisibility();
+      populateSubjectSuggestions();
       render();
     });
   });
@@ -396,6 +414,7 @@ export function initStatisticsView() {
     state.testId = e.target.value || null;
     state.selectedRunIds.clear();
     state.selectedOrder = [];
+    populateSubjectSuggestions();
     render();
   });
 
@@ -404,14 +423,28 @@ export function initStatisticsView() {
     state.scope = e.target.value;
     state.subjectId = null;
     state.participantKey = null;
+    const subjectInput = el("stats-subject-input");
+    if (subjectInput) subjectInput.value = "";
+    populateSubjectSuggestions();
     updateScopeVisibility();
     render();
   });
 
   const subjectInput = el("stats-subject-input");
-  subjectInput?.addEventListener("change", (e) => {
+  const handleSubjectChange = (e) => {
     state.subjectId = e.target.value.trim() || null;
     render();
+  };
+  subjectInput?.addEventListener("input", handleSubjectChange);
+  subjectInput?.addEventListener("change", handleSubjectChange);
+  subjectInput?.addEventListener("click", () => {
+    if (typeof subjectInput.showPicker === "function") {
+      try {
+        subjectInput.showPicker();
+      } catch {
+        // Ignoruj błąd jeśli kontekst nie zezwala na showPicker
+      }
+    }
   });
 
   const participantSelect = el("stats-participant-select");
@@ -466,6 +499,7 @@ export async function loadStatisticsData() {
         state.testId = select.value;
       }
     }
+    populateSubjectSuggestions();
     render();
   } catch (e) {
     console.error("Error loading statistics:", e);

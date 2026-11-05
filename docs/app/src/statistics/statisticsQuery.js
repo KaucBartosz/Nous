@@ -25,30 +25,73 @@ const TEST_ID_ALIASES = {
   bystreoczko: "BystreOczko",
 };
 
+/**
+ * Mapa synonimów metryk z testów JS (BBTP) do jednolitego klucza kanonicznego.
+ * Zapobiega powielaniu tych samych pojęć (np. bledne vs ilosc_blednych_nacisniec).
+ */
+const CANONICAL_METRIC_MAP = {
+  score: "score",
+
+  // Punkty / poprawne
+  poprawne: "poprawne",
+  poprawne_reakcje: "poprawne",
+  poprawnetrafienia: "poprawne",
+  punkty: "poprawne",
+  zdobyte_punkty: "poprawne",
+  ilosc_poprawnych_nacisniec: "poprawne",
+
+  // Błędy
+  bledne: "bledne",
+  bledne_reakcje: "bledne",
+  bledy: "bledne",
+  ilosc_blednych_nacisniec: "bledne",
+  bledne_lacznie: "bledne",
+  bledne_klikniecia: "bledne",
+
+  // Wszystkie próby / kliknięcia
+  wszystkie: "wszystkie_proby",
+  wszystkie_proby: "wszystkie_proby",
+  wszystkie_kliki: "wszystkie_proby",
+  ogolna_ilosc_nacisniec: "wszystkie_proby",
+  proby: "wszystkie_proby",
+  wszystkie_próby: "wszystkie_proby",
+
+  // Czas reakcji (ms)
+  sredni_czas_reakcji: "sredni_czas_ms",
+  sredni_czas_ms: "sredni_czas_ms",
+  avg_hit_rt_ms: "sredni_czas_ms",
+  czas_reakcji: "sredni_czas_ms",
+  czas_ms: "sredni_czas_ms",
+
+  // Skuteczność
+  skutecznosc: "skutecznosc",
+  skutecznosc_proc: "skutecznosc",
+  accuracy_percent: "skutecznosc",
+
+  // Pominięte
+  pominiete: "pominiete",
+  pominiete_cele: "pominiete",
+
+  // Poziom trudności
+  poziom_trudnosci: "poziom_trudnosci",
+  poziom: "poziom_trudnosci",
+  trasa: "poziom_trudnosci",
+
+  // Sekwencje
+  max_dlugosc_sekwencji: "max_dlugosc_sekwencji",
+  max_sekwencja: "max_dlugosc_sekwencji",
+};
+
 const METRIC_LABELS = {
   score: "Wynik (score)",
-  ilosc_poprawnych_nacisniec: "Poprawne naciśnięcia",
-  ilosc_blednych_nacisniec: "Błędne naciśnięcia",
-  ogolna_ilosc_nacisniec: "Naciśnięcia łącznie",
-  sredni_czas_reakcji: "Średni czas reakcji (ms)",
-  sredni_czas_ms: "Średni czas reakcji (ms)",
-  czas_reakcji: "Czas reakcji",
-  czas_ms: "Czas (ms)",
-  poprawne: "Poprawne",
-  poprawne_reakcje: "Poprawne",
-  bledne: "Błędne",
-  bledne_reakcje: "Błędne",
-  wszystkie: "Wszystkie próby",
+  poprawne: "Zdobyte punkty",
+  bledne: "Błędy",
   wszystkie_proby: "Wszystkie próby",
-  wszystkie_kliki: "Wszystkie kliknięcia",
-  skutecznosc: "Skuteczność",
-  skutecznosc_proc: "Skuteczność (%)",
-  accuracy_percent: "Skuteczność (%)",
+  sredni_czas_ms: "Średni czas reakcji (ms)",
+  skutecznosc: "Skuteczność (%)",
   pominiete: "Pominięte",
-  pominiete_cele: "Pominięte cele",
   poziom_trudnosci: "Poziom trudności",
   max_dlugosc_sekwencji: "Maks. długość sekwencji",
-  max_sekwencja: "Maks. sekwencja",
 };
 
 export function normalizeTestId(id) {
@@ -62,9 +105,16 @@ export function metricBaseName(key) {
   return parts[parts.length - 1].trim();
 }
 
+export function canonicalMetricKey(key) {
+  const base = metricBaseName(key).toLowerCase().trim();
+  return CANONICAL_METRIC_MAP[base] || base;
+}
+
 export function metricLabel(key) {
+  const canonical = canonicalMetricKey(key);
+  if (METRIC_LABELS[canonical]) return METRIC_LABELS[canonical];
   const base = metricBaseName(key);
-  if (METRIC_LABELS[base]) return METRIC_LABELS[base];
+  if (METRIC_LABELS[base.toLowerCase()]) return METRIC_LABELS[base.toLowerCase()];
   return base
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -77,10 +127,15 @@ function isNumeric(value) {
 export function extractMetrics(result) {
   const flat = {};
   flattenObject(result?.wyniki || result?.data || {}, flat);
-  const out = [];
-  const seen = new Set();
-  for (const [key, rawValue] of Object.entries(flat)) {
-    const segments = key.split(" - ");
+
+  if (flat.score === undefined && result?.score !== undefined) {
+    flat.score = result.score;
+  }
+
+  const map = new Map();
+
+  for (const [rawKey, rawValue] of Object.entries(flat)) {
+    const segments = rawKey.split(" - ");
     if (segments.some((seg) => STATS_IGNORE_KEYS.has(seg.trim()))) continue;
     let value = rawValue;
     if (typeof value === "string") {
@@ -88,20 +143,68 @@ export function extractMetrics(result) {
       if (!Number.isNaN(num) && value.trim() !== "") value = num;
     }
     if (!isNumeric(value)) continue;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ key, label: metricLabel(key), value: Number(value) });
+
+    const key = canonicalMetricKey(rawKey);
+    const isFromStats = rawKey.startsWith("statystyki - ");
+
+    // Jeśli klucza jeszcze nie ma lub dana wartość pochodzi ze szczegółowych 'statystyki',
+    // zapisujemy ją pod kanonicznym kluczem (deduplikacja i ujednolicenie)
+    if (!map.has(key) || isFromStats) {
+      map.set(key, { key, label: metricLabel(key), value: Number(value) });
+    }
   }
-  return out;
+
+  return Array.from(map.values());
 }
 
+const SCORE_FALLBACK_KEYS = [
+  "zdobyte_punkty",
+  "punkty",
+  "ilosc_poprawnych_nacisniec",
+  "poprawne",
+  "poprawne_reakcje",
+];
+
+function asNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const num = Number(value.replace(",", "."));
+    if (!Number.isNaN(num)) return num;
+  }
+  return null;
+}
+
+/**
+ * Wynik główny wykonania: `score`, a gdy go brak — metryka punktowa
+ * (np. `ilosc_poprawnych_nacisniec`), bo część testów nie zapisuje `score`.
+ */
 export function scoreOf(result) {
   const metrics = extractMetrics(result);
   const match =
     metrics.find((m) => m.key === "score") ||
     metrics.find((m) => /(^| - )score$/i.test(m.key)) ||
     metrics.find((m) => m.key.toLowerCase().endsWith("score"));
-  return match ? match.value : null;
+  if (match) return match.value;
+
+  const topLevel = asNumber(result?.score);
+  if (topLevel !== null) return topLevel;
+
+  for (const key of SCORE_FALLBACK_KEYS) {
+    const canonicalKey = canonicalMetricKey(key);
+    const found = metrics.find(
+      (m) => m.key === key || m.key === canonicalKey || m.key.endsWith(` - ${key}`),
+    );
+    if (found) return found.value;
+  }
+  return null;
+}
+
+/** Czy dla metryki lepsza jest wartość niższa (błędy, czasy reakcji). */
+export function isLowerBetter(key, label = "") {
+  const text = `${key} ${label}`.toLowerCase();
+  return /błęd|bled|błąd|blad|error|pomini|czas|reakcj|opóźn|latenc|\brt\b/.test(
+    text,
+  );
 }
 
 export function distinctTestIds(results) {
@@ -123,12 +226,15 @@ export function distinctSubjectIds(results, testId = null) {
 
 export function filterStatisticsResults(results, { testId = null, subjectIds = [] } = {}) {
   const target = testId ? normalizeTestId(testId) : null;
-  const subjects = Array.isArray(subjectIds) ? subjectIds : [];
+  const subjects = Array.isArray(subjectIds)
+    ? subjectIds.map((s) => String(s).trim().toLowerCase()).filter(Boolean)
+    : [];
   return (results || [])
     .filter((r) => {
       if (target && normalizeTestId(testIdOf(r)) !== target) return false;
       if (subjects.length > 0) {
-        if (!subjects.includes(subjectIdOf(r))) return false;
+        const sid = String(subjectIdOf(r)).trim().toLowerCase();
+        if (!subjects.includes(sid)) return false;
       }
       return true;
     })
@@ -138,9 +244,10 @@ export function filterStatisticsResults(results, { testId = null, subjectIds = [
 export function compareRuns(runA, runB, selectedKeys = []) {
   const mapA = new Map(extractMetrics(runA).map((m) => [m.key, m.value]));
   const mapB = new Map(extractMetrics(runB).map((m) => [m.key, m.value]));
+  const canonicalSelected = (selectedKeys || []).map(canonicalMetricKey);
   const keys =
-    selectedKeys && selectedKeys.length > 0
-      ? selectedKeys
+    canonicalSelected && canonicalSelected.length > 0
+      ? Array.from(new Set(canonicalSelected))
       : Array.from(new Set([...mapA.keys(), ...mapB.keys()]));
   return keys.map((key) => {
     const valueA = mapA.has(key) ? mapA.get(key) : null;
@@ -158,15 +265,20 @@ export function compareRuns(runA, runB, selectedKeys = []) {
       valueB,
       delta,
       deltaPercent,
+      lowerIsBetter: isLowerBetter(key, metricLabel(key)),
     };
   });
 }
 
 export function aggregateMetrics(runs, selectedKeys = []) {
+  const canonicalSelected =
+    selectedKeys && selectedKeys.length > 0
+      ? new Set(selectedKeys.map(canonicalMetricKey))
+      : null;
   const stats = new Map();
   (runs || []).forEach((run) => {
     extractMetrics(run).forEach((m) => {
-      if (selectedKeys.length > 0 && !selectedKeys.includes(m.key)) return;
+      if (canonicalSelected && !canonicalSelected.has(m.key)) return;
       if (!stats.has(m.key)) {
         stats.set(m.key, { key: m.key, label: m.label, count: 0, sum: 0, min: null, max: null });
       }
@@ -191,9 +303,10 @@ export function aggregateMetrics(runs, selectedKeys = []) {
 
 export function trendForMetric(runs, metricKey) {
   if (!metricKey) return [];
+  const target = canonicalMetricKey(metricKey);
   return (runs || [])
     .map((r) => {
-      const m = extractMetrics(r).find((x) => x.key === metricKey);
+      const m = extractMetrics(r).find((x) => x.key === target || x.key === metricKey);
       return {
         timestamp: r.timestamp,
         subjectId: subjectIdOf(r),

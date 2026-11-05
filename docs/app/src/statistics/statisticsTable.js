@@ -1,5 +1,5 @@
 // src/statistics/statisticsTable.js — renderowanie tabel statystyk (DOM).
-import { extractMetrics } from "./statisticsQuery.js";
+import { scoreOf } from "./statisticsQuery.js";
 
 export function formatNumber(v) {
   if (v === null || v === undefined) return "—";
@@ -78,20 +78,9 @@ export function renderRunsTable(tbody, runs, selectedIds, onToggle) {
 
     tr.appendChild(makeCell(formatDateTime(r.timestamp), "stats-date"));
 
-    const subject = document.createElement("td");
-    const chip = document.createElement("span");
-    chip.className = "stats-subject";
-    chip.textContent = r.subject_id || "—";
-    subject.appendChild(chip);
-    tr.appendChild(subject);
-
-    const metrics = extractMetrics(r);
-    const scoreMetric = metrics.find(
-      (m) => m.key === "score" || m.key.toLowerCase().endsWith("score"),
-    );
     tr.appendChild(
       makeCell(
-        scoreMetric ? formatNumber(scoreMetric.value) : "—",
+        scoreOf(r) !== null ? formatNumber(scoreOf(r)) : "—",
         "stats-num stats-score",
       ),
     );
@@ -117,8 +106,10 @@ export function renderCompareTable(tbody, rows) {
       pill.classList.add("delta-none");
       pill.textContent = "—";
     } else {
+      const improved = row.lowerIsBetter ? row.delta < 0 : row.delta > 0;
+      const worsened = row.lowerIsBetter ? row.delta > 0 : row.delta < 0;
       pill.classList.add(
-        row.delta > 0 ? "delta-up" : row.delta < 0 ? "delta-down" : "delta-neutral",
+        improved ? "delta-up" : worsened ? "delta-down" : "delta-neutral",
       );
       const arrow = row.delta > 0 ? "▲" : row.delta < 0 ? "▼" : "•";
       pill.textContent = `${arrow} ${fmtDelta(row.delta)}${
@@ -139,7 +130,6 @@ export function renderAggTable(tbody, rows) {
   rows.forEach((row) => {
     const tr = document.createElement("tr");
     tr.appendChild(makeCell(row.label, "stats-metric-name"));
-    tr.appendChild(makeCell(String(row.count), "stats-num"));
     tr.appendChild(makeCell(formatNumber(row.avg), "stats-num stats-strong"));
     tr.appendChild(makeCell(formatNumber(row.min), "stats-num"));
     tr.appendChild(makeCell(formatNumber(row.max), "stats-num"));
@@ -147,47 +137,146 @@ export function renderAggTable(tbody, rows) {
   });
 }
 
-export function renderTrendTable(tbody, points) {
-  tbody.innerHTML = "";
-  const max = points.reduce(
-    (acc, p) => Math.max(acc, Math.abs(p.value) || 0),
-    0,
-  );
-  points.forEach((p) => {
-    const tr = document.createElement("tr");
-    tr.appendChild(makeCell(formatDateTime(p.timestamp), "stats-date"));
+const SVG_NS = "http://www.w3.org/2000/svg";
 
-    const subject = document.createElement("td");
-    const chip = document.createElement("span");
-    chip.className = "stats-subject";
-    chip.textContent = p.subjectId || "—";
-    subject.appendChild(chip);
-    tr.appendChild(subject);
+function svgEl(name, attrs = {}) {
+  const node = document.createElementNS(SVG_NS, name);
+  Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, String(v)));
+  return node;
+}
 
-    const tdValue = document.createElement("td");
-    tdValue.className = "stats-num";
+function formatDay(timestamp) {
+  const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
+}
 
-    const inner = document.createElement("div");
-    inner.className = "stats-trend-inner";
+/**
+ * Wykres liniowy trendu (SVG, bez zależności).
+ * points: [{ timestamp, value }]
+ */
+export function renderTrendChart(container, points, options = {}) {
+  container.innerHTML = "";
+  if (!points || points.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "stats-chart-empty";
+    empty.textContent = "Brak danych dla wybranej metryki.";
+    container.appendChild(empty);
+    return;
+  }
 
-    const wrap = document.createElement("span");
-    wrap.className = "stats-bar-wrap";
-    const bar = document.createElement("span");
-    bar.className = "stats-bar";
-    const pct = max > 0 ? Math.max(3, Math.round((Math.abs(p.value) / max) * 100)) : 0;
-    bar.style.width = `${pct}%`;
-    wrap.appendChild(bar);
-    inner.appendChild(wrap);
+  const width = Math.max(320, Math.round(container.clientWidth || 760));
+  const height = 280;
+  const pad = { top: 20, right: 20, bottom: 38, left: 56 };
+  const innerW = width - pad.left - pad.right;
+  const innerH = height - pad.top - pad.bottom;
 
-    const value = document.createElement("span");
-    value.className = "stats-trend-value";
-    value.textContent = formatNumber(p.value);
-    inner.appendChild(value);
+  const values = points.map((p) => p.value);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  } else {
+    const span = max - min;
+    min -= span * 0.12;
+    max += span * 0.12;
+  }
 
-    tdValue.appendChild(inner);
-    tr.appendChild(tdValue);
-    tbody.appendChild(tr);
+  const xOf = (i) =>
+    points.length === 1
+      ? pad.left + innerW / 2
+      : pad.left + (i * innerW) / (points.length - 1);
+  const yOf = (v) => pad.top + innerH - ((v - min) / (max - min)) * innerH;
+
+  const svg = svgEl("svg", {
+    viewBox: `0 0 ${width} ${height}`,
+    width,
+    height,
+    class: "stats-chart",
+    role: "img",
   });
+  svg.setAttribute(
+    "aria-label",
+    `Wykres trendu: ${options.metricLabel || "metryka"}`,
+  );
+
+  // Siatka + oś Y
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const value = min + ((max - min) * i) / steps;
+    const y = yOf(value);
+    svg.appendChild(
+      svgEl("line", {
+        x1: pad.left,
+        x2: width - pad.right,
+        y1: y,
+        y2: y,
+        class: "stats-chart-grid",
+      }),
+    );
+    const label = svgEl("text", {
+      x: pad.left - 10,
+      y: y + 4,
+      class: "stats-chart-axis",
+      "text-anchor": "end",
+    });
+    label.textContent = formatNumber(
+      Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10,
+    );
+    svg.appendChild(label);
+  }
+
+  // Linia + wypełnienie
+  let line = "";
+  points.forEach((p, i) => {
+    line += `${i === 0 ? "M" : "L"}${xOf(i).toFixed(2)},${yOf(p.value).toFixed(2)} `;
+  });
+  const baseY = pad.top + innerH;
+  const area = `${line}L${xOf(points.length - 1).toFixed(2)},${baseY} L${xOf(0).toFixed(2)},${baseY} Z`;
+
+  svg.appendChild(svgEl("path", { d: area, class: "stats-chart-area" }));
+  svg.appendChild(svgEl("path", { d: line, class: "stats-chart-line" }));
+
+  // Punkty + podpowiedzi
+  const showDots = points.length <= 40;
+  points.forEach((p, i) => {
+    if (showDots) {
+      const dot = svgEl("circle", {
+        cx: xOf(i).toFixed(2),
+        cy: yOf(p.value).toFixed(2),
+        r: points.length > 20 ? 3 : 4.5,
+        class: "stats-chart-dot",
+      });
+      const title = svgEl("title");
+      title.textContent = `${formatDateTime(p.timestamp)} — ${formatNumber(p.value)}`;
+      dot.appendChild(title);
+      svg.appendChild(dot);
+    }
+  });
+
+  // Etykiety osi X (max ~6, bez nachodzenia)
+  const maxLabels = Math.min(points.length, Math.max(2, Math.floor(innerW / 90)));
+  const indices = new Set();
+  if (points.length === 1) {
+    indices.add(0);
+  } else {
+    for (let k = 0; k < maxLabels; k++) {
+      indices.add(Math.round((k * (points.length - 1)) / (maxLabels - 1)));
+    }
+  }
+  indices.forEach((i) => {
+    const text = svgEl("text", {
+      x: xOf(i).toFixed(2),
+      y: height - 14,
+      class: "stats-chart-axis",
+      "text-anchor": "middle",
+    });
+    text.textContent = formatDay(points[i].timestamp);
+    svg.appendChild(text);
+  });
+
+  container.appendChild(svg);
 }
 
 export function renderMetricsPanel(container, metrics, selected, onToggle) {

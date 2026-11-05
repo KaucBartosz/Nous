@@ -2714,6 +2714,26 @@ html[data-platform="web"] #nav-updates {
     box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
+#stats-subject-input::-webkit-calendar-picker-indicator {
+    opacity: 0.65;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    border-radius: 4px;
+    transition:
+        opacity 0.16s ease,
+        transform 0.16s ease;
+}
+
+#stats-subject-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+[data-theme="dark"] #stats-subject-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+}
+
 .stats-metrics-toggle {
     margin-left: auto;
     display: inline-flex;
@@ -2983,12 +3003,7 @@ html[data-platform="web"] #nav-updates {
 
 #stats-runs-table th:nth-child(2),
 #stats-runs-table td:nth-child(2) {
-    width: 200px;
-}
-
-#stats-runs-table th:nth-child(3),
-#stats-runs-table td:nth-child(3) {
-    width: 240px;
+    width: 220px;
 }
 
 #stats-compare-table th:nth-child(2),
@@ -3003,19 +3018,9 @@ html[data-platform="web"] #nav-updates {
     width: 210px;
 }
 
-#stats-trend-table th:nth-child(1),
-#stats-trend-table td:nth-child(1) {
-    width: 200px;
-}
-
-#stats-trend-table th:nth-child(2),
-#stats-trend-table td:nth-child(2) {
-    width: 240px;
-}
-
 #stats-agg-table th:nth-child(n + 2),
 #stats-agg-table td:nth-child(n + 2) {
-    width: 110px;
+    width: 150px;
 }
 
 .stats-select {
@@ -3088,37 +3093,81 @@ html[data-platform="web"] #nav-updates {
     background: rgba(127, 127, 127, 0.12);
 }
 
-/* --- Trend: mini-słupki --- */
+/* --- Trend: wykres --- */
 
-.stats-trend-inner {
+.stats-trend-controls {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-.stats-bar-wrap {
-    display: inline-block;
-    flex: 0 1 90px;
-    min-width: 40px;
-    height: 6px;
-    border-radius: 999px;
-    background: rgba(127, 127, 127, 0.22);
+.stats-field-inline {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.stats-field-inline .stats-field-label {
+    white-space: nowrap;
+}
+
+.stats-field-inline select {
+    min-width: 210px;
+}
+
+.stats-chart-wrap {
+    width: 100%;
     overflow: hidden;
 }
 
-.stats-bar {
+.stats-chart {
     display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--primary), #7bb0ff);
+    max-width: 100%;
+    height: auto;
 }
 
-.stats-trend-value {
-    min-width: 46px;
-    text-align: right;
-    font-weight: 600;
+.stats-chart-grid {
+    stroke: var(--border);
+    stroke-width: 1;
+}
+
+.stats-chart-axis {
+    fill: var(--text-muted);
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
+}
+
+.stats-chart-area {
+    fill: rgba(79, 140, 242, 0.16);
+    stroke: none;
+}
+
+.stats-chart-line {
+    fill: none;
+    stroke: var(--primary);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.stats-chart-dot {
+    fill: var(--bg-sidebar);
+    stroke: var(--primary);
+    stroke-width: 2;
+    transition: r 0.12s ease;
+}
+
+.stats-chart-dot:hover {
+    r: 6;
+}
+
+.stats-chart-empty {
+    margin: 0;
+    padding: 28px 8px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
 /* --- Stan pusty --- */
@@ -3224,6 +3273,60 @@ html[data-platform="web"] #nav-updates {
 
     .stats-kpis {
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .stats-table thead th,
+    .stats-table tbody td {
+        padding: 9px 8px;
+    }
+
+    .stats-table thead th {
+        white-space: normal;
+    }
+
+    .stats-delta {
+        padding: 2px 7px;
+        font-size: 11px;
+    }
+
+    #stats-runs-table th:nth-child(2),
+    #stats-runs-table td:nth-child(2) {
+        width: 150px;
+    }
+
+    #stats-compare-table th:nth-child(2),
+    #stats-compare-table td:nth-child(2),
+    #stats-compare-table th:nth-child(3),
+    #stats-compare-table td:nth-child(3) {
+        width: 22%;
+    }
+
+    #stats-compare-table th:nth-child(4),
+    #stats-compare-table td:nth-child(4) {
+        width: 30%;
+    }
+
+    #stats-compare-table {
+        table-layout: fixed;
+    }
+
+    #stats-compare-table th:nth-child(1),
+    #stats-compare-table td:nth-child(1) {
+        width: 26%;
+    }
+
+    #stats-compare-table td:nth-child(4) .stats-delta {
+        font-size: 10px;
+        padding: 2px 5px;
+    }
+
+    .stats-field-inline {
+        flex-wrap: wrap;
+    }
+
+    .stats-field-inline select {
+        min-width: 0;
+        flex: 1;
     }
 }
 

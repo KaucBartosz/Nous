@@ -794,8 +794,11 @@
                                 <input
                                     id="stats-subject-input"
                                     type="text"
-                                    placeholder="np. A-001"
+                                    list="stats-subject-datalist"
+                                    placeholder="Wpisz lub wybierz ID…"
+                                    autocomplete="off"
                                 />
+                                <datalist id="stats-subject-datalist"></datalist>
                             </label>
                             <label class="stats-field hidden" id="stats-participant-field">
                                 <span class="stats-field-label">Profil z kartoteki</span>
@@ -844,7 +847,6 @@
                                     <tr>
                                         <th style="width: 52px; text-align: center;">Wybierz</th>
                                         <th>Data</th>
-                                        <th>Badany</th>
                                         <th class="stats-num">Wynik</th>
                                     </tr>
                                 </thead>
@@ -882,20 +884,15 @@
                                 <span class="material-icons">trending_up</span>
                                 Trend
                             </h4>
-                            <p id="stats-trend-info" class="stats-section-sub"></p>
+                            <div class="stats-trend-controls">
+                                <label class="stats-field stats-field-inline">
+                                    <span class="stats-field-label">Metryka</span>
+                                    <select id="stats-trend-metric"></select>
+                                </label>
+                                <span id="stats-trend-info" class="stats-section-sub"></span>
+                            </div>
                         </div>
-                        <div class="table-container">
-                            <table id="stats-trend-table" class="stats-table">
-                                <thead>
-                                    <tr>
-                                        <th>Data</th>
-                                        <th>Badany</th>
-                                        <th class="stats-num">Wartość</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
+                        <div id="stats-trend-chart" class="stats-chart-wrap"></div>
                     </div>
 
                     <div id="stats-research" class="hidden stats-section">
@@ -911,7 +908,6 @@
                                 <thead>
                                     <tr>
                                         <th>Metryka</th>
-                                        <th class="stats-num">Liczba</th>
                                         <th class="stats-num">Średnia</th>
                                         <th class="stats-num">Min</th>
                                         <th class="stats-num">Max</th>
