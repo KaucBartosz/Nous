@@ -37,9 +37,9 @@ function addFieldUI(initialData = null) {
     const fieldDiv = document.createElement('div');
     fieldDiv.className = 'form-row';
     fieldDiv.style.alignItems = 'flex-start';
-    fieldDiv.style.marginBottom = '15px';
-    fieldDiv.style.borderBottom = '1px solid #333';
-    fieldDiv.style.paddingBottom = '10px';
+    fieldDiv.style.marginBottom = '16px';
+    fieldDiv.style.borderBottom = '1px solid var(--border)';
+    fieldDiv.style.paddingBottom = '12px';
     fieldDiv.dataset.id = fieldId;
 
     const labelVal = initialData ? initialData.label : '';

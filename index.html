@@ -138,8 +138,10 @@
                         type="text"
                         id="local-username"
                         placeholder="Login"
+                        list="local-accounts-list"
                         autocomplete="username"
                     />
+                    <datalist id="local-accounts-list"></datalist>
                     <div class="password-container">
                         <input
                             type="password"
@@ -302,48 +304,45 @@
             <main class="content-area">
                 <!-- WIDOK 1: Biblioteka (Grid) -->
                 <div id="library-view">
-                    <div class="library-toolbar">
-                        <input
-                            type="text"
-                            id="library-search"
-                            placeholder="Szukaj testu... (użyj @tag aby filtrować)"
-                            class="library-search-input"
-                        />
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">library_books</span>
+                        <div>
+                            <h3>Biblioteka Testów</h3>
+                            <p class="page-header-sub" id="library-count">
+                                Ładowanie biblioteki…
+                            </p>
+                        </div>
+                    </div>
 
-                        <div class="view-switcher" style="margin-left: auto">
-                            <div
-                                class="training-mode-container"
-                                style="
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 8px;
-                                    margin-right: 20px;
-                                    padding-right: 20px;
-                                    border-right: 1px solid var(--border);
-                                "
+                    <div class="toolbar">
+                        <label class="field" style="flex: 1; min-width: 220px; max-width: 420px">
+                            <span class="field-label">Szukaj</span>
+                            <input
+                                type="text"
+                                id="library-search"
+                                placeholder="Szukaj testu... (użyj @tag aby filtrować)"
+                                class="library-search-input"
+                            />
+                        </label>
+
+                        <div class="training-mode-container">
+                            <span class="view-switcher-label">Tryb treningowy:</span>
+                            <label class="switch" title="Tryb treningowy">
+                                <input
+                                    type="checkbox"
+                                    id="toggle-training-mode"
+                                />
+                                <span class="slider round"></span>
+                            </label>
+                            <span
+                                class="material-icons info-icon"
+                                id="training-info-icon"
+                                title="W trybie treningowym wyniki nie są zapisywane ani ocenianie"
+                                >info</span
                             >
-                                <span class="view-switcher-label"
-                                    >Tryb treningowy:</span
-                                >
-                                <label class="switch" title="Tryb treningowy">
-                                    <input
-                                        type="checkbox"
-                                        id="toggle-training-mode"
-                                    />
-                                    <span class="slider round"></span>
-                                </label>
-                                <span
-                                    class="material-icons info-icon"
-                                    id="training-info-icon"
-                                    style="
-                                        font-size: 18px;
-                                        color: var(--text-muted);
-                                        cursor: help;
-                                    "
-                                    title="W trybie treningowym wyniki nie są zapisywane ani ocenianie"
-                                    >info</span
-                                >
-                            </div>
+                        </div>
+
+                        <div class="view-switcher">
                             <span class="view-switcher-label">Widok:</span>
                             <button
                                 id="view-grid"
@@ -375,6 +374,7 @@
                             </button>
                         </div>
                     </div>
+
                     <div id="tests-grid" class="grid-container">
                         <!-- Placeholder startowy: pierwsza klatka nie może być pusta.
                              loadTestsList nadpisuje tę zawartość. -->
@@ -386,27 +386,15 @@
 
                 <!-- WIDOK: Konta Lokalne (tylko ADMIN) -->
                 <div id="local-admin-view" class="view-content hidden">
-                    <div class="view-header">
-                        <h2>
-                            <span
-                                class="material-icons"
-                                style="
-                                    vertical-align: middle;
-                                    margin-right: 8px;
-                                "
-                                >manage_accounts</span
-                            >Konta Lokalne na tym urządzeniu
-                        </h2>
-                        <p
-                            style="
-                                color: var(--text-muted);
-                                margin: 4px 0 0;
-                                font-size: 13px;
-                            "
-                        >
-                            Widok dostępny tylko dla administratorów. Możesz
-                            przeglądać konta lokalne i resetować ich hasła.
-                        </p>
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">manage_accounts</span>
+                        <div>
+                            <h3>Konta Lokalne</h3>
+                            <p class="page-header-sub">
+                                Widok dostępny tylko dla administratorów. Przeglądaj
+                                konta lokalne i resetuj ich hasła.
+                            </p>
+                        </div>
                     </div>
                     <div id="local-accounts-list" class="local-accounts-list">
                         <!-- wypełniane dynamicznie przez localAccountsAdmin.js -->
@@ -415,40 +403,40 @@
 
                 <!-- WIDOK 2: Historia (Tabela) -->
                 <div id="history-view" class="hidden">
-                    <div
-                        style="
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 10px;
-                        "
-                    >
-                        <h3>Ostatnie Badania</h3>
-                        <div style="display: flex; gap: 10px">
-                            <button
-                                id="btn-toggle-guest-view"
-                                class="btn outline small hidden"
-                                title="Pokaż wyniki zapisane lokalnie w trybie Gościa"
-                            >
-                                <span class="material-icons">no_accounts</span>
-                                Pokaż wyniki Gościa
-                            </button>
-                            <button
-                                id="btn-toggle-cloud-view"
-                                class="btn outline small hidden"
-                                title="Pokaż moje wyniki zapisane w chmurze"
-                            >
-                                <span class="material-icons">cloud_queue</span>
-                                Pokaż moje wyniki z bazy danych
-                            </button>
-                            <button
-                                id="btn-export-csv"
-                                class="btn secondary small"
-                            >
-                                <span class="material-icons">download</span>
-                                Pobierz historię wyników w CSV
-                            </button>
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">history</span>
+                        <div>
+                            <h3>Historia Wyników</h3>
+                            <p class="page-header-sub">
+                                Przeglądaj, filtruj i eksportuj wyniki badań.
+                            </p>
                         </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <button
+                            id="btn-toggle-guest-view"
+                            class="btn outline small hidden"
+                            title="Pokaż wyniki zapisane lokalnie w trybie Gościa"
+                        >
+                            <span class="material-icons">no_accounts</span>
+                            Pokaż wyniki Gościa
+                        </button>
+                        <button
+                            id="btn-toggle-cloud-view"
+                            class="btn outline small hidden"
+                            title="Pokaż moje wyniki zapisane w chmurze"
+                        >
+                            <span class="material-icons">cloud_queue</span>
+                            Pokaż moje wyniki z bazy danych
+                        </button>
+                        <button
+                            id="btn-export-csv"
+                            class="btn secondary small"
+                        >
+                            <span class="material-icons">download</span>
+                            Pobierz historię wyników w CSV
+                        </button>
                     </div>
 
                     <div
@@ -646,7 +634,7 @@
                     </div>
 
                     <div class="table-container">
-                        <table id="history-table">
+                        <table id="history-table" class="data-table">
                             <thead>
                                 <tr>
                                     <th style="width: 40px; text-align: center">
@@ -955,157 +943,131 @@
 
                 <!-- WIDOK 3: Aktualizacje (Tabela) -->
                 <div id="updates-view" class="hidden">
-                    <!-- 3a. Sekcja Aktualizacji Programu -->
-                    <div
-                        class="app-update-container"
-                        style="
-                            background: var(--bg-card);
-                            padding: 20px;
-                            border-radius: 8px;
-                            margin-bottom: 25px;
-                            border: 1px solid var(--border);
-                        "
-                    >
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: start;
-                            "
-                        >
-                            <div>
-                                <h3
-                                    style="
-                                        margin-top: 0;
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 10px;
-                                    "
-                                >
-                                    <span class="material-icons"
-                                        >cloud_sync</span
-                                    >
-                                    Aktualizacja Programu Nous
-                                </h3>
-                                <p
-                                    style="
-                                        color: var(--text-muted);
-                                        margin: 5px 0 15px 0;
-                                    "
-                                >
-                                    Obecna wersja:
-                                    <span
-                                        id="app-current-version"
-                                        style="
-                                            color: var(--text-main);
-                                            font-weight: bold;
-                                        "
-                                        >v...</span
-                                    >
-                                </p>
-                                <div
-                                    id="app-update-status"
-                                    style="font-size: 14px; margin-bottom: 15px"
-                                >
-                                    Sprawdzanie aktualizacji...
-                                </div>
-
-                                <!-- Pasek postępu pobierania aktualizacji -->
-                                <div
-                                    id="app-update-progress-container"
-                                    class="hidden"
-                                    style="width: 300px; margin-bottom: 10px"
-                                >
-                                    <div
-                                        style="
-                                            display: flex;
-                                            justify-content: space-between;
-                                            font-size: 12px;
-                                            margin-bottom: 5px;
-                                            color: var(--text-muted);
-                                        "
-                                    >
-                                        <span>Pobieranie...</span>
-                                        <span id="app-update-percent">0%</span>
-                                    </div>
-                                    <div
-                                        class="progress-bar-bg"
-                                        style="
-                                            height: 6px;
-                                            background: var(--border);
-                                            border-radius: 3px;
-                                        "
-                                    >
-                                        <div
-                                            id="app-update-bar"
-                                            style="
-                                                width: 0%;
-                                                height: 100%;
-                                                background: var(
-                                                    --primary-color
-                                                );
-                                                border-radius: 3px;
-                                                transition: width 0.2s;
-                                            "
-                                        ></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="app-update-actions">
-                                <!-- Przyciski pojawią się dynamicznie -->
-                                <button
-                                    id="btn-check-app-update"
-                                    class="btn secondary small"
-                                >
-                                    <span class="material-icons">refresh</span>
-                                    Sprawdź ponownie
-                                </button>
-                                <button
-                                    id="btn-download-app-update"
-                                    class="btn primary hidden"
-                                >
-                                    <span class="material-icons">download</span>
-                                    Pobierz Aktualizację
-                                </button>
-                                <button
-                                    id="btn-install-app-update"
-                                    class="btn primary hidden"
-                                >
-                                    <span class="material-icons"
-                                        >system_update_alt</span
-                                    >
-                                    Zainstaluj i Restartuj
-                                </button>
-                            </div>
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">system_update</span>
+                        <div>
+                            <h3>Aktualizacje</h3>
+                            <p class="page-header-sub">
+                                Aktualizuj program i zainstalowane testy.
+                            </p>
                         </div>
                     </div>
 
-                    <div
-                        style="
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 15px;
-                        "
-                    >
-                        <h3 style="margin: 0">Stan Zainstalowanych Testów</h3>
-                        <input
-                            type="text"
-                            id="updates-search"
-                            placeholder="Szukaj..."
-                            style="
-                                width: 250px;
-                                padding: 8px;
-                                background: var(--bg-card);
-                                border: 1px solid var(--border);
-                                color: var(--text-main);
-                                border-radius: 4px;
-                            "
-                        />
+                    <!-- 3a. Sekcja Aktualizacji Programu -->
+                    <div class="app-update-container panel">
+                        <div class="panel-header">
+                            <h4>
+                                <span class="material-icons">cloud_sync</span>
+                                Aktualizacja Programu Nous
+                            </h4>
+                        </div>
+                        <p class="panel-sub">
+                            Obecna wersja:
+                            <span
+                                id="app-current-version"
+                                style="color: var(--text-main); font-weight: 600"
+                                >v...</span
+                            >
+                        </p>
+                        <div
+                            id="app-update-status"
+                            style="font-size: 14px; margin-bottom: 15px"
+                        >
+                            Sprawdzanie aktualizacji...
+                        </div>
+
+                        <!-- Pasek postępu pobierania aktualizacji -->
+                        <div
+                            id="app-update-progress-container"
+                            class="hidden"
+                            style="max-width: 320px; margin-bottom: 10px"
+                        >
+                            <div
+                                style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    font-size: 12px;
+                                    margin-bottom: 5px;
+                                    color: var(--text-muted);
+                                "
+                            >
+                                <span>Pobieranie...</span>
+                                <span id="app-update-percent">0%</span>
+                            </div>
+                            <div
+                                class="progress-bar-bg"
+                                style="
+                                    height: 6px;
+                                    background: var(--border);
+                                    border-radius: var(--radius-pill);
+                                "
+                            >
+                                <div
+                                    id="app-update-bar"
+                                    style="
+                                        width: 0%;
+                                        height: 100%;
+                                        background: var(--primary);
+                                        border-radius: var(--radius-pill);
+                                        transition: width 0.2s;
+                                    "
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div
+                            id="app-update-actions"
+                            class="toolbar"
+                            style="margin-top: 12px; padding: 0; background: transparent; border: none"
+                        >
+                            <!-- Przyciski pojawią się dynamicznie -->
+                            <button
+                                id="btn-check-app-update"
+                                class="btn secondary small"
+                            >
+                                <span class="material-icons">refresh</span>
+                                Sprawdź ponownie
+                            </button>
+                            <button
+                                id="btn-download-app-update"
+                                class="btn primary hidden"
+                            >
+                                <span class="material-icons">download</span>
+                                Pobierz Aktualizację
+                            </button>
+                            <button
+                                id="btn-install-app-update"
+                                class="btn primary hidden"
+                            >
+                                <span class="material-icons"
+                                    >system_update_alt</span
+                                >
+                                Zainstaluj i Restartuj
+                            </button>
+                        </div>
                     </div>
-                    <div class="table-container">
-                        <table id="updates-table">
+
+                    <div class="panel" style="margin-top: 16px">
+                        <div class="panel-header">
+                            <h4>
+                                <span class="material-icons">inventory_2</span>
+                                Stan Zainstalowanych Testów
+                            </h4>
+                        </div>
+                        <div class="toolbar" style="margin-bottom: 12px; padding: 8px 12px">
+                            <label class="field" style="flex: 1; min-width: 200px; max-width: 320px">
+                                <span class="field-label">Szukaj</span>
+                                <input
+                                    type="text"
+                                    id="updates-search"
+                                    placeholder="Szukaj..."
+                                    class="library-search-input"
+                                    style="max-width: 100%"
+                                />
+                            </label>
+                        </div>
+                        <div class="table-container">
+                            <table id="updates-table" class="data-table">
                             <thead>
                                 <tr>
                                     <th>Nazwa Testu</th>
@@ -1120,10 +1082,21 @@
                             </tbody>
                         </table>
                     </div>
+                    </div>
                 </div>
 
                 <!-- WIDOK 4: Metryczka (Formularz) -->
                 <div id="demographics-view" class="hidden">
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">assignment_ind</span>
+                        <div>
+                            <h3>Metryczka</h3>
+                            <p class="page-header-sub">
+                                Dane uczestnika badania i kartoteka badanych.
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Panel: Kartoteka Badanych -->
                     <div class="participants-panel">
                         <div class="participants-panel-header">
@@ -1165,18 +1138,20 @@
                         </div>
                     </div>
 
-                    <h3 style="margin-top: 24px">Dane Uczestnika Badania</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 20px">
-                        Wypełnij te dane przed uruchomieniem testu.
-                    </p>
+                    <div class="form-container panel" style="max-width: 800px; margin-top: 16px">
+                        <div class="panel-header">
+                            <h4>
+                                <span class="material-icons">edit_note</span>
+                                Dane Uczestnika Badania
+                            </h4>
+                        </div>
+                        <p class="panel-sub" style="margin-bottom: 16px">
+                            Wypełnij te dane przed uruchomieniem testu.
+                        </p>
 
-                    <div class="form-container">
                         <div class="form-group">
                             <label>Wybierz Szablon Metryczki:</label>
-                            <select
-                                id="demo-template-select"
-                                style="margin-bottom: 20px"
-                            >
+                            <select id="demo-template-select">
                                 <option value="">-- Domyślna (Brak) --</option>
                                 <!-- JS populate -->
                             </select>
@@ -1194,15 +1169,7 @@
                             </p>
                         </div>
 
-                        <div
-                            style="
-                                margin-top: 20px;
-                                display: flex;
-                                flex-wrap: wrap;
-                                gap: 10px;
-                                align-items: center;
-                            "
-                        >
+                        <div class="toolbar" style="margin-top: 16px; padding: 8px 12px; background: transparent; border: none">
                             <button id="btn-save-demo" class="btn primary">
                                 <span class="material-icons">save</span> Zapisz
                                 Dane Sesji
@@ -1220,11 +1187,7 @@
                             </button>
                             <span
                                 id="demo-status"
-                                style="
-                                    margin-left: 5px;
-                                    color: #4caf50;
-                                    display: none;
-                                "
+                                style="color: var(--success); display: none"
                                 >Zapisano!</span
                             >
                         </div>
@@ -1233,13 +1196,17 @@
 
                 <!-- WIDOK 5: Kreator Metryczek (NOWY) -->
                 <div id="demo-creator-view" class="hidden">
-                    <h3>Kreator Szablonów Metryczek</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 20px">
-                        Zdefiniuj własne pola, które chcesz zbierać od
-                        uczestników.
-                    </p>
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">build</span>
+                        <div>
+                            <h3>Kreator Metryczek</h3>
+                            <p class="page-header-sub">
+                                Zdefiniuj własne pola zbierane od uczestników.
+                            </p>
+                        </div>
+                    </div>
 
-                    <div class="form-container">
+                    <div class="form-container panel">
                         <div class="form-group">
                             <label for="creator-template-name"
                                 >Nazwa Szablonu:</label
@@ -1251,15 +1218,9 @@
                             />
                         </div>
 
-                        <hr
-                            style="
-                                border: 0;
-                                border-top: 1px solid var(--border);
-                                margin: 20px 0;
-                            "
-                        />
+                        <hr class="form-divider" />
 
-                        <h4>Pola Formularza</h4>
+                        <h4 class="panel-sub" style="margin: 0 0 8px; color: var(--text-main); font-size: 15px; font-weight: 600">Pola Formularza</h4>
                         <div id="creator-fields-container">
                             <!-- Dynamiczna lista pól -->
                         </div>
@@ -1267,7 +1228,7 @@
                         <button
                             id="btn-add-field"
                             class="btn secondary small"
-                            style="margin-top: 10px"
+                            style="margin-top: 12px"
                         >
                             <span class="material-icons">add</span> Dodaj Pole
                         </button>
@@ -1340,24 +1301,17 @@
 
                 <!-- WIDOK 6: Ustawienia -->
                 <div id="settings-view" class="hidden">
-                    <div
-                        style="
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 20px;
-                        "
-                    >
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">settings</span>
                         <div>
-                            <h3>Ustawienia Wyglądu</h3>
-                            <p style="color: var(--text-muted); margin: 0">
-                                Dostosuj wygląd aplikacji do własnych
-                                preferencji.
+                            <h3>Ustawienia</h3>
+                            <p class="page-header-sub">
+                                Dostosuj wygląd i zachowanie aplikacji.
                             </p>
                         </div>
                     </div>
 
-                    <div class="form-container" style="max-width: 800px">
+                    <div class="form-container panel" style="max-width: 800px">
                         <!-- Sekcja Motywu -->
                         <div class="settings-section">
                             <h4>Motyw Główny</h4>
@@ -1426,13 +1380,7 @@
                                 <!-- Theme Management -->
                                 <div
                                     id="custom-theme-management"
-                                    style="
-                                        margin-top: 20px;
-                                        padding: 15px;
-                                        background: rgba(0, 0, 0, 0.2);
-                                        border-radius: 8px;
-                                        border: 1px solid var(--border);
-                                    "
+                                    class="custom-theme-management"
                                 >
                                     <label
                                         style="
@@ -1999,37 +1947,23 @@
                 </div>
                 <!-- WIDOK 7: Co nowego? -->
                 <div id="whats-new-view" class="hidden">
-                    <div
-                        style="
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 20px;
-                        "
-                    >
+                    <div class="page-header">
+                        <span class="material-icons page-header-icon">new_releases</span>
                         <div>
                             <h3>Co nowego w Nous?</h3>
-                            <p style="color: var(--text-muted); margin: 0">
+                            <p class="page-header-sub">
                                 Ostatnie zmiany i aktualizacje aplikacji.
                             </p>
                         </div>
-                        <div
+                    </div>
+                        <div class="toolbar" style="margin-bottom: 16px; padding: 8px 12px">
+                            <div
+                                class="release-nav segmented"
                             style="
                                 display: flex;
-                                gap: 10px;
-                                align-items: center;
+                                gap: 5px;
+                                padding: 4px;
                             "
-                        >
-                            <div
-                                class="release-nav"
-                                style="
-                                    display: flex;
-                                    gap: 5px;
-                                    margin-right: 15px;
-                                    background: rgba(0, 0, 0, 0.2);
-                                    padding: 4px;
-                                    border-radius: 6px;
-                                "
                             >
                                 <button
                                     id="btn-prev-release"
@@ -2310,13 +2244,7 @@
                         Platforma do dystrybucji i przeprowadzania testów
                         psychometrycznych.
                     </p>
-                    <hr
-                        style="
-                            border: 0;
-                            border-top: 1px solid var(--border);
-                            margin: 20px 0;
-                        "
-                    />
+                    <hr class="form-divider" />
                     <p style="font-size: 12px; color: var(--text-muted)">
                         Praca Inżynierska<br />
                         Autor: Bartosz Kauc<br />

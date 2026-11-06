@@ -359,6 +359,7 @@ function renderHistoryPage() {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = 7;
+    td.className = "history-empty-cell";
     td.textContent = emptyMessage({
       guestView: state.guestView,
       hasFilters: hasActiveFilters(state.filters),

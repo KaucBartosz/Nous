@@ -179,8 +179,13 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
         getSettings,
       });
       if (res.empty && !res.offline) {
-        elements.testsGrid.innerHTML = "<p>Brak testów w chmurze.</p>";
-        return; // isLoading zresetowane w finally
+        elements.testsGrid.innerHTML =
+          '<div class="empty-state">' +
+          '<span class="material-icons empty-state-icon">cloud_off</span>' +
+          '<h4>Brak testów w chmurze</h4>' +
+          '<p>Spróbuj ponownie później lub pracuj w trybie offline.</p>' +
+          '</div>';
+        return;
       }
       cachedTests = res.tests;
       if (res.empty && res.offline) {
@@ -206,9 +211,10 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
 
 function showOfflinePanel(scannedPath) {
   elements.testsGrid.innerHTML = `
-            <div style="text-align:center; padding:40px; color:#888;">
-                <span class="material-icons" style="font-size:48px; margin-bottom:15px;">signal_wifi_off</span>
-                <p>Brak połączenia z Internetem i nie znaleziono pobranych testów.</p>
+            <div class="empty-state">
+                <span class="material-icons empty-state-icon">signal_wifi_off</span>
+                <h4>Brak połączenia z Internetem</h4>
+                <p>Nie znaleziono pobranych testów.</p>
                 <p style="font-size:11px; margin-top:10px;">Przeszukano folder:<br><code style="background:rgba(255,255,255,0.05); padding:2px 5px; border-radius:3px;">${escapeHtml(scannedPath)}</code></p>
                 <button class="btn secondary small" onclick="location.reload()" style="margin-top:20px;">Spróbuj ponownie</button>
             </div>
@@ -236,12 +242,30 @@ function handleStart(t, status) {
 function renderTests(testsSource, filterText) {
   elements.testsGrid.innerHTML = "";
 
+  // Reset scroll, żeby przy zmianie widoku nie zostawać w połowie strony
+  const contentArea = document.querySelector(".content-area");
+  if (contentArea) contentArea.scrollTop = 0;
+
   // 1-2. Filtr (tekst + @tagi) i sort (C5: catalog; logika identyczna)
   const tests = queryTests(testsSource, filterText, Tags);
 
   if (tests.length === 0) {
-    elements.testsGrid.innerHTML = "<p>Brak wyników wyszukiwania.</p>";
+    elements.testsGrid.innerHTML =
+      '<div class="empty-state">' +
+      '<span class="material-icons empty-state-icon">search_off</span>' +
+      '<h4>Brak wyników wyszukiwania</h4>' +
+      '<p>Spróbuj zmienić filtr lub wyczyść wyszukiwanie.</p>' +
+      '</div>';
     return;
+  }
+
+  // 3. Aktualizuj licznik w nagłówku (jeśli istnieje)
+  const countEl = document.getElementById("library-count");
+  if (countEl) {
+    countEl.textContent =
+      filterText && tests.length !== testsSource.length
+        ? `${tests.length} z ${testsSource.length} testów`
+        : `${testsSource.length} testów`;
   }
 
   // 3. Render based on current view mode

@@ -199,6 +199,12 @@ export function switchView(viewName, callbacks = {}) {
     if (callbackFn) {
       callbackFn();
     }
+
+    // Reset scroll pozycji przy zmianie widoku (żeby nie zostawać
+    // w połowie poprzedniej, dłuższej strony).
+    const contentArea = document.querySelector(".content-area");
+    if (contentArea) contentArea.scrollTop = 0;
+    window.scrollTo(0, 0);
   } else {
     console.warn(`Unknown view: ${viewName}`);
   }
@@ -280,7 +286,38 @@ export function showLoginLocalPanel() {
     elements.loginLocalPanel.classList.remove("hidden");
   // Wyczyść błędy
   if (elements.errorMsgLocal) elements.errorMsgLocal.textContent = "";
+  // Wypełnij listę zapisanych loginów (wybór z listy zamiast pamiętania)
+  void populateLocalAccountSuggestions();
 }
+
+/**
+ * Wypełnia <datalist id="local-accounts-list"> loginami zapisanymi na maszynie,
+ * żeby użytkownik mógł wybrać login z listy zamiast wpisywać go z pamięci.
+ */
+export async function populateLocalAccountSuggestions() {
+  const datalist = document.getElementById("local-accounts-list");
+  if (!datalist) return;
+
+  let accounts = [];
+  try {
+    const db = await import("./database.js");
+    accounts = (await db.getAllLocalAccounts()) || [];
+  } catch (error) {
+    console.error("Nie udało się pobrać listy kont lokalnych:", error);
+    accounts = [];
+  }
+
+  datalist.innerHTML = "";
+  for (const account of accounts) {
+    if (!account || !account.username) continue;
+    const option = document.createElement("option");
+    option.value = account.username;
+    datalist.appendChild(option);
+  }
+}
+
+// Alias dla wygody / testów
+export const refreshLocalAccountSuggestions = populateLocalAccountSuggestions;
 
 export function showError(message) {
   elements.errorMsg.textContent = message;
