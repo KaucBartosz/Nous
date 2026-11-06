@@ -774,10 +774,33 @@
                         </div>
                     </div>
 
+                    <div id="stats-hero" class="stats-hero hidden">
+                        <div class="stats-hero-copy">
+                            <span class="stats-hero-eyebrow">Twoje postępy</span>
+                            <h4 id="stats-hero-title"></h4>
+                            <p id="stats-hero-text"></p>
+                        </div>
+                        <button
+                            id="stats-hero-cta"
+                            class="btn primary stats-hero-cta"
+                            type="button"
+                        >
+                            Wykonaj test ponownie
+                        </button>
+                    </div>
+
                     <div class="stats-controls">
                         <label class="stats-field">
                             <span class="stats-field-label">Test</span>
                             <select id="stats-test"></select>
+                        </label>
+
+                        <label
+                            class="stats-field hidden"
+                            id="stats-personal-subject-field"
+                        >
+                            <span class="stats-field-label">Osoba</span>
+                            <select id="stats-personal-subject"></select>
                         </label>
 
                         <div id="stats-research-scope" class="stats-scope hidden">
@@ -920,7 +943,13 @@
 
                     <div id="stats-empty" class="stats-empty hidden">
                         <span class="material-icons stats-empty-icon">query_stats</span>
+                        <h4 id="stats-empty-title"></h4>
                         <p id="stats-empty-text"></p>
+                        <button
+                            id="stats-empty-cta"
+                            class="btn primary stats-empty-cta"
+                            type="button"
+                        ></button>
                     </div>
                 </div>
 

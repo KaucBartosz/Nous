@@ -34,7 +34,10 @@ const state = {
   scope: "all",
   subjectId: null,
   participantKey: null,
+  personalSubjectId: null,
 };
+
+const LAST_TEST_KEY = "nous-stats-last-test";
 
 function el(id) {
   return document.getElementById(id);
@@ -43,6 +46,106 @@ function el(id) {
 function dateShort(timestamp) {
   const d = new Date(timestamp);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pl-PL");
+}
+
+function dateRelative(timestamp) {
+  const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return "—";
+  const today = new Date();
+  const startToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const startDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((startToday - startDay) / 86400000);
+  if (days <= 0) return "dzisiaj";
+  if (days === 1) return "wczoraj";
+  if (days < 7) return `${days} dni temu`;
+  if (days < 14) return "tydzień temu";
+  if (days < 31) return `${Math.floor(days / 7)} tyg. temu`;
+  return d.toLocaleDateString("pl-PL");
+}
+
+function readLastTest() {
+  try {
+    return localStorage.getItem(LAST_TEST_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeLastTest(testId) {
+  try {
+    if (testId) localStorage.setItem(LAST_TEST_KEY, testId);
+    else localStorage.removeItem(LAST_TEST_KEY);
+  } catch {
+    // localStorage może być niedostępny — wybór testu zostaje w pamięci.
+  }
+}
+
+function preferredMetric(metrics) {
+  const byKey = (key) => metrics.find((m) => m.key === key);
+  return (
+    byKey("score") ||
+    metrics.find((m) => /(^| - )score$/i.test(m.key)) ||
+    metrics.find((m) => /poprawne|punkty|wynik/i.test(m.label)) ||
+    byKey("skutecznosc") ||
+    metrics[0] ||
+    null
+  );
+}
+
+function heroContent(runs) {
+  const latest = scoreOf(runs[0]);
+  const previous = runs.length > 1 ? scoreOf(runs[1]) : null;
+  const scores = runs
+    .map((r) => scoreOf(r))
+    .filter((v) => v !== null && Number.isFinite(v));
+  const best = scores.length > 0 ? Math.max(...scores) : null;
+
+  if (runs.length === 1) {
+    return {
+      title: "Pierwszy krok za Tobą",
+      text: "Masz 1 wykonanie. Powtórz test, aby zobaczyć trend i porównać wyniki.",
+    };
+  }
+
+  if (
+    latest !== null &&
+    best !== null &&
+    latest === best &&
+    (previous === null || best > previous)
+  ) {
+    return {
+      title: "Nowy rekord!",
+      text: `Twój najlepszy wynik to ${formatNumber(best)}. Tak trzymaj.`,
+    };
+  }
+
+  if (latest !== null && previous !== null) {
+    if (latest > previous) {
+      return {
+        title: "Wynik rośnie",
+        text: `Ostatnio ${formatNumber(latest)}, poprzednio ${formatNumber(previous)}. Dobra robota.`,
+      };
+    }
+    if (latest < previous) {
+      return {
+        title: "Każde powtórzenie się liczy",
+        text: `Ostatnio ${formatNumber(latest)}, poprzednio ${formatNumber(previous)}. Następne podejście może być lepsze.`,
+      };
+    }
+    return {
+      title: "Równe tempo",
+      text: `Ostatnio ${formatNumber(latest)} — tyle samo co poprzednio.`,
+    };
+  }
+
+  return {
+    title: "Twoje postępy",
+    text: "Śledź wyniki i porównuj kolejne wykonania.",
+  };
 }
 
 function currentFilteredRuns() {
@@ -58,6 +161,12 @@ function currentFilteredRuns() {
       const key = p?.participant_id || p?.display_name;
       if (key) subjectIds.push(key);
     }
+  } else if (state.personalSubjectId) {
+    subjectIds.push(state.personalSubjectId);
+  } else if (distinctSubjectIds(state.allResults, state.testId).length > 1) {
+    // Kilka osób w tym teście — najpierw wybierz jedną, żeby statystyki
+    // dotyczyły konkretnego postępu, a nie mieszanki wyników.
+    return [];
   }
   return filterStatisticsResults(state.allResults, {
     testId: state.testId,
@@ -101,15 +210,23 @@ function computeKpis(runs) {
     const latest = runs.length > 0 ? scoreOf(runs[0]) : null;
     const previous = runs.length > 1 ? scoreOf(runs[1]) : null;
 
+    const best = hasScores ? Math.max(...scores) : null;
+    const isNewRecord =
+      latest !== null && best !== null && latest === best && runs.length > 1;
+
     items.push({
       label: "Ostatni wynik",
       value: latest !== null ? formatNumber(latest) : "—",
-      hint: runs[0] ? dateShort(runs[0].timestamp) : "brak danych",
+      hint: runs[0] ? dateRelative(runs[0].timestamp) : "brak danych",
     });
     items.push({
       label: "Najlepszy wynik",
-      value: hasScores ? formatNumber(Math.max(...scores)) : "—",
-      hint: hasScores ? "maksimum z wykonań" : "brak metryki wyniku",
+      value: best !== null ? formatNumber(best) : "—",
+      hint: isNewRecord
+        ? "nowy rekord!"
+        : hasScores
+          ? "maksimum z wykonań"
+          : "brak metryki wyniku",
     });
 
     let tone = null;
@@ -119,7 +236,12 @@ function computeKpis(runs) {
       const delta = latest - previous;
       tone = delta > 0 ? "up" : delta < 0 ? "down" : null;
       value = (delta > 0 ? "+" : "") + formatNumber(delta);
-      hint = "względem poprzedniego";
+      hint =
+        delta > 0
+          ? "poprawa względem poprzedniego"
+          : delta < 0
+            ? "spadek względem poprzedniego"
+            : "bez zmian";
     }
     items.push({ label: "Zmiana", value, hint, tone });
   } else {
@@ -146,7 +268,7 @@ function computeKpis(runs) {
 
 function populateTests() {
   const select = el("stats-test");
-  if (!select) return;
+  if (!select) return [];
   const tests = distinctTestIds(state.allResults);
   const prev = state.testId;
   select.innerHTML = '<option value="">-- wybierz test --</option>';
@@ -158,6 +280,7 @@ function populateTests() {
   });
   if (prev && tests.includes(prev)) select.value = prev;
   else state.testId = select.value || null;
+  return tests;
 }
 
 function populateParticipants() {
@@ -173,6 +296,58 @@ function populateParticipants() {
     select.appendChild(opt);
   });
   if (prev) select.value = prev;
+}
+
+function personalSubjects() {
+  if (!state.testId) return [];
+  return distinctSubjectIds(state.allResults, state.testId).map((id) => {
+    const participant = state.participants.find(
+      (p) => p.participant_id === id || p.id === id,
+    );
+    return {
+      id,
+      label: id === "GUEST" ? "Gość" : participant?.display_name || id,
+    };
+  });
+}
+
+function syncPersonalField() {
+  const field = el("stats-personal-subject-field");
+  const select = el("stats-personal-subject");
+  if (!field || !select) return;
+  const hasSubjects =
+    state.mode === "personal" &&
+    (select.options.length > 1 || select.value !== "");
+  field.classList.toggle("hidden", !hasSubjects);
+}
+
+function populatePersonalSubjects() {
+  const select = el("stats-personal-subject");
+  if (!select) return;
+
+  const subjects = personalSubjects();
+  const prev = state.personalSubjectId;
+  select.innerHTML = "";
+
+  if (subjects.length !== 1) {
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent =
+      subjects.length > 1 ? "-- wybierz osobę --" : "-- brak wyników --";
+    select.appendChild(placeholder);
+  }
+
+  subjects.forEach((subject) => {
+    const option = document.createElement("option");
+    option.value = subject.id;
+    option.textContent = subject.label;
+    select.appendChild(option);
+  });
+
+  if (prev && subjects.some((s) => s.id === prev)) select.value = prev;
+  else if (subjects.length === 1) select.value = subjects[0].id;
+  state.personalSubjectId = select.value || null;
+  syncPersonalField();
 }
 
 function populateSubjectSuggestions() {
@@ -215,16 +390,53 @@ function updateModeButtons() {
   });
 }
 
-function setEmpty(message) {
+function setEmpty({ title, text, cta, action } = {}) {
   const empty = el("stats-empty");
-  const text = el("stats-empty-text");
-  if (!empty || !text) return;
-  if (message) {
-    text.textContent = message;
-    empty.classList.remove("hidden");
-  } else {
-    text.textContent = "";
+  const titleEl = el("stats-empty-title");
+  const textEl = el("stats-empty-text");
+  const ctaEl = el("stats-empty-cta");
+  if (!empty || !textEl) return;
+
+  if (!text) {
     empty.classList.add("hidden");
+    return;
+  }
+
+  if (titleEl) titleEl.textContent = title || "";
+  textEl.textContent = text;
+  if (ctaEl) {
+    ctaEl.textContent = cta || "";
+    ctaEl.dataset.action = action || "";
+    ctaEl.classList.toggle("hidden", !cta);
+  }
+  empty.classList.remove("hidden");
+}
+
+function renderHero(runs) {
+  const hero = el("stats-hero");
+  if (!hero) return;
+  if (state.mode !== "personal" || runs.length === 0) {
+    hero.classList.add("hidden");
+    return;
+  }
+
+  const content = heroContent(runs);
+  const title = el("stats-hero-title");
+  const text = el("stats-hero-text");
+  const cta = el("stats-hero-cta");
+  if (title) title.textContent = content.title;
+  if (text) text.textContent = content.text;
+  if (cta) cta.dataset.action = "library";
+  hero.classList.remove("hidden");
+}
+
+function handleEmptyAction(action) {
+  if (action === "library") {
+    document.getElementById("nav-library")?.click();
+  } else if (action === "test") {
+    el("stats-test")?.focus();
+  } else if (action === "subject") {
+    el("stats-personal-subject")?.focus();
   }
 }
 
@@ -236,6 +448,7 @@ function hideAllSections() {
 
 function render() {
   updateModeButtons();
+  syncPersonalField();
 
   const personalRuns = el("stats-personal-runs");
   const compare = el("stats-compare");
@@ -268,22 +481,56 @@ function render() {
   if (!state.testId) {
     hideAllSections();
     kpis?.classList.add("hidden");
-    setEmpty(
-      state.allResults.length === 0
-        ? "Brak zapisanych wyników. Wykonaj test, aby zobaczyć statystyki."
-        : "Wybierz test, aby zobaczyć statystyki.",
-    );
+    el("stats-hero")?.classList.add("hidden");
+    if (state.allResults.length === 0) {
+      setEmpty({
+        title: "Twój dziennik postępów czeka",
+        text: "Wykonaj pierwszy test, aby zobaczyć tutaj wynik, rekord i trend.",
+        cta: "Przejdź do biblioteki testów",
+        action: "library",
+      });
+    } else {
+      setEmpty({
+        title: "Wybierz test, który chcesz śledzić",
+        text: `Dostępne wyniki: ${state.allResults.length}. Wskaż test, aby zobaczyć postęp.`,
+        cta: "Wybierz test",
+        action: "test",
+      });
+    }
     return;
   }
 
   if (runs.length === 0) {
     hideAllSections();
     kpis?.classList.add("hidden");
-    setEmpty("Brak wyników dla wybranego testu i zakresu.");
+    el("stats-hero")?.classList.add("hidden");
+    const subjects = personalSubjects();
+    if (
+      state.mode === "personal" &&
+      subjects.length > 1 &&
+      !state.personalSubjectId
+    ) {
+      setEmpty({
+        title: "Wybierz osobę",
+        text: "Wyniki tego testu należą do kilku osób. Wskaż jedną, aby śledzić jej postęp.",
+        cta: "Wybierz osobę",
+        action: "subject",
+      });
+    } else {
+      setEmpty({
+        title: "Brak wyników dla tego testu",
+        text:
+          state.mode === "personal"
+            ? "Wykonaj ten test, aby zobaczyć swój postęp."
+            : "Zmień zakres lub wykonaj test, aby zobaczyć statystyki.",
+        cta: "Wykonaj test",
+        action: "library",
+      });
+    }
     return;
   }
 
-  setEmpty("");
+  setEmpty();
   if (kpis) {
     renderKpis(kpis, computeKpis(runs));
     kpis.classList.remove("hidden");
@@ -294,6 +541,7 @@ function render() {
   if (state.mode === "personal") {
     research?.classList.add("hidden");
     personalRuns?.classList.remove("hidden");
+    renderHero(runs);
 
     const tbody = document.querySelector("#stats-runs-table tbody");
     if (tbody) {
@@ -338,10 +586,7 @@ function render() {
     const trendSelect = el("stats-trend-metric");
     const allKeys = metrics.map((m) => m.key);
     if (!state.trendMetric || !allKeys.includes(state.trendMetric)) {
-      state.trendMetric =
-        selectedMetricKeys.find((k) => allKeys.includes(k)) ||
-        allKeys[0] ||
-        null;
+      state.trendMetric = preferredMetric(metrics)?.key || null;
     }
     if (trendSelect) {
       trendSelect.innerHTML = "";
@@ -375,6 +620,7 @@ function render() {
     personalRuns?.classList.add("hidden");
     compare?.classList.add("hidden");
     trend?.classList.add("hidden");
+    el("stats-hero")?.classList.add("hidden");
     research?.classList.remove("hidden");
 
     const rows = aggregateMetrics(runs, selectedMetricKeys);
@@ -405,6 +651,7 @@ export function initStatisticsView() {
       if (subjectInput) subjectInput.value = "";
       updateScopeVisibility();
       populateSubjectSuggestions();
+      populatePersonalSubjects();
       render();
     });
   });
@@ -414,7 +661,12 @@ export function initStatisticsView() {
     state.testId = e.target.value || null;
     state.selectedRunIds.clear();
     state.selectedOrder = [];
+    state.selectedMetrics.clear();
+    state.trendMetric = null;
+    state.personalSubjectId = null;
+    writeLastTest(state.testId);
     populateSubjectSuggestions();
+    populatePersonalSubjects();
     render();
   });
 
@@ -453,6 +705,22 @@ export function initStatisticsView() {
     render();
   });
 
+  const personalSubjectSelect = el("stats-personal-subject");
+  personalSubjectSelect?.addEventListener("change", (e) => {
+    state.personalSubjectId = e.target.value || null;
+    state.selectedRunIds.clear();
+    state.selectedOrder = [];
+    render();
+  });
+
+  el("stats-hero-cta")?.addEventListener("click", (e) => {
+    handleEmptyAction(e.currentTarget.dataset.action);
+  });
+
+  el("stats-empty-cta")?.addEventListener("click", (e) => {
+    handleEmptyAction(e.currentTarget.dataset.action);
+  });
+
   const trendSelect = el("stats-trend-metric");
   trendSelect?.addEventListener("change", (e) => {
     state.trendMetric = e.target.value || null;
@@ -470,6 +738,7 @@ export function initStatisticsView() {
 
   updateScopeVisibility();
   updateModeButtons();
+  populatePersonalSubjects();
 
   // Wykres trendu jest rysowany w pikselach — przerysuj po zmianie rozmiaru.
   let resizeTimer = null;
@@ -490,16 +759,21 @@ export async function loadStatisticsData() {
 
     state.participants = await getAllParticipants(uid);
 
-    populateTests();
+    const tests = populateTests();
     populateParticipants();
     if (state.testId === null) {
       const select = el("stats-test");
-      if (select && select.options.length > 1) {
-        select.selectedIndex = 1;
-        state.testId = select.value;
+      const lastTest = readLastTest();
+      if (select && lastTest && tests.includes(lastTest)) {
+        select.value = lastTest;
+        state.testId = lastTest;
+      } else if (select && tests.length === 1) {
+        select.value = tests[0];
+        state.testId = tests[0];
       }
     }
     populateSubjectSuggestions();
+    populatePersonalSubjects();
     render();
   } catch (e) {
     console.error("Error loading statistics:", e);

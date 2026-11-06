@@ -175,8 +175,15 @@ export function renderTrendChart(container, points, options = {}) {
   let min = Math.min(...values);
   let max = Math.max(...values);
   if (min === max) {
-    min -= 1;
-    max += 1;
+    // Wszystkie punkty równe: oprzyj skalę na zerze, zamiast sztucznego
+    // zakresu -1…1, który sugerował zmienność, której nie ma.
+    if (min >= 0) {
+      min = 0;
+      max = values[0] > 0 ? values[0] * 1.25 : 1;
+    } else {
+      max = 0;
+      min = values[0] * 1.25;
+    }
   } else {
     const span = max - min;
     min -= span * 0.12;
@@ -222,7 +229,7 @@ export function renderTrendChart(container, points, options = {}) {
       "text-anchor": "end",
     });
     label.textContent = formatNumber(
-      Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10,
+      Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 100) / 100,
     );
     svg.appendChild(label);
   }

@@ -2614,6 +2614,63 @@ html[data-platform="web"] #nav-updates {
     color: var(--text-muted);
 }
 
+/* --- Hero postępów (tryb osobisty) --- */
+
+.stats-hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 20px 22px;
+    border-radius: 14px;
+    border: 1px solid rgba(79, 140, 242, 0.28);
+    background:
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(79, 140, 242, 0.2),
+            transparent 55%
+        ),
+        var(--glass-bg);
+}
+
+.stats-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.stats-hero-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--primary);
+}
+
+.stats-hero h4 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-main);
+}
+
+.stats-hero p {
+    margin: 0;
+    max-width: 64ch;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.stats-hero-cta {
+    flex: 0 0 auto;
+}
+
 .stats-segmented {
     display: inline-flex;
     gap: 4px;
@@ -3190,9 +3247,21 @@ html[data-platform="web"] #nav-updates {
     opacity: 0.55;
 }
 
+.stats-empty h4 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
 .stats-empty p {
     margin: 0;
+    max-width: 56ch;
     font-size: 14px;
+}
+
+.stats-empty-cta {
+    margin-top: 6px;
 }
 
 /* --- Motyw jasny: mocniejszy kontrast kart --- */
@@ -3202,6 +3271,18 @@ html[data-platform="web"] #nav-updates {
 [data-theme="light"] .stats-kpi {
     background: #ffffff;
     border-color: rgba(15, 23, 42, 0.12);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="light"] .stats-hero {
+    border-color: rgba(29, 78, 216, 0.22);
+    background:
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(29, 78, 216, 0.1),
+            transparent 55%
+        ),
+        #ffffff;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
@@ -3244,6 +3325,15 @@ html[data-platform="web"] #nav-updates {
 
     .stats-segmented-btn {
         flex: 1;
+    }
+
+    .stats-hero {
+        padding: 16px;
+    }
+
+    .stats-hero-cta {
+        width: 100%;
+        justify-content: center;
     }
 
     .stats-controls {
