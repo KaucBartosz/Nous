@@ -203,16 +203,26 @@ body {
     width: 100%;
 }
 
-/* Przełącznik języka przed logowaniem (ekran wyboru i panele logowania) */
-.login-lang-switch {
-    position: absolute;
-    top: 0;
-    right: 0;
+/* Przełącznik języka (ekran logowania i pasek boczny) */
+.lang-switch {
     display: flex;
     gap: 4px;
 }
 
-.login-lang-btn {
+/* Na ekranie logowania: prawy górny róg logo */
+.login-lang-switch {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+/* Nad kartą profilu w pasku bocznym */
+.sidebar-lang-switch {
+    justify-content: flex-end;
+    padding: 0 15px 10px;
+}
+
+.lang-switch-btn {
     min-width: 34px;
     padding: 4px 8px;
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
@@ -226,12 +236,12 @@ body {
     transition: color 0.15s, border-color 0.15s;
 }
 
-.login-lang-btn:hover {
+.lang-switch-btn:hover {
     color: var(--text-main, #fff);
     border-color: var(--text-muted, #888);
 }
 
-.login-lang-btn.is-active {
+.lang-switch-btn.is-active {
     color: var(--primary, #4caf50);
     border-color: var(--primary, #4caf50);
 }

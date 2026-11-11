@@ -249,8 +249,8 @@ test.describe('Electron App - Authentication', () => {
   test('language switch works on the choice and the sign-in panels', async () => {
     await gotoLoginChoice();
 
-    const plBtn = page.locator('[data-locale-choice][data-locale="pl"]');
-    const enBtn = page.locator('[data-locale-choice][data-locale="en"]');
+    const plBtn = page.locator('#login-screen [data-locale-choice][data-locale="pl"]');
+    const enBtn = page.locator('#login-screen [data-locale-choice][data-locale="en"]');
     const chooseOnline = page.locator('#btn-choose-online');
 
     // Choice screen: both toggles visible, PL active (forced in beforeAll)
@@ -729,7 +729,7 @@ test.describe('Electron App - Settings', () => {
   test('language change persists across reload', async () => {
     await gotoLoginChoice();
 
-    const enBtn = page.locator('[data-locale-choice][data-locale="en"]');
+    const enBtn = page.locator('#login-screen [data-locale-choice][data-locale="en"]');
     await enBtn.click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 

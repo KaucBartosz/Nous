@@ -6,7 +6,7 @@ import {
   resolveDownloadDir,
 } from '../platform/downloadPrefs.js';
 import { Notify } from '../notify/notify.js';
-import { t, getLocale, setLocale, getSupportedLocales } from '../i18n/index.js';
+import { t, getLocale, setLocale, getSupportedLocales, onLocaleChange } from '../i18n/index.js';
 
 const SETTINGS_KEY = 'nous-app-settings';
 const CUSTOM_CACHE_KEY = 'nous-app-settings-custom-cache';
@@ -445,23 +445,23 @@ export function initSettings() {
         });
     }
 
-    // Przełącznik języka na ekranie logowania (dostępny przed zalogowaniem).
-    const loginLangButtons = document.querySelectorAll('[data-locale-choice]');
-    const syncLoginLangButtons = () => {
-        loginLangButtons.forEach((btn) => {
+    // Przełączniki języka (ekran logowania + pasek boczny nad kartą profilu).
+    const localeButtons = document.querySelectorAll('[data-locale-choice]');
+    const syncLocaleButtons = () => {
+        localeButtons.forEach((btn) => {
             const active = btn.dataset.locale === getLocale();
             btn.classList.toggle('is-active', active);
             btn.setAttribute('aria-pressed', String(active));
         });
     };
-    loginLangButtons.forEach((btn) => {
+    localeButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
             setLocale(btn.dataset.locale);
             if (elements.languageSelect) elements.languageSelect.value = getLocale();
-            syncLoginLangButtons();
         });
     });
-    syncLoginLangButtons();
+    onLocaleChange(syncLocaleButtons);
+    syncLocaleButtons();
 
     // Setup color picker listeners
     function setupColorPicker(picker, valueDisplay, settingKey) {

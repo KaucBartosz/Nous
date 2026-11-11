@@ -22,10 +22,10 @@
             <div class="login-container">
                 <!-- Logo — zawsze widoczne; przełącznik języka dostępny przed logowaniem -->
                 <div class="login-logo-area">
-                    <div class="login-lang-switch">
+                    <div class="lang-switch login-lang-switch">
                         <button
                             type="button"
-                            class="login-lang-btn"
+                            class="lang-switch-btn"
                             data-locale-choice
                             data-locale="pl"
                             title="Polski"
@@ -34,7 +34,7 @@
                         </button>
                         <button
                             type="button"
-                            class="login-lang-btn"
+                            class="lang-switch-btn"
                             data-locale-choice
                             data-locale="en"
                             title="English"
@@ -269,6 +269,27 @@
                         <span class="material-icons">info</span> <span data-i18n="nav.about">O programie</span>
                     </button>
                 </nav>
+
+                <div class="lang-switch sidebar-lang-switch">
+                    <button
+                        type="button"
+                        class="lang-switch-btn"
+                        data-locale-choice
+                        data-locale="pl"
+                        title="Polski"
+                    >
+                        PL
+                    </button>
+                    <button
+                        type="button"
+                        class="lang-switch-btn"
+                        data-locale-choice
+                        data-locale="en"
+                        title="English"
+                    >
+                        EN
+                    </button>
+                </div>
 
                 <div class="user-profile">
                     <div class="avatar-circle">
