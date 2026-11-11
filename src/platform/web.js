@@ -8,7 +8,10 @@ function registryToVersions(registry) {
       version: t.version || 1,
       isLocalDev: false,
       name: t.name,
+      name_en: t.name_en || t.name,
       description: t.description,
+      description_pl: t.description_pl || t.description,
+      description_en: t.description_en || t.description,
       webPath: t.path || "",
     };
   });

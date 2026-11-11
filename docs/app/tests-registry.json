@@ -4,90 +4,123 @@
     "name": "Bystre Oczko",
     "description": "Test na czas reakcji, polegający na jak najszybszym wciśnięciu sygnalizatora zapalonego na zielono",
     "version": 1,
-    "path": "tests/BystreOczko/index.html"
+    "path": "tests/BystreOczko/index.html",
+    "description_pl": "Test na czas reakcji, polegający na jak najszybszym wciśnięciu sygnalizatora zapalonego na zielono",
+    "description_en": "Reaction time test, involving pressing the green-lit signal as quickly as possible"
   },
   {
     "id": "Corsi",
     "name": "Corsiego",
     "description": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
     "version": 1,
-    "path": "tests/Corsi/index.html"
+    "path": "tests/Corsi/index.html",
+    "description_pl": "Test polegający na zapamiętywaniu sekwencji zapalenia świateł",
+    "description_en": "Test involving memorizing a sequence of light activations"
   },
   {
     "id": "FabrykaFigur",
     "name": "FabrykaFigur",
     "description": "Zaimportowano z repozytorium BBTP (FabrykaFigur)",
     "version": 1,
-    "path": "tests/FabrykaFigur/index.html"
+    "path": "tests/FabrykaFigur/index.html",
+    "description_pl": "Zaimportowano z repozytorium BBTP (FabrykaFigur)",
+    "description_en": "Imported from BBTP repository (FabrykaFigur)",
+    "name_en": "Shapes Factory"
   },
   {
     "id": "GoNoGo",
     "name": "Go/No-Go",
     "description": "Test typu Go NoGo na liczbach parzystych i nieparzystych.",
     "version": 1,
-    "path": "tests/GoNoGo/index.html"
+    "path": "tests/GoNoGo/index.html",
+    "description_pl": "Test typu Go NoGo na liczbach parzystych i nieparzystych.",
+    "description_en": "Go/No-Go test on even and odd numbers."
   },
   {
     "id": "GoNoGoBiegacze",
     "name": "GoNoGoBiegacze",
     "description": "Zaimportowano z repozytorium BBTP (GoNoGoBiegacze)",
     "version": 1,
-    "path": "tests/GoNoGoBiegacze/index.html"
+    "path": "tests/GoNoGoBiegacze/index.html",
+    "description_pl": "Zaimportowano z repozytorium BBTP (GoNoGoBiegacze)",
+    "description_en": "Imported from BBTP repository (GoNoGoBiegacze)",
+    "name_en": "Go|NoGo - Runners"
   },
   {
     "id": "NWstecz",
     "name": "N-Wstecz",
     "description": "Test polega na pamiętaniu liczby która pojawiła się N liczb wcześniej (od 1 do 5)",
     "version": 1,
-    "path": "tests/NWstecz/index.html"
+    "path": "tests/NWstecz/index.html",
+    "description_pl": "Test polega na pamiętaniu liczby która pojawiła się N liczb wcześniej (od 1 do 5)",
+    "description_en": "Test involves remembering a number that appeared N numbers earlier (from 1 to 5)",
+    "name_en": "NBack"
   },
   {
     "id": "PingPong",
     "name": "Ping Pong",
     "description": "Test na koordynacji wzrokowo-ruchowej (oburęcznej).",
     "version": 1,
-    "path": "tests/PingPong/index.html"
+    "path": "tests/PingPong/index.html",
+    "description_pl": "Test na koordynacji wzrokowo-ruchowej (oburęcznej).",
+    "description_en": "Test of visual-motor coordination (bimanual)."
   },
   {
     "id": "Samochodzik",
     "name": "Samochodzik",
     "description": "Test polegający na przejechaniu labiryntu",
     "version": 1,
-    "path": "tests/Samochodzik/index.html"
+    "path": "tests/Samochodzik/index.html",
+    "description_pl": "Test polegający na przejechaniu labiryntu",
+    "description_en": "Test involving navigating a maze",
+    "name_en": "Car labirynth"
   },
   {
     "id": "Semafor",
     "name": "Semafor",
     "description": "Test na Semaforze, często spotykany przy badaniach kierowców",
     "version": 1,
-    "path": "tests/Semafor/index.html"
+    "path": "tests/Semafor/index.html",
+    "description_pl": "Test na Semaforze, często spotykany przy badaniach kierowców",
+    "description_en": "Traffic light test, often used in driver studies",
+    "name_en": "Cross apparatus"
   },
   {
     "id": "Sygnalizacja",
     "name": "Sygnalizacja",
     "description": "Test na czas reakcji zmiany światła na skrzyżowaniu",
     "version": 1,
-    "path": "tests/Sygnalizacja/index.html"
+    "path": "tests/Sygnalizacja/index.html",
+    "description_pl": "Test na czas reakcji zmiany światła na skrzyżowaniu",
+    "description_en": "Test of reaction time to traffic light changes at an intersection",
+    "name_en": "Sygnalization"
   },
   {
     "id": "Stop",
     "name": "Sygnał Stop",
     "description": "Test na reakcję na pojawienie się znaku STOP",
     "version": 1,
-    "path": "tests/Stop/index.html"
+    "path": "tests/Stop/index.html",
+    "description_pl": "Test na reakcję na pojawienie się znaku STOP",
+    "description_en": "Test of reaction to the appearance of a STOP sign"
   },
   {
     "id": "Stroop",
     "name": "Test Stroopa",
     "description": "Test w stylu testu Stroop",
     "version": 1,
-    "path": "tests/Stroop/index.html"
+    "path": "tests/Stroop/index.html",
+    "description_pl": "Test w stylu testu Stroop",
+    "description_en": "Test in the style of the Stroop test"
   },
   {
     "id": "ZlapSygnal",
     "name": "ZlapSygnal",
     "description": "Zaimportowano z repozytorium BBTP (ZlapSygnal)",
     "version": 1,
-    "path": "tests/ZlapSygnal/index.html"
+    "path": "tests/ZlapSygnal/index.html",
+    "description_pl": "Zaimportowano z repozytorium BBTP (ZlapSygnal)",
+    "description_en": "Imported from BBTP repository (ZlapSygnal)",
+    "name_en": "Catch the Signal"
   }
 ]
