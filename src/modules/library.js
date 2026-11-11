@@ -23,11 +23,10 @@ import {
 import { t, getLocale, onLocaleChange } from "../i18n/index.js";
 
 // Re-render library when language changes so translated names/descriptions update
-onLocaleChange(() => {
-  const grid = document.getElementById("tests-grid");
-  if (grid) {
-    loadTestsList();
-  }
+onLocaleChange((locale) => {
+  console.log("[library] locale changed to", locale);
+  // Always reload tests list to update translated names/descriptions
+  loadTestsList();
 });
 
 /**
@@ -157,6 +156,7 @@ function updateViewButtonStates() {
 }
 
 export async function loadTestsList(filterText = null, forceRefresh = false) {
+  console.log("[loadTestsList] called, cachedTests.length:", cachedTests.length, "isLoading:", isLoading);
   // Guard: jeśli już trwa ładowanie, zignoruj nowe wywołanie (zapobiega race condition i podwójnemu wyświetlaniu)
   if (isLoading) {
     console.log(

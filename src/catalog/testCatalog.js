@@ -113,7 +113,10 @@ export function mergeLocalVersions(tests, localVersions, settings = {}, { backfi
         merged.push({
           id: testId,
           name: local.name || t("library.localTestName", { id: testId }),
+          name_en: local.name_en || local.name || "",
           description: local.description || t("library.downloadedPreviously"),
+          description_pl: local.description_pl || local.description || "",
+          description_en: local.description_en || local.description || "",
           version: local.version || 0,
           local_ver: Number(local.version || 0),
           remote_ver: Number(local.version || 0),
