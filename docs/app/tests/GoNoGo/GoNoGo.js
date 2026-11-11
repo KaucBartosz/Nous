@@ -3,12 +3,16 @@
  ***************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
+import { lang, t as tr } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
 //some handy aliases as in the psychopy scripts;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
+
+localizePsychoJSDialogs(lang);
 
 
 // store info about the experiment session:
@@ -63,10 +67,10 @@ flowScheduler.add(trialsLoopEnd);
 
 
 
-flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
 // quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
   expName: expName,
@@ -128,7 +132,7 @@ async function experimentInit() {
   instrText = new visual.TextStim({
     win: psychoJS.window,
     name: 'instrText',
-    text: 'Za chwilę na ekranie będą pojawiać się kolejno cyfry. Twoim zadaniem jest wcisnąć SPACJĘ, gdy pokazywana cyfra będzie PARZYSTA (0, 2, 4, 6, 8) i powstrzymać się od reakcji, gdy cyfra będzie NIEPARZYSTA (1, 3, 5, 7, 9). Aby rozpocząć zadanie, wciśnij SPACJĘ.',
+    text: tr('instructions'),
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,
@@ -144,7 +148,7 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Wybierz poziom trudności:\n\n1 - ŁATWY (1.5 sekundy)\n2 - NORMALNY (1.0 sekunda)\n3 - TRUDNY (0.5 sekundy)\n\nNaciśnij 1, 2 lub 3.',
+    text: tr('difficulty'),
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,
@@ -160,7 +164,7 @@ async function experimentInit() {
   text_len = new visual.TextStim({
     win: psychoJS.window,
     name: 'text_len',
-    text: 'Wybierz długość testu:\n\n1 - KRÓTKI (10 prób)\n2 - ŚREDNI (30 prób)\n3 - DŁUGI (60 prób)\n\nNaciśnij 1, 2 lub 3.',
+    text: tr('length'),
     font: 'Arial',
     pos: [0, 0], height: 0.05, wrapWidth: undefined, ori: 0.0,
     color: new util.Color('white'), opacity: undefined,
@@ -182,7 +186,7 @@ async function experimentInit() {
 
   // Domyślne wartości trudności
   window.decisionTime = 1.0;
-  window.difficultyName = "Normalny (Domyślny)";
+  window.difficultyName = tr('difficultyDefault');
 
   console.log("Eksperyment zainicjowany.");
   // Initialize components for Routine "trial"
@@ -348,7 +352,7 @@ function instructionsRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
 
     // check if the Routine should terminate
@@ -494,7 +498,7 @@ function DifficultyRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
 
     // check if the Routine should terminate
@@ -587,7 +591,7 @@ function LengthRoutineEachFrame() {
     }
 
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
 
     if (!continueRoutine) {
@@ -695,13 +699,13 @@ function DifficultyRoutineEnd(snapshot) {
     // Ustawienie parametrów w zależności od klawisza
     if (choice === '1') {
       window.decisionTime = 1.5;
-      window.difficultyName = "Łatwy (1.5s)";
+      window.difficultyName = tr('difficultyEasy');
     } else if (choice === '3') {
       window.decisionTime = 0.5;
-      window.difficultyName = "Trudny (0.5s)";
+      window.difficultyName = tr('difficultyHard');
     } else {
       window.decisionTime = 1.0;
-      window.difficultyName = "Normalny (1.0s)";
+      window.difficultyName = tr('difficultyNormal');
     }
 
     console.log(`Wybrano poziom: ${window.difficultyName}`);
@@ -948,7 +952,7 @@ function trialRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
 
     // check if the Routine should terminate
@@ -1130,7 +1134,7 @@ function feedbackRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
 
     // check if the Routine should terminate
@@ -1289,8 +1293,15 @@ async function quitPsychoJS(message, isCompleted) {
         sredni_czas_reakcji: sredniCzasReakcji,
 
         // Dodatkowe informacje
-        poziom_trudnosci: window.difficultyName || "Nieznany",
-        score: `Poprawne: ${poprawneNacisniecia} | Błędne: ${bledneNacisniecia} | Łącznie: ${wszystkieNacisniecia} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms | Poziom: ${window.difficultyName}`,
+        poziom_trudnosci: window.difficultyName || tr('difficultyUnknown'),
+        score: tr('score', {
+          correct: poprawneNacisniecia,
+          wrong: bledneNacisniecia,
+          total: wszystkieNacisniecia,
+          accuracy: accuracy,
+          rt: sredniCzasReakcji,
+          level: window.difficultyName || tr('difficultyUnknown'),
+        }),
 
         statystyki: {
           poprawne: totalCorrect,
@@ -1322,14 +1333,3 @@ async function quitPsychoJS(message, isCompleted) {
 }
 
 
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

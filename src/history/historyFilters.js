@@ -8,6 +8,7 @@ import {
   resolveStatusLabel,
   hasActiveFilters,
 } from "../results/historyQuery.js";
+import { t, localeTag } from "../i18n/index.js";
 
 /** Jedna funkcja licząca zamiast 3 kopii pętli (klucz wstrzyknięty). */
 export function countBy(results, keyFn) {
@@ -16,7 +17,9 @@ export function countBy(results, keyFn) {
     const val = keyFn(r);
     counts[val] = (counts[val] || 0) + 1;
   });
-  return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], "pl"));
+  return Object.entries(counts).sort((a, b) =>
+    a[0].localeCompare(b[0], localeTag()),
+  );
 }
 
 /** Wartości filtra z danych widoku (daty jako drzewo rok→miesiąc→dzień). */
@@ -29,7 +32,7 @@ export function buildFilterValues(results, type) {
       const month = d.getMonth();
       const day = d.getDate();
       const dateStr = `${String(day).padStart(2, "0")}.${String(month + 1).padStart(2, "0")}.${year}`;
-      const monthName = d.toLocaleString("pl-PL", { month: "long" });
+      const monthName = d.toLocaleString(localeTag(), { month: "long" });
       if (!tree[year]) tree[year] = {};
       if (!tree[year][month]) tree[year][month] = { name: monthName, days: {} };
       if (!tree[year][month].days[day])
@@ -250,8 +253,8 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
     <div class="filter-dropdown-header">
       <span>${label}</span>
       <div class="filter-dropdown-actions">
-        <button class="filter-select-all">Zaznacz wszystko</button>
-        <button class="filter-deselect-all">Wyczyść</button>
+        <button class="filter-select-all">${t("history.selectAll")}</button>
+        <button class="filter-deselect-all">${t("history.clear")}</button>
       </div>
     </div>
     <div class="filter-dropdown-body"></div>

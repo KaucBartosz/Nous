@@ -1,6 +1,7 @@
 import { elements } from './ui.js';
 import { escapeHtml } from './utils.js';
 import { getPlatform } from '../platform/index.js';
+import { t, localeTag } from '../i18n/index.js';
 
 const CACHE_KEY = 'whats_new_cache_v2';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
@@ -122,8 +123,8 @@ async function fetchReleases() {
         return releases.map(release => ({
             title: release.name || release.tag_name,
             version: release.tag_name,
-            date: new Date(release.published_at).toLocaleDateString('pl-PL'),
-            body: release.body || 'Brak opisu.',
+            date: new Date(release.published_at).toLocaleDateString(localeTag()),
+            body: release.body || t('whatsNew.noDescription'),
             html_url: release.html_url
         }));
     } catch (error) {
@@ -158,14 +159,14 @@ function displayWhatsNew(data) {
         <div class="release-header">
             <h4>${escapeHtml(data.title)}</h4>
             <div class="release-meta">
-                <span class="version-badge">Wersja: ${escapeHtml(data.version)}</span>
-                <span class="release-date">Data wydania: ${escapeHtml(data.date)}</span>
+                <span class="version-badge">${t('whatsNew.version', { version: escapeHtml(data.version) })}</span>
+                <span class="release-date">${t('whatsNew.releaseDate', { date: escapeHtml(data.date) })}</span>
             </div>
         </div>
         <div class="release-body"></div>
         <div class="release-actions">
             <a href="${escapeHtml(data.html_url)}" target="_blank" class="btn primary small">
-                <span class="material-icons">open_in_new</span> Zobacz szczegóły tej wersji na GitHubie
+                <span class="material-icons">open_in_new</span> ${t('whatsNew.viewOnGitHub')}
             </a>
         </div>
     `;

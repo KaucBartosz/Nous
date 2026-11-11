@@ -11,6 +11,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     runTest: (testId) =>
         ipcRenderer.send('run-test', { testId }),
 
+    // Język interfejsu (pl/en) dla okien testów — main przekazuje go przez
+    // --nous-test-language= do preload_test.js.
+    setUiLanguage: (lang) =>
+        ipcRenderer.send('set-ui-language', lang),
+
     onStatusUpdate: (callback) => ipcRenderer.on('test-status', (event, message) => callback(message)),
     onTestResults: (callback) => ipcRenderer.on('test-results-forwarded', (event, data) => callback(data)),
     saveResultToDisk: (data) => ipcRenderer.send('save-local-result', data),
@@ -45,15 +50,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onAppUpdateDownloaded: (callback) => ipcRenderer.on('app-update-downloaded', (event, info) => callback(info)),
 
     // 7. IMPORT / EKSPORT SZABLONÓW
-    exportTemplate: (data) => ipcRenderer.invoke('export-template', data),
-    importTemplate: () => ipcRenderer.invoke('import-template'),
+    // dialogTitle: tytuł natywnego okna z i18n renderera (main nie zna języka).
+    exportTemplate: (data, dialogTitle) => ipcRenderer.invoke('export-template', data, dialogTitle),
+    importTemplate: (dialogTitle) => ipcRenderer.invoke('import-template', dialogTitle),
 
     // 8. ZAPIS PACZKI ZIP
     downloadBulkZip: (data) => ipcRenderer.invoke('download-bulk-zip', data),
 
     // 8b. CICHE POBIERANIE (opcja w Ustawieniach; domyślnie dialog systemowy)
     getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
-    pickDownloadFolder: (current) => ipcRenderer.invoke('pick-download-folder', current),
+    pickDownloadFolder: (opts) => ipcRenderer.invoke('pick-download-folder', opts),
     setSilentDownloads: (mode) => ipcRenderer.send('set-silent-downloads', mode),
 
     // 9. OTWIERANIE LINKÓW

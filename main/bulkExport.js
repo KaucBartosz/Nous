@@ -7,6 +7,19 @@
 
 const CSV_BOM = "﻿";
 
+// Main nie zna języka interfejsu — etykiety kolumn podaje renderer (i18n).
+// Fallback PL = dotychczasowe nagłówki dla wywołań bez UI.
+const DEFAULT_LABELS = {
+  date: "Data",
+  testId: "Test ID",
+  subjectId: "ID Badanego",
+  researcherUid: "Badacz UID",
+  demographics: "Metryczka",
+  result: "Wynik",
+  parameter: "Parametr",
+  value: "Wartość",
+};
+
 /**
  * Kopia utils.flattenObject (separator ` - `, tablice jako JSON, guard cykli).
  * Kopia zamiast importu — patrz nagłówek pliku.
@@ -39,21 +52,22 @@ function escapeCell(value) {
  * Domyślne jak w normalizeResult/resultRow: test "test", braki "-".
  * (Nazwa pliku ZIP — `Wynik_${testId}_...` — zostaje po staremu, to nie kolumna.)
  */
-function buildBulkRow(res) {
+function buildBulkRow(res, labels = DEFAULT_LABELS) {
+  const L = { ...DEFAULT_LABELS, ...labels };
   const resData = res.wyniki || res.data || {};
   const flat = {};
-  flat["Data"] = new Date(res.timestamp || new Date().toISOString()).toLocaleString();
-  flat["Test ID"] = res.test_id || res.testId || "test";
+  flat[L.date] = new Date(res.timestamp || new Date().toISOString()).toLocaleString();
+  flat[L.testId] = res.test_id || res.testId || "test";
   const subj =
     res.subject_id ?? (resData && resData.subjectId) ?? res.subjectId ?? null;
-  flat["ID Badanego"] = subj || "-";
-  flat["Badacz UID"] = res.researcher_uid ?? "-";
+  flat[L.subjectId] = subj || "-";
+  flat[L.researcherUid] = res.researcher_uid ?? "-";
 
   const demo = res.demographics || {};
   const dData = demo.data || demo;
-  if (dData && typeof dData === "object") flattenDeep(dData, flat, "Metryczka");
+  if (dData && typeof dData === "object") flattenDeep(dData, flat, L.demographics);
 
-  if (resData && typeof resData === "object") flattenDeep(resData, flat, "Wynik");
+  if (resData && typeof resData === "object") flattenDeep(resData, flat, L.result);
   return flat;
 }
 
@@ -61,9 +75,10 @@ function buildBulkRow(res) {
  * tego samego wyniku (src/results/resultExporter.js: toKeyValueCSV(resultRow)).
  * Decyzja: ZIP = N x single (wariant A). Kopia zamiast importu — main nie
  * importuje ESM z src/; prawdą jest test parytetu serializacji. */
-function buildBulkCsv(res) {
-  const flat = buildBulkRow(res);
-  let out = `${CSV_BOM}Parametr;Wartość\r\n`;
+function buildBulkCsv(res, labels = DEFAULT_LABELS) {
+  const L = { ...DEFAULT_LABELS, ...labels };
+  const flat = buildBulkRow(res, labels);
+  let out = `${CSV_BOM}${L.parameter};${L.value}\r\n`;
   for (const [key, value] of Object.entries(flat)) {
     out += `${key};${escapeCell(value)}\r\n`;
   }
@@ -78,7 +93,10 @@ function buildBulkCsv(res) {
  * dialog/AdmZip/path/folder-downloads wstrzyknięte (wzorzec jak main/templates.js).
  */
 function createBulkExport({ dialog, AdmZip, path, getDownloadsDir }) {
-  async function downloadBulkZip(getMainWindow, { results, filename, format, destDir = null }) {
+  async function downloadBulkZip(
+    getMainWindow,
+    { results, filename, format, destDir = null, dialogTitle, labels },
+  ) {
     try {
       const zip = new AdmZip();
 
@@ -86,10 +104,11 @@ function createBulkExport({ dialog, AdmZip, path, getDownloadsDir }) {
         const dateStr = new Date(res.timestamp || res.synced_at).toISOString().replace(/[:.]/g, '-');
         const testId = res.test_id || res.testId || 'unknown';
         const subjectId = res.subject_id || 'unknown';
-        const baseName = `Wynik_${testId}_${subjectId}_${dateStr}`;
+        // Nazwy plików w archiwum są neutralne językowo (to dane, nie UI).
+        const baseName = `Result_${testId}_${subjectId}_${dateStr}`;
 
         if (format === 'csv') {
-          const csvContent = buildBulkCsv(res);
+          const csvContent = buildBulkCsv(res, labels);
           zip.addFile(`${baseName}.csv`, Buffer.from(csvContent, 'utf8'));
         } else {
           const jsonStr = JSON.stringify(res, null, 2);
@@ -98,7 +117,7 @@ function createBulkExport({ dialog, AdmZip, path, getDownloadsDir }) {
       });
 
       // SEC: sama nazwa pliku (bez podkatalogów z ładunku).
-      const safeName = path.basename(filename || `Wyniki_${Date.now()}.zip`);
+      const safeName = path.basename(filename || `Results_${Date.now()}.zip`);
 
       if (destDir) {
         const filePath = path.join(destDir, safeName);
@@ -107,7 +126,8 @@ function createBulkExport({ dialog, AdmZip, path, getDownloadsDir }) {
       }
 
       const { filePath } = await dialog.showSaveDialog(getMainWindow(), {
-        title: 'Zapisz paczkę wyników (ZIP)',
+        // Tytuł z renderera (i18n); fallback EN dla wywołań bez UI.
+        title: dialogTitle || 'Save result package (ZIP)',
         defaultPath: path.join(getDownloadsDir(), safeName),
         filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
       });

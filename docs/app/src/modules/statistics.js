@@ -21,6 +21,7 @@ import {
   renderMetricsPanel,
 } from "../statistics/statisticsTable.js";
 import { Notify } from "../notify/notify.js";
+import { t, localeTag } from "../i18n/index.js";
 
 const state = {
   allResults: [],
@@ -45,7 +46,7 @@ function el(id) {
 
 function dateShort(timestamp) {
   const d = new Date(timestamp);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pl-PL");
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString(localeTag());
 }
 
 function dateRelative(timestamp) {
@@ -59,12 +60,12 @@ function dateRelative(timestamp) {
   );
   const startDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const days = Math.round((startToday - startDay) / 86400000);
-  if (days <= 0) return "dzisiaj";
-  if (days === 1) return "wczoraj";
-  if (days < 7) return `${days} dni temu`;
-  if (days < 14) return "tydzień temu";
-  if (days < 31) return `${Math.floor(days / 7)} tyg. temu`;
-  return d.toLocaleDateString("pl-PL");
+  if (days <= 0) return t("statistics.today");
+  if (days === 1) return t("statistics.yesterday");
+  if (days < 7) return t("statistics.daysAgo", { count: days });
+  if (days < 14) return t("statistics.weekAgo");
+  if (days < 31) return t("statistics.weeksAgo", { count: Math.floor(days / 7) });
+  return d.toLocaleDateString(localeTag());
 }
 
 function readLastTest() {
@@ -106,8 +107,8 @@ function heroContent(runs) {
 
   if (runs.length === 1) {
     return {
-      title: "Pierwszy krok za Tobą",
-      text: "Masz 1 wykonanie. Powtórz test, aby zobaczyć trend i porównać wyniki.",
+      title: t("statistics.heroFirstTitle"),
+      text: t("statistics.heroFirstText"),
     };
   }
 
@@ -118,33 +119,39 @@ function heroContent(runs) {
     (previous === null || best > previous)
   ) {
     return {
-      title: "Nowy rekord!",
-      text: `Twój najlepszy wynik to ${formatNumber(best)}. Tak trzymaj.`,
+      title: t("statistics.heroRecordTitle"),
+      text: t("statistics.heroRecordText", { value: formatNumber(best) }),
     };
   }
 
   if (latest !== null && previous !== null) {
     if (latest > previous) {
       return {
-        title: "Wynik rośnie",
-        text: `Ostatnio ${formatNumber(latest)}, poprzednio ${formatNumber(previous)}. Dobra robota.`,
+        title: t("statistics.heroUpTitle"),
+        text: t("statistics.heroUpText", {
+          latest: formatNumber(latest),
+          previous: formatNumber(previous),
+        }),
       };
     }
     if (latest < previous) {
       return {
-        title: "Każde powtórzenie się liczy",
-        text: `Ostatnio ${formatNumber(latest)}, poprzednio ${formatNumber(previous)}. Następne podejście może być lepsze.`,
+        title: t("statistics.heroDownTitle"),
+        text: t("statistics.heroDownText", {
+          latest: formatNumber(latest),
+          previous: formatNumber(previous),
+        }),
       };
     }
     return {
-      title: "Równe tempo",
-      text: `Ostatnio ${formatNumber(latest)} — tyle samo co poprzednio.`,
+      title: t("statistics.heroSameTitle"),
+      text: t("statistics.heroSameText", { latest: formatNumber(latest) }),
     };
   }
 
   return {
-    title: "Twoje postępy",
-    text: "Śledź wyniki i porównuj kolejne wykonania.",
+    title: t("statistics.heroDefaultTitle"),
+    text: t("statistics.heroDefaultText"),
   };
 }
 
@@ -182,7 +189,7 @@ function availableMetrics(runs) {
     });
   });
   return Array.from(map.values()).sort((a, b) =>
-    a.label.localeCompare(b.label, "pl"),
+    a.label.localeCompare(b.label, localeTag()),
   );
 }
 
@@ -200,9 +207,12 @@ function computeKpis(runs) {
   const hasScores = scores.length > 0;
   const items = [
     {
-      label: "Wykonania",
+      label: t("statistics.kpiRuns"),
       value: String(runs.length),
-      hint: state.mode === "personal" ? "w wybranym teście" : "w wybranym zakresie",
+      hint:
+        state.mode === "personal"
+          ? t("statistics.kpiInTest")
+          : t("statistics.kpiInScope"),
     },
   ];
 
@@ -215,51 +225,57 @@ function computeKpis(runs) {
       latest !== null && best !== null && latest === best && runs.length > 1;
 
     items.push({
-      label: "Ostatni wynik",
+      label: t("statistics.kpiLastResult"),
       value: latest !== null ? formatNumber(latest) : "—",
-      hint: runs[0] ? dateRelative(runs[0].timestamp) : "brak danych",
+      hint: runs[0] ? dateRelative(runs[0].timestamp) : t("statistics.kpiNoData"),
     });
     items.push({
-      label: "Najlepszy wynik",
+      label: t("statistics.kpiBestResult"),
       value: best !== null ? formatNumber(best) : "—",
       hint: isNewRecord
-        ? "nowy rekord!"
+        ? t("statistics.kpiNewRecord")
         : hasScores
-          ? "maksimum z wykonań"
-          : "brak metryki wyniku",
+          ? t("statistics.kpiMaxOfRuns")
+          : t("statistics.kpiNoScoreMetric"),
     });
 
     let tone = null;
     let value = "—";
-    let hint = "potrzebne dwa wykonania";
+    let hint = t("statistics.kpiNeedsTwoRuns");
     if (latest !== null && previous !== null) {
       const delta = latest - previous;
       tone = delta > 0 ? "up" : delta < 0 ? "down" : null;
       value = (delta > 0 ? "+" : "") + formatNumber(delta);
       hint =
         delta > 0
-          ? "poprawa względem poprzedniego"
+          ? t("statistics.kpiImprovement")
           : delta < 0
-            ? "spadek względem poprzedniego"
-            : "bez zmian";
+            ? t("statistics.kpiDecline")
+            : t("statistics.kpiNoChange");
     }
-    items.push({ label: "Zmiana", value, hint, tone });
+    items.push({ label: t("statistics.kpiChange"), value, hint, tone });
   } else {
     const subjects = distinctSubjectIds(runs, state.testId).length;
-    items.push({ label: "Badani", value: String(subjects), hint: "unikalnych osób" });
+    items.push({
+      label: t("statistics.kpiSubjects"),
+      value: String(subjects),
+      hint: t("statistics.kpiUniquePeople"),
+    });
 
     const avg = hasScores
       ? scores.reduce((a, b) => a + b, 0) / scores.length
       : null;
     items.push({
-      label: "Średni wynik",
+      label: t("statistics.kpiAverageResult"),
       value: avg !== null ? formatNumber(avg) : "—",
-      hint: hasScores ? `z ${scores.length} wykonań` : "brak metryki wyniku",
+      hint: hasScores
+        ? t("statistics.kpiOfRuns", { count: scores.length })
+        : t("statistics.kpiNoScoreMetric"),
     });
     items.push({
-      label: "Najwyższy wynik",
+      label: t("statistics.kpiHighestResult"),
       value: hasScores ? formatNumber(Math.max(...scores)) : "—",
-      hint: "maksimum w zakresie",
+      hint: t("statistics.kpiMaxInScope"),
     });
   }
 
@@ -271,11 +287,12 @@ function populateTests() {
   if (!select) return [];
   const tests = distinctTestIds(state.allResults);
   const prev = state.testId;
-  select.innerHTML = '<option value="">-- wybierz test --</option>';
-  tests.forEach((t) => {
+  select.innerHTML = `<option value="">${t("statistics.chooseTestPlaceholder")}</option>`;
+  tests.forEach((testId) => {
     const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
+    opt.value = testId;
+    opt.textContent =
+      testId === "Nieznany" ? t("statistics.unknownTest") : testId;
     select.appendChild(opt);
   });
   if (prev && tests.includes(prev)) select.value = prev;
@@ -287,7 +304,7 @@ function populateParticipants() {
   const select = el("stats-participant-select");
   if (!select) return;
   const prev = state.participantKey;
-  select.innerHTML = '<option value="">-- wybierz badanego --</option>';
+  select.innerHTML = `<option value="">${t("statistics.chooseParticipantPlaceholder")}</option>`;
   state.participants.forEach((p) => {
     const opt = document.createElement("option");
     const key = p.id || p.display_name;
@@ -306,7 +323,7 @@ function personalSubjects() {
     );
     return {
       id,
-      label: id === "GUEST" ? "Gość" : participant?.display_name || id,
+      label: id === "GUEST" ? t("statistics.guest") : participant?.display_name || id,
     };
   });
 }
@@ -333,7 +350,9 @@ function populatePersonalSubjects() {
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.textContent =
-      subjects.length > 1 ? "-- wybierz osobę --" : "-- brak wyników --";
+      subjects.length > 1
+        ? t("statistics.choosePersonPlaceholder")
+        : t("statistics.noResultsPlaceholder");
     select.appendChild(placeholder);
   }
 
@@ -484,16 +503,18 @@ function render() {
     el("stats-hero")?.classList.add("hidden");
     if (state.allResults.length === 0) {
       setEmpty({
-        title: "Twój dziennik postępów czeka",
-        text: "Wykonaj pierwszy test, aby zobaczyć tutaj wynik, rekord i trend.",
-        cta: "Przejdź do biblioteki testów",
+        title: t("statistics.emptyJournalTitle"),
+        text: t("statistics.emptyJournalText"),
+        cta: t("statistics.emptyJournalCta"),
         action: "library",
       });
     } else {
       setEmpty({
-        title: "Wybierz test, który chcesz śledzić",
-        text: `Dostępne wyniki: ${state.allResults.length}. Wskaż test, aby zobaczyć postęp.`,
-        cta: "Wybierz test",
+        title: t("statistics.emptyChooseTestTitle"),
+        text: t("statistics.emptyChooseTestText", {
+          count: state.allResults.length,
+        }),
+        cta: t("statistics.emptyChooseTestCta"),
         action: "test",
       });
     }
@@ -511,19 +532,19 @@ function render() {
       !state.personalSubjectId
     ) {
       setEmpty({
-        title: "Wybierz osobę",
-        text: "Wyniki tego testu należą do kilku osób. Wskaż jedną, aby śledzić jej postęp.",
-        cta: "Wybierz osobę",
+        title: t("statistics.emptyChoosePersonTitle"),
+        text: t("statistics.emptyChoosePersonText"),
+        cta: t("statistics.emptyChoosePersonCta"),
         action: "subject",
       });
     } else {
       setEmpty({
-        title: "Brak wyników dla tego testu",
+        title: t("statistics.emptyNoResultsTitle"),
         text:
           state.mode === "personal"
-            ? "Wykonaj ten test, aby zobaczyć swój postęp."
-            : "Zmień zakres lub wykonaj test, aby zobaczyć statystyki.",
-        cta: "Wykonaj test",
+            ? t("statistics.emptyNoResultsTextPersonal")
+            : t("statistics.emptyNoResultsTextResearch"),
+        cta: t("statistics.emptyRunTestCta"),
         action: "library",
       });
     }
@@ -574,7 +595,10 @@ function render() {
         if (ctbody) renderCompareTable(ctbody, rows);
         const info = el("stats-compare-info");
         if (info) {
-          info.textContent = `A: ${dateShort(runA.timestamp)}  ·  B: ${dateShort(runB.timestamp)}`;
+          info.textContent = t("statistics.compareInfo", {
+            a: dateShort(runA.timestamp),
+            b: dateShort(runB.timestamp),
+          });
         }
         compare?.classList.remove("hidden");
       }
@@ -611,7 +635,9 @@ function render() {
       const info = el("stats-trend-info");
       if (info) {
         info.textContent =
-          points.length === 1 ? "1 wykonanie" : `${points.length} wykonań`;
+          points.length === 1
+            ? t("statistics.runCount", { count: 1 })
+            : t("statistics.runCount", { count: points.length });
       }
     } else {
       trend?.classList.add("hidden");
@@ -629,7 +655,7 @@ function render() {
 
     const count = el("stats-research-count");
     if (count) {
-      count.textContent = `Liczba wykonań: ${runs.length}`;
+      count.textContent = t("statistics.researchCount", { count: runs.length });
     }
   }
 }
@@ -777,6 +803,6 @@ export async function loadStatisticsData() {
     render();
   } catch (e) {
     console.error("Error loading statistics:", e);
-    Notify.error("Błąd ładowania statystyk: " + e.message);
+    Notify.error(t("statistics.loadError") + " " + e.message);
   }
 }

@@ -8,7 +8,9 @@ import {
   renderParticipantsList,
 } from "./participants.js";
 import { getResearcherUid } from "./auth.js";
+import { getSettings } from "./settings.js";
 import { storageKeySuffix } from "../session/session.js";
+import { t } from "../i18n/index.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
@@ -24,12 +26,18 @@ function getDemoStorageKeys() {
 
 let activeDemographics = null;
 let currentTemplateId = null;
-let _loadedParticipantDisplayName = null; // Name from Kartoteka Badanych
+// Tymczasowa nazwa z Kartoteki Badanych — ustawiana tylko na czas zapisu
+// formularza po wczytaniu profilu (izolowana per operacja, nie per konto).
+let _pendingParticipantName = null;
 
 export async function initDemographics() {
   await refreshTemplatesDropdown();
 
-  const savedTemplateId = localStorage.getItem(getDemoStorageKeys().templateId);
+  const autoLoad = getSettings().autoLoadDemographics === true;
+
+  const savedTemplateId = autoLoad
+    ? localStorage.getItem(getDemoStorageKeys().templateId)
+    : null;
   if (savedTemplateId) {
     elements.demoTemplateSelect.value = savedTemplateId;
     await renderDynamicForm(savedTemplateId);
@@ -45,8 +53,10 @@ export async function initDemographics() {
     renderParticipantsList();
   });
 
-  // Populate data if exists
-  loadSavedDemographics();
+  // Populate data if exists (tylko gdy włączone auto-wczytywanie)
+  if (autoLoad) {
+    loadSavedDemographics();
+  }
 
   // Bind Save Button
   if (elements.btnSaveDemo) {
@@ -64,9 +74,7 @@ export async function initDemographics() {
   if (btnSaveToRegistry) {
     btnSaveToRegistry.addEventListener("click", async () => {
       if (!activeDemographics) {
-        await Notify.warning(
-          'Najpierw zapisz dane sesji (kliknij "Zapisz Dane Sesji").',
-        );
+        await Notify.warning(t("demographics.saveSessionFirst"));
         return;
       }
       await saveCurrentAsParticipant(activeDemographics);
@@ -83,11 +91,11 @@ export async function initDemographics() {
 export async function refreshTemplatesDropdown() {
   const templates = await getAllTemplates();
   elements.demoTemplateSelect.innerHTML =
-    '<option value="">-- Domyślna (Brak) --</option>';
-  templates.forEach((t) => {
+    `<option value="">${t("demographics.defaultTemplate")}</option>`;
+  templates.forEach((template) => {
     const opt = document.createElement("option");
-    opt.value = t.id;
-    opt.textContent = t.name;
+    opt.value = template.id;
+    opt.textContent = template.name;
     elements.demoTemplateSelect.appendChild(opt);
   });
 }
@@ -99,14 +107,14 @@ async function renderDynamicForm(templateId) {
 
   if (!templateId) {
     container.innerHTML =
-      '<p style="color:#888;">Wybierz szablon, aby wypełnić metryczkę.</p>';
+      `<p style="color:#888;">${t("demographics.noTemplateHint")}</p>`;
     return;
   }
 
   const template = await getTemplate(templateId);
   if (!template) {
     container.innerHTML =
-      '<p style="color:red;">Błąd: Szablon nie istnieje.</p>';
+      `<p style="color:red;">${t("demographics.templateMissing")}</p>`;
     return;
   }
 
@@ -129,7 +137,7 @@ async function renderDynamicForm(templateId) {
 
       const defaultOpt = document.createElement("option");
       defaultOpt.value = "";
-      defaultOpt.textContent = "-- Wybierz --";
+      defaultOpt.textContent = t("demographics.chooseOption");
       input.appendChild(defaultOpt);
 
       if (field.options) {
@@ -369,7 +377,7 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
   const isForce = forceOverwrite === true; // Handle Event object from addEventListener
 
   if (!currentTemplateId) {
-    await Notify.warning("Wybierz szablon przed zapisaniem!");
+    await Notify.warning(t("demographics.chooseTemplateBeforeSave"));
     return;
   }
 
@@ -427,20 +435,16 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
   });
 
   if (hasInputs && isEmpty) {
-    await Notify.warning("Wypełnij przynajmniej jedno pole!");
+    await Notify.warning(t("demographics.fillAtLeastOne"));
     return;
   }
 
   function detectParticipantId(formData) {
-    if (_loadedParticipantDisplayName) return _loadedParticipantDisplayName;
-    const idKeywords = ["id", "participant", "pesel", "identyfikator", "kod", "numer"];
-    for (const [label, value] of Object.entries(formData)) {
-      const clean = label.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (idKeywords.some(kw => clean.includes(kw)) && value) {
-        return String(value);
-      }
-    }
-    return `ID_${crypto.randomUUID().slice(0, 8)}`;
+    // Tylko nazwa z Kartoteki Badanych (wczytany profil) staje się
+    // participant_id. Ręczne wypełnienie metryczki nie generuje własnego ID
+    // ani nie skanuje pól — ID badanego pochodzi wtedy z testu.
+    if (_pendingParticipantName) return _pendingParticipantName;
+    return null;
   }
 
   activeDemographics = {
@@ -458,7 +462,7 @@ export async function saveDemographicsFromForm(forceOverwrite = false) {
   const statusSpan = document.getElementById("demo-status");
   if (statusSpan) {
     statusSpan.style.display = "inline";
-    statusSpan.textContent = "Zapisano!";
+    statusSpan.textContent = t("demographics.saved");
     setTimeout(() => {
       statusSpan.style.display = "none";
     }, 3000);
@@ -479,24 +483,24 @@ export function getActiveDemographics() {
 
 export async function clearDemographics() {
   if (!activeDemographics) {
-    await Notify.info("Brak zapisanych danych do usunięcia.");
+    await Notify.info(t("demographics.noDataToDelete"));
     // Still clear the form visually just in case
     await renderDynamicForm(currentTemplateId);
     return;
   }
 
   const confirmed = await Notify.confirm(
-    "Czy na pewno chcesz usunąć zapisane dane uczestnika?",
+    t("demographics.deleteConfirm"),
   );
   if (confirmed) {
     activeDemographics = null;
-    _loadedParticipantDisplayName = null;
+    _pendingParticipantName = null;
     localStorage.removeItem(getDemoStorageKeys().demographics);
 
     // Reload form to clear values
     await renderDynamicForm(currentTemplateId);
 
-    await Notify.info("Dane zostały wyczyszczone.");
+    await Notify.info(t("demographics.cleared"));
   }
 }
 
@@ -508,8 +512,8 @@ export async function clearDemographics() {
 async function fillFormFromParticipant(participant) {
   if (!participant || !participant.templateId) return;
 
-  // Store the Kartoteka display_name so it becomes the participant_id in results
-  _loadedParticipantDisplayName = participant.display_name || null;
+  // Nazwa z Kartoteki Badanych staje się participant_id (tylko dla tego zapisu).
+  _pendingParticipantName = participant.display_name || null;
 
   // Switch template if needed
   const select = document.getElementById("demo-template-select");
@@ -552,11 +556,14 @@ async function fillFormFromParticipant(participant) {
   });
   // Save form data automatically as "Active Session Data" without prompting
   await saveDemographicsFromForm(true);
+  _pendingParticipantName = null;
 
   const statusSpan = document.getElementById("demo-status");
   if (statusSpan) {
     statusSpan.style.display = "inline";
-    statusSpan.textContent = `Wczytano i Zapisano sesję: ${participant.display_name}`;
+    statusSpan.textContent = t("demographics.sessionLoaded", {
+      name: participant.display_name,
+    });
     setTimeout(() => {
       statusSpan.style.display = "none";
     }, 3000);

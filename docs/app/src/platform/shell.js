@@ -2,9 +2,7 @@
 // Mówi językiem domeny (gość, historia, aktualizacje), nie IPC/DOM.
 // app.js tylko stosuje politykę; cała manipulacja document żyje tutaj.
 import { Notify } from "../notify/notify.js";
-
-const COMPACT_UPDATES_MESSAGE =
-  "Zarządzanie aktualizacjami dotyczy wyłącznie aplikacji Desktopowej.";
+import { t } from "../i18n/index.js";
 
 /** Sposób traktowania urządzeń dotykowych. */
 export const TouchMode = Object.freeze({
@@ -43,11 +41,8 @@ export function shellPolicyFor(kind) {
       hiddenElementKeys: ["btnLogout", "syncToggleContainer"],
       hiddenSelectors: [".participants-panel"],
       hiddenIds: ["btn-save-to-registry", "desktop-settings"],
-      compactUpdatesMessage: COMPACT_UPDATES_MESSAGE,
-      historyNotice:
-        "Wyniki są przechowywane tylko w tej przeglądarce (na tym komputerze). " +
-        "Nie trafiają na serwer. Wyczyszczenie danych przeglądania usunie je — " +
-        "pobierz kopię, jeśli chcesz je zachować.",
+      compactUpdatesMessage: () => t("shell.compactUpdatesMessage"),
+      historyNotice: () => t("shell.historyNotice"),
     };
   }
   return {
@@ -60,7 +55,7 @@ export function shellPolicyFor(kind) {
     hiddenElementKeys: [],
     hiddenSelectors: [],
     hiddenIds: [],
-    compactUpdatesMessage: COMPACT_UPDATES_MESSAGE,
+    compactUpdatesMessage: () => t("shell.compactUpdatesMessage"),
     historyNotice: null,
   };
 }
@@ -89,23 +84,15 @@ export function detectTouchMode(win = window, nav = navigator) {
   });
 }
 
-const BLOCK_SCREEN_HTML = `
+function blockScreenHtml() {
+  return `
   <div class="shell-block">
       <span class="material-icons shell-block__icon">tablet_mac</span>
-      <h2 class="shell-block__title">Ta wersja nie obsługuje tabletów</h2>
-      <p class="shell-block__text">
-          Wersja przeglądarkowa platformy Nous wymaga komputera z myszą i/lub
-          klawiaturą ze względu na specyfikę testów psychometrycznych.
-      </p>
-      <p class="shell-block__text">
-          Na tablecie użyj aplikacji desktopowej Nous.
-      </p>
+      <h2 class="shell-block__title">${t("shell.blockTitle")}</h2>
+      <p class="shell-block__text">${t("shell.blockText1")}</p>
+      <p class="shell-block__text">${t("shell.blockText2")}</p>
   </div>`;
-
-const TOUCH_NOTICE_TEXT =
-  "Nawigacja i interfejs działają dotykiem, ale wiele testów psychometrycznych " +
-  "nie obsługuje ekranu dotykowego — do ich wykonania potrzebna będzie mysz " +
-  "i/lub klawiatura.";
+}
 
 function renderTouchNotice(notify) {
   if (document.getElementById("touch-notice")) return;
@@ -120,18 +107,18 @@ function renderTouchNotice(notify) {
 
   const text = document.createElement("p");
   text.className = "touch-notice__text";
-  text.textContent = TOUCH_NOTICE_TEXT;
+  text.textContent = t("shell.touchNotice");
 
   const close = document.createElement("button");
   close.type = "button";
   close.className = "touch-notice__close";
-  close.setAttribute("aria-label", "Ukryj ostrzeżenie o trybie dotykowym");
-  close.textContent = "Rozumiem";
+  close.setAttribute("aria-label", t("shell.touchNoticeClose"));
+  close.textContent = t("shell.touchNoticeButton");
   close.addEventListener("click", () => notice.remove());
 
   notice.append(icon, text, close);
   document.body.prepend(notice);
-  notify?.info?.("Tryb dotykowy: część testów wymaga myszy lub klawiatury.");
+  notify?.info?.(t("shell.touchNotify"));
 }
 
 function hideNavButton(el) {
@@ -182,7 +169,7 @@ export function applyShellPolicy(policy, { elements = {}, notify = Notify } = {}
   if (policy.touch !== "off") {
     const mode = detectTouchMode();
     if (mode === TouchMode.BLOCK) {
-      document.body.innerHTML = BLOCK_SCREEN_HTML;
+      document.body.innerHTML = blockScreenHtml();
       return true;
     }
     if (mode === TouchMode.WARN) renderTouchNotice(notify);
@@ -197,7 +184,13 @@ export function applyShellPolicy(policy, { elements = {}, notify = Notify } = {}
 
   for (const key of policy.hiddenNav) hideNavButton(elements[key]);
 
-  if (policy.historyNotice) renderHistoryNotice(policy.historyNotice);
+  if (policy.historyNotice) {
+    const noticeText =
+      typeof policy.historyNotice === "function"
+        ? policy.historyNotice()
+        : policy.historyNotice;
+    renderHistoryNotice(noticeText);
+  }
 
   for (const { key, message } of policy.disabledNav) {
     disableNavButton(elements[key], message, notify);

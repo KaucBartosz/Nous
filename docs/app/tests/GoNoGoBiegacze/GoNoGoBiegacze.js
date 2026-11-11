@@ -1,7 +1,12 @@
 import { core, data, util, visual } from './lib/psychojs-2025.1.1.js';
+import { lang, t } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
+
 const { PsychoJS } = core;
 const { TrialHandler } = data;
 const { Scheduler } = util;
+
+localizePsychoJSDialogs(lang);
 
 let expName = 'GoNoGoCyfry';
 let expInfo = { 'participant': util.pad(Math.floor(Math.random() * 1000000).toString(), 6), 'session': '001' };
@@ -37,8 +42,8 @@ flowScheduler.add(blocksLoopBegin(blocksLoopScheduler));
 flowScheduler.add(blocksLoopScheduler);
 flowScheduler.add(blocksLoopEnd);
 
-flowScheduler.add(quitPsychoJS, 'Dziękujemy za udział w badaniu.', true);
-dialogCancelScheduler.add(quitPsychoJS, 'Dziękujemy za udział w badaniu.', false);
+flowScheduler.add(quitPsychoJS, t('quit.thanks'), true);
+dialogCancelScheduler.add(quitPsychoJS, t('quit.thanks'), false);
 
 psychoJS.start({ expName, expInfo, resources: [] });
 
@@ -60,10 +65,10 @@ async function experimentInit() {
   globalClock = new util.Clock();
   routineTimer = new util.CountdownTimer();
 
-  modeText = new visual.TextStim({ win: psychoJS.window, name: 'modeText', text: 'Wybierz tryb:\n1 - Badanie\n2 - Trening', height: 0.05 });
+  modeText = new visual.TextStim({ win: psychoJS.window, name: 'modeText', text: t('mode'), height: 0.05 });
   modeKey = new core.Keyboard({ psychoJS, clock: new util.Clock(), waitForStart: true });
 
-  instrText = new visual.TextStim({ win: psychoJS.window, name: 'instrText', text: 'Zadanie Go/No-Go\n\nNaciśnij SPACJĘ, gdy zobaczysz cyfrę NIEPARZYSTĄ (1, 3, 7, 9).\nNIE naciskaj niczego, gdy zobaczysz cyfrę PARZYSTĄ (2, 4, 6, 8).\n\nNaciśnij SPACJĘ, aby rozpocząć.', height: 0.05 });
+  instrText = new visual.TextStim({ win: psychoJS.window, name: 'instrText', text: t('instructions'), height: 0.05 });
   instrKey = new core.Keyboard({ psychoJS, clock: new util.Clock(), waitForStart: true });
 
   trialText = new visual.TextStim({ win: psychoJS.window, name: 'trialText', text: '', height: 0.15 });
@@ -73,12 +78,12 @@ async function experimentInit() {
   feedbackText = new visual.TextStim({ win: psychoJS.window, name: 'feedbackText', text: '', height: 0.1 });
   feedbackClock = new util.Clock();
 
-  breakText = new visual.TextStim({ win: psychoJS.window, name: 'breakText', text: 'Przerwa. Naciśnij SPACJĘ, aby kontynuować.', height: 0.05 });
+  breakText = new visual.TextStim({ win: psychoJS.window, name: 'breakText', text: t('break'), height: 0.05 });
   breakKey = new core.Keyboard({ psychoJS, clock: new util.Clock(), waitForStart: true });
 
   postTrainingText = new visual.TextStim({
     win: psychoJS.window, name: 'postTrainingText',
-    text: 'Koniec treningu\n\nTeraz zacznie się zadanie właściwe - zasady są te same,\nale nie będzie się wyświetlać informacja o poprawności reakcji.\n\nZasady:\nNaciśnij SPACJĘ, gdy zobaczysz cyfrę NIEPARZYSTĄ (1, 3, 7, 9).\nNIE naciskaj niczego, gdy zobaczysz cyfrę PARZYSTĄ (2, 4, 6, 8).\n\nNaciśnij SPACJĘ, aby rozpocząć zadanie.',
+    text: t('postTraining'),
     height: 0.05, wrapWidth: 1.5
   });
   postTrainingKey = new core.Keyboard({ psychoJS, clock: new util.Clock(), waitForStart: true });
@@ -130,7 +135,7 @@ function modeRoutineBegin() {
 function modeRoutineEachFrame() {
   return async function () {
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
     let keys = modeKey.getKeys({ keyList: ['1', '2'], waitRelease: false });
     if (keys.length > 0) {
@@ -158,7 +163,7 @@ function instructionsRoutineBegin() {
 function instructionsRoutineEachFrame() {
   return async function () {
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
     let keys = instrKey.getKeys({ keyList: ['space'], waitRelease: false });
 
@@ -246,7 +251,7 @@ function postTrainingRoutineEachFrame() {
   return async function () {
     if (window.expMode !== 'training') return Scheduler.Event.NEXT;
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
     let keys = postTrainingKey.getKeys({ keyList: ['space'], waitRelease: false });
     if (window._touchJustStarted && window._touchCanvas) {
@@ -348,7 +353,7 @@ function trialRoutineBegin(snapshot, isTraining) {
 function trialRoutineEachFrame(isTraining) {
   return async function () {
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
     tTrial = trialClock.getTime();
 
@@ -430,10 +435,10 @@ function trialRoutineEnd(snapshot, isTraining) {
 function feedbackRoutineBegin(snapshot) {
   return async function () {
     if (window.lastCorrect) {
-      feedbackText.setText('Dobrze!');
+      feedbackText.setText(t('feedback.correct'));
       feedbackText.setColor(new util.Color('green'));
     } else {
-      feedbackText.setText('Źle!');
+      feedbackText.setText(t('feedback.wrong'));
       feedbackText.setColor(new util.Color('red'));
     }
     feedbackText.setAutoDraw(true);
@@ -444,7 +449,7 @@ function feedbackRoutineBegin(snapshot) {
 function feedbackRoutineEachFrame() {
   return async function () {
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
     if (feedbackClock.getTime() >= 0.5) return Scheduler.Event.NEXT;
     return Scheduler.Event.FLIP_REPEAT;
@@ -468,7 +473,7 @@ function breakRoutineBegin(snapshot) {
 function breakRoutineEachFrame() {
   return async function () {
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
     if (blocksLoop.thisN === 3) return Scheduler.Event.NEXT;
     let keys = breakKey.getKeys({ keyList: ['space'], waitRelease: false });
@@ -546,7 +551,9 @@ async function quitPsychoJS(message, isCompleted) {
       ilosc_blednych_nacisniec: fa,
       ogolna_ilosc_nacisniec: countHitRT + countFaRT,
       sredni_czas_reakcji: avgHitRT,
-      score: `Hits: ${hits}/${goTrials} | FA: ${fa}/${nogoTrials} | Skut: ${accuracy}% | d': ${dPrime} | RT Hits: ${avgHitRT} ms | RT FA: ${avgFaRT} ms`,
+      score: t('score', {
+        hits, go: goTrials, fa, nogo: nogoTrials, accuracy, d: dPrime, rtHits: avgHitRT, rtFa: avgFaRT,
+      }),
       statystyki: {
         go_trials: goTrials,
         nogo_trials: nogoTrials,
@@ -571,14 +578,3 @@ async function quitPsychoJS(message, isCompleted) {
   psychoJS.quit({ message, isCompleted });
   return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

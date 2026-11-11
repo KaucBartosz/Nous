@@ -3,6 +3,7 @@
 // Ostrzeżenia UI rejestruje warstwa aplikacji (src/app.js) przez setCryptoWarningHandler.
 import { initCrypto, encryptData, decryptData } from "../modules/cryptoService.js";
 import { getPlatform } from "../platform/index.js";
+import { t } from "../i18n/index.js";
 
 let ready = false;
 let warned = false;
@@ -30,11 +31,7 @@ export async function ensureCrypto() {
     if (!warned) {
       warned = true;
       setTimeout(() => {
-        warnHandler(
-          "Błąd inicjalizacji szyfrowania. Dane lokalne mogą nie być szyfrowane. " +
-            "Przyczyną może być brak dostępu do systemu przechowywania kluczy (DPAPI/Keychain).",
-          "warning",
-        );
+        warnHandler(t("crypto.initError"), "warning");
       }, 1000);
     }
   } catch (e) {
@@ -43,7 +40,7 @@ export async function ensureCrypto() {
       warned = true;
       setTimeout(() => {
         warnHandler(
-          `Błąd szyfrowania: ${e.message}. Dane lokalne będą przechowywane niezaszyfrowane.`,
+          t("crypto.encryptError", { message: e.message }),
           "error",
         );
       }, 1000);

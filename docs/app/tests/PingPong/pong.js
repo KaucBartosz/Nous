@@ -3,11 +3,15 @@
  ********************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
+import { lang, t as tr } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
+
+localizePsychoJSDialogs(lang);
 
 // Store info about the experiment session:
 let expName = 'pingpong';
@@ -90,10 +94,10 @@ flowScheduler.add(gameRoutineEnd());
 flowScheduler.add(resultsRoutineBegin());
 flowScheduler.add(resultsRoutineEachFrame());
 flowScheduler.add(resultsRoutineEnd());
-flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
 // quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
     expName: expName,
@@ -144,13 +148,7 @@ async function experimentInit() {
     welcomeText = new visual.TextStim({
         win: psychoJS.window,
         name: 'welcomeText',
-        text: 'PING PONG - Test Koordynacji\n\n' +
-              'Twoim zadaniem jest odbijanie piłki za pomocą dwóch paletek.\n\n' +
-              'LEWA PALETKA: klawisze W (góra) i S (dół)\n' +
-              'PRAWA PALETKA: strzałki góra i dół lub klawisze O (góra) i L (dół)\n\n' +
-              'Test trwa 2 minuty. Odbijaj piłkę jak najdłużej!\n\n' +
-              'Naciśnij SPACJĘ, aby wybrać poziom trudności\n' +
-              'ESC - wyjście bez zapisu',
+        text: tr('welcome'),
         font: 'Arial',
         units: undefined,
         pos: [0, 0], draggable: false, height: 0.04, wrapWidth: undefined, ori: 0.0,
@@ -166,12 +164,7 @@ async function experimentInit() {
     difficultyText = new visual.TextStim({
         win: psychoJS.window,
         name: 'difficultyText',
-        text: 'WYBIERZ POZIOM TRUDNOŚCI\n\n' +
-              '1 - ŁATWY (wolniejsza piłka, większe paletki)\n' +
-              '2 - NORMALNY (standardowa prędkość)\n' +
-              '3 - TRUDNY (prędkość rośnie z czasem)\n' +
-              '4 - PRZETRWANIE (jeden błąd = koniec, bez limitu czasu)\n\n' +
-              'Naciśnij 1, 2, 3 lub 4',
+        text: tr('difficulty'),
         font: 'Arial',
         units: undefined,
         pos: [0, 0], draggable: false, height: 0.04, wrapWidth: undefined, ori: 0.0,
@@ -287,7 +280,7 @@ function welcomeRoutineEachFrame() {
         
         // Check for quit (ESC key)
         if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-            return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+            return quitPsychoJS(tr('quit.escapeCompleted'), false);
         }
         
         if (!continueRoutine) {
@@ -401,7 +394,7 @@ function difficultyRoutineEachFrame() {
         
         // Check for quit (ESC key)
         if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-            return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+            return quitPsychoJS(tr('quit.escapeCompleted'), false);
         }
         
         if (!continueRoutine) {
@@ -585,7 +578,7 @@ function gameRoutineEachFrame() {
         
         // Check for quit (ESC key)
         if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-            return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+            return quitPsychoJS(tr('quit.escapeCompleted'), false);
         }
         
         // Check if 2 minutes have passed (not applicable in Survival mode)
@@ -825,16 +818,16 @@ function resultsRoutineBegin(snapshot) {
             let survMins = Math.floor(gameState.survivalTime / 60);
             let survSecs = Math.floor(gameState.survivalTime % 60);
             let survStr = `${survMins.toString().padStart(2, '0')}:${survSecs.toString().padStart(2, '0')}`;
-            resultsStr = 'KONIEC TESTU – TRYB PRZETRWANIA\n\n' +
-                `Czas przeżycia: ${survStr}\n` +
-                `Odbicia paletką: ${gameState.paddleHits}\n\n` +
-                'Naciśnij SPACJĘ, aby zakończyć';
+            resultsStr = tr('results.survival', {
+                time: survStr,
+                hits: gameState.paddleHits,
+            });
         } else {
-            resultsStr = 'KONIEC TESTU\n\n' +
-                `Lewa strona: ${gameState.leftWallHits} uderzeń\n` +
-                `Prawa strona: ${gameState.rightWallHits} uderzeń\n` +
-                `Razem: ${gameState.totalWallHits} uderzeń\n\n` +
-                'Naciśnij SPACJĘ, aby zakończyć';
+            resultsStr = tr('results.normal', {
+                left: gameState.leftWallHits,
+                right: gameState.rightWallHits,
+                total: gameState.totalWallHits,
+            });
         }
         resultsText.setText(resultsStr);
         
@@ -886,7 +879,7 @@ function resultsRoutineEachFrame() {
         
         // Check for quit (ESC key)
         if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-            return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+            return quitPsychoJS(tr('quit.escapeCompleted'), false);
         }
         
         if (!continueRoutine) {
@@ -944,8 +937,17 @@ async function quitPsychoJS(message, isCompleted) {
                 ilosc_blednych_nacisniec: 0,
                 ogolna_ilosc_nacisniec: isSurvival ? gameState.paddleHits : gameState.totalWallHits,
                 score: isSurvival
-                    ? `Poziom: Przetrwanie | Czas: ${gameState.survivalTime.toFixed(1)}s | Odbicia: ${gameState.paddleHits}`
-                    : `Poziom: ${gameState.difficulty} | Lewa: ${gameState.leftWallHits} | Prawa: ${gameState.rightWallHits} | Razem: ${gameState.totalWallHits}`,
+                    ? tr('score.survival', {
+                        level: tr('level.survivalWord'),
+                        seconds: gameState.survivalTime.toFixed(1),
+                        hits: gameState.paddleHits,
+                    })
+                    : tr('score.normal', {
+                        level: tr(`level.${gameState.difficulty}`),
+                        left: gameState.leftWallHits,
+                        right: gameState.rightWallHits,
+                        total: gameState.totalWallHits,
+                    }),
                 statystyki: {
                     poziom_trudnosci: gameState.difficulty,
                     lewa_ilosc_uderzen: gameState.leftWallHits,
@@ -968,14 +970,3 @@ async function quitPsychoJS(message, isCompleted) {
 
     return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

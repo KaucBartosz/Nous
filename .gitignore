@@ -64,3 +64,8 @@ praca_inzynierska.blg
 praca_inzynierska.bbl
 /coverage/
 playwright-report/
+
+# Pliki danych Tesseract OCR (niecommitowane)
+*.traineddata
+test-results/
+graphify-out/

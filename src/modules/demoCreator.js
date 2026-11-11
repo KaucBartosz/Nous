@@ -4,6 +4,7 @@ import { refreshTemplatesDropdown } from './demographics.js';
 import { Notify } from '../notify/notify.js';
 import { getPlatform } from '../platform/index.js';
 import { escapeHtml } from './utils.js';
+import { t } from '../i18n/index.js';
 
 let editingTemplateId = null;
 
@@ -57,26 +58,26 @@ function addFieldUI(initialData = null) {
         <div class="field-creator-container">
             <div class="field-creator-row">
                 <div class="form-group field-creator-label-group">
-                    <label for="${labelId}">Etykieta Pola</label>
-                    <input type="text" id="${labelId}" class="field-label" placeholder="np. Wiek">
+                    <label for="${labelId}">${t('creator.fieldLabel')}</label>
+                    <input type="text" id="${labelId}" class="field-label" placeholder="${t('creator.fieldLabelPlaceholder')}">
                 </div>
                 <div class="form-group field-creator-type-group">
-                    <label for="${typeId}">Typ</label>
+                    <label for="${typeId}">${t('creator.typeLabel')}</label>
                     <select id="${typeId}" class="field-type">
-                        <option value="text">Tekst (String)</option>
-                        <option value="number">Liczba (Int)</option>
-                        <option value="float">Liczba (Float)</option>
-                        <option value="select">Lista rozwijana (Select)</option>
-                        <option value="checkbox">Pola wielokrotnego wyboru (Checkboxy)</option>
-                        <option value="radio">Pola pojedynczego wyboru (Radio)</option>
-                        <option value="date">Data</option>
+                        <option value="text">${t('creator.typeText')}</option>
+                        <option value="number">${t('creator.typeNumber')}</option>
+                        <option value="float">${t('creator.typeFloat')}</option>
+                        <option value="select">${t('creator.typeSelect')}</option>
+                        <option value="checkbox">${t('creator.typeCheckbox')}</option>
+                        <option value="radio">${t('creator.typeRadio')}</option>
+                        <option value="date">${t('creator.typeDate')}</option>
                     </select>
                 </div>
             </div>
             
             <div class="field-options-container">
-                <label for="${optionsId}">Opcje (oddzielone przecinkami)</label>
-                <input type="text" id="${optionsId}" class="field-options" placeholder="np. Kobieta, Mężczyzna, Inna">
+                <label for="${optionsId}">${t('creator.optionsLabel')}</label>
+                <input type="text" id="${optionsId}" class="field-options" placeholder="${t('creator.optionsPlaceholderDefault')}">
             </div>
         </div>
 
@@ -103,11 +104,11 @@ function addFieldUI(initialData = null) {
 
             // Helpful placeholder change
             if (typeSelect.value === 'checkbox') {
-                optionsInput.placeholder = "Opcje (np. Opcja A, Opcja B) - będzie można zaznaczyć kilka";
+                optionsInput.placeholder = t('creator.optionsPlaceholderMulti');
             } else if (typeSelect.value === 'radio') {
-                optionsInput.placeholder = "Opcje (np. Tak, Nie, Nie wiem) - będzie można wybrać jedną";
+                optionsInput.placeholder = t('creator.optionsPlaceholderSingle');
             } else {
-                optionsInput.placeholder = "np. Kobieta, Mężczyzna, Inna";
+                optionsInput.placeholder = t('creator.optionsPlaceholderDefault');
             }
         } else {
             optionsContainer.classList.remove('visible');
@@ -119,7 +120,7 @@ function addFieldUI(initialData = null) {
 
     // Remove field button
     fieldDiv.querySelector('.btn-remove-field').addEventListener('click', async () => {
-        if (await Notify.confirm("Usunąć to pole?")) {
+        if (await Notify.confirm(t('creator.deleteFieldConfirm'))) {
             fieldDiv.remove();
         }
     });
@@ -140,7 +141,7 @@ async function saveCurrentTemplate() {
     const name = nameInput.value.trim();
 
     if (!name) {
-        await Notify.alert("Podaj nazwę szablonu!", 'warning');
+        await Notify.alert(t('creator.nameRequired'), 'warning');
         return;
     }
 
@@ -162,7 +163,7 @@ async function saveCurrentTemplate() {
     });
 
     if (fields.length === 0) {
-        await Notify.alert("Dodaj przynajmniej jedno pole!", 'warning');
+        await Notify.alert(t('creator.addAtLeastOneField'), 'warning');
         return;
     }
 
@@ -185,7 +186,7 @@ async function saveCurrentTemplate() {
         // Success UI
         const status = document.getElementById('creator-status');
         status.style.display = 'block';
-        status.textContent = editingTemplateId ? "Zaktualizowano szablon!" : "Zapisano szablon!";
+        status.textContent = editingTemplateId ? t('creator.updatedStatus') : t('creator.savedStatus');
         setTimeout(() => status.style.display = 'none', 3000);
 
         // Reset form
@@ -193,7 +194,7 @@ async function saveCurrentTemplate() {
         refreshTemplatesList();
 
     } catch (e) {
-        await Notify.alert("Błąd zapisu: " + e.message, 'error');
+        await Notify.alert(t('creator.saveFailed', { message: e.message }), 'error');
     }
 }
 
@@ -202,7 +203,7 @@ function resetCreatorForm() {
     document.getElementById('creator-fields-container').innerHTML = '';
     editingTemplateId = null;
     const btnSave = document.getElementById('btn-save-template');
-    if (btnSave) btnSave.innerHTML = '<span class="material-icons">save</span> Zapisz Szablon';
+    if (btnSave) btnSave.innerHTML = `<span class="material-icons">save</span> ${t('creator.saveTemplateBtn')}`;
 }
 
 async function loadTemplateIntoCreator(id) {
@@ -217,7 +218,7 @@ async function loadTemplateIntoCreator(id) {
 
         // Change button text
         const btnSave = document.getElementById('btn-save-template');
-        if (btnSave) btnSave.innerHTML = '<span class="material-icons">save</span> Zaktualizuj Szablon';
+        if (btnSave) btnSave.innerHTML = `<span class="material-icons">save</span> ${t('creator.updateTemplate')}`;
 
         // Add fields
         template.fields.forEach(field => {
@@ -237,13 +238,13 @@ async function exportCurrentTemplate(template) {
         // C1: eksport przez seam (Electron: dialog systemowy, Web: Blob w adapterze)
         const result = await getPlatform().files.exportTemplate(template);
         if (result.success) {
-            await Notify.alert(`Szablon "${template.name}" został wyeksportowany pomyślnie.`, 'info');
+            await Notify.alert(t('creator.exported', { name: template.name }), 'info');
         } else if (!result.cancelled) {
-            await Notify.alert("Błąd eksportu: " + result.error, 'error');
+            await Notify.alert(t('creator.exportFailed', { message: result.error }), 'error');
         }
     } catch (e) {
         console.error("Export error:", e);
-        await Notify.alert("Błąd eksportu: " + e.message, 'error');
+        await Notify.alert(t('creator.exportFailed', { message: e.message }), 'error');
     }
 }
 
@@ -256,22 +257,25 @@ async function importTemplateFromFile() {
 
             resetCreatorForm();
 
-            document.getElementById('creator-template-name').value = (imported.name || "Szablon") + " (Import)";
+            document.getElementById('creator-template-name').value =
+                t('creator.importedNameSuffix', {
+                    name: imported.name || t('creator.defaultTemplateName'),
+                });
 
             if (imported.fields && Array.isArray(imported.fields)) {
                 imported.fields.forEach(field => addFieldUI(field));
             }
 
-            await Notify.alert("Szablon został zaimportowany do kreatora. Możesz go teraz zapisać.", 'info');
+            await Notify.alert(t('creator.imported'), 'info');
 
             document.getElementById('demo-creator-view').scrollIntoView({ behavior: 'smooth' });
 
         } else if (!result.cancelled) {
-            await Notify.alert("Błąd importu: " + result.error, 'error');
+            await Notify.alert(t('creator.importFailed', { message: result.error }), 'error');
         }
     } catch (e) {
         console.error("Import error:", e);
-        await Notify.alert("Błąd importu: " + e.message, 'error');
+        await Notify.alert(t('creator.importFailed', { message: e.message }), 'error');
     }
 }
 
@@ -279,18 +283,18 @@ export async function refreshTemplatesList() {
     const list = document.getElementById('existing-templates-list');
     if (!list) return;
 
-    list.innerHTML = 'Ładowanie...';
+    list.innerHTML = t('creator.loading');
 
     try {
         const templates = await getAllTemplates();
         list.innerHTML = '';
 
         if (templates.length === 0) {
-            list.innerHTML = '<p style="color:#888;">Brak zapisanych szablonów.</p>';
+            list.innerHTML = `<p style="color:#888;">${t('creator.noSavedTemplates')}</p>`;
             return;
         }
 
-        templates.forEach(t => {
+        templates.forEach(template => {
             const card = document.createElement('div');
             card.className = 'test-card'; // Reuse style
             card.style.cursor = 'default';
@@ -300,37 +304,39 @@ export async function refreshTemplatesList() {
 
             card.innerHTML = `
                 <div>
-                    <h4>${escapeHtml(t.name)}</h4>
-                    <p>${t.fields.length} pól</p>
+                    <h4>${escapeHtml(template.name)}</h4>
+                    <p>${t('creator.fieldsCount', { count: template.fields.length })}</p>
                 </div>
                 <div style="margin-top:10px; display:flex; gap:5px;">
-                    <button class="btn secondary small btn-edit-template" style="flex:1;" title="Edytuj">
+                    <button class="btn secondary small btn-edit-template" style="flex:1;" title="${t('creator.editTitle')}">
                         <span class="material-icons">edit</span>
                     </button>
-                    <button class="btn secondary small btn-export-template" style="flex:1;" title="Eksportuj">
+                    <button class="btn secondary small btn-export-template" style="flex:1;" title="${t('creator.exportTitle')}">
                         <span class="material-icons">download</span>
                     </button>
-                    <button class="btn danger small btn-delete-template" style="flex:1;" title="Usuń">
+                    <button class="btn danger small btn-delete-template" style="flex:1;" title="${t('creator.delete')}">
                         <span class="material-icons">delete</span>
                     </button>
                 </div>
             `;
 
             card.querySelector('.btn-export-template').addEventListener('click', () => {
-                exportCurrentTemplate(t);
+                exportCurrentTemplate(template);
             });
 
             card.querySelector('.btn-edit-template').addEventListener('click', () => {
-                loadTemplateIntoCreator(t.id);
+                loadTemplateIntoCreator(template.id);
             });
 
             card.querySelector('.btn-delete-template').addEventListener('click', async () => {
-                const confirmed = await Notify.confirm(`Usunąć szablon "${t.name}"?`);
+                const confirmed = await Notify.confirm(
+                    t('creator.deleteTemplateConfirm', { name: template.name }),
+                );
                 if (confirmed) {
-                    await deleteTemplate(t.id);
+                    await deleteTemplate(template.id);
                     await refreshTemplatesDropdown(); // Sync dropdown
 
-                    if (editingTemplateId === t.id) {
+                    if (editingTemplateId === template.id) {
                         resetCreatorForm();
                     }
 
@@ -342,6 +348,6 @@ export async function refreshTemplatesList() {
         });
 
     } catch (e) {
-        list.innerHTML = 'Błąd: ' + e.message;
+        list.innerHTML = t('creator.error', { message: e.message });
     }
 }

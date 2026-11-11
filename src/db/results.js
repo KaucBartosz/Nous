@@ -2,6 +2,7 @@
 // Jedyny moduł znający snake_case/camelCase, prefixy LOCAL::/GUEST i statusy sync.
 import { initDB } from "./index.js";
 import { isCryptoReady, encryptData, decryptData } from "./cryptoPolicy.js";
+import { t } from "../i18n/index.js";
 
 /** Normalizacja legacy camelCase → snake_case (1 miejsce, było w 2 gałęziach). */
 function normalizeRecord(record) {
@@ -119,7 +120,7 @@ export async function saveResult(resultData, currentUserId) {
     return id;
   } catch (error) {
     console.error("Error saving result:", error);
-    throw new Error(`Nie udało się zapisać wyniku: ${error.message}`);
+    throw new Error(t("db.resultSaveError", { message: error.message }));
   }
 }
 
@@ -141,7 +142,7 @@ export async function getAllResults() {
     return decrypted;
   } catch (error) {
     console.error("Error getting all results:", error);
-    throw new Error(`Nie udało się pobrać wyników: ${error.message}`);
+    throw new Error(t("db.resultsFetchError", { message: error.message }));
   }
 }
 
@@ -170,9 +171,7 @@ export async function getPendingResults(userId) {
     return decodedRecords;
   } catch (error) {
     console.error("Error getting pending results:", error);
-    throw new Error(
-      `Nie udało się pobrać oczekujących wyników: ${error.message}`,
-    );
+    throw new Error(t("db.pendingFetchError", { message: error.message }));
   }
 }
 
@@ -191,9 +190,7 @@ export async function markAsSynced(local_id, firestore_id) {
     await tx.done;
   } catch (error) {
     console.error("Error marking as synced:", error);
-    throw new Error(
-      `Nie udało się oznaczyć jako zsynchronizowane: ${error.message}`,
-    );
+    throw new Error(t("db.markSyncedError", { message: error.message }));
   }
 }
 
@@ -203,7 +200,7 @@ export async function deleteResult(id) {
     await db.delete("results", id);
   } catch (error) {
     console.error("Error deleting result:", error);
-    throw new Error(`Nie udało się usunąć wyniku: ${error.message}`);
+    throw new Error(t("db.resultDeleteError", { message: error.message }));
   }
 }
 
@@ -219,7 +216,7 @@ export async function deleteResults(ids) {
     await tx.done;
   } catch (error) {
     console.error("Error deleting multiple results:", error);
-    throw new Error(`Nie udało się usunąć wyników: ${error.message}`);
+    throw new Error(t("db.resultsDeleteError", { message: error.message }));
   }
 }
 
@@ -260,9 +257,8 @@ export async function claimGuestResult(
     currentUserId === "GUEST" ||
     currentUserId.startsWith("LOCAL::")
   ) {
-    throw new Error(
-      "Tylko zalogowany użytkownik konta online może przejąć wyniki Gościa.",
-    );
+    // Komunikat UI — przez i18n, żeby zależał od języka interfejsu.
+    throw new Error(t("history.claimOnlineOnly"));
   }
 
   const payload = { ...guestResult };

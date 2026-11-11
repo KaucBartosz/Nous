@@ -1,6 +1,7 @@
 // src/statistics/statisticsQuery.js — czysta logika statystyk (bez DOM).
 import { flattenObject } from "../modules/utils.js";
 import { testIdOf, subjectIdOf } from "../results/resultPackage.js";
+import { t, localeTag } from "../i18n/index.js";
 
 const STATS_IGNORE_KEYS = new Set([
   "testId",
@@ -83,15 +84,15 @@ const CANONICAL_METRIC_MAP = {
 };
 
 const METRIC_LABELS = {
-  score: "Wynik (score)",
-  poprawne: "Zdobyte punkty",
-  bledne: "Błędy",
-  wszystkie_proby: "Wszystkie próby",
-  sredni_czas_ms: "Średni czas reakcji (ms)",
-  skutecznosc: "Skuteczność (%)",
-  pominiete: "Pominięte",
-  poziom_trudnosci: "Poziom trudności",
-  max_dlugosc_sekwencji: "Maks. długość sekwencji",
+  score: "statistics.metricScore",
+  poprawne: "statistics.metricPoints",
+  bledne: "statistics.metricErrors",
+  wszystkie_proby: "statistics.metricAllAttempts",
+  sredni_czas_ms: "statistics.metricAvgReactionTime",
+  skutecznosc: "statistics.metricAccuracy",
+  pominiete: "statistics.metricOmitted",
+  poziom_trudnosci: "statistics.metricDifficulty",
+  max_dlugosc_sekwencji: "statistics.metricMaxSequence",
 };
 
 export function normalizeTestId(id) {
@@ -112,9 +113,9 @@ export function canonicalMetricKey(key) {
 
 export function metricLabel(key) {
   const canonical = canonicalMetricKey(key);
-  if (METRIC_LABELS[canonical]) return METRIC_LABELS[canonical];
+  if (METRIC_LABELS[canonical]) return t(METRIC_LABELS[canonical]);
   const base = metricBaseName(key);
-  if (METRIC_LABELS[base.toLowerCase()]) return METRIC_LABELS[base.toLowerCase()];
+  if (METRIC_LABELS[base.toLowerCase()]) return t(METRIC_LABELS[base.toLowerCase()]);
   return base
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -210,7 +211,7 @@ export function isLowerBetter(key, label = "") {
 export function distinctTestIds(results) {
   const set = new Set();
   (results || []).forEach((r) => set.add(normalizeTestId(testIdOf(r))));
-  return Array.from(set).sort((a, b) => a.localeCompare(b, "pl"));
+  return Array.from(set).sort((a, b) => a.localeCompare(b, localeTag()));
 }
 
 export function distinctSubjectIds(results, testId = null) {
@@ -221,7 +222,7 @@ export function distinctSubjectIds(results, testId = null) {
     const sid = subjectIdOf(r);
     if (sid && sid !== "Nieznany") set.add(sid);
   });
-  return Array.from(set).sort((a, b) => a.localeCompare(b, "pl"));
+  return Array.from(set).sort((a, b) => a.localeCompare(b, localeTag()));
 }
 
 export function filterStatisticsResults(results, { testId = null, subjectIds = [] } = {}) {
@@ -298,7 +299,7 @@ export function aggregateMetrics(runs, selectedKeys = []) {
       min: s.min,
       max: s.max,
     }))
-    .sort((a, b) => a.label.localeCompare(b.label, "pl"));
+    .sort((a, b) => a.label.localeCompare(b.label, localeTag()));
 }
 
 export function trendForMetric(runs, metricKey) {

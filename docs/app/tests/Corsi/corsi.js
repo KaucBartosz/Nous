@@ -3,10 +3,39 @@
  *****************/
 
 import { core, data, util, visual } from "./lib/psychojs-2025.1.1.js";
+import { lang, t as tr } from "./i18n.js";
+import { localizePsychoJSDialogs } from "./dialog-i18n.js";
 const { PsychoJS } = core;
 const { Scheduler } = util;
 const { floor, random } = Math;
 const { round } = util;
+
+localizePsychoJSDialogs(lang);
+
+// Etykiety opcji trzymane osobno (PL), tłumaczone dopiero w momencie użycia.
+const DIFFICULTY_NAMES_PL = [
+  "Łatwy",
+  "Średni",
+  "Trudny",
+  "Bardzo trudny",
+  "Ekspert",
+  "Mistrz",
+  "Arcymistrz",
+  "Legenda",
+];
+const SPEED_NAMES_PL = ["Łatwy", "Normalny", "Trudny"];
+function difficultyLabel(level) {
+  return tr("difficultyLabel", {
+    difficultyName: tr("difficultyNames").split("|")[level - 1],
+    n: DIFFICULTY_CONFIG[level].gridSize,
+  });
+}
+function speedLabel(level) {
+  return tr("speedLabel", {
+    speedName: tr("speedNames").split("|")[level - 1],
+    seconds: FLASH_SPEED_CONFIG[level].fd.toFixed(1),
+  });
+}
 
 let expName = "Corsi";
 let expInfo = {
@@ -55,9 +84,9 @@ flowScheduler.add(flashSpeedRoutineEnd());
 flowScheduler.add(gameRoutineBegin());
 flowScheduler.add(gameRoutineEachFrame());
 flowScheduler.add(gameRoutineEnd());
-flowScheduler.add(quitPsychoJS, "Thank you for your patience.", true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
-dialogCancelScheduler.add(quitPsychoJS, "Thank you for your patience.", false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
   expName: expName,
@@ -79,20 +108,20 @@ const MAX_SEQUENCE_LENGTH = 20;
 const FEEDBACK_DURATION = 1.3;
 
 const DIFFICULTY_CONFIG = {
-  1: { label: "Łatwy (3x3)", gridSize: 3 },
-  2: { label: "Średni (4x4)", gridSize: 4 },
-  3: { label: "Trudny (5x5)", gridSize: 5 },
-  4: { label: "Bardzo trudny (6x6)", gridSize: 6 },
-  5: { label: "Ekspert (7x7)", gridSize: 7 },
-  6: { label: "Mistrz (8x8)", gridSize: 8 },
-  7: { label: "Arcymistrz (9x9)", gridSize: 9 },
-  8: { label: "Legenda (10x10)", gridSize: 10 },
+  1: { gridSize: 3 },
+  2: { gridSize: 4 },
+  3: { gridSize: 5 },
+  4: { gridSize: 6 },
+  5: { gridSize: 7 },
+  6: { gridSize: 8 },
+  7: { gridSize: 9 },
+  8: { gridSize: 10 },
 };
 
 const FLASH_SPEED_CONFIG = {
-  1: { label: "Łatwy (1.0s)", fd: 1.0, fg: 0.3 },
-  2: { label: "Normalny (0.5s)", fd: 0.5, fg: 0.2 },
-  3: { label: "Trudny (0.3s)", fd: 0.3, fg: 0.15 },
+  1: { fd: 1.0, fg: 0.3 },
+  2: { fd: 0.5, fg: 0.2 },
+  3: { fd: 0.3, fg: 0.15 },
 };
 
 var currentLoop;
@@ -230,7 +259,7 @@ function welcomeRoutineBegin(snapshot) {
     welcomeText = new visual.TextStim({
       win: psychoJS.window,
       name: "welcomeText",
-      text: "TEST CORSI - Pamięć przestrzenna\n\nNa ekranie pojawią się koła w siatce.\nKilka kół zapali się na CZERWONO (wzór systemu).\nZapamiętaj kolejność i kliknij na koła — podświetlą się na ZIELONO.\nKażda poprawna odpowiedź wydłuży sekwencję.\nTest kończy się po błędnej odpowiedzi.\n\nNaciśnij SPACJĘ, aby kontynuować.\nESC - wyjście",
+      text: tr('welcome'),
       font: "Arial",
       pos: [0, 0],
       height: 0.04,
@@ -279,7 +308,7 @@ function welcomeRoutineEachFrame(snapshot) {
         waitRelease: false,
       });
       if (k.length > 0) {
-        if (k[0].name === "escape") return quitPsychoJS("Escape", true);
+        if (k[0].name === "escape") return quitPsychoJS(tr('quit.escape'), true);
         continueRoutine = false;
       }
     }
@@ -287,7 +316,7 @@ function welcomeRoutineEachFrame(snapshot) {
       psychoJS.experiment.experimentEnded ||
       psychoJS.eventManager.getKeys({ keyList: ["escape"] }).length > 0
     )
-      return quitPsychoJS("Escape", false);
+      return quitPsychoJS(tr('quit.escape'), false);
     if (!continueRoutine) {
       routineForceEnded = true;
       return Scheduler.Event.NEXT;
@@ -325,7 +354,7 @@ function difficultyRoutineBegin(snapshot) {
     diffText = new visual.TextStim({
       win: psychoJS.window,
       name: "diffText",
-      text: "Wybierz rozmiar siatki:\n\n1 - 3x3 (Łatwy)\n2 - 4x4 (Średni)\n3 - 5x5 (Trudny)\n4 - 6x6 (Bardzo trudny)\n5 - 7x7 (Ekspert)\n6 - 8x8 (Mistrz)\n7 - 9x9 (Arcymistrz)\n8 - 10x10 (Legenda)\n\nNaciśnij 1-8\nESC - wyjście",
+      text: tr('difficulty'),
       font: "Arial",
       pos: [0, 0],
       height: 0.04,
@@ -374,7 +403,7 @@ function difficultyRoutineEachFrame(snapshot) {
         waitRelease: false,
       });
       if (k.length > 0) {
-        if (k[0].name === "escape") return quitPsychoJS("Escape", false);
+        if (k[0].name === "escape") return quitPsychoJS(tr('quit.escape'), false);
         let dl = parseInt(k[0].name);
         if (dl >= 1 && dl <= 8) {
           chosenDifficulty = dl;
@@ -384,7 +413,7 @@ function difficultyRoutineEachFrame(snapshot) {
       }
     }
     if (psychoJS.eventManager.getKeys({ keyList: ["escape"] }).length > 0)
-      return quitPsychoJS("Escape", false);
+      return quitPsychoJS(tr('quit.escape'), false);
     if (!continueRoutine) {
       routineForceEnded = true;
       return Scheduler.Event.NEXT;
@@ -422,7 +451,7 @@ function flashSpeedRoutineBegin(snapshot) {
     speedText = new visual.TextStim({
       win: psychoJS.window,
       name: "speedText",
-      text: "Wybierz szybkość świecenia:\n\n1 - Łatwy (1.0s - długo)\n2 - Normalny (0.5s)\n3 - Trudny (0.3s - szybko)\n\nNaciśnij 1, 2 lub 3\nESC - wyjście",
+      text: tr('speed'),
       font: "Arial",
       pos: [0, 0],
       height: 0.04,
@@ -471,7 +500,7 @@ function flashSpeedRoutineEachFrame(snapshot) {
         waitRelease: false,
       });
       if (k.length > 0) {
-        if (k[0].name === "escape") return quitPsychoJS("Escape", false);
+        if (k[0].name === "escape") return quitPsychoJS(tr('quit.escape'), false);
         let sl = parseInt(k[0].name);
         if (sl >= 1 && sl <= 3) {
           chosenFlashSpeed = sl;
@@ -482,7 +511,7 @@ function flashSpeedRoutineEachFrame(snapshot) {
       }
     }
     if (psychoJS.eventManager.getKeys({ keyList: ["escape"] }).length > 0)
-      return quitPsychoJS("Escape", false);
+      return quitPsychoJS(tr('quit.escape'), false);
     if (!continueRoutine) {
       routineForceEnded = true;
       return Scheduler.Event.NEXT;
@@ -553,7 +582,7 @@ function gameRoutineBegin(snapshot) {
     instrText = new visual.TextStim({
       win: psychoJS.window,
       name: "instrText",
-      text: "Obserwuj sekwencje...",
+      text: tr('observe'),
       pos: [0, 0.45],
       height: 0.035,
       color: new util.Color("white"),
@@ -569,7 +598,7 @@ function gameRoutineBegin(snapshot) {
     seqLenText = new visual.TextStim({
       win: psychoJS.window,
       name: "seqLenText",
-      text: "Dlugosc: 2",
+      text: tr('length', { n: 2 }),
       pos: [0.5, 0.45],
       height: 0.025,
       color: new util.Color("gray"),
@@ -649,7 +678,10 @@ function gameRoutineEachFrame(snapshot) {
         if (flashT < flashDuration) {
           window.litState[sequence[seqIdx]] = 1; // system – czerwony
           instrText.setText(
-            "Obserwuj... (" + (seqIdx + 1) + "/" + sequence.length + ")",
+            tr('observeProgress', {
+              current: seqIdx + 1,
+              total: sequence.length,
+            }),
           );
         } else if (flashT < flashDuration + flashGap) {
           window.litState[sequence[seqIdx]] = 0;
@@ -661,7 +693,7 @@ function gameRoutineEachFrame(snapshot) {
         phase = "wait";
         respStart = t;
         playerSequence = [];
-        instrText.setText("Klikaj kola w tej samej kolejnosci.");
+        instrText.setText(tr('repeat'));
         fbText.setText("");
         for (let i = 0; i < window.litState.length; i++) window.litState[i] = 0;
       }
@@ -694,9 +726,9 @@ function gameRoutineEachFrame(snapshot) {
                 result: "incorrect",
                 responseTime: t - respStart,
               });
-              fbText.setText("BŁĄD! Powtorzenie poprawnej sekwencji:");
+              fbText.setText(tr('error'));
               fbText.setColor(new util.Color("red"));
-              instrText.setText("Obsęruj uważnie...");
+              instrText.setText(tr('watch'));
               // 0.3 s błędne kółko świeci na zielono, potem replay na czerwono
               phase = "error_replay";
               fbT = 0;
@@ -713,13 +745,13 @@ function gameRoutineEachFrame(snapshot) {
                 result: "correct",
                 responseTime: t - respStart,
               });
-              fbText.setText("POPRAWNIE!");
+              fbText.setText(tr('correct'));
               fbText.setColor(new util.Color("green"));
               if (currentSequenceLength < MAX_SEQUENCE_LENGTH)
                 currentSequenceLength++;
               phase = "fb";
               fbT = 0;
-              seqLenText.setText("Dlugosc: " + currentSequenceLength);
+              seqLenText.setText(tr('length', { n: currentSequenceLength }));
               clickOffTimer = 0.3;
             } else {
               clickOffTimer = 0.15;
@@ -745,9 +777,9 @@ function gameRoutineEachFrame(snapshot) {
           result: "timeout",
           responseTime: RESPONSE_TIMEOUT,
         });
-        fbText.setText("Czas minął! Powtorzenie poprawnej sekwencji:");
+        fbText.setText(tr('timeout'));
         fbText.setColor(new util.Color("orange"));
-        instrText.setText("Obsęruj uważnie...");
+        instrText.setText(tr('watch'));
         for (let j = 0; j < window.litState.length; j++) window.litState[j] = 0;
         // od razu zaczynamy replay (brak błędnego kółka do pokazania)
         phase = "error_replay";
@@ -793,7 +825,7 @@ function gameRoutineEachFrame(snapshot) {
         seqIdx = 0;
         phase = "show";
         flashT = 0;
-        instrText.setText("Obserwuj sekwencje...");
+        instrText.setText(tr('observe'));
         fbText.setText("");
       }
     }
@@ -807,7 +839,7 @@ function gameRoutineEachFrame(snapshot) {
     }
 
     if (psychoJS.eventManager.getKeys({ keyList: ["escape"] }).length > 0)
-      return quitPsychoJS("Escape", false);
+      return quitPsychoJS(tr('quit.escape'), false);
     if (!continueRoutine) {
       routineForceEnded = true;
       return Scheduler.Event.NEXT;
@@ -843,18 +875,10 @@ async function quitPsychoJS(message, isCompleted) {
       ct.length > 0
         ? Math.round(ct.reduce((a, b) => a + b * 1000, 0) / ct.length)
         : 0;
-    let labels = [
-      "",
-      "Latwy (3x3)",
-      "Sredni (4x4)",
-      "Trudny (5x5)",
-      "Bardzo trudny (6x6)",
-      "Ekspert (7x7)",
-      "Mistrz (8x8)",
-      "Arcymistrz (9x9)",
-      "Legenda (10x10)",
-    ];
-    let speedLabels = ["", "Latwy (1.0s)", "Normalny (0.5s)", "Trudny (0.3s)"];
+    let labels = [""];
+    for (let i = 1; i <= 8; i++) labels.push(difficultyLabel(i));
+    let speedLabels = [""];
+    for (let i = 1; i <= 3; i++) speedLabels.push(speedLabel(i));
     window.electronTest.sendResults({
       testId: expName,
       subjectId: expInfo["participant"],
@@ -864,24 +888,18 @@ async function quitPsychoJS(message, isCompleted) {
       ogolna_ilosc_nacisniec: totalTrials,
       sredni_czas_reakcji: avgRT,
       max_dlugosc_sekwencji: maxCorrectLength,
-      poziom_trudnosci: labels[chosenDifficulty] || "Latwy (3x3)",
+      poziom_trudnosci: difficultyLabel(chosenDifficulty),
       rozmiar_siatki: gridSize + "x" + gridSize,
-      szybkosc_swiecenia: speedLabels[chosenFlashSpeed] || "Normalny (0.5s)",
-      score:
-        "Max: " +
-        maxCorrectLength +
-        " | Poprawne: " +
-        correctTrials +
-        "/" +
-        totalTrials +
-        " | Skutecznosc: " +
-        acc +
-        "% | Sr. RT: " +
-        avgRT +
-        "ms | " +
-        (labels[chosenDifficulty] || "Latwy (3x3)") +
-        " | " +
-        (speedLabels[chosenFlashSpeed] || "Normalny (0.5s)"),
+      szybkosc_swiecenia: speedLabel(chosenFlashSpeed),
+      score: tr("score", {
+        max: maxCorrectLength,
+        correct: correctTrials,
+        total: totalTrials,
+        accuracy: acc,
+        rt: avgRT,
+        difficulty: difficultyLabel(chosenDifficulty),
+        speed: speedLabel(chosenFlashSpeed),
+      }),
       statystyki: {
         poprawne: correctTrials,
         bledne: totalTrials - correctTrials,
@@ -898,18 +916,8 @@ async function quitPsychoJS(message, isCompleted) {
   } else if (typeof window.electronTest !== "undefined") {
     window.electronTest.close();
   }
+  if (!isCompleted && message === tr("quit.escape")) message = tr("quit.escapeCompleted");
   psychoJS.window.close();
   psychoJS.quit({ message: message, isCompleted: isCompleted });
   return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

@@ -2,6 +2,7 @@
 // UWAGA: getLocalAccount zwraca pełny rekord z passwordHash (używać tylko w auth.js).
 // getAllLocalAccounts zwraca rekordy BEZ passwordHash (bezpieczne dla UI).
 import { initDB } from "./index.js";
+import { t } from "../i18n/index.js";
 
 export async function getLocalAccount(username) {
   try {
@@ -9,7 +10,7 @@ export async function getLocalAccount(username) {
     return db.get("localAccounts", username);
   } catch (error) {
     console.error("Error getting local account:", error);
-    throw new Error(`Nie udało się pobrać konta: ${error.message}`);
+    throw new Error(t("db.accountFetchError", { message: error.message }));
   }
 }
 
@@ -26,7 +27,7 @@ export async function createLocalAccount(username, passwordHash, salt) {
     });
   } catch (error) {
     console.error("Error creating local account:", error);
-    throw new Error(`Nie udało się utworzyć konta: ${error.message}`);
+    throw new Error(t("db.accountCreateError", { message: error.message }));
   }
 }
 
@@ -66,6 +67,6 @@ export async function deleteLocalAccount(username) {
     await db.delete("localAccounts", username);
   } catch (error) {
     console.error("Error deleting local account:", error);
-    throw new Error(`Nie udało się usunąć konta: ${error.message}`);
+    throw new Error(t("db.accountDeleteError", { message: error.message }));
   }
 }

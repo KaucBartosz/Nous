@@ -2,6 +2,7 @@
 // Polityka: separator `;`, BOM, quoting przy `;`/`\n` (bajtowo zgodna ze starą).
 import { flattenObject } from "../modules/utils.js";
 import { normalizeResult } from "./resultPackage.js";
+import { t } from "../i18n/index.js";
 
 export const CSV_SEPARATOR = ";";
 export const CSV_MIME = "text/csv;charset=utf-8;";
@@ -58,11 +59,11 @@ export function resultRow(
 ) {
   const pkg = normalizeResult(pkgLike);
   const flat = {};
-  flat["Data"] = new Date(pkg.timestamp).toLocaleString();
-  flat["Test ID"] = pkg.test_id;
-  flat["ID Badanego"] = pkg.subject_id || "-";
+  flat[t("csv.date")] = new Date(pkg.timestamp).toLocaleString();
+  flat[t("csv.testId")] = pkg.test_id;
+  flat[t("csv.subjectId")] = pkg.subject_id || "-";
   // Decyzja 2b/b: brakujący badacz to "-" jak badany (wcześniej literalne "null").
-  if (includeResearcher) flat["Badacz UID"] = pkg.researcher_uid ?? "-";
+  if (includeResearcher) flat[t("csv.researcherUid")] = pkg.researcher_uid ?? "-";
 
   if (includeDemographics) {
     const demo = pkg.demographics || {};
@@ -71,7 +72,7 @@ export function resultRow(
       // Decyzja 2b/b: metryczkę spłaszczamy jak wyniki (ten sam ` - `),
       // zamiast wpisywać obiekty (kończyły jako "[object Object]").
       const demoFlat = {};
-      flattenObject(dData, demoFlat, "Metryczka");
+      flattenObject(dData, demoFlat, t("csv.demographics"));
       Object.assign(flat, demoFlat);
     }
   }
@@ -81,12 +82,12 @@ export function resultRow(
   const resData = omitKeys(pkg.wyniki || {}, ignoreKeys);
   if (deep) {
     const flatWyniki = {};
-    flattenObject(resData, flatWyniki, "Wynik");
+    flattenObject(resData, flatWyniki, t("csv.result"));
     Object.assign(flat, flatWyniki);
   } else {
     for (const [key, value] of Object.entries(resData)) {
       if (value !== undefined && value !== null) {
-        flat[`Wynik - ${key}`] = value;
+        flat[`${t("csv.result")} - ${key}`] = value;
       }
     }
   }
@@ -95,7 +96,7 @@ export function resultRow(
 
 /** CSV klucz-wartość (pojedynczy wynik): nagłówek `Parametr;Wartość`. */
 export function toKeyValueCSV(flat) {
-  let out = `${CSV_BOM}Parametr;Wartość\r\n`;
+  let out = `${CSV_BOM}${t("csv.parameter")};${t("csv.value")}\r\n`;
   for (const [key, value] of Object.entries(flat)) {
     out += `${key};${escapeCsvCell(value)}\r\n`;
   }

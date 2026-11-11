@@ -30,6 +30,7 @@ function cloudVault() {
     });
 }
 import { getPlatform } from '../platform/index.js';
+import { t } from '../i18n/index.js';
 
 // Cached DOM elements (populated by initE2E)
 let _els = null;
@@ -71,7 +72,7 @@ export function initE2E() {
     e.btnSavePin?.addEventListener('click', async () => {
         const pin = e.pinSetupInput.value;
         if (!isValidPin(pin)) {
-            e.pinSetupError.textContent = "PIN musi składać się z 6 cyfr.";
+            e.pinSetupError.textContent = t('e2e.pinInvalid');
             return;
         }
 
@@ -80,7 +81,7 @@ export function initE2E() {
 
         try {
             e.btnSavePin.disabled = true;
-            e.btnSavePin.textContent = "Szyfrowanie...";
+            e.btnSavePin.textContent = t('e2e.encrypting');
 
             // C4: orkiestracja w session/e2ePolicy.js, tu tylko UI + persist
             const newMasterKey = await setupNewMaster(
@@ -100,10 +101,10 @@ export function initE2E() {
 
         } catch (err) {
             console.error(err);
-            e.pinSetupError.textContent = "Błąd szyfrowania: " + err.message;
+            e.pinSetupError.textContent = t('e2e.encryptError', { message: err.message });
         } finally {
             e.btnSavePin.disabled = false;
-            e.btnSavePin.textContent = "Zapisz PIN i Utwórz Klucz";
+            e.btnSavePin.textContent = t('e2e.savePin');
         }
     });
 
@@ -118,7 +119,7 @@ export function initE2E() {
     e.btnSubmitPin?.addEventListener('click', async () => {
         const pin = e.pinEnterInput.value;
         if (!isValidPin(pin)) {
-            e.pinEnterError.textContent = "PIN musi składać się z 6 cyfr.";
+            e.pinEnterError.textContent = t('e2e.pinInvalid');
             return;
         }
 
@@ -130,7 +131,7 @@ export function initE2E() {
             e.pinEnterError.textContent = "";
 
             const originalText = e.btnSubmitPin.textContent;
-            e.btnSubmitPin.textContent = "Odszyfrowywanie...";
+            e.btnSubmitPin.textContent = t('e2e.decrypting');
 
             // C4: unwrap w policy; brak klucza w chmurze rzuca jak wcześniej
             const decryptedMasterKeyHex = await unlockWithPin(
@@ -150,8 +151,8 @@ export function initE2E() {
 
         } catch (err) {
             console.error(err);
-            e.pinEnterError.textContent = "Nieprawidłowy PIN.";
-            e.btnSubmitPin.textContent = "Odblokuj";
+            e.pinEnterError.textContent = t('e2e.invalidPin');
+            e.btnSubmitPin.textContent = t('e2e.unlock');
         } finally {
             e.btnSubmitPin.disabled = false;
         }
@@ -178,17 +179,17 @@ export function initE2E() {
         const newPin = e.newPinInput.value;
 
         if (!code) {
-            e.pinRecoveryError.textContent = "Podaj kod odzyskiwania.";
+            e.pinRecoveryError.textContent = t('e2e.recoveryCodeRequired');
             return;
         }
         if (!isValidPin(newPin)) {
-            e.pinRecoveryError.textContent = "Nowy PIN musi mieć 6 cyfr.";
+            e.pinRecoveryError.textContent = t('e2e.newPinInvalid');
             return;
         }
 
         const unformattedCode = unformatRecoveryKey(code);
         if (unformattedCode.length !== 64) {
-            e.pinRecoveryError.textContent = "Nieprawidłowy format kodu odzyskiwania.";
+            e.pinRecoveryError.textContent = t('e2e.recoveryCodeInvalid');
             return;
         }
 
@@ -197,10 +198,10 @@ export function initE2E() {
 
         try {
             e.btnSubmitRecovery.disabled = true;
-            e.btnSubmitRecovery.textContent = "Resetowanie...";
+            e.btnSubmitRecovery.textContent = t('e2e.resetting');
 
             if (!/^[0-9a-f]{64}$/i.test(unformattedCode)) {
-                throw new Error("Kod zawiera niedozwolone znaki.");
+                throw new Error(t('e2e.recoveryCodeIllegalChars'));
             }
 
             // C4: rotacja w policy
@@ -221,10 +222,10 @@ export function initE2E() {
 
         } catch (err) {
             console.error(err);
-            e.pinRecoveryError.textContent = "Błąd: " + err.message;
+            e.pinRecoveryError.textContent = t('e2e.recoveryError', { message: err.message });
         } finally {
             e.btnSubmitRecovery.disabled = false;
-            e.btnSubmitRecovery.textContent = "Odzyskaj Klucz";
+            e.btnSubmitRecovery.textContent = t('e2e.recoverKey');
         }
     });
 }
@@ -263,7 +264,7 @@ export async function verifyE2E(user, onSuccess) {
     if (remoteState === "error") {
         console.error("Failed to check user_keys");
         import('./dialog.js').then(({ Dialog }) => {
-            Dialog.alert("Błąd połączenia z bazą kluczy E2E. Prawdopodobnie brak wymaganych reguł w Firestore (collections: user_keys). Zgłoś to administratorowi.", 'error');
+            Dialog.alert(t('e2e.keyDbError'), 'error');
         });
         if (onSuccess) onSuccess();
         return;

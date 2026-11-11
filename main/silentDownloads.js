@@ -28,7 +28,7 @@ function createSilentDownloads({ session, dialog, app, fs, path }) {
 
   /** Ścieżka cichego zapisu (basename = strażnik jak w bulkExport). */
   function silentPathFor(filename) {
-    const safeName = path.basename(filename || `Wynik_${Date.now()}`);
+    const safeName = path.basename(filename || `Result_${Date.now()}`);
     return path.join(downloadsDir(), safeName);
   }
 
@@ -47,9 +47,12 @@ function createSilentDownloads({ session, dialog, app, fs, path }) {
   function registerIpc(ipcMain, getMainWindow) {
     ipcMain.handle("get-downloads-path", () => app.getPath("downloads"));
 
-    ipcMain.handle("pick-download-folder", async (event, current) => {
+    ipcMain.handle("pick-download-folder", async (event, payload) => {
+      // Starsza sygnatura (string) traktowana jak brak tytułu i ścieżki startowej.
+      const opts = typeof payload === "string" ? { current: payload } : payload || {};
+      const current = opts.current;
       const res = await dialog.showOpenDialog(getMainWindow(), {
-        title: "Wybierz folder pobierania",
+        title: opts.title || "Choose download folder",
         properties: ["openDirectory"],
         defaultPath: (current && String(current)) || downloadsDir(),
       });

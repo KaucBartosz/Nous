@@ -10,8 +10,12 @@ import {
   sound,
   hardware,
 } from "./lib/psychojs-2025.1.1.js";
+import { lang, t } from "./i18n.js";
+import { localizePsychoJSDialogs } from "./dialog-i18n.js";
 const { PsychoJS } = core;
 const { Scheduler } = util;
+
+localizePsychoJSDialogs(lang);
 
 // 1. Inicjalizacja
 const psychoJS = new PsychoJS({ debug: false });
@@ -75,14 +79,14 @@ async function updateInfo() {
 async function experimentInit() {
   welcomeText = new visual.TextStim({
     win: psychoJS.window,
-    text: "Twoim zadaniem będzie przejechanie labiryntu. Za pomocą strzałek na klawiaturze, pokieruj samochodem do mety. Staraj się dokładnie kierować samochodem, aby nie wyjechać poza krawędź labiryntu. Wyjechanie poza krawędź spowoduje powrót samochodu na start. Naciśnij SPACJĘ aby wybrać trasę.",
+    text: t("welcome"),
     color: new util.Color("white"),
     height: 0.04,
   });
 
   difficultyText = new visual.TextStim({
     win: psychoJS.window,
-    text: "WYBIERZ TRASĘ:\n\n1 - Klasyczna (Łatwa)\n2 - Labirynt (Trudna)\n\nNaciśnij 1 lub 2",
+    text: t("chooseTrack"),
     color: new util.Color("white"),
     height: 0.05,
   });
@@ -120,7 +124,7 @@ function welcomeRoutine() {
       return Scheduler.Event.NEXT;
     }
     if (activeKeys.has("Escape") || activeKeys.has("escape"))
-      return quitPsychoJS("Wyjście", true);
+      return quitPsychoJS(t("quit.exit"), true);
     return Scheduler.Event.FLIP_REPEAT;
   };
 }
@@ -151,7 +155,7 @@ function difficultyRoutine() {
     }
 
     if (activeKeys.has("Escape") || activeKeys.has("escape"))
-      return quitPsychoJS("Wyjście", true);
+      return quitPsychoJS(t("quit.exit"), true);
     return Scheduler.Event.FLIP_REPEAT;
   };
 }
@@ -248,7 +252,7 @@ function gameRoutine() {
     }
 
     if (activeKeys.has("Escape") || activeKeys.has("escape"))
-      return quitPsychoJS("Przerwano", true);
+      return quitPsychoJS(t("quit.aborted"), true);
 
     // System mrożenia po kolizji
     if (freezeTimer > 0) {
@@ -316,7 +320,7 @@ function finishRoutine() {
       finishClock = new util.Clock();
       finishText = new visual.TextStim({
         win: psychoJS.window,
-        text: "META!\n\nZamykanie...",
+        text: t("finish"),
         color: new util.Color("green"),
         height: 0.1,
       });
@@ -325,7 +329,7 @@ function finishRoutine() {
 
     if (finishClock.getTime() > 2.0) {
       finishText.setAutoDraw(false);
-      return quitPsychoJS("Koniec", true);
+      return quitPsychoJS(t("quit.finished"), true);
     }
     return Scheduler.Event.FLIP_REPEAT;
   };
@@ -344,7 +348,11 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_blednych_nacisniec: collisionCount,
         ogolna_ilosc_nacisniec: 1 + collisionCount,
         czas_pokonania_trasy_sek: Math.round((performance.now() - startTime) / 1000),
-        score: `Trasa ${expInfo["difficulty"]} | Kolizje: ${collisionCount} | Czas: ${Math.round((performance.now() - startTime) / 1000)}s`,
+        score: t("score", {
+          track: expInfo["difficulty"],
+          collisions: collisionCount,
+          seconds: Math.round((performance.now() - startTime) / 1000),
+        }),
         statystyki: {
           trasa: expInfo["difficulty"],
           kolizje: collisionCount,
@@ -371,17 +379,6 @@ flowScheduler.add(welcomeRoutine());
 flowScheduler.add(difficultyRoutine());
 flowScheduler.add(gameRoutine());
 flowScheduler.add(finishRoutine());
-dialogCancelScheduler.add(quitPsychoJS, "Anulowano", false);
+dialogCancelScheduler.add(quitPsychoJS, t("quit.cancelled"), false);
 
 psychoJS.start({ expName: expName, expInfo: expInfo, resources: [] });
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

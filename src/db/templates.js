@@ -1,6 +1,7 @@
 // src/db/templates.js — TemplatesStore (C2): Szablony metryczek.
 // Jawnie NIESZYFROWANE (config, nie dane wrażliwe).
 import { initDB } from "./index.js";
+import { t } from "../i18n/index.js";
 
 export async function saveTemplate(template) {
   try {
@@ -10,7 +11,7 @@ export async function saveTemplate(template) {
     return id;
   } catch (error) {
     console.error("Error saving template:", error);
-    throw new Error(`Nie udało się zapisać szablonu: ${error.message}`);
+    throw new Error(t("db.templateSaveError", { message: error.message }));
   }
 }
 
@@ -31,7 +32,7 @@ export async function getTemplate(id) {
     return db.get("demographicsTemplates", id);
   } catch (error) {
     console.error("Error getting template:", error);
-    throw new Error(`Nie udało się pobrać szablonu: ${error.message}`);
+    throw new Error(t("db.templateFetchError", { message: error.message }));
   }
 }
 
@@ -41,6 +42,6 @@ export async function deleteTemplate(id) {
     await db.delete("demographicsTemplates", id);
   } catch (error) {
     console.error("Error deleting template:", error);
-    throw new Error(`Nie udało się usunąć szablonu: ${error.message}`);
+    throw new Error(t("db.templateDeleteError", { message: error.message }));
   }
 }

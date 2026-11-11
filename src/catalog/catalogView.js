@@ -5,6 +5,7 @@
 import { debounce } from "../modules/utils.js";
 import { setTestButtonProgress } from "./testCard.js";
 import { statusOf } from "./testCatalog.js";
+import { t } from "../i18n/index.js";
 
 const boundSearchInputs = new Set();
 
@@ -45,17 +46,20 @@ export function bindCatalogProgress(platform, { progressIdPrefix, onInstalled })
 export function updateStatusLabel(r) {
   switch (statusOf(r)) {
     case "missing":
-      return { text: "Nie zainstalowano", color: "#888", bold: false };
+      return { text: t("catalog.notInstalled"), color: "#888", bold: false };
     case "outdated":
       return {
-        text: `Aktualizacja! (v${r.local_ver} → v${r.remote_ver})`,
+        text: t("catalog.updateBang", {
+          local: r.local_ver,
+          remote: r.remote_ver,
+        }),
         color: "#ff9800",
         bold: true,
       };
     case "localdev":
-      return { text: "Lokalny (dev)", color: "#2196f3", bold: false };
+      return { text: t("catalog.localDev"), color: "#2196f3", bold: false };
     default:
-      return { text: "Aktualne", color: "#4caf50", bold: false };
+      return { text: t("catalog.upToDate"), color: "#4caf50", bold: false };
   }
 }
 
@@ -102,7 +106,7 @@ export function buildUpdateActionCell(r, { onDownload, onDelete }) {
         id: `force-update-${id}`,
         className: "btn primary small",
         icon: "download",
-        label: "Pobierz",
+        label: t("catalog.download"),
         onClick: () => onDownload(r),
       }),
     );
@@ -115,7 +119,7 @@ export function buildUpdateActionCell(r, { onDownload, onDelete }) {
         id: `force-update-${id}`,
         className: "btn primary small",
         icon: "system_update_alt",
-        label: "Aktualizuj",
+        label: t("catalog.update"),
         onClick: () => onDownload(r),
       }),
     );
@@ -123,7 +127,7 @@ export function buildUpdateActionCell(r, { onDownload, onDelete }) {
     const current = document.createElement("button");
     current.className = "btn outline small";
     current.disabled = true;
-    current.textContent = "Aktualne";
+    current.textContent = t("catalog.upToDate");
     cell.appendChild(current);
   }
 
@@ -132,7 +136,7 @@ export function buildUpdateActionCell(r, { onDownload, onDelete }) {
       id: `delete-test-${id}`,
       className: "btn danger small",
       icon: "delete",
-      label: "Usuń",
+      label: t("catalog.delete"),
       style: "margin-left:5px;",
       onClick: () => onDelete(id),
     }),

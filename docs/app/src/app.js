@@ -2,6 +2,7 @@
 import {
   elements,
   switchView,
+  refreshCurrentView,
   showLoginChoice,
   showLoginOnlinePanel,
   showLoginLocalPanel,
@@ -51,12 +52,31 @@ import { initAppUpdater } from "./modules/appUpdater.js";
 import { initWhatsNew, loadWhatsNewView } from "./modules/whatsNew.js";
 import { renderParticipantsList } from "./modules/participants.js";
 import { getPlatform } from "./platform/index.js";
+import { isTestStatusError } from "./platform/electron.js";
 import { shellPolicyFor, applyShellPolicy } from "./platform/shell.js";
 import { initLocalPasswordModal } from "./session/passwordModal.js";
 import { Notify } from "./notify/notify.js";
 import { setCryptoWarningHandler } from "./db/cryptoPolicy.js";
+import { initI18n, onLocaleChange, getLocale } from "./i18n/index.js";
 
 // --- INITIALIZATION ---
+
+// i18n musi wystartować przed pierwszym renderem (motyw ustawia initSettings,
+// ale język steruje statycznym HTML-em i <html lang>).
+initI18n();
+
+// Okna testów dostają język interfejsu przy starcie (desktop). Web = noop.
+const pushTestLanguage = () => {
+  const platform = getPlatform();
+  platform.tests?.setUiLanguage?.(getLocale());
+};
+pushTestLanguage();
+onLocaleChange(pushTestLanguage);
+
+// Po zmianie języka przerysowujemy aktywny widok (dynamiczne karty/tabele).
+onLocaleChange(() => {
+  if (typeof refreshCurrentView === "function") refreshCurrentView();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   // 0. Initialize Settings (must be first to apply saved theme/colors)
@@ -279,13 +299,9 @@ document.addEventListener("DOMContentLoaded", () => {
   getPlatform().tests.onStatus((message) => {
     console.log("[Electron Status]:", message);
 
-    // Simple heuristic to detect errors
-    if (message.startsWith("BŁĄD") || message.includes("Error")) {
+    // Non-error statuses drive the button state in library.js (progress/state).
+    if (isTestStatusError(message)) {
       Notify.error(message);
-    } else {
-      // For non-error messages, we might just log them or show a toast if we had one.
-      // Currently, many messages are handled by the button state updates in library.js (download progress/state).
-      // However, some global messages might be useful to see.
     }
   });
 });

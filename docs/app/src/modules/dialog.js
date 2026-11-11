@@ -1,4 +1,6 @@
 
+import { t } from "../i18n/index.js";
+
 export const Dialog = {
     overlay: null,
     titleEl: null,
@@ -70,7 +72,7 @@ export const Dialog = {
     prompt(message, defaultValue = '') {
         this.init();
         return new Promise((resolve) => {
-            this.titleEl.textContent = 'Wprowadź dane';
+            this.titleEl.textContent = t('dialog.enterData');
             this.messageEl.textContent = message;
             this.iconEl.innerHTML = `<span class="material-icons" style="font-size: 48px; color: #3771c8;">edit</span>`;
 
@@ -85,7 +87,7 @@ export const Dialog = {
 
             const btnCancel = document.createElement('button');
             btnCancel.className = 'btn outline';
-            btnCancel.textContent = 'Anuluj';
+            btnCancel.textContent = t('common.cancel');
             btnCancel.addEventListener('click', () => {
                 input.remove();
                 this.close(null);
@@ -93,7 +95,7 @@ export const Dialog = {
 
             const btnOk = document.createElement('button');
             btnOk.className = 'btn primary';
-            btnOk.textContent = 'OK';
+            btnOk.textContent = t('common.ok');
             btnOk.addEventListener('click', () => {
                 const val = input.value.trim();
                 input.remove();
@@ -124,7 +126,7 @@ export const Dialog = {
         this.init();
         return new Promise((resolve) => {
             // 1. Setup Content
-            this.titleEl.textContent = 'Wybór akcji';
+            this.titleEl.textContent = t('dialog.chooseAction');
             this.messageEl.textContent = message;
             this.iconEl.innerHTML = `<span class="material-icons" style="font-size: 48px; color: #3771c8;">help_outline</span>`;
 
@@ -160,28 +162,28 @@ export const Dialog = {
             case 'error':
                 iconName = 'error_outline';
                 color = '#f44336';
-                title = 'Błąd';
+                title = t('dialog.error');
                 break;
             case 'success':
                 iconName = 'check_circle_outline';
                 color = '#4caf50';
-                title = 'Sukces';
+                title = t('dialog.success');
                 break;
             case 'warning':
                 iconName = 'warning_amber';
                 color = '#ff9800';
-                title = 'Uwaga';
+                title = t('dialog.warning');
                 break;
             case 'question':
                 iconName = 'help_outline';
                 color = '#3771c8';
-                title = 'Potwierdzenie';
+                title = t('dialog.question');
                 break;
             case 'info':
             default:
                 iconName = 'info_outline';
                 color = '#3771c8';
-                title = 'Informacja';
+                title = t('dialog.info');
                 break;
         }
 
@@ -195,14 +197,14 @@ export const Dialog = {
             // Cancel Button
             const btnCancel = document.createElement('button');
             btnCancel.className = 'btn outline';
-            btnCancel.textContent = 'Anuluj';
+            btnCancel.textContent = t('common.cancel');
             btnCancel.addEventListener('click', () => this.close(false));
             this.footerEl.appendChild(btnCancel);
 
             // Confirm Button
             const btnConfirm = document.createElement('button');
             btnConfirm.className = 'btn primary';
-            btnConfirm.textContent = 'Tak';
+            btnConfirm.textContent = t('common.yes');
             btnConfirm.addEventListener('click', () => this.close(true));
             this.footerEl.appendChild(btnConfirm);
 
@@ -213,7 +215,7 @@ export const Dialog = {
             // OK Button
             const btnOk = document.createElement('button');
             btnOk.className = 'btn primary';
-            btnOk.textContent = 'OK';
+            btnOk.textContent = t('common.ok');
             btnOk.addEventListener('click', () => this.close(true)); // alert resolves to void/true, doesn't matter
             this.footerEl.appendChild(btnOk);
 

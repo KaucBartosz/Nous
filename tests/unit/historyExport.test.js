@@ -53,7 +53,7 @@ describe('historyExport CSV', () => {
 
   it('singleResultFile: csv/json jak stary downloadSingleResult', () => {
     const csv = singleResultFile({ ...r('P1'), testId: 'x' }, 'csv');
-    expect(csv.filename).toMatch(/^wynik_stroop_\d+\.csv$/);
+    expect(csv.filename).toMatch(/^result_stroop_\d+\.csv$/);
     expect(csv.mime).toContain('csv');
     expect(csv.content).toContain('Parametr;Wartość');
     const json = singleResultFile({ ...r('P1') }, 'json');

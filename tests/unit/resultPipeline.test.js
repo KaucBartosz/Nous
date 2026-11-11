@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 import { normalizeResult, testIdOf, subjectIdOf } from '../../src/results/resultPackage.js';
 import {
   escapeCsvCell,
@@ -31,6 +31,8 @@ import {
   savePipeline,
 } from '../../src/results/resultPipeline.js';
 
+import { setLocale } from '../../src/i18n/index.js';
+
 const pkg = () => ({
   test_id: 'stroop',
   timestamp: '2024-05-01T10:00:00.000Z',
@@ -61,6 +63,8 @@ describe('resultPackage', () => {
 });
 
 describe('resultExporter', () => {
+  afterAll(() => setLocale('pl', { persist: false }));
+
   it('escapeCsvCell cytuje przy ;, nowej linii i cudzysłowie (reguła maina, 2b/b)', () => {
     expect(escapeCsvCell('abc')).toBe('abc');
     expect(escapeCsvCell('a;b')).toBe('"a;b"');
@@ -116,6 +120,19 @@ describe('resultExporter', () => {
   it('toMatrixCSV: unia kluczy, braki jako pusty string', () => {
     const csv = toMatrixCSV([{ a: 1, b: 2 }, { b: 3, c: 'x;y' }]);
     expect(csv).toBe('﻿a;b;c\r\n1;2;\r\n;3;"x;y"\r\n');
+  });
+
+  it('kolumny CSV podążają za językiem interfejsu (EN)', () => {
+    setLocale('en', { persist: false });
+    try {
+      expect(Object.keys(resultRow(pkg()))).toEqual([
+        'Date', 'Test ID', 'Subject ID', 'Researcher UID',
+        'Demographics - wiek', 'Result - poprawne', 'Result - sredni_czas',
+      ]);
+      expect(toKeyValueCSV({ A: 1 })).toBe('﻿Parameter;Value\r\nA;1\r\n');
+    } finally {
+      setLocale('pl', { persist: false });
+    }
   });
 });
 
@@ -226,7 +243,7 @@ describe('resultPipeline (A6: save → export → sync)', () => {
 
   it('webResultCsv: nazwa + BOM + brak Badacz UID i metryczki (plik dla badanego)', () => {
     const { filename, csv } = webResultCsv(pkg());
-    expect(filename).toMatch(/^Wynik_stroop_\d+\.csv$/);
+    expect(filename).toMatch(/^(Result|Wynik)_stroop_\d+\.csv$/);
     expect(csv.startsWith('﻿Parametr;Wartość')).toBe(true);
     expect(csv).not.toContain('Badacz UID');
     expect(csv).not.toContain('Metryczka');

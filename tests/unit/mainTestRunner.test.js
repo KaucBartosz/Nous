@@ -100,7 +100,7 @@ describe("main/testRunner", () => {
       height: 768,
       show: true,
       fullscreen: true,
-      title: "Badanie w toku...",
+      title: "Nous",
     });
     expect(win.opts.parent).toBeDefined();
     expect(win.opts.webPreferences.preload).toBe("/preload_test.js");
@@ -192,7 +192,7 @@ describe("main/testRunner", () => {
     const expected = crypto.createHmac("sha256", "sekret").update(JSON.stringify({ a: 1 })).digest("hex");
     expect(saved.meta.signature).toBe(expected);
     expect(saved.meta.app).toBe("Nous");
-    expect(sends).toEqual([["test-status", "Wynik zapisany pomyślnie."]]);
+    expect(sends).toEqual([["test-status", { code: "resultSaved" }]]);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
@@ -212,7 +212,9 @@ describe("main/testRunner", () => {
     });
     const sends = [];
     r.onSaveLocalResult({ sender: { send: (ch, msg) => sends.push([ch, msg]) } }, { wyniki: {} });
-    expect(sends).toEqual([["test-status", "BŁĄD: Nie można wygenerować klucza podpisu!"]]);
+    expect(sends).toEqual([
+      ["test-status", { code: "error", error: "signingKeyUnavailable" }],
+    ]);
     expect(dialog.showSaveDialog).not.toHaveBeenCalled();
   });
 });
@@ -250,14 +252,18 @@ describe("main/testRunner run-test (uruchomienie z dysku, nigdy download)", () =
   it("run-test: brak entryFile → błąd, bez otwierania okna", () => {
     const { r, FakeBW, sends, sender } = runHarness({ entryFile: null });
     r.onRunTest({ sender }, { testId: "t1" });
-    expect(sends).toEqual([["test-status", "BŁĄD: Test nie jest pobrany! Pobierz go najpierw."]]);
+    expect(sends).toEqual([
+      ["test-status", { code: "error", error: "testNotDownloaded" }],
+    ]);
     expect(FakeBW).not.toHaveBeenCalled();
   });
 
   it("run-test: nieprawidłowe ID → błąd, bez otwierania okna", () => {
     const { r, FakeBW, sends, sender } = runHarness();
     r.onRunTest({ sender }, { testId: "../evil" });
-    expect(sends).toEqual([["test-status", "BŁĄD: Nieprawidłowe ID testu!"]]);
+    expect(sends).toEqual([
+      ["test-status", { code: "error", error: "invalidTestId" }],
+    ]);
     expect(FakeBW).not.toHaveBeenCalled();
   });
 
@@ -265,14 +271,14 @@ describe("main/testRunner run-test (uruchomienie z dysku, nigdy download)", () =
     const { r, FakeBW, sends, sender } = runHarness({ running: true });
     expect(FakeBW).toHaveBeenCalledTimes(1);
     r.onRunTest({ sender }, { testId: "t1" });
-    expect(sends).toEqual([["test-status", "Inny test w toku. Uruchomienie wstrzymane."]]);
+    expect(sends).toEqual([["test-status", { code: "anotherTestRunning" }]]);
     expect(FakeBW).toHaveBeenCalledTimes(1);
   });
 
   it("run-test: happy path → status + openTestWindow", () => {
     const { r, win, sends, sender } = runHarness();
     r.onRunTest({ sender }, { testId: "t1" });
-    expect(sends).toEqual([["test-status", "Uruchamianie..."]]);
+    expect(sends).toEqual([["test-status", { code: "starting" }]]);
     expect(win.loaded).toBe("/lib/t1/index.html");
     expect(r.isTestRunning()).toBe(true);
   });

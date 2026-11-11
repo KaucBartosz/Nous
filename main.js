@@ -33,6 +33,10 @@ autoUpdater.logger.transports.file.level = "info";
 
 let mainWindow;
 
+// Język interfejsu (pl/en) — renderer podaje go przez set-ui-language;
+// okna testów dostają go przy starcie (preload_test.js).
+let uiLanguage = 'pl';
+
 // TestRunner: okno testu + kanał run-test (uruchomienie z dysku, nigdy download)
 const testRunner = createTestRunner({
     BrowserWindow,
@@ -46,8 +50,15 @@ const testRunner = createTestRunner({
     preloadPath: path.join(__dirname, 'preload_test.js'),
     getTestsLibraryDir: () => path.join(nodePaths.getUserDataPath(app), 'tests_library'),
     findStartFile: (folderPath) => nodePaths.findStartFile(folderPath),
+    // Język interfejsu dla okna testu — renderer informuje go przez setUiLanguage.
+    getUiLanguage: () => uiLanguage,
 });
 testRunner.registerIpc(ipcMain);
+
+// Renderer (preload.js setUiLanguage) podaje język przy starcie i zmianie.
+ipcMain.on('set-ui-language', (_event, lang) => {
+    if (lang === 'pl' || lang === 'en') uiLanguage = lang;
+});
 
 // Kolejka pobierania + skan + usuwanie w main/downloads.js
 // (czysty download-test — bez uruchamiania; run-test żyje w testRunnerze).

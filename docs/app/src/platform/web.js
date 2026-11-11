@@ -1,4 +1,6 @@
 // src/platform/web.js — adapter Web (przeglądarka, bez Electron)
+import { t } from "../i18n/index.js";
+
 function registryToVersions(registry) {
   const out = {};
   (registry || []).forEach((t) => {
@@ -61,7 +63,7 @@ export function createWebPlatform(deps = {}) {
     },
 
     tests: {
-      download: async () => ({ success: false, error: "Niedostępne w Web" }),
+      download: async () => ({ success: false, error: t("web.unavailable") }),
       run: async ({ id } = {}) => {
         const versions = await getLocalVersions();
         const info = versions[id];
@@ -72,7 +74,7 @@ export function createWebPlatform(deps = {}) {
         return { opened: false, reason: "missing-webPath" };
       },
       getLocalVersions,
-      deleteTest: async () => ({ success: false, error: "Niedostępne w Web" }),
+      deleteTest: async () => ({ success: false, error: t("web.unavailable") }),
       onProgress: () => () => {},
       onInstalled: () => () => {},
       onProcessStopped: () => () => {},
@@ -86,6 +88,8 @@ export function createWebPlatform(deps = {}) {
       },
       onStatus: () => () => {},
       saveResultToDisk: () => {},
+      // Web: test czyta język sam (localStorage w test-i18n-shim.js).
+      setUiLanguage: () => {},
     },
 
     keys: {
@@ -96,9 +100,9 @@ export function createWebPlatform(deps = {}) {
     },
 
     files: {
-      bulkZip: async () => ({ success: false, error: "Niedostępne w Web — CSV generowany lokalnie" }),
+      bulkZip: async () => ({ success: false, error: t("web.bulkZipUnavailable") }),
       exportTemplate: async (data) => {
-        const safeName = (data && data.name ? String(data.name) : "szablon").replace(/[^a-z0-9]/gi, "_");
+        const safeName = (data && data.name ? String(data.name) : "template").replace(/[^a-z0-9]/gi, "_");
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -122,10 +126,10 @@ export function createWebPlatform(deps = {}) {
             try {
               resolve({ success: true, data: JSON.parse(ev.target.result) });
             } catch (err) {
-              resolve({ success: false, error: "Nieprawidłowy plik JSON" });
+              resolve({ success: false, error: t("web.invalidJson") });
             }
           };
-          reader.onerror = () => resolve({ success: false, error: "Błąd odczytu pliku" });
+          reader.onerror = () => resolve({ success: false, error: t("web.fileReadError") });
           reader.readAsText(file);
         };
         input.click();

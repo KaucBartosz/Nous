@@ -29,7 +29,7 @@ describe("main/templates pure", () => {
     expect(parseImportContent(JSON.stringify(raw))).toEqual({ success: true, data: raw });
 
     expect(() => parseImportContent(JSON.stringify({ template: {} }))).toThrow(
-      "Nieprawidłowy format pliku",
+      "Invalid file format",
     );
     expect(() => parseImportContent("nie-json{{{")).toThrow(SyntaxError);
   });
@@ -40,17 +40,18 @@ describe("main/templates ipc", () => {
 
   it("export: zapisuje plik i raportuje sukces / anulowanie", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-tpl-"));
-    const filePath = path.join(dir, "szablon_x.json");
+    const filePath = path.join(dir, "template_x.json");
     const dialog = { showSaveDialog: vi.fn(async () => ({ filePath })) };
     const { exportTemplate } = createTemplates({ dialog, fs });
 
-    const ok = await exportTemplate(getMainWindow, { name: "X", fields: [] });
+    // dialogTitle: tytuł okna z i18n renderera (main nie zna języka).
+    const ok = await exportTemplate(getMainWindow, { name: "X", fields: [] }, "Export");
     expect(ok).toEqual({ success: true });
-    expect(dialog.showSaveDialog.mock.calls[0][1].defaultPath).toBe("szablon_x.json");
+    expect(dialog.showSaveDialog.mock.calls[0][1].defaultPath).toBe("template_x.json");
     expect(JSON.parse(fs.readFileSync(filePath, "utf8")).template.name).toBe("X");
 
     dialog.showSaveDialog.mockResolvedValue({});
-    expect(await exportTemplate(getMainWindow, {})).toEqual({ success: false, cancelled: true });
+    expect(await exportTemplate(getMainWindow, {}, "Export")).toEqual({ success: false, cancelled: true });
     fs.rmSync(dir, { recursive: true, force: true });
   });
 

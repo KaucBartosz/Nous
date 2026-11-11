@@ -35,6 +35,7 @@ export function createFakePlatform(seed = {}) {
       onResults: (cb) => { listeners.results.push(cb); return () => {}; },
       onStatus: (cb) => { listeners.status.push(cb); return () => {}; },
       saveResultToDisk: (d) => { rec("tests.saveResultToDisk", d); },
+      setUiLanguage: (lang) => { rec("tests.setUiLanguage", lang); },
       __emitResults: (data) => listeners.results.forEach((cb) => cb(data)),
     },
 

@@ -8,6 +8,7 @@ import { getPlatform } from '../platform/index.js';
 import { loadCatalog, countUpdates, selectUpdatesView } from '../catalog/testCatalog.js';
 import { setTestButtonState } from '../catalog/testCard.js';
 import { bindSearchInput, bindCatalogProgress, buildUpdateStatusCell, buildUpdateActionCell } from '../catalog/catalogView.js';
+import { t, getLocale } from '../i18n/index.js';
 
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
 
@@ -37,7 +38,7 @@ export async function loadUpdatesData(filterText = '') {
     // Init listeners on first load
     initUpdatesListeners();
 
-    elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Skanowanie...</td></tr>';
+    elements.updatesTableBody.innerHTML = `<tr><td colspan="5">${t('updates.scanning')}</td></tr>`;
     try {
         // C5: rejestr + merge wersji z katalogu (bez backfillu/cache jak wcześniej);
         // na Web Firestore bezpośrednio (jak wcześniej — widok i tak zablokowany).
@@ -49,11 +50,11 @@ export async function loadUpdatesData(filterText = '') {
             getSettings: () => ({}),
             backfill: false,
         });
-        if (res.offline) throw new Error("Brak połączenia internetowego");
+        if (res.offline) throw new Error(t("updates.noInternet"));
 
         elements.updatesTableBody.innerHTML = '';
         if (res.empty) {
-            elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak testów.</td></tr>';
+            elements.updatesTableBody.innerHTML = `<tr><td colspan="5">${t('updates.noTests')}</td></tr>`;
             return;
         }
 
@@ -64,7 +65,7 @@ export async function loadUpdatesData(filterText = '') {
         updateUpdatesBadge(countUpdates(tests));
 
         if (tests.length === 0) {
-            elements.updatesTableBody.innerHTML = '<tr><td colspan="5">Brak wyników wyszukiwania.</td></tr>';
+            elements.updatesTableBody.innerHTML = `<tr><td colspan="5">${t('updates.noSearchResults')}</td></tr>`;
             return;
         }
 
@@ -74,7 +75,7 @@ export async function loadUpdatesData(filterText = '') {
 
             // Column 1: Test Name (SAFE - use textContent)
             const nameCell = document.createElement('td');
-            nameCell.textContent = r.name || 'Brak nazwy';
+            nameCell.textContent = r.name || t('library.unnamed');
             row.appendChild(nameCell);
 
             // Column 2: Local Version
@@ -90,7 +91,7 @@ export async function loadUpdatesData(filterText = '') {
             // Column 4: Status + Column 5: Actions
             row.appendChild(buildUpdateStatusCell(r));
             row.appendChild(buildUpdateActionCell(r, {
-                onDownload: (t) => forceUpdate(t.download_url || t.downloadUrl, t.id, t.remote_ver, t.name, t.description),
+                onDownload: (t) => forceUpdate(t.download_url || t.downloadUrl, t.id, t.remote_ver, (getLocale() === "en" ? (t.name_en || t.name) : t.name), (getLocale() === "en" ? (t.description_en || t.description) : (t.description_pl || t.description))),
                 onDelete: (testId) => deleteLocalTest(testId),
             }));
 
@@ -102,7 +103,7 @@ export async function loadUpdatesData(filterText = '') {
         const errorRow = document.createElement('tr');
         const errorCell = document.createElement('td');
         errorCell.colSpan = 5;
-        errorCell.textContent = `Błąd: ${e.message}`;
+        errorCell.textContent = t('updates.error', { message: e.message });
         errorRow.appendChild(errorCell);
         elements.updatesTableBody.appendChild(errorRow);
     }
@@ -112,7 +113,7 @@ export async function forceUpdate(url, id, ver, name = "", description = "") {
   // A1: jawny komunikat zamiast silent no-op — użytkownik wie dlaczego nic się nie dzieje.
   if (!getPlatform().capabilities?.canDownload) {
     await Notify.info(
-      "Pobieranie testów jest niedostępne w wersji Web. Użyj aplikacji Desktopowej.",
+      t("updates.downloadUnavailable"),
     );
     return;
   }
@@ -131,12 +132,12 @@ export async function deleteLocalTest(test_id) {
   // A1: jawny komunikat zamiast silent no-op.
   if (!getPlatform().capabilities?.canDelete) {
     await Notify.info(
-      "Usuwanie testów jest niedostępne w wersji Web. Użyj aplikacji Desktopowej.",
+      t("updates.deleteUnavailable"),
     );
     return;
   }
   {
-        const confirmed = await Notify.confirm("Czy na pewno chcesz usunąć ten test?");
+        const confirmed = await Notify.confirm(t("updates.deleteConfirm"));
         if (!confirmed) return;
 
         const res = await getPlatform().tests.deleteTest(test_id);
@@ -144,7 +145,7 @@ export async function deleteLocalTest(test_id) {
             loadUpdatesData();
             loadTestsList();
         } else {
-            await Notify.error("Błąd: " + res.error);
+            await Notify.error(t("updates.error", { message: res.error }));
         }
     }
 }

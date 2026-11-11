@@ -3,6 +3,7 @@
 // + maszyna stanów przycisku startu (progress/busy).
 // Czysty DOM: zero importów auth/Firestore — testowalny w happy-dom bez mocków.
 // Cztery renderery w `library.js` tylko układają te klocki w kontenerach.
+import { t as translate, getLocale } from "../i18n/index.js";
 
 /**
  * Deskryptor statusu testu (dane dla renderu, nie elementy).
@@ -18,10 +19,10 @@ export function getTestStatus(t) {
     return {
       iconName: "code",
       iconColor: "#2196f3",
-      iconTitle: "Wersja Lokalna (Deweloperska)",
-      btnText: "Uruchom (Dev)",
+      iconTitle: translate("catalog.localDevTitle"),
+      btnText: translate("catalog.runDev"),
       btnClass: "secondary",
-      statusText: "Lokalny",
+      statusText: translate("catalog.statusLocal"),
       action: "run",
     };
   }
@@ -30,30 +31,30 @@ export function getTestStatus(t) {
     return {
       iconName: "cloud_download",
       iconColor: "#888",
-      iconTitle: "Nie pobrano",
-      btnText: "Pobierz",
+      iconTitle: translate("catalog.notDownloaded"),
+      btnText: translate("catalog.download"),
       btnClass: "primary",
-      statusText: "Nie pobrano",
+      statusText: translate("catalog.notDownloaded"),
       action: "download",
     };
   } else if (local_ver < remote_ver) {
     return {
       iconName: "system_update",
       iconColor: "#ff9800",
-      iconTitle: "Dostępna aktualizacja",
-      btnText: `Uruchom (v${local_ver})`,
+      iconTitle: translate("catalog.updateAvailableTitle"),
+      btnText: translate("catalog.runVersion", { version: local_ver }),
       btnClass: "outline",
-      statusText: "Aktualizacja dostępna",
+      statusText: translate("catalog.updateAvailable"),
       action: "run",
     };
   } else {
     return {
       iconName: "check_circle",
       iconColor: "#4caf50",
-      iconTitle: "Zainstalowano",
-      btnText: "Uruchom",
+      iconTitle: translate("catalog.installed"),
+      btnText: translate("catalog.run"),
       btnClass: "primary",
-      statusText: "Zainstalowano",
+      statusText: translate("catalog.installed"),
       action: "run",
     };
   }
@@ -127,10 +128,16 @@ export function cardParts(t, { iconSize = null, appIcon = false, tagBtn = null, 
   const status = getTestStatus(t);
 
   const titleEl = document.createElement("h4");
-  titleEl.textContent = t.name || "Bez nazwy";
+  const name = getLocale() === "en"
+    ? (t.name_en || t.name || "")
+    : (t.name || "");
+  titleEl.textContent = name || translate("library.unnamed");
 
   const descEl = document.createElement("p");
-  descEl.textContent = t.description || "Brak opisu";
+  const desc = getLocale() === "en"
+    ? (t.description_en || t.description || "")
+    : (t.description_pl || t.description || "");
+  descEl.textContent = desc || translate("library.noDescription");
 
   const versionEl = document.createElement("span");
   versionEl.textContent = `v${t.version}`;

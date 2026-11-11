@@ -3,12 +3,16 @@
  ********************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
+import { lang, t as tr } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
 //some handy aliases as in the psychopy scripts;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
+
+localizePsychoJSDialogs(lang);
 
 
 // store info about the experiment session:
@@ -63,10 +67,10 @@ flowScheduler.add(welcomeRoutineEnd());
 flowScheduler.add(trialRoutineBegin());
 flowScheduler.add(trialRoutineEachFrame());
 flowScheduler.add(trialRoutineEnd());
-flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
 // quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
   expName: expName,
@@ -131,7 +135,7 @@ async function experimentInit() {
   durationText = new visual.TextStim({
     win: psychoJS.window,
     name: 'durationText',
-    text: 'Wybierz czas trwania testu poniżej',
+    text: tr('chooseDuration'),
     font: 'Arial',
     units: 'height',
     pos: [0, 0.3], draggable: false, height: 0.06, wrapWidth: 1.2, ori: 0.0,
@@ -148,7 +152,7 @@ async function experimentInit() {
     let button = new visual.TextStim({
       win: psychoJS.window,
       name: 'durationButton' + i,
-      text: DURATION_OPTIONS[i] + ' sekund',
+      text: tr('duration_seconds', { n: DURATION_OPTIONS[i], count: DURATION_OPTIONS[i] }),
       font: 'Arial',
       units: 'height',
       pos: [0, buttonY - i * buttonSpacing], draggable: false, height: 0.08, wrapWidth: undefined, ori: 0.0,
@@ -172,7 +176,7 @@ async function experimentInit() {
   welcomeText = new visual.TextStim({
     win: psychoJS.window,
     name: 'welcomeText',
-    text: 'Na ekranie w krótkich odstępach czasu pojawiać się będzie czerwone kółko. \nTwoim zadaniem jest, za pomocą MYSZY, kliknąć na samochód za każdym razem, gdy pojawi się nowe kółko. \nStaraj się reagować najszybciej jak potrafisz. \nAby rozpocząć zadanie, wciśnij SPACJĘ.',
+    text: tr('welcome'),
     font: 'Arial',
     units: 'height',
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: 1.2, ori: 0.0,
@@ -370,7 +374,7 @@ function durationSelectionRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     // check if the Routine should terminate
@@ -514,7 +518,7 @@ function welcomeRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     // check if the Routine should terminate
@@ -826,7 +830,7 @@ function trialRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     // check if the Routine should terminate
@@ -926,7 +930,13 @@ async function quitPsychoJS(message, isCompleted) {
         ogolna_ilosc_nacisniec: totalCircles,
         sredni_czas_reakcji: avgRT,
         klikniecia_bez_kolka: window.clicksWithoutCircle,
-        score: `Poprawne: ${window.correctCount} | Misses: ${window.missCount} | Bez kółka: ${window.clicksWithoutCircle} | Łącznie: ${totalCircles} | Śr. RT: ${avgRT} ms`,
+        score: tr('score', {
+          correct: window.correctCount,
+          misses: window.missCount,
+          withoutCircle: window.clicksWithoutCircle,
+          total: totalCircles,
+          rt: avgRT,
+        }),
         statystyki: {
           sredni_czas_ms: avgRT,
           poprawne_reakcje: window.correctCount,
@@ -946,13 +956,3 @@ async function quitPsychoJS(message, isCompleted) {
 
   return Scheduler.Event.QUIT;
 }
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

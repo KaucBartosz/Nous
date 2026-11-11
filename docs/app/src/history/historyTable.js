@@ -2,6 +2,7 @@
 // Własność: wiersze wyników, paginacja, selekcja, etykiety przycisków.
 // Czyste reguły (score/patient/empty/labels) osobno od DOM; orkiestrator
 // (modules/history.js) dostarcza stan i callbacki domenowe (claim/sync).
+import { t, localeTag } from "../i18n/index.js";
 
 /** Tekst wyniku w wierszu (czas_reakcji → score → JSON). */
 export function scoreTextOf(r) {
@@ -21,9 +22,9 @@ export function patientIdOf(r) {
 
 /** Komunikat pustej tabeli (filtry wygrywają z trybem gościa jak wcześniej). */
 export function emptyMessage({ guestView, hasFilters }) {
-  if (hasFilters) return "Brak wyników pasujących do aktywnych filtrów.";
-  if (guestView) return "Brak wyników w trybie Gościa.";
-  return "Brak wyników.";
+  if (hasFilters) return t("history.emptyFiltered");
+  if (guestView) return t("history.emptyGuest");
+  return t("history.empty");
 }
 
 /** Etykieta przycisku ZIP per widok (cloud ignoruje filtry jak wcześniej). */
@@ -32,11 +33,11 @@ export function downloadButtonLabel(
   { count, hasFilters, filteredCount },
 ) {
   const icon = `<span class="material-icons">download</span>`;
-  if (count > 0) return `${icon} Pobierz zaznaczone (${count})`;
+  if (count > 0) return `${icon} ${t("history.downloadSelected", { count })}`;
   if (hasFilters && variant !== "cloud")
-    return `${icon} Pobierz przefiltrowane (${filteredCount})`;
-  if (variant === "local") return `${icon} Pobierz wszystkie wyniki`;
-  return `${icon} Pobierz wszystkie`;
+    return `${icon} ${t("history.downloadFiltered", { count: filteredCount })}`;
+  if (variant === "local") return `${icon} ${t("history.downloadAllResults")}`;
+  return `${icon} ${t("history.downloadAll")}`;
 }
 
 /**
@@ -92,8 +93,8 @@ function claimCell(r, claim) {
   btnClaim.style.padding = "2px 8px";
   btnClaim.style.fontSize = "12px";
   btnClaim.innerHTML =
-    '<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> Przejmij';
-  btnClaim.title = "Przypisz ten wynik do swojego konta";
+    `<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> ${t("history.claim")}`;
+  btnClaim.title = t("history.claimTitle");
   btnClaim.onclick = async (e) => {
     e.stopPropagation();
     await claim.onClaim(r, claim.userUid);
@@ -114,25 +115,25 @@ function syncStatusCell(r, { canUpload, syncRecord, onSyncError }) {
   if (r.researcher_uid && r.researcher_uid.startsWith("LOCAL::")) {
     icon.textContent = "computer";
     icon.style.color = "#64b5f6";
-    icon.title = "Konto lokalne";
+    icon.title = t("history.syncStatusLocal");
   } else if (sync_status === "LOCAL") {
     icon.textContent = "computer";
     icon.style.color = "#64b5f6";
-    icon.title = "Konto lokalne";
+    icon.title = t("history.syncStatusLocal");
   } else if (r.researcher_uid === "GUEST") {
     icon.textContent = "dns";
     icon.style.color = "#888";
-    icon.title = "Lokalne (Tryb Gościa)";
+    icon.title = t("history.localGuestMode");
   } else if (sync_status === "SYNCED") {
     icon.textContent = "cloud_done";
     icon.style.color = "#4caf50";
-    icon.title = "Zsynchronizowano";
+    icon.title = t("history.synced");
   } else if (sync_status === "PENDING") {
     if (canUpload) {
       icon.textContent = "cloud_upload";
       icon.style.color = "#ff9800";
       icon.style.cursor = "pointer";
-      icon.title = "Kliknij, aby wysłać do chmury";
+      icon.title = t("history.clickToSendToCloud");
 
       icon.onclick = async (e) => {
         e.stopPropagation();
@@ -153,12 +154,12 @@ function syncStatusCell(r, { canUpload, syncRecord, onSyncError }) {
     } else {
       icon.textContent = "cloud_off";
       icon.style.color = "#aaa";
-      icon.title = "Czeka na wysyłkę (Wymagany status APPROVED)";
+      icon.title = t("history.waitingForApproval");
     }
   } else {
     icon.textContent = "error";
     icon.style.color = "red";
-    icon.title = `Status nieznany: ${sync_status}`;
+    icon.title = t("history.unknownStatus", { status: sync_status });
   }
   td.appendChild(icon);
   return td;
@@ -169,7 +170,7 @@ function downloadCell(r, onDownload) {
   td.style.textAlign = "center";
   const btn = document.createElement("button");
   btn.className = "btn-download-result icon-btn";
-  btn.title = "Pobierz JSON";
+  btn.title = t("history.downloadJson");
   const btnIcon = document.createElement("span");
   btnIcon.className = "material-icons";
   btnIcon.style.fontSize = "18px";
@@ -191,7 +192,7 @@ export function renderHistoryRows(tbody, items, ctx) {
     row.appendChild(checkboxCell(r, ctx.selectedIds, ctx.onCheck));
 
     const tdDate = document.createElement("td");
-    tdDate.textContent = new Date(r.timestamp).toLocaleString();
+    tdDate.textContent = new Date(r.timestamp).toLocaleString(localeTag());
     row.appendChild(tdDate);
 
     const tdTestId = document.createElement("td");
@@ -246,7 +247,7 @@ export function renderPagination({ page, totalPages, totalItems, onPage }) {
 
   const btnPrev = document.createElement("button");
   btnPrev.className = "btn outline small";
-  btnPrev.textContent = "← Poprzednia";
+  btnPrev.textContent = t("history.previous");
   btnPrev.disabled = page <= 1;
   btnPrev.addEventListener("click", () => {
     if (page > 1) onPage(page - 1);
@@ -254,11 +255,15 @@ export function renderPagination({ page, totalPages, totalItems, onPage }) {
 
   const pageInfo = document.createElement("span");
   pageInfo.className = "pagination-info";
-  pageInfo.textContent = `Strona ${page} z ${totalPages} (${totalItems} wyników)`;
+  pageInfo.textContent = t("history.page", {
+    page,
+    totalPages,
+    totalItems,
+  });
 
   const btnNext = document.createElement("button");
   btnNext.className = "btn outline small";
-  btnNext.textContent = "Następna →";
+  btnNext.textContent = t("history.next");
   btnNext.disabled = page >= totalPages;
   btnNext.addEventListener("click", () => {
     if (page < totalPages) onPage(page + 1);

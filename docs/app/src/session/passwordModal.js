@@ -2,10 +2,11 @@
 // app.js tylko podpina; cała obsługa formularza (walidacja + stany przycisku)
 // żyje tutaj. validatePasswordChange to czysta reguła (testowalna bez DOM).
 import { Notify } from "../notify/notify.js";
+import { t } from "../i18n/index.js";
 
 /** @returns {string} "" gdy OK, inaczej komunikat błędu. */
 export function validatePasswordChange(newPwd, confirmPwd) {
-  if (newPwd !== confirmPwd) return "Nowe hasła nie są zgodne.";
+  if (newPwd !== confirmPwd) return t("login.passwordsDoNotMatch");
   return "";
 }
 
@@ -47,16 +48,16 @@ export function initLocalPasswordModal({ changePassword, notify = Notify } = {})
     }
 
     btnSubmit.disabled = true;
-    btnSubmit.textContent = "Zapisywanie...";
+    btnSubmit.textContent = t("common.saving");
 
     const result = await changePassword(oldPwd, newPwd);
 
     btnSubmit.disabled = false;
-    btnSubmit.textContent = "Zmień hasło";
+    btnSubmit.textContent = t("login.changePassword");
 
     if (result.ok) {
       hide();
-      notify.success("Hasło zostało zmienione pomyślnie.");
+      notify.success(t("login.passwordChanged"));
     } else {
       errorEl.textContent = result.error;
     }

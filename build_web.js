@@ -16,7 +16,7 @@ const STATIC_FILES = ["style.css", "fonts.css", "logo.webp", "logo-touch.png"];
 // Katalogi przenoszone 1:1.
 const STATIC_DIRS = ["assets"];
 // Pliki webowe utrzymywane ręcznie (poza src/).
-const WEB_FILES = ["web-adapter.js", "boot-guard.js"];
+const WEB_FILES = ["web-adapter.js", "boot-guard.js", "test-lang.js"];
 
 // ─── I/O ─────────────────────────────────────────────────────────────────────
 
@@ -150,10 +150,15 @@ function buildWeb() {
     throw new Error(`build_web: brak artefaktów: ${leftovers.join(", ")}`);
   }
 
-  // 6. Testy BBTP są synchronizowane osobno (scripts/sync-bbtp.js) — build ich
-  //    nie rusza poza usunięciem source map.
+  // 6. Testy BBTP: źródło to katalog BBTP (lokalnie lub obok repozytorium).
+  //    Kopiujemy tylko pliki eksperymentu — index.html i lib zostają w docs/app,
+  //    bo wersja webowa ma własny index.html z web-adapter.js. Potem wstrzykujemy
+  //    test-lang.js (język testu w Web: wybór Nous z localStorage).
+  const bbtp = resolveBbtpSource();
   const testsDest = path.join(DEST, "tests");
   fs.mkdirSync(testsDest, { recursive: true });
+  const synced = bbtp ? syncBbtpTests(bbtp, testsDest) : 0;
+  injectTestLanguage(testsDest);
   const registryPath = path.join(DEST, "tests-registry.json");
   if (!fs.existsSync(registryPath)) {
     fs.writeFileSync(registryPath, "[]\n", "utf8");
@@ -162,7 +167,76 @@ function buildWeb() {
 
   const sizeMb = dirSize(DEST) / (1024 * 1024);
   console.log(`✅ Gotowe: docs/app (${sizeMb.toFixed(2)} MB, usunięto ${maps} source map)`);
-  console.log("   Testy: docs/app/tests + docs/app/tests-registry.json (bez zmian).");
+  if (synced) {
+    console.log(`   Testy: zsynchronizowano ${synced} plików z ${bbtp}`);
+  } else {
+    console.log("   Testy: bez zmian (nie znaleziono katalogu BBTP).");
+  }
+}
+
+/** Katalog BBTP z testami: zmienna BBTP_DIR, lokalna ścieżka lub sąsiad repo. */
+function resolveBbtpSource() {
+  const candidates = [
+    process.env.BBTP_DIR,
+    "C:\\Users\\HARDPC\\Desktop\\BBTP",
+    path.join(ROOT, "..", "BBTP"),
+    path.join(ROOT, "BBTP"),
+  ].filter(Boolean);
+  return candidates.find((dir) => fs.existsSync(path.join(dir, "NWstecz", "nwstecz.js"))) || null;
+}
+
+/**
+ * Kopiuje pliki eksperymentu z BBTP do docs/app/tests. Test we Web to folder,
+ * którego index.html importuje jeden plik eksperymentu; dokładamy jego moduły
+ * i18n (i18n.js, dialog-i18n.js, strings.js), bo testy je importują.
+ * Zwraca liczbę skopiowanych plików.
+ */
+function syncBbtpTests(bbtpDir, testsDest) {
+  let count = 0;
+  for (const entry of fs.readdirSync(testsDest, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const srcDir = path.join(bbtpDir, entry.name);
+    const indexPath = path.join(testsDest, entry.name, "index.html");
+    if (!fs.existsSync(indexPath) || !fs.existsSync(srcDir)) continue;
+
+    const html = fs.readFileSync(indexPath, "utf8");
+    const entryScript = html.match(/<script[^>]+src="\.\/([^"/]+\.js)"[^>]*type="module"/);
+    if (!entryScript) continue;
+
+    const files = [entryScript[1], "i18n.js", "dialog-i18n.js", "strings.js"];
+    for (const file of files) {
+      const from = path.join(srcDir, file);
+      if (!fs.existsSync(from)) continue;
+      fs.copyFileSync(from, path.join(testsDest, entry.name, file));
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/**
+ * Wstrzykuje test-lang.js do każdego testu w docs/app/tests — bezpośrednio po
+ * web-adapter.js. Ścieżka jest liczona tak samo jak ścieżka adaptera, więc
+ * działa niezależnie od głębokości folderu testu. Idempotentne.
+ */
+function injectTestLanguage(testsDir) {
+  if (!fs.existsSync(testsDir)) return;
+
+  for (const entry of fs.readdirSync(testsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const indexPath = path.join(testsDir, entry.name, "index.html");
+    if (!fs.existsSync(indexPath)) continue;
+
+    let html = fs.readFileSync(indexPath, "utf8");
+    if (html.includes("test-lang.js")) continue;
+
+    const adapter = html.match(/<script[^>]+src="([^"]*web-adapter\.js)"[^>]*><\/script>/);
+    if (!adapter) continue; // test bez adaptera nie raportuje wyników — nic nie robimy
+
+    const langSrc = adapter[1].replace(/web-adapter\.js$/, "test-lang.js");
+    html = html.replace(adapter[0], `${adapter[0]}\n    <script src="${langSrc}"></script>`);
+    fs.writeFileSync(indexPath, html, "utf8");
+  }
 }
 
 function dirSize(dir) {

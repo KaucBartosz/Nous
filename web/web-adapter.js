@@ -11,6 +11,45 @@
     return;
   }
 
+  // Skrypt nie jest modułem i ładuje się w komponencie testu (poza kontekstem
+  // i18n) — etykiety wybieramy samodzielnie z tego samego klucza co aplikacja.
+  var TEXTS = {
+    pl: {
+      date: "Data",
+      testId: "Test ID",
+      subjectId: "ID Badanego",
+      guest: "Gość",
+      unknown: "Nieznany",
+      parameter: "Parametr",
+      value: "Wartość",
+      resultPrefix: "Wynik - ",
+      filenamePrefix: "Wynik_",
+    },
+    en: {
+      date: "Date",
+      testId: "Test ID",
+      subjectId: "Subject ID",
+      guest: "Guest",
+      unknown: "Unknown",
+      parameter: "Parameter",
+      value: "Value",
+      resultPrefix: "Result - ",
+      filenamePrefix: "Result_",
+    },
+  };
+
+  function texts() {
+    var lang = "en";
+    try {
+      var saved = localStorage.getItem("nous-language");
+      var nav = (navigator.language || "").toLowerCase();
+      lang = saved || (nav.indexOf("pl") === 0 ? "pl" : "en");
+    } catch (e) {
+      // localStorage niedostępny — zostaje domyślny EN.
+    }
+    return TEXTS[lang] || TEXTS.pl;
+  }
+
   var IGNORE_KEYS = [
     "wyniki",
     "testId",
@@ -40,20 +79,21 @@
   }
 
   function buildCsv(data) {
+    var t = texts();
     var rows = [
-      ["Data", new Date().toLocaleString()],
-      ["Test ID", data.testId || data.test_id || "Nieznany"],
-      ["ID Badanego", data.subjectId || data.subject_id || "Gość"],
+      [t.date, new Date().toLocaleString()],
+      [t.testId, data.testId || data.test_id || t.unknown],
+      [t.subjectId, data.subjectId || data.subject_id || t.guest],
     ];
 
     for (var key in data) {
       if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
       if (IGNORE_KEYS.indexOf(key) !== -1) continue;
       if (data[key] === undefined) continue;
-      rows.push(["Wynik - " + key, data[key]]);
+      rows.push([t.resultPrefix + key, data[key]]);
     }
 
-    var out = "\uFEFFParametr;Wartość\r\n";
+    var out = "\uFEFF" + t.parameter + ";" + t.value + "\r\n";
     rows.forEach(function (row) {
       out += escapeCell(row[0]) + ";" + escapeCell(row[1]) + "\r\n";
     });
@@ -96,7 +136,9 @@
         // Fallback: brak rodzica (test otwarty bezpośrednio) — CSV na miejscu.
         console.log("Nous WebAdapter: przechwycono wynik testu", data);
         var testId = data.testId || data.test_id || "test";
-        downloadCsv("Wynik_" + testId + "_" + Date.now() + ".csv", buildCsv(data));
+        // Wzorzec zgodny z i18n `webAdapter.filename` (Result_/Wynik_ + id + czas).
+        var filename = t.filenamePrefix + testId + "_" + Date.now() + ".csv";
+        downloadCsv(filename, buildCsv(data));
         closeSoon(2000);
       } catch (e) {
         console.error("WebAdapter Error:", e);

@@ -1,5 +1,6 @@
 // src/statistics/statisticsTable.js — renderowanie tabel statystyk (DOM).
 import { scoreOf } from "./statisticsQuery.js";
+import { t, localeTag } from "../i18n/index.js";
 
 export function formatNumber(v) {
   if (v === null || v === undefined) return "—";
@@ -16,7 +17,7 @@ function fmtDelta(v) {
 function formatDateTime(timestamp) {
   const d = new Date(timestamp);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("pl-PL", {
+  return d.toLocaleString(localeTag(), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -71,7 +72,7 @@ export function renderRunsTable(tbody, runs, selectedIds, onToggle) {
     cb.type = "checkbox";
     cb.className = "stats-checkbox";
     cb.checked = selectedIds.has(r.id);
-    cb.setAttribute("aria-label", "Wybierz wykonanie do porównania");
+    cb.setAttribute("aria-label", t("statistics.selectRunAria"));
     cb.addEventListener("change", () => onToggle(r.id, cb.checked));
     tdSel.appendChild(cb);
     tr.appendChild(tdSel);
@@ -148,7 +149,7 @@ function svgEl(name, attrs = {}) {
 function formatDay(timestamp) {
   const d = new Date(timestamp);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
+  return d.toLocaleDateString(localeTag(), { day: "2-digit", month: "2-digit" });
 }
 
 /**
@@ -160,7 +161,7 @@ export function renderTrendChart(container, points, options = {}) {
   if (!points || points.length === 0) {
     const empty = document.createElement("p");
     empty.className = "stats-chart-empty";
-    empty.textContent = "Brak danych dla wybranej metryki.";
+    empty.textContent = t("statistics.chartEmpty");
     container.appendChild(empty);
     return;
   }
@@ -205,7 +206,9 @@ export function renderTrendChart(container, points, options = {}) {
   });
   svg.setAttribute(
     "aria-label",
-    `Wykres trendu: ${options.metricLabel || "metryka"}`,
+    t("statistics.chartAria", {
+      metric: options.metricLabel || t("statistics.metricFallback"),
+    }),
   );
 
   // Siatka + oś Y

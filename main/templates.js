@@ -31,20 +31,21 @@ function parseImportContent(content) {
     if (json.name && json.fields) {
       return { success: true, data: json };
     }
-    throw new Error("Nieprawidłowy format pliku (brak pola template lub fields).");
+    throw new Error("Invalid file format (missing template or fields).");
   }
 
   return { success: true, data: json.template };
 }
 
 function createTemplates({ dialog, fs }) {
-  async function exportTemplate(getMainWindow, templateData) {
+  async function exportTemplate(getMainWindow, templateData, dialogTitle) {
     // Sanity check name
     const safeName = safeTemplateName(templateData.name);
 
     const { filePath } = await dialog.showSaveDialog(getMainWindow(), {
-      title: "Eksportuj Szablon Metryczki",
-      defaultPath: `szablon_${safeName}.json`,
+      // Tytuł z renderera (i18n); fallback EN dla wywołań bez UI.
+      title: dialogTitle || "Export Demographics Template",
+      defaultPath: `template_${safeName}.json`,
       filters: [{ name: "JSON", extensions: ["json"] }],
     });
 
@@ -60,9 +61,9 @@ function createTemplates({ dialog, fs }) {
     return { success: false, cancelled: true };
   }
 
-  async function importTemplate(getMainWindow) {
+  async function importTemplate(getMainWindow, dialogTitle) {
     const { filePaths } = await dialog.showOpenDialog(getMainWindow(), {
-      title: "Importuj Szablon Metryczki",
+      title: dialogTitle || "Import Demographics Template",
       properties: ["openFile"],
       filters: [{ name: "JSON", extensions: ["json"] }],
     });
@@ -80,10 +81,12 @@ function createTemplates({ dialog, fs }) {
   }
 
   function registerIpc(ipcMain, getMainWindow) {
-    ipcMain.handle("export-template", async (event, templateData) =>
-      exportTemplate(getMainWindow, templateData),
+    ipcMain.handle("export-template", async (event, templateData, dialogTitle) =>
+      exportTemplate(getMainWindow, templateData, dialogTitle),
     );
-    ipcMain.handle("import-template", async () => importTemplate(getMainWindow));
+    ipcMain.handle("import-template", async (event, dialogTitle) =>
+      importTemplate(getMainWindow, dialogTitle),
+    );
   }
 
   return { safeTemplateName, buildExportPayload, parseImportContent, exportTemplate, importTemplate, registerIpc };

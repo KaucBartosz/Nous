@@ -3,6 +3,7 @@
 // A5: seam modalny — Dialog jako domyślny adapter DOM, fake w testach.
 // Domena woła Notify.*, nigdy Dialog wprost.
 import { Dialog } from "../modules/dialog.js";
+import { t } from "../i18n/index.js";
 
 let adapter = null; // null = prawdziwy DOM
 
@@ -74,9 +75,9 @@ export function toast({ id, titleHtml, messageHtml, actions = [], autoDismissMs 
   return true;
 }
 
-/** Polska odmiana "wynik/wyniki/wyników" (reguła z sync.showSyncToast). */
+/** Liczba zsynchronizowanych wyników (odmiana przez i18n). */
 export function syncCountMessage(count) {
-  return `Zsynchronizowano ${count} ${count === 1 ? "wynik" : count < 5 ? "wyniki" : "wyników"}.`;
+  return t("notify.syncCount", { count });
 }
 
 // ==========================================================

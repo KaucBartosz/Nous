@@ -20,6 +20,7 @@ import {
   bindSearchInput,
   bindCatalogProgress,
 } from "../catalog/catalogView.js";
+import { t, getLocale } from "../i18n/index.js";
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
@@ -166,7 +167,7 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
   if (!cachedTests.length || forceRefresh) {
     isLoading = true;
     elements.testsGrid.innerHTML =
-      '<p style="color:#888;">Ładowanie biblioteki...</p>';
+      `<p style="color:#888;">${t("library.loading")}</p>`;
 
     try {
       const res = await loadCatalog({
@@ -182,8 +183,8 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
         elements.testsGrid.innerHTML =
           '<div class="empty-state">' +
           '<span class="material-icons empty-state-icon">cloud_off</span>' +
-          '<h4>Brak testów w chmurze</h4>' +
-          '<p>Spróbuj ponownie później lub pracuj w trybie offline.</p>' +
+          `<h4>${t("library.emptyCloudTitle")}</h4>` +
+          `<p>${t("library.emptyCloudHint")}</p>` +
           '</div>';
         return;
       }
@@ -194,7 +195,7 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
       }
     } catch (e) {
       console.warn("Błąd ładowania biblioteki:", e);
-      showOfflinePanel("nieznana");
+      showOfflinePanel(t("library.unknownLocation"));
       return;
     } finally {
       isLoading = false; // Zawsze resetuj flagę, niezależnie od ścieżki wykonania
@@ -203,7 +204,7 @@ export async function loadTestsList(filterText = null, forceRefresh = false) {
 
   if (cachedTests.length === 0) {
     const localVersions = await getLocalVersionsCached();
-    showOfflinePanel(localVersions.__scannedDir || "nieznana");
+    showOfflinePanel(localVersions.__scannedDir || t("library.unknownLocation"));
   } else {
     renderTests(cachedTests, filterText);
   }
@@ -213,10 +214,10 @@ function showOfflinePanel(scannedPath) {
   elements.testsGrid.innerHTML = `
             <div class="empty-state">
                 <span class="material-icons empty-state-icon">signal_wifi_off</span>
-                <h4>Brak połączenia z Internetem</h4>
-                <p>Nie znaleziono pobranych testów.</p>
-                <p style="font-size:11px; margin-top:10px;">Przeszukano folder:<br><code style="background:rgba(255,255,255,0.05); padding:2px 5px; border-radius:3px;">${escapeHtml(scannedPath)}</code></p>
-                <button class="btn secondary small" onclick="location.reload()" style="margin-top:20px;">Spróbuj ponownie</button>
+                <h4>${t("library.offlineTitle")}</h4>
+                <p>${t("library.offlineHint")}</p>
+                <p style="font-size:11px; margin-top:10px;">${t("library.searchedFolder")}<br><code style="background:rgba(255,255,255,0.05); padding:2px 5px; border-radius:3px;">${escapeHtml(scannedPath)}</code></p>
+                <button class="btn secondary small" onclick="location.reload()" style="margin-top:20px;">${t("common.retry")}</button>
             </div>
         `;
 }
@@ -227,12 +228,18 @@ function showOfflinePanel(scannedPath) {
 // aktualizacje robi wyłącznie kanał download (zakładka Aktualizacje).
 function handleStart(t, status) {
   if (status.action === "download") {
+    const name = getLocale() === "en"
+      ? (t.name_en || t.name || "")
+      : (t.name || "");
+    const desc = getLocale() === "en"
+      ? (t.description_en || t.description || "")
+      : (t.description_pl || t.description || "");
     startDownloadProcess(
       t.download_url || t.downloadUrl,
       t.id,
       t.remote_ver,
-      t.name,
-      t.description,
+      name,
+      desc,
     );
   } else {
     startRunProcess(t.id, t.isLocalDev);
@@ -253,8 +260,8 @@ function renderTests(testsSource, filterText) {
     elements.testsGrid.innerHTML =
       '<div class="empty-state">' +
       '<span class="material-icons empty-state-icon">search_off</span>' +
-      '<h4>Brak wyników wyszukiwania</h4>' +
-      '<p>Spróbuj zmienić filtr lub wyczyść wyszukiwanie.</p>' +
+      `<h4>${t("library.noResultsTitle")}</h4>` +
+      `<p>${t("library.noResultsHint")}</p>` +
       '</div>';
     return;
   }
@@ -264,8 +271,11 @@ function renderTests(testsSource, filterText) {
   if (countEl) {
     countEl.textContent =
       filterText && tests.length !== testsSource.length
-        ? `${tests.length} z ${testsSource.length} testów`
-        : `${testsSource.length} testów`;
+        ? t("library.countTestsFiltered", {
+            filtered: tests.length,
+            total: testsSource.length,
+          })
+        : t("library.countTests", { count: testsSource.length });
   }
 
   // 3. Render based on current view mode
@@ -303,8 +313,11 @@ function createTagBtn(
   const tagBtn = document.createElement("span");
   tagBtn.className = "material-icons tag-btn";
   tagBtn.textContent = "menu_book";
-  tagBtn.title = "Zarządzaj tagami";
-  tagBtn.setAttribute("aria-label", `Zarządzaj tagami dla testu ${testName}`);
+  tagBtn.title = t("library.manageTags");
+  tagBtn.setAttribute(
+    "aria-label",
+    t("library.manageTagsFor", { name: testName }),
+  );
   tagBtn.style.fontSize = fontSize;
   if (marginLeft !== null) tagBtn.style.marginLeft = marginLeft;
 
@@ -438,11 +451,11 @@ function renderTableView(tests) {
   const thead = document.createElement("thead");
   thead.innerHTML = `
         <tr>
-            <th>Nazwa Testu</th>
-            <th>Opis</th>
-            <th>Wersja</th>
-            <th>Status</th>
-            <th>Akcja</th>
+            <th>${t("library.testName")}</th>
+            <th>${t("library.description")}</th>
+            <th>${t("library.version")}</th>
+            <th>${t("library.status")}</th>
+            <th>${t("library.action")}</th>
         </tr>
     `;
   table.appendChild(thead);
@@ -465,7 +478,7 @@ function renderTableView(tests) {
     // Name cell
     const nameCell = document.createElement("td");
     nameCell.style.fontWeight = "500";
-    nameCell.textContent = t.name || "Bez nazwy";
+    nameCell.textContent = t.name || t("library.unnamed");
 
     // Description cell
     const descCell = document.createElement("td");
@@ -474,7 +487,10 @@ function renderTableView(tests) {
     descCell.style.overflow = "hidden";
     descCell.style.textOverflow = "ellipsis";
     descCell.style.whiteSpace = "nowrap";
-    descCell.textContent = t.description || "Brak opisu";
+    const desc = getLocale() === "en"
+      ? (t.description_en || t.description || "")
+      : (t.description_pl || t.description || "");
+    descCell.textContent = desc || t("library.noDescription");
 
     // Version cell
     const versionCell = document.createElement("td");
@@ -540,20 +556,18 @@ export async function startDownloadProcess(url, id, ver, name = "", description 
 
   // Pobieranie plików tylko tam, gdzie platforma umie pobierać.
   if (!caps.canDownload) {
-    await Notify.info(
-      "Zarządzanie plikami jest niedostępne w wersji Web. Testy są serwowane dynamicznie.",
-    );
+    await Notify.info(t("library.downloadUnavailableWeb"));
     return;
   }
 
   // Kanoniczny stan przycisku (B: jeden szablon zamiast osobnych łańcuchów HTML).
-  if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
+  if (btn) setTestButtonState(btn, { label: t("library.initializing"), percent: 0 });
 
   try {
     await platform.tests.download({ url, id, ver, name, description });
   } catch (err) {
     console.error("Błąd pobierania testu:", err);
-    await Notify.error("Wystąpił błąd podczas pobierania testu.");
+    await Notify.error(t("library.downloadError"));
     loadTestsList();
   }
 }
@@ -579,14 +593,12 @@ export async function startRunProcess(id, isLocalDev = false) {
   const btn = document.getElementById(`start-test-${id}`);
 
   // Kanoniczny stan przycisku (B: jeden szablon zamiast osobnych łańcuchów HTML).
-  if (btn) setTestButtonState(btn, { label: "Inicjowanie...", percent: 0 });
+  if (btn) setTestButtonState(btn, { label: t("library.initializing"), percent: 0 });
 
   if (isLocalDev && caps.canRunLocalDev) {
     const confirmed = await Notify.confirm(
-      "<strong>Ostrzeżenie Bezpieczeństwa</strong><br><br>" +
-        "To jest test uruchamiany z Twojego lokalnego dysku (folder <code>tests/</code>). " +
-        "Uruchamiaj tylko te pliki, których kod znasz i którym ufasz. " +
-        "Czy na pewno chcesz kontynuować?",
+      `<strong>${t("library.securityWarning")}</strong><br><br>` +
+        t("library.securityWarningText"),
       "warning",
     );
     if (!confirmed) {
@@ -604,15 +616,13 @@ export async function startRunProcess(id, isLocalDev = false) {
     // Electron/fake nic nie zwracają (undefined) = sukces.
     if (result && result.opened === false) {
       pendingTrainingRun = null;
-      await Notify.error(
-        "Ten test nie posiada jeszcze odpowiedniej ścieżki (webPath) w rejestrze Web.",
-      );
+      await Notify.error(t("library.noWebPath"));
       loadTestsList();
     }
   } catch (err) {
     pendingTrainingRun = null;
     console.error("Błąd uruchamiania testu:", err);
-    await Notify.error("Wystąpił błąd podczas uruchamiania testu.");
+    await Notify.error(t("library.runError"));
     loadTestsList();
   }
 }

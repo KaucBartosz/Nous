@@ -3,9 +3,13 @@
  *************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
+import { lang, t } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
+
+localizePsychoJSDialogs(lang);
 
 let expName = 'Stroop';
 let expInfo = {
@@ -59,10 +63,10 @@ flowScheduler.add(trialsLoopBegin(trialsLoopScheduler));
 flowScheduler.add(trialsLoopScheduler);
 flowScheduler.add(trialsLoopEnd);
 
-flowScheduler.add(quitPsychoJS, 'Dziękujemy!', true);
+flowScheduler.add(quitPsychoJS, t('quit.thanks'), true);
 
 // quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, 'Anulowano.', false);
+dialogCancelScheduler.add(quitPsychoJS, t('quit.cancelled'), false);
 
 psychoJS.start({
   expName: expName,
@@ -73,10 +77,10 @@ psychoJS.start({
 // GLOBALS
 // =============================================================
 const HINT_DATA = [
-  { key: '1', label: '1: Czerwony', color: 'red',   x: -0.55 },
-  { key: '2', label: '2: Niebieski', color: 'blue',  x: -0.18 },
-  { key: '3', label: '3: Zielony',  color: 'green', x:  0.18 },
-  { key: '4', label: '4: Żółty',   color: 'yellow', x:  0.55 },
+  { key: '1', label: t('hint.1'), color: 'red',   x: -0.55 },
+  { key: '2', label: t('hint.2'), color: 'blue',  x: -0.18 },
+  { key: '3', label: t('hint.3'), color: 'green', x:  0.18 },
+  { key: '4', label: t('hint.4'), color: 'yellow', x:  0.55 },
 ];
 
 var currentLoop;
@@ -136,7 +140,7 @@ async function experimentInit() {
   selectionText = new visual.TextStim({
     win: psychoJS.window,
     name: 'selectionText',
-    text: 'Za chwilę na ekranie pojawiać się będą kolejno słowa zapisane kolorową czcionką. Twoim zadaniem jest zareagowanie na KOLOR czcionki i ignorowanie treści słowa.\n\nUżywaj klawiszy: 1-Czerwony, 2-Niebieski, 3-Zielony, 4-Żółty\n\nWybierz długość testu:\n1 - 10 pytań\n2 - 20 pytań\n3 - 30 pytań\n\nESC - Wyjście',
+    text: t('instructions'),
     font: 'Arial',
     pos: [0, 0],
     height: 0.04,
@@ -239,7 +243,7 @@ function selectionRoutineEachFrame() {
       let theseKeys = selectionKB.getKeys({ keyList: ['1', '2', '3', 'num_1', 'num_2', 'num_3', 'escape'], waitRelease: false });
       if (theseKeys.length > 0) {
         let key = theseKeys[0].name;
-        if (key === 'escape') return quitPsychoJS('Przerwano.', false);
+        if (key === 'escape') return quitPsychoJS(t('quit.aborted'), false);
         if (key === '1' || key === 'num_1') n_questions = 10;
         else if (key === '2' || key === 'num_2') n_questions = 20;
         else if (key === '3' || key === 'num_3') n_questions = 30;
@@ -249,7 +253,7 @@ function selectionRoutineEachFrame() {
 
     // ESC
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
 
     if (!continueRoutine_sel) return Scheduler.Event.NEXT;
@@ -360,7 +364,7 @@ function trialRoutineEachFrame() {
       let theseKeys = trialKB.getKeys({ keyList: ['1', '2', '3', '4', 'escape'], waitRelease: false });
       if (theseKeys.length > 0) {
         let key = theseKeys[0].name;
-        if (key === 'escape') return quitPsychoJS('Przerwano.', false);
+        if (key === 'escape') return quitPsychoJS(t('quit.aborted'), false);
 
         let rt_val = Math.round((theseKeys[0].rt - targetText.tStart) * 1000); // RT od momentu pojawienia słowa (ms)
         let correct = (key === correctKey) ? 1 : 0;
@@ -390,7 +394,7 @@ function trialRoutineEachFrame() {
 
     // ESC
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(t('quit.escapeCompleted'), true);
     }
 
     if (!continueRoutine_trial) return Scheduler.Event.NEXT;
@@ -443,8 +447,10 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_blednych_nacisniec: errors,
         ogolna_ilosc_nacisniec: presses,
         sredni_czas_reakcji: avgRT,
-        poziom_trudnosci: `${n_questions} pytań`,
-        score: `Poprawne: ${correct} | Błędne: ${errors} | Pominięte: ${total_trials - presses} | Śr. RT: ${avgRT} ms | Skuteczność: ${accuracy}%`,
+        poziom_trudnosci: t('difficulty', { count: n_questions }),
+        score: t('score', {
+          correct, errors, skipped: total_trials - presses, rt: avgRT, accuracy,
+        }),
         statystyki: {
           sredni_czas_ms: avgRT,
           poprawne_reakcje: correct,
@@ -463,14 +469,3 @@ async function quitPsychoJS(message, isCompleted) {
   psychoJS.quit({ message: message, isCompleted: isCompleted });
   return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

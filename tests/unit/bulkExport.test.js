@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import bulkExport from "../../main/bulkExport.js";
 import { resultRow, toKeyValueCSV } from "../../src/results/resultExporter.js";
+import { setLocale } from "../../src/i18n/index.js";
 
 // main/ to CommonJS (proces Electrona) — nie może importować ESM z src/.
 // Prawdą jest TEN test: buildBulkRow(f) deep-equals resultRow(f).
@@ -77,6 +78,26 @@ describe("bulkExport parity (2b/b)", () => {
       expect(buildBulkCsv(fixture)).toBe(toKeyValueCSV(resultRow(fixture)));
     },
   );
+
+  it("etykiety z renderera (EN) — parytet z resultRow po setLocale", () => {
+    setLocale("en", { persist: false });
+    try {
+      const labels = {
+        date: "Date",
+        testId: "Test ID",
+        subjectId: "Subject ID",
+        researcherUid: "Researcher UID",
+        demographics: "Demographics",
+        result: "Result",
+        parameter: "Parameter",
+        value: "Value",
+      };
+      expect(buildBulkRow(basic, labels)).toEqual(resultRow(basic));
+      expect(buildBulkCsv(basic, labels)).toBe(toKeyValueCSV(resultRow(basic)));
+    } finally {
+      setLocale("pl", { persist: false });
+    }
+  });
 
   it("escapeCell jak escapeCsvCell (reguła maina)", () => {
     expect(escapeCell('say "hi"')).toBe('"say ""hi"""');

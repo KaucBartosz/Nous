@@ -26,6 +26,7 @@ import {
 import { generateSalt, hashPassword } from "../session/passwordHash.js";
 import { createSession, canUploadResult, isCloudSyncAllowed } from "../session/session.js";
 import { getPlatform } from "../platform/index.js";
+import { t } from "../i18n/index.js";
 
 // ─── Prywatny stan modułu ────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ const RATE_LIMIT_MS = 1000;
 function checkRateLimit(channel) {
   const now = Date.now();
   if (now - _lastAttemptTime < RATE_LIMIT_MS) {
-    const msg = "Zbyt szybko. Poczekaj chwilę.";
+    const msg = t("login.tooFast");
     if (channel === "local") {
       showErrorLocal(msg);
     } else {
@@ -100,16 +101,16 @@ export function initAuth(onLoginSuccess) {
 export async function login(email, password) {
   if (!checkRateLimit("online")) return;
   try {
-    showError("Logowanie...");
+    showError(t("login.loggingIn"), { shake: false });
     await signIn(email, password);
   } catch (error) {
     console.error("Login error:", error);
     if (error.code === "auth/invalid-credential") {
-      showError("Nieprawidłowy e-mail lub hasło");
+      showError(t("login.invalidCredentials"));
     } else if (error.code === "auth/too-many-requests") {
-      showError("Zbyt wiele prób logowania. Spróbuj ponownie później.");
+      showError(t("login.tooManyRequests"));
     } else {
-      showError("Błąd logowania: " + error.message);
+      showError(t("login.loginError", { message: error.message }));
     }
   }
 }
@@ -120,27 +121,27 @@ export async function login(email, password) {
 export async function register(email, password) {
   if (!checkRateLimit("online")) return;
   if (password.length < 6) {
-    showError("Hasło min. 6 znaków.");
+    showError(t("login.passwordMinLength"));
     return;
   }
 
   try {
-    showError("Tworzenie konta...");
+    showError(t("login.creatingAccount"), { shake: false });
     const userCred = await signUp(email, password);
     await saveUserDoc(userCred.user.uid, {
       email: userCred.user.email,
       status: "PENDING",
       createdAt: new Date().toISOString(),
     });
-    showError("Konto utworzone!");
+    showError(t("login.accountCreated"), { shake: false });
   } catch (error) {
     console.error("Registration error:", error);
     if (error.code === "auth/email-already-in-use") {
-      showError("Na dany email założono już konto.");
+      showError(t("login.emailAlreadyInUse"));
     } else if (error.code === "auth/weak-password") {
-      showError("Hasło jest zbyt słabe.");
+      showError(t("login.weakPassword"));
     } else {
-      showError("Błąd rejestracji: " + error.message);
+      showError(t("login.registrationError", { message: error.message }));
     }
   }
 }
@@ -167,26 +168,26 @@ export async function loginLocal(username, password, onLoginSuccess) {
   if (!checkRateLimit("local")) return;
 
   if (!username || !username.trim()) {
-    showErrorLocal("Podaj login.");
+    showErrorLocal(t("login.enterLogin"));
     return;
   }
   if (!password) {
-    showErrorLocal("Podaj hasło.");
+    showErrorLocal(t("login.enterPassword"));
     return;
   }
 
   try {
-    showErrorLocal("Logowanie...");
+    showErrorLocal(t("login.loggingIn"), { shake: false });
     const account = await getLocalAccount(username);
 
     if (!account) {
-      showErrorLocal("Nie znaleziono konta o tej nazwie.");
+      showErrorLocal(t("login.accountNotFound"));
       return;
     }
 
     const hash = await hashPassword(account.salt, password);
     if (hash !== account.passwordHash) {
-      showErrorLocal("Nieprawidłowe hasło.");
+      showErrorLocal(t("login.invalidPassword"));
       return;
     }
 
@@ -200,7 +201,7 @@ export async function loginLocal(username, password, onLoginSuccess) {
     if (onLoginSuccess) onLoginSuccess();
   } catch (error) {
     console.error("Local login error:", error);
-    showErrorLocal("Błąd logowania: " + error.message);
+    showErrorLocal(t("login.loginError", { message: error.message }));
   }
 }
 
@@ -216,31 +217,31 @@ export async function registerLocal(username, password, onLoginSuccess) {
 
   // Walidacja loginu
   if (!username || username.trim().length < 3) {
-    showErrorLocal("Login musi mieć min. 3 znaki.");
+    showErrorLocal(t("login.loginMinLength"));
     return;
   }
   if (username.trim().length > 30) {
-    showErrorLocal("Login max. 30 znaków.");
+    showErrorLocal(t("login.loginMaxLength"));
     return;
   }
 
   // Walidacja hasła
   if (!password || password.length < 4) {
-    showErrorLocal("Hasło musi mieć min. 4 znaki.");
+    showErrorLocal(t("login.localPasswordMinLength"));
     return;
   }
   if (password.length > 30) {
-    showErrorLocal("Hasło max. 30 znaków.");
+    showErrorLocal(t("login.localPasswordMaxLength"));
     return;
   }
 
   const trimmedUsername = username.trim();
 
   try {
-    showErrorLocal("Tworzenie konta...");
+    showErrorLocal(t("login.creatingAccount"), { shake: false });
     const existing = await getLocalAccount(trimmedUsername);
     if (existing) {
-      showErrorLocal("Konto o tej nazwie już istnieje.");
+      showErrorLocal(t("login.accountExists"));
       return;
     }
 
@@ -249,7 +250,7 @@ export async function registerLocal(username, password, onLoginSuccess) {
     await createLocalAccount(trimmedUsername, passwordHash, salt);
 
     // Auto-login na nowo utworzone konto
-    showErrorLocal("Konto utworzone. Logowanie...");
+    showErrorLocal(t("login.accountCreatedLoggingIn"), { shake: false });
     _currentLocalUsername = trimmedUsername;
     _currentUserStatus = "LOCAL";
     await updateLocalAccountLastLogin(trimmedUsername);
@@ -259,7 +260,7 @@ export async function registerLocal(username, password, onLoginSuccess) {
     if (onLoginSuccess) onLoginSuccess();
   } catch (error) {
     console.error("Local register error:", error);
-    showErrorLocal("Błąd rejestracji: " + error.message);
+    showErrorLocal(t("login.registrationError", { message: error.message }));
   }
 }
 
@@ -281,21 +282,21 @@ export function logoutLocal() {
  */
 export async function changeLocalPassword(oldPassword, newPassword) {
   if (!_currentLocalUsername || _currentUserStatus !== "LOCAL") {
-    return { ok: false, error: "Brak aktywnego konta lokalnego." };
+    return { ok: false, error: t("login.noLocalAccount") };
   }
   if (!newPassword || newPassword.length < 4) {
-    return { ok: false, error: "Nowe hasło musi mieć min. 4 znaki." };
+    return { ok: false, error: t("login.newPasswordMinLength") };
   }
   if (newPassword.length > 30) {
-    return { ok: false, error: "Nowe hasło max. 30 znaków." };
+    return { ok: false, error: t("login.newPasswordMaxLength") };
   }
   try {
     const account = await getLocalAccount(_currentLocalUsername);
-    if (!account) return { ok: false, error: "Konto nie istnieje." };
+    if (!account) return { ok: false, error: t("login.accountNotExist") };
 
     const oldHash = await hashPassword(account.salt, oldPassword);
     if (oldHash !== account.passwordHash) {
-      return { ok: false, error: "Stare hasło jest nieprawidłowe." };
+      return { ok: false, error: t("login.oldPasswordIncorrect") };
     }
 
     const newSalt = generateSalt();
@@ -317,21 +318,24 @@ export async function changeLocalPassword(oldPassword, newPassword) {
  */
 export async function adminResetLocalPassword(targetUsername, newPassword) {
   if (_currentUserStatus !== "ADMIN") {
-    return { ok: false, error: "Brak uprawnień. Wymagany status ADMIN." };
+    return { ok: false, error: t("login.adminNoPermission") };
   }
   if (!targetUsername || !targetUsername.trim()) {
-    return { ok: false, error: "Podaj nazwę konta." };
+    return { ok: false, error: t("login.enterAccountName") };
   }
   if (!newPassword || newPassword.length < 4) {
-    return { ok: false, error: "Nowe hasło musi mieć min. 4 znaki." };
+    return { ok: false, error: t("login.newPasswordMinLength") };
   }
   if (newPassword.length > 30) {
-    return { ok: false, error: "Nowe hasło max. 30 znaków." };
+    return { ok: false, error: t("login.newPasswordMaxLength") };
   }
   try {
     const account = await getLocalAccount(targetUsername.trim());
     if (!account) {
-      return { ok: false, error: `Konto "${targetUsername}" nie istnieje.` };
+      return {
+        ok: false,
+        error: t("login.accountNotExistNamed", { name: targetUsername }),
+      };
     }
     const newSalt = generateSalt();
     const newHash = await hashPassword(newSalt, newPassword);

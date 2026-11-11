@@ -8,6 +8,7 @@ import {
   downloadFile,
   WEB_RESULT_IGNORE_KEYS,
 } from "./resultExporter.js";
+import { t } from "../i18n/index.js";
 
 /** Web: plik .csv dla badanego — generowany od razu po badaniu. */
 export function needsInstantCsv(platformKind) {
@@ -26,7 +27,10 @@ export function webResultCsv(pkg) {
     ignoreKeys: WEB_RESULT_IGNORE_KEYS,
   });
   return {
-    filename: `Wynik_${pkg.test_id}_${Date.now()}.csv`,
+    filename: t("webAdapter.filename", {
+      testId: pkg.test_id,
+      timestamp: Date.now(),
+    }) + ".csv",
     csv: toKeyValueCSV(flat),
   };
 }

@@ -20,30 +20,33 @@ const {
 describe("main/downloads validators", () => {
   it("validateTestId: alfanumeryczne/_/- OK, reszta błąd", () => {
     expect(validateTestId("stroop-1_X")).toBeNull();
-    expect(validateTestId("../evil")).toBe("BŁĄD: Nieprawidłowe ID testu!");
-    expect(validateTestId("a b")).toBe("BŁĄD: Nieprawidłowe ID testu!");
-    expect(validateTestId("")).toBe("BŁĄD: Nieprawidłowe ID testu!");
-    expect(validateTestId(null)).toBe("BŁĄD: Nieprawidłowe ID testu!");
+    // Kody, nie teksty — main nie zna języka UI (tłumaczy renderer, `testStatus.*`).
+    expect(validateTestId("../evil")).toBe("invalidTestId");
+    expect(validateTestId("a b")).toBe("invalidTestId");
+    expect(validateTestId("")).toBe("invalidTestId");
+    expect(validateTestId(null)).toBe("invalidTestId");
   });
 
   it("validateDownloadUrl: allowlista kanału download-test", () => {
     expect(validateDownloadUrl("https://github.com/KaucBartosz/BBTP/archive/refs/heads/main.zip")).toBeNull();
     expect(validateDownloadUrl("https://raw.githubusercontent.com/KaucBartosz/Nous/main/x.zip")).toBeNull();
     expect(validateDownloadUrl("https://objects.githubusercontent.com/abc123")).toBeNull();
-    expect(validateDownloadUrl("http://github.com/KaucBartosz/x.zip")).toBe("BŁĄD: Tylko HTTPS!");
-    expect(validateDownloadUrl("https://evil.com/KaucBartosz/x.zip")).toBe("BŁĄD: Niedozwolona domena!");
-    expect(validateDownloadUrl("https://github.com/Other/x.zip")).toBe(
-      "BŁĄD: Dozwolone są wyłącznie repozytoria KaucBartosz!",
-    );
-    expect(validateDownloadUrl("nie-url")).toBe("BŁĄD: Nieprawidłowy URL!");
+    expect(validateDownloadUrl("http://github.com/KaucBartosz/x.zip")).toBe("httpsOnly");
+    expect(validateDownloadUrl("https://evil.com/KaucBartosz/x.zip")).toBe("forbiddenDomain");
+    // Only the owner is allowed — carries the owner name for the message.
+    expect(validateDownloadUrl("https://github.com/Other/x.zip")).toEqual({
+      code: "ownerOnly",
+      params: { owner: "KaucBartosz" },
+    });
+    expect(validateDownloadUrl("nie-url")).toBe("invalidUrl");
   });
 
   it("SEC: granica domeny — podszywanie odrzucone, subdomeny działają", () => {
     expect(validateDownloadUrl("https://evilgithub.com/KaucBartosz/x.zip")).toBe(
-      "BŁĄD: Niedozwolona domena!",
+      "forbiddenDomain",
     );
     expect(validateDownloadUrl("https://evilraw.githubusercontent.com/KaucBartosz/x.zip")).toBe(
-      "BŁĄD: Niedozwolona domena!",
+      "forbiddenDomain",
     );
     // Legalne subdomeny (np. codeload z archiwami) + case-insensitive host
     expect(validateDownloadUrl("https://codeload.github.com/KaucBartosz/BBTP/zip/refs/heads/main")).toBeNull();
@@ -54,8 +57,8 @@ describe("main/downloads validators", () => {
     expect(validateRedirectTarget(null)).toBeNull(); // brak Location → stara ścieżka Błąd HTTP
     expect(validateRedirectTarget("https://github.com/KaucBartosz/Nous/x.zip")).toBeNull();
     expect(validateRedirectTarget("https://objects.githubusercontent.com/hash")).toBeNull();
-    expect(validateRedirectTarget("https://evil.com/x.zip")).toBe("BŁĄD: Niedozwolona domena!");
-    expect(validateRedirectTarget("http://github.com/KaucBartosz/x.zip")).toBe("BŁĄD: Tylko HTTPS!");
+    expect(validateRedirectTarget("https://evil.com/x.zip")).toBe("forbiddenDomain");
+    expect(validateRedirectTarget("http://github.com/KaucBartosz/x.zip")).toBe("httpsOnly");
   });
 
   it("SEC: strażnik rozmiaru przed AdmZip", () => {
@@ -68,12 +71,14 @@ describe("main/downloads validators", () => {
     fs.writeFileSync(big, Buffer.alloc(3 * MB, 1));
 
     expect(checkDownloadedSize({ fs, zipPath: small })).toBeNull();
-    expect(checkDownloadedSize({ fs, zipPath: big, limitBytes: 2 * MB })).toBe(
-      "BŁĄD: Paczka przekracza limit 2 MB!",
-    );
-    expect(checkDownloadedSize({ fs, zipPath: path.join(dir, "brak.zip") })).toMatch(
-      /^Błąd odczytu paczki: /,
-    );
+    expect(checkDownloadedSize({ fs, zipPath: big, limitBytes: 2 * MB })).toEqual({
+      code: "packageTooLarge",
+      params: { limit: 2 },
+    });
+    expect(checkDownloadedSize({ fs, zipPath: path.join(dir, "brak.zip") })).toMatchObject({
+      code: "zipReadError",
+      params: { message: expect.any(String) },
+    });
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
@@ -192,10 +197,7 @@ describe("main/downloads enqueue", () => {
     const task = { testId: "t1", url: "https://github.com/KaucBartosz/Nous/x.zip" };
     expect(d.enqueueDownload(task, sender)).toEqual({ ok: true });
     expect(d.queueState()).toEqual({ length: 1, busy: false, active: ["t1"] });
-    expect(d.enqueueDownload(task, sender)).toEqual({
-      ok: false,
-      message: "Zadanie dla tego testu jest już w kolejce!",
-    });
+    expect(d.enqueueDownload(task, sender)).toEqual({ ok: false, error: "queueBusy" });
     expect(d.queueState().length).toBe(1);
   });
 
@@ -210,16 +212,17 @@ describe("main/downloads enqueue", () => {
 
   it("złe ID i zły URL nie trafiają do kolejki (download nigdy nie omija URL)", () => {
     const d = stub();
+    // Kody (nie teksty) — komunikaty tłumaczy renderer wg języka interfejsu.
     expect(d.enqueueDownload({ testId: "../x", url: "https://github.com/KaucBartosz/Nous/x.zip" }, sender)).toEqual({
       ok: false,
-      message: "BŁĄD: Nieprawidłowe ID testu!",
+      error: "invalidTestId",
     });
     expect(
       d.enqueueDownload({ testId: "t2", url: "https://evil.com/x.zip" }, sender),
-    ).toEqual({ ok: false, message: "BŁĄD: Niedozwolona domena!" });
+    ).toEqual({ ok: false, error: "forbiddenDomain" });
     expect(
       d.enqueueDownload({ testId: "dev1", url: "śmieć" }, sender),
-    ).toEqual({ ok: false, message: "BŁĄD: Nieprawidłowy URL!" });
+    ).toEqual({ ok: false, error: "invalidUrl" });
     expect(d.queueState().length).toBe(0);
   });
 });

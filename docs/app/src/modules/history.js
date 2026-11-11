@@ -40,6 +40,7 @@ import {
   resetHistoryFilters,
 } from "../history/historyState.js";
 import { createFilterUi } from "../history/historyFilters.js";
+import { t, localeTag } from "../i18n/index.js";
 import {
   emptyMessage,
   refreshDownloadButtons,
@@ -159,36 +160,36 @@ function updateToggleButtonsState() {
     if (elements.btnToggleGuestView) {
       elements.btnToggleGuestView.classList.remove("active");
       elements.btnToggleGuestView.innerHTML =
-        '<span class="material-icons">no_accounts</span> Pokaż wyniki Gościa';
+        `<span class="material-icons">no_accounts</span> ${t("history.toggleShowGuest")}`;
     }
     if (elements.btnToggleCloudView) {
       elements.btnToggleCloudView.classList.add("active");
       elements.btnToggleCloudView.innerHTML =
-        '<span class="material-icons">storage</span> Pokaż wyniki Lokalne';
+        `<span class="material-icons">storage</span> ${t("history.toggleShowLocal")}`;
     }
   } else if (state.guestView) {
     elements.guestActionsContainer?.classList.remove("hidden");
     if (elements.btnToggleGuestView) {
       elements.btnToggleGuestView.classList.add("active");
       elements.btnToggleGuestView.innerHTML =
-        '<span class="material-icons">person</span> Pokaż moje wyniki';
+        `<span class="material-icons">person</span> ${t("history.toggleShowMine")}`;
     }
     if (elements.btnToggleCloudView) {
       elements.btnToggleCloudView.classList.remove("active");
       elements.btnToggleCloudView.innerHTML =
-        '<span class="material-icons">cloud_queue</span> Moje wyniki z bazy';
+        `<span class="material-icons">cloud_queue</span> ${t("history.toggleCloudResults")}`;
     }
   } else {
     elements.localActionsContainer?.classList.remove("hidden");
     if (elements.btnToggleGuestView) {
       elements.btnToggleGuestView.classList.remove("active");
       elements.btnToggleGuestView.innerHTML =
-        '<span class="material-icons">no_accounts</span> Pokaż wyniki Gościa';
+        `<span class="material-icons">no_accounts</span> ${t("history.toggleShowGuest")}`;
     }
     if (elements.btnToggleCloudView) {
       elements.btnToggleCloudView.classList.remove("active");
       elements.btnToggleCloudView.innerHTML =
-        '<span class="material-icons">cloud_queue</span> Moje wyniki z bazy';
+        `<span class="material-icons">cloud_queue</span> ${t("history.toggleCloudResults")}`;
     }
   }
 }
@@ -196,7 +197,7 @@ function updateToggleButtonsState() {
 export async function loadHistoryData() {
   updateToggleButtonsState();
   elements.historyTableBody.innerHTML =
-    '<tr><td colspan="6">Ładowanie...</td></tr>';
+    `<tr><td colspan="6">${t("history.loading")}</td></tr>`;
   const user = getCurrentUser();
 
   const userStatus = getUserStatus();
@@ -246,10 +247,9 @@ export async function loadHistoryData() {
     td.colSpan = 6;
     td.style.color = "#f44336";
     if (e.message && e.message.includes("decrypt")) {
-      td.textContent =
-        "Błąd odczytu danych: Problem z deszyfrowaniem. Sprawdź klucz szyfrowania.";
+      td.textContent = t("history.decryptError");
     } else {
-      td.textContent = `Błąd: ${e.message}`;
+      td.textContent = t("history.error", { message: e.message });
     }
     tr.appendChild(td);
     elements.historyTableBody.appendChild(tr);
@@ -287,10 +287,10 @@ async function handleDeleteSelected() {
 
   const count = state.selectedIds.size;
   const choice = await Notify.custom(
-    `Czy na pewno chcesz usunąć ${count} wyników testów z historii? Jest to proces nieodwracalny.`,
+    t("history.deleteConfirmCount", { count }),
     [
-      { label: "Tak, usuń", value: true, class: "btn danger" },
-      { label: "Anuluj", value: false, class: "btn outline" },
+      { label: t("history.yesDelete"), value: true, class: "btn danger" },
+      { label: t("common.cancel"), value: false, class: "btn outline" },
     ],
   );
 
@@ -298,14 +298,17 @@ async function handleDeleteSelected() {
 
   try {
     await deleteResults(Array.from(state.selectedIds));
-    await Notify.alert("Wyniki zostały pomyślnie usunięte.", "success");
+    await Notify.alert(t("history.deleteSuccess"), "success");
     state.selectedIds.clear();
     const selectAll = document.getElementById("selectAllHistory");
     if (selectAll) selectAll.checked = false;
     updateDownloadButtonState();
     loadHistoryData();
   } catch (e) {
-    await Notify.alert("Błąd podczas usuwania: " + e.message, "error");
+    await Notify.alert(
+      t("history.deleteError", { message: e.message }),
+      "error",
+    );
   }
 }
 
@@ -382,7 +385,7 @@ function renderHistoryPage() {
     onCheck: handleCheckboxChange,
     syncRecord: (r) => syncSingleResult(r),
     onSyncError: async (err) => {
-      await Notify.alert("Błąd wysyłania: " + err.message, "error");
+      await Notify.alert(t("history.sendError", { message: err.message }), "error");
       loadHistoryData();
     },
     onDownload: downloadSingle,
@@ -397,11 +400,11 @@ function renderHistoryPage() {
 
 async function handleClaimResult(result, userUid) {
   const choice = await Notify.custom(
-    "Czy chcesz przenieść ten wynik (zniknie z konta Gościa) czy skopiować (zostanie na koncie Gościa)?",
+    t("history.claimQuestion"),
     [
-      { label: "Przenieś (Wytnij)", value: "move", class: "btn primary" },
-      { label: "Kopiuj (Duplikuj)", value: "copy", class: "btn secondary" },
-      { label: "Anuluj", value: false, class: "btn outline" },
+      { label: t("history.moveCut"), value: "move", class: "btn primary" },
+      { label: t("history.copyDuplicate"), value: "copy", class: "btn secondary" },
+      { label: t("common.cancel"), value: false, class: "btn outline" },
     ],
   );
 
@@ -411,13 +414,13 @@ async function handleClaimResult(result, userUid) {
     const keepOriginal = choice === "copy";
     await claimGuestResult(result, userUid, keepOriginal);
     await Notify.alert(
-      "Wynik został pomyślnie przypisany do Twojego konta!",
+      t("history.claimSuccess"),
       "success",
     );
     loadHistoryData();
   } catch (e) {
     await Notify.alert(
-      "Błąd podczas przejmowania wyniku: " + e.message,
+      t("history.claimError", { message: e.message }),
       "error",
     );
   }
@@ -443,7 +446,7 @@ async function loadCloudResults() {
   state.lastCloudFetch = now;
 
   elements.historyTableBody.innerHTML =
-    '<tr><td colspan="6">Pobieranie danych z chmury...</td></tr>';
+    `<tr><td colspan="6">${t("history.fetchingCloud")}</td></tr>`;
 
   try {
     const snap = await fetchResearcherResults(user.uid);
@@ -460,7 +463,7 @@ async function loadCloudResults() {
     const td = document.createElement("td");
     td.colSpan = 6;
     td.style.color = "red";
-    td.textContent = `Błąd pobierania: ${e.message}`;
+    td.textContent = t("history.fetchError", { message: e.message });
     tr.appendChild(td);
     elements.historyTableBody.appendChild(tr);
   }
@@ -477,7 +480,7 @@ async function renderCloudResultsTable(results) {
 
   if (results.length === 0) {
     elements.historyTableBody.innerHTML =
-      '<tr><td colspan="7">Brak wyników w chmurze dla Twojego konta.</td></tr>';
+      `<tr><td colspan="7">${t("history.emptyCloudAccount")}</td></tr>`;
     return;
   }
 
@@ -500,7 +503,7 @@ async function renderCloudResultsTable(results) {
     row.appendChild(tdCheckbox);
 
     const tdDate = document.createElement("td");
-    tdDate.textContent = new Date(data.timestamp).toLocaleString();
+    tdDate.textContent = new Date(data.timestamp).toLocaleString(localeTag());
     row.appendChild(tdDate);
 
     const tdTestId = document.createElement("td");
@@ -531,13 +534,13 @@ async function renderCloudResultsTable(results) {
       const statusBox = document.createElement("div");
       statusBox.className = "cloud-status-ok";
       statusBox.innerHTML =
-        '<span class="material-icons" style="font-size:16px;">check_circle</span> Wynik już znajduje się na urządzeniu';
+        `<span class="material-icons" style="font-size:16px;">check_circle</span> ${t("history.alreadyOnDevice")}`;
       tdStatus.appendChild(statusBox);
     } else {
       const btnImport = document.createElement("button");
       btnImport.className = "btn small primary";
       btnImport.innerHTML =
-        '<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> Importuj';
+        `<span class="material-icons" style="font-size:14px; vertical-align:middle; margin-right:4px;">input</span> ${t("history.import")}`;
       btnImport.onclick = (e) => {
         e.stopPropagation();
         handleImportResult(data);
@@ -575,7 +578,7 @@ async function handleImportResult(cloudResult) {
 
     if (exists) {
       Notify.alert(
-        "Ten wynik znajduje się już w Twojej lokalnej bazie danych.",
+        t("history.alreadyInLocalDb"),
         "info",
       );
       return;
@@ -585,10 +588,10 @@ async function handleImportResult(cloudResult) {
     const localData = cloudRecordToLocal(cloudResult, user.uid);
 
     await saveResult(localData, user.uid);
-    Notify.alert("Wynik został zaimportowany!", "success");
+    Notify.alert(t("history.importSuccess"), "success");
     renderCloudResultsTable(state.cloudResults);
   } catch (e) {
-    Notify.alert("Błąd importu: " + e.message, "error");
+    Notify.alert(t("history.importError", { message: e.message }), "error");
   }
 }
 
@@ -613,12 +616,12 @@ async function handleImportAll() {
     );
 
     Notify.alert(
-      `Import zakończony. Dodano: ${count}, Pominięto (duplikaty): ${skipped}`,
+      t("history.importSummary", { count, skipped }),
       "success",
     );
     renderCloudResultsTable(state.cloudResults);
   } catch (e) {
-    Notify.alert("Błąd masowego importu: " + e.message, "error");
+    Notify.alert(t("history.bulkImportError", { message: e.message }), "error");
   }
 }
 
@@ -636,7 +639,7 @@ async function handleDownloadAll() {
         text: "btn-cloud-download-text",
         progress: "btn-cloud-download-progress",
       },
-      "Pobieranie wyników...",
+      t("history.downloadingResults"),
     );
     if (!dl) return;
     dl.progress("50%");
@@ -663,17 +666,17 @@ async function handleDownloadAll() {
         () =>
           Notify.alert(
             result.format === "csv"
-              ? "Pobrano wszystkie wyniki jako scalony plik CSV."
-              : "Archiwum ZIP zostało wygenerowane!",
+              ? t("history.csvCombined")
+              : t("history.zipGenerated"),
             "success",
           ),
         500,
       );
     } else if (!result.cancelled) {
-      Notify.alert("Błąd podczas generowania archiwum: " + result.error, "error");
+      Notify.alert(t("history.archiveError", { error: result.error }), "error");
     }
   } catch (e) {
-    Notify.alert("Wystąpił nieoczekiwany błąd: " + e.message, "error");
+    Notify.alert(t("history.unexpectedError", { message: e.message }), "error");
   } finally {
     dl?.restore();
   }
@@ -688,16 +691,16 @@ async function handleImportGuestResults() {
     const guestResults = allLocal.filter((r) => r.researcher_uid === "GUEST");
 
     if (guestResults.length === 0) {
-      Notify.alert("Brak wyników Gościa do zaimportowania.", "info");
+      Notify.alert(t("history.noGuestResults"), "info");
       return;
     }
 
     const choice = await Notify.custom(
-      `Znaleziono ${guestResults.length} wyników Gościa. Czy chcesz je przenieść na swoje konto (znikną z konta Gościa) czy duplikować?`,
+      t("history.guestFound", { count: guestResults.length }),
       [
-        { label: "Przenieś", value: "move", class: "btn primary" },
-        { label: "Duplikuj", value: "duplicate", class: "btn secondary" },
-        { label: "Anuluj", value: "cancel", class: "btn outline" },
+        { label: t("history.move"), value: "move", class: "btn primary" },
+        { label: t("history.duplicate"), value: "duplicate", class: "btn secondary" },
+        { label: t("common.cancel"), value: "cancel", class: "btn outline" },
       ],
     );
 
@@ -711,12 +714,16 @@ async function handleImportGuestResults() {
     );
 
     Notify.alert(
-      `Zakończono! ${choice === "move" ? "Przeniesiono" : "Zduplikowano"} ${syncCount} wyników.`,
+      `${t("history.done")} ${
+        choice === "move"
+          ? t("history.movedCount", { count: syncCount })
+          : t("history.duplicatedCount", { count: syncCount })
+      }`,
       "success",
     );
     loadHistoryData();
   } catch (e) {
-    Notify.alert("Błąd importu: " + e.message, "error");
+    Notify.alert(t("history.importError", { message: e.message }), "error");
   }
 }
 
@@ -741,7 +748,7 @@ async function handleDownloadAllLocal(targetUid) {
     }
 
     if (results.length === 0) {
-      Notify.alert("Brak wyników do pobrania.", "info");
+      Notify.alert(t("history.noResultsToDownload"), "info");
       return;
     }
 
@@ -761,13 +768,16 @@ async function handleDownloadAllLocal(targetUid) {
         text: `btn-${prefix}-download-text`,
         progress: `btn-${prefix}-download-progress`,
       },
-      "Pobieranie...",
+      t("history.downloading"),
     );
     if (!dl) return;
     dl.progress("30%");
 
     const format = selectedDownloadFormat();
-    const filename = `Wyniki_${isGuest ? "Gosc" : "Uzytkownik"}_${Date.now()}.zip`;
+    const filename = t("history.archiveFileName", {
+      scope: t(isGuest ? "common.guest" : "common.local"),
+      timestamp: Date.now(),
+    });
 
     const result = await archiveHistoryResults({
       results,
@@ -779,15 +789,15 @@ async function handleDownloadAllLocal(targetUid) {
       dl.progress("100%");
       if (result.format === "csv") {
         setTimeout(
-          () => Notify.alert("Pobrano wszystkie wyniki jako scalony plik CSV.", "success"),
+          () => Notify.alert(t("history.csvCombined"), "success"),
           500,
         );
       }
     } else if (!result.cancelled) {
-      Notify.alert("Błąd pobierania: " + result.error, "error");
+      Notify.alert(t("history.fetchError", { message: result.error }), "error");
     }
   } catch (e) {
-    Notify.alert("Błąd: " + e.message, "error");
+    Notify.alert(t("history.error", { message: e.message }), "error");
   } finally {
     // Poprawka: przycisk wraca też po wyjątku (wcześniej zostawał wisy).
     dl?.restore();

@@ -14,6 +14,7 @@ import {
   syncOneRecord,
   syncAll,
 } from "../sync/syncEngine.js";
+import { t } from "../i18n/index.js";
 
 let isAutoSyncEnabled = (() => {
   try {
@@ -61,9 +62,7 @@ export function setAutoSync(enabled) {
       const toggleSync = document.getElementById("toggle-sync");
       if (toggleSync) toggleSync.checked = false;
 
-      Notify.error(
-        "Tryb Sync jest dostępny tylko dla zatwierdzonych użytkowników. Aby nim zostać skontaktuj się z Administratorem (Bartosz Kauc)",
-      );
+      Notify.error(t("sync.approvedOnly"));
       return;
     }
   }
@@ -158,9 +157,7 @@ export async function syncNow() {
     }
     if (result.halted) {
       updateSyncUI(false, 0);
-      Notify.error(
-        `Błąd synchronizacji: Brak uprawnień. Sprawdź czy Twój status to 'APPROVED' i czy reguły bazy danych są poprawne.`,
-      );
+      Notify.error(t("sync.permissionDenied"));
     }
   } finally {
     // Zakończ synchronizację — zawsze resetuj flagę
@@ -195,15 +192,13 @@ async function syncSingleResultInternal(record) {
 /**
  * Manualna synchronizacja pojedynczego wyniku (wywoływana z UI).
  */
-// Komunikaty ręcznej wysyłki — te same co wcześniej.
-const MANUAL_BLOCK_MESSAGE = {
-  "local-session":
-    "Synchronizacja z chmurą nie jest dostępna dla kont lokalnych i trybu Gościa.",
-  "local-record":
-    "Ten wynik pochodzi z konta lokalnego i nie może być synchronizowany z chmurą.",
-  offline: "Brak połączenia z internetem.",
-  "no-user": "Użytkownik nie jest zalogowany.",
-  "foreign-record": "Nie możesz wysłać wyniku należącego do innego użytkownika.",
+// Komunikaty ręcznej wysyłki — te same co wcześniej (klucze i18n).
+const MANUAL_BLOCK_KEY = {
+  "local-session": "sync.localSessionBlock",
+  "local-record": "sync.localRecordBlock",
+  offline: "sync.offline",
+  "no-user": "sync.noUser",
+  "foreign-record": "sync.foreignRecord",
 };
 
 export async function syncSingleResult(record) {
@@ -214,7 +209,7 @@ export async function syncSingleResult(record) {
     online: navigator.onLine,
     user,
   });
-  if (reason) throw new Error(MANUAL_BLOCK_MESSAGE[reason]);
+  if (reason) throw new Error(t(MANUAL_BLOCK_KEY[reason]));
 
   try {
     await syncSingleResultInternal(record);
@@ -223,9 +218,7 @@ export async function syncSingleResult(record) {
   } catch (e) {
     console.error(`Failed to manually sync record ${record.id}:`, e);
     if (e.code === "permission-denied") {
-      throw new Error(
-        "Brak uprawnień (Permission Denied). Sprawdź status Approved.",
-      );
+      throw new Error(t("sync.permissionDeniedShort"));
     }
     throw e;
   }

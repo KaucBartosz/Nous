@@ -17,6 +17,7 @@ function createTestRunner({
   // Opcjonalne — stare testy jednostkowe ich nie podają.
   getTestsLibraryDir = null,
   findStartFile = null,
+  getUiLanguage = null,
 }) {
   let activeTestWindow = null;
 
@@ -43,7 +44,7 @@ function createTestRunner({
       y: isLinux ? 0 : undefined,
       show: !isLinux, // Na Linuksie: ukryj, pokażemy ręcznie
       parent: isLinux ? undefined : getMainWindow(), // Na Linuksie: bez parent (Cinnamon blokuje FS dla child windows)
-      title: "Badanie w toku...",
+      title: "Nous",
 
       // --- PEŁNY EKRAN ---
       fullscreen: !isLinux, // Na Linuksie nie ustawiamy w konstruktorze
@@ -55,6 +56,7 @@ function createTestRunner({
         contextIsolation: true,
         devTools: false,
         preload: preloadPath,
+        additionalArguments: [`--nous-test-language=${resolveTestLanguage()}`],
       },
     });
 
@@ -124,12 +126,12 @@ function createTestRunner({
 
     // --- SECURITY CHECK: TEST ID VALIDATION (jak delete-test) ---
     if (!/^[a-zA-Z0-9_-]+$/.test(testId || "")) {
-      sender.send("test-status", "BŁĄD: Nieprawidłowe ID testu!");
+      sender.send("test-status", { code: "error", error: "invalidTestId" });
       return;
     }
 
     if (!getTestsLibraryDir || !findStartFile) {
-      sender.send("test-status", "BŁĄD: Błąd konfiguracji uruchamiania!");
+      sender.send("test-status", { code: "error", error: "runConfig" });
       return;
     }
 
@@ -137,17 +139,27 @@ function createTestRunner({
     const entryFile = findStartFile(testFolder);
 
     if (!entryFile) {
-      sender.send("test-status", "BŁĄD: Test nie jest pobrany! Pobierz go najpierw.");
+      sender.send("test-status", { code: "error", error: "testNotDownloaded" });
       return;
     }
 
     if (isTestRunning()) {
-      sender.send("test-status", "Inny test w toku. Uruchomienie wstrzymane.");
+      sender.send("test-status", { code: "anotherTestRunning" });
       return;
     }
 
-    sender.send("test-status", "Uruchamianie...");
+    sender.send("test-status", { code: "starting" });
     openTestWindow(entryFile);
+  }
+
+  /**
+   * Język interfejsu (pl/en) świeżo dla każdego okna testu — czyta go
+   * getter preload_test.js, więc test dostaje język z chwili uruchomienia.
+   * Nieznana/brakująca wartość → pl (język źródłowy).
+   */
+  function resolveTestLanguage() {
+    const lang = typeof getUiLanguage === "function" ? getUiLanguage() : "pl";
+    return lang === "en" ? "en" : "pl";
   }
 
   function onSaveLocalResult(event, dataToSave) {
@@ -155,7 +167,10 @@ function createTestRunner({
     const masterKey = getMasterKey();
     if (!masterKey) {
       console.error("Could not get master key for HMAC!");
-      event.sender.send("test-status", "BŁĄD: Nie można wygenerować klucza podpisu!");
+      event.sender.send("test-status", {
+        code: "error",
+        error: "signingKeyUnavailable",
+      });
       return;
     }
 
@@ -174,19 +189,20 @@ function createTestRunner({
 
     dialog
       .showSaveDialog(getMainWindow(), {
-        title: "Zapisz wynik badania",
+        // Tytuł dialogu podaje renderer (i18n) zamiast main — patrz src/platform/electron.js.
+        title: (dataToSave && dataToSave.dialogTitle) || "Save result",
         // Używamy test_id (snake_case) jako primary, testId jako fallback
-        defaultPath: `Wynik_${dataToSave.test_id || dataToSave.testId || "wynik"}_${Date.now()}.json`,
+        defaultPath: `${(dataToSave && dataToSave.fileBaseName) || "Result"}_${dataToSave.test_id || dataToSave.testId || "result"}_${Date.now()}.json`,
         filters: [{ name: "JSON", extensions: ["json"] }],
       })
       .then((result) => {
         if (!result.canceled) {
           try {
             fs.writeFileSync(result.filePath, JSON.stringify(finalFileContent, null, 2));
-            event.sender.send("test-status", "Wynik zapisany pomyślnie.");
+            event.sender.send("test-status", { code: "resultSaved" });
           } catch (writeErr) {
             console.error("Save error:", writeErr);
-            event.sender.send("test-status", "BŁĄD: Nie udało się zapisać pliku!");
+            event.sender.send("test-status", { code: "error", error: "fileSave" });
           }
         }
       })

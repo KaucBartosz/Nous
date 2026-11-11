@@ -2,6 +2,7 @@
 // Własność: rejestr chmury + wersje lokalne + backfill + sort + status + query.
 // Widoki (library/updates) tylko renderują; Firestore/DOM nie wyciekają na zewnątrz.
 import { sortByInstallStatus } from "../modules/utils.js";
+import { t } from "../i18n/index.js";
 
 export const CACHE_KEY = "cached_tests_metadata";
 export const FETCH_TIMEOUT_MS = 8000;
@@ -40,7 +41,7 @@ function withTimeout(promise, ms) {
 export async function fetchRegistry({ fetchRemote, isOnline, storage = localStorage } = {}) {
   const online = isOnline ? isOnline() : true;
   if (!online) {
-    throw new Error("Brak połączenia internetowego (navigator.onLine)");
+    throw new Error(t("sync.offline"));
   }
   const { race, clear } = withTimeout(fetchRemote(), FETCH_TIMEOUT_MS);
   let snap;
@@ -108,8 +109,8 @@ export function mergeLocalVersions(tests, localVersions, settings = {}, { backfi
       if (local.version >= 0) {
         merged.push({
           id: testId,
-          name: local.name || `Test lokalny (${testId})`,
-          description: local.description || "Pobrano wcześniej.",
+          name: local.name || t("library.localTestName", { id: testId }),
+          description: local.description || t("library.downloadedPreviously"),
           version: local.version || 0,
           local_ver: Number(local.version || 0),
           remote_ver: Number(local.version || 0),

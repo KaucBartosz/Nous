@@ -6,6 +6,7 @@
 import { updateUpdatesBadge } from './utils.js';
 import { getPlatform } from '../platform/index.js';
 import { toast } from '../notify/notify.js';
+import { t } from '../i18n/index.js';
 
 // Tracks whether an app update is available (so we can add/remove +1 from badge)
 let _appUpdateAvailable = false;
@@ -32,14 +33,14 @@ export function initAppUpdater() {
 
 
     if (platform.kind !== 'electron') {
-        if (versionSpan) versionSpan.textContent = "Web Mode";
-        if (statusDiv) statusDiv.textContent = "Aktualizacje dostępne tylko w aplikacji desktopowej.";
+        if (versionSpan) versionSpan.textContent = t('updates.webMode');
+        if (statusDiv) statusDiv.textContent = t('updates.desktopOnly');
         if (actionContainer) actionContainer.style.display = 'none';
         return;
     }
 
     // 1. Get Current Version on Start
-    api.getAppVersion().then(ver => {
+    api.getVersion().then(ver => {
         if (versionSpan) versionSpan.textContent = `v${ver}`;
     });
 
@@ -60,8 +61,8 @@ export function initAppUpdater() {
             hide(btnDownload);
             hide(btnInstall);
             hide(progressContainer);
-            setStatus('Sprawdzanie aktualizacji...', '#aaa');
-            api.checkAppUpdate();
+            setStatus(t('updates.checkingShort'), '#aaa');
+            api.check();
         });
     }
 
@@ -73,29 +74,29 @@ export function initAppUpdater() {
             }
             hide(btnDownload); // Hide download button to prevent double click
             show(progressContainer);
-            setStatus('Inicjowanie pobierania...', '#aaa');
-            api.downloadAppUpdate();
+            setStatus(t('updates.initializing'), '#aaa');
+            api.download();
         });
     }
 
     if (btnInstall) {
         btnInstall.addEventListener('click', () => {
-            api.installAppUpdate();
+            api.install();
         });
     }
 
 
     // 4. IPC Event Listeners (From Backend)
 
-    api.onAppUpdateChecking(() => {
-        setStatus('Sprawdzanie dostępności aktualizacji...', '#aaa');
+    api.onChecking(() => {
+        setStatus(t('updates.checking'), '#aaa');
     });
 
-    api.onAppUpdateAvailable((info) => {
-        setStatus(`Dostępna nowa wersja: v${info.version}`, '#4caf50');
+    api.onAvailable((info) => {
+        setStatus(t('updates.availableVersion', { version: info.version }), '#4caf50');
 
         if (platform.isMac) {
-            btnDownload.innerHTML = '<span class="material-icons">open_in_new</span> Otwórz GitHub (Pobierz)';
+            btnDownload.innerHTML = `<span class="material-icons">open_in_new</span> ${t('updates.openGitHub')}`;
         }
 
         show(btnDownload);
@@ -120,13 +121,16 @@ export function initAppUpdater() {
     function showUpdateToast(newVersion) {
         toast({
             id: "update-toast",
-            titleHtml: "Dostępna Aktualizacja",
-            messageHtml: `Dostępna jest nowa wersja programu Nous (v${newVersion}).${platform.isMac ? ' (Wymaga ręcznego pobrania na Mac)' : ''}`,
+            titleHtml: t('updates.available'),
+            messageHtml: t('updates.updateAvailable', {
+                version: newVersion,
+                manual: platform.isMac ? t('updates.macManualNote') : '',
+            }),
             actions: [
-                { id: "btn-toast-dismiss", label: "Później" },
+                { id: "btn-toast-dismiss", label: t('updates.later') },
                 {
                     id: "btn-toast-update",
-                    label: platform.isMac ? 'Pobierz z GitHub' : 'Idź do Aktualizacji',
+                    label: platform.isMac ? t('updates.downloadFromGitHub') : t('updates.goToUpdate'),
                     primary: true,
                     onClick: (close) => {
                         close();
@@ -143,31 +147,31 @@ export function initAppUpdater() {
         });
     }
 
-    api.onAppUpdateNotAvailable((info) => {
+    api.onNotAvailable((info) => {
         // info may contain current version or update info
-        setStatus('Posiadasz najnowszą wersję.', '#4caf50');
+        setStatus(t('updates.upToDate'), '#4caf50');
         hide(btnDownload);
         hide(btnInstall);
         hide(progressContainer);
     });
 
-    api.onAppUpdateError((msg) => {
-        setStatus(`Błąd: ${msg}`, '#ff5252');
+    api.onError((msg) => {
+        setStatus(t('updates.error', { message: msg }), '#ff5252');
         hide(progressContainer);
         show(btnCheck); // Allow retry
     });
 
-    api.onAppDownloadProgress((progressObj) => {
+    api.onDownloadProgress((progressObj) => {
         show(progressContainer);
         const p = Math.round(progressObj.percent);
         if (progressPercent) progressPercent.textContent = `${p}%`;
         if (progressBar) progressBar.style.width = `${p}%`;
 
-        setStatus(`Pobieranie: ${p}%`, '#aaa');
+        setStatus(t('updates.downloadingPercent', { percent: p }), '#aaa');
     });
 
-    api.onAppUpdateDownloaded((info) => {
-        setStatus('Aktualizacja pobrana. Gotowa do instalacji.', '#4caf50');
+    api.onDownloaded((info) => {
+        setStatus(t('updates.downloadedReady'), '#4caf50');
         hide(progressContainer);
         hide(btnDownload);
         show(btnInstall);
@@ -179,16 +183,16 @@ export function initAppUpdater() {
     setTimeout(() => {
         if (navigator.onLine) {
             console.log("Online: Checking for app updates...");
-            api.checkAppUpdate();
+            api.check();
         } else {
             console.log("Offline: Skipping update check.");
-            setStatus('Brak połączenia. Nie można sprawdzić aktualizacji.', '#e0e0e0');
+            setStatus(t('updates.noConnection'), '#e0e0e0');
         }
     }, 2000);
 
     // Optional: Check when coming back online
     window.addEventListener('online', () => {
-        setStatus('Odzyskano połączenie. Sprawdzam aktualizacje...', '#aaa');
-        api.checkAppUpdate();
+        setStatus(t('updates.connectionRestored'), '#aaa');
+        api.check();
     });
 }

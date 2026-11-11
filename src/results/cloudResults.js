@@ -1,6 +1,7 @@
 // src/results/cloudResults.js — operacje chmurowe historii (C3): czyste funkcje kolekcji.
 // Firestore/Auth/Dialog zostają w history.js (warstwa UI); tu tylko decyzje na danych.
 import { normalizeResult } from "./resultPackage.js";
+import { t } from "../i18n/index.js";
 
 /** Klucze już-zaimportowanych: firestore_id + znacznik czas_test_badanego. */
 export function buildLocalKeys(localResults) {
@@ -46,7 +47,7 @@ export async function decryptCloudRecords(items, { hasKey, decrypt }) {
     items.map(async (data) => {
       if (data.is_encrypted && data.iv) {
         if (!hasKey()) {
-          data.data = { score: "Zaszyfrowane (Brak Klucza Chmury)" };
+          data.data = { score: t("history.encryptedNoKey") };
         } else {
           try {
             const decrypted = await decrypt(data.data, data.iv);
@@ -55,7 +56,7 @@ export async function decryptCloudRecords(items, { hasKey, decrypt }) {
             data.is_encrypted = false; // Po odszyfrowaniu w RAM jak zwykły obiekt
           } catch (e) {
             console.error("Failed to decrypt cloud result:", e);
-            data.data = { score: "Błąd Deszyfracji" };
+            data.data = { score: t("history.decryptFailed") };
           }
         }
       }

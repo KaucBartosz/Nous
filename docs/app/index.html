@@ -20,8 +20,28 @@
         <!-- 1. EKRAN LOGOWANIA -->
         <div id="login-screen" class="full-screen-center hidden" aria-hidden="true">
             <div class="login-container">
-                <!-- Logo — zawsze widoczne -->
+                <!-- Logo — zawsze widoczne; przełącznik języka dostępny przed logowaniem -->
                 <div class="login-logo-area">
+                    <div class="login-lang-switch">
+                        <button
+                            type="button"
+                            class="login-lang-btn"
+                            data-locale-choice
+                            data-locale="pl"
+                            title="Polski"
+                        >
+                            PL
+                        </button>
+                        <button
+                            type="button"
+                            class="login-lang-btn"
+                            data-locale-choice
+                            data-locale="en"
+                            title="English"
+                        >
+                            EN
+                        </button>
+                    </div>
                     <img
                         src="logo.webp"
                         alt="Logo Nous"
@@ -34,7 +54,7 @@
 
                 <!-- Panel Wyboru (domyślnie widoczny) -->
                 <div id="login-choice-panel" class="login-choice-panel">
-                    <p class="login-choice-subtitle">
+                    <p class="login-choice-subtitle" data-i18n="login.chooseMethod">
                         Wybierz sposób logowania
                     </p>
                     <div class="choice-buttons">
@@ -42,15 +62,15 @@
                             <span class="material-icons choice-icon"
                                 >cloud</span
                             >
-                            <span class="choice-label">Konto Online</span>
-                            <span class="choice-desc">Wymaga internetu</span>
+                            <span class="choice-label" data-i18n="login.onlineAccount">Konto Online</span>
+                            <span class="choice-desc" data-i18n="login.requiresInternet">Wymaga internetu</span>
                         </button>
                         <button id="btn-choose-local" class="choice-card">
                             <span class="material-icons choice-icon"
                                 >computer</span
                             >
-                            <span class="choice-label">Konta Lokalne</span>
-                            <span class="choice-desc"
+                            <span class="choice-label" data-i18n="login.localAccounts">Konta Lokalne</span>
+                            <span class="choice-desc" data-i18n="login.onlyOnThisDevice"
                                 >Tylko na tym urządzeniu</span
                             >
                         </button>
@@ -65,7 +85,7 @@
                             style="font-size: 16px; vertical-align: middle"
                             >arrow_back</span
                         >
-                        Wróć
+                        <span data-i18n="login.back">Wróć</span>
                     </button>
                     <h2 class="login-panel-title">
                         <span
@@ -78,19 +98,21 @@
                             "
                             >cloud</span
                         >
-                        Konto Online
+                        <span data-i18n="login.onlinePanelTitle">Konto Online</span>
                     </h2>
 
                     <input
                         type="email"
                         id="email"
                         placeholder="E-mail badacza"
+                        data-i18n-placeholder="login.researcherEmail"
                     />
                     <div class="password-container">
                         <input
                             type="password"
                             id="password"
                             placeholder="Hasło"
+                            data-i18n-placeholder="login.password"
                         />
                         <button
                             id="btn-toggle-password"
@@ -100,10 +122,10 @@
                         </button>
                     </div>
 
-                    <button id="btn-login" class="btn primary full-width">
+                    <button id="btn-login" class="btn primary full-width" data-i18n="login.login">
                         Zaloguj się
                     </button>
-                    <button id="btn-register" class="btn secondary full-width">
+                    <button id="btn-register" class="btn secondary full-width" data-i18n="login.register">
                         Załóż konto
                     </button>
 
@@ -118,7 +140,7 @@
                             style="font-size: 16px; vertical-align: middle"
                             >arrow_back</span
                         >
-                        Wróć
+                        <span data-i18n="login.back">Wróć</span>
                     </button>
                     <h2 class="login-panel-title">
                         <span
@@ -131,13 +153,14 @@
                             "
                             >computer</span
                         >
-                        Konta Lokalne
+                        <span data-i18n="login.localPanelTitle">Konta Lokalne</span>
                     </h2>
 
                     <input
                         type="text"
                         id="local-username"
                         placeholder="Login"
+                        data-i18n-placeholder="login.username"
                         list="local-accounts-list"
                         autocomplete="username"
                     />
@@ -147,6 +170,7 @@
                             type="password"
                             id="local-password"
                             placeholder="Hasło"
+                            data-i18n-placeholder="login.password"
                             autocomplete="current-password"
                         />
                         <button
@@ -157,17 +181,18 @@
                         </button>
                     </div>
 
-                    <button id="btn-login-local" class="btn primary full-width">
+                    <button id="btn-login-local" class="btn primary full-width" data-i18n="login.login">
                         Zaloguj się
                     </button>
                     <button
                         id="btn-register-local"
                         class="btn secondary full-width"
+                        data-i18n="login.registerLocal"
                     >
                         Zarejestruj konto
                     </button>
 
-                    <div class="divider">lub</div>
+                    <div class="divider" data-i18n="login.or">lub</div>
                     <button id="btn-guest" class="btn outline full-width">
                         <span
                             class="material-icons"
@@ -178,7 +203,7 @@
                             "
                             >person_outline</span
                         >
-                        Tryb Offline (Gość)
+                        <span data-i18n="login.offlineGuest">Tryb Gościa</span>
                     </button>
 
                     <p id="error-msg-local" class="error-text"></p>
@@ -204,46 +229,44 @@
                 <nav>
                     <button id="nav-library" class="nav-item active">
                         <span class="material-icons">library_books</span>
-                        Biblioteka Testów
+                        <span data-i18n="nav.library">Biblioteka Testów</span>
                     </button>
                     <button id="nav-history" class="nav-item">
-                        <span class="material-icons">history</span> Historia
-                        Wyników
+                        <span class="material-icons">history</span> <span data-i18n="nav.history">Historia Wyników</span>
                     </button>
                     <button id="nav-statistics" class="nav-item">
                         <span class="material-icons">bar_chart</span>
-                        Statystyka
+                        <span data-i18n="nav.statistics">Statystyka</span>
                     </button>
                     <button id="nav-updates" class="nav-item hidden" aria-hidden="true">
                         <span class="material-icons">system_update</span>
-                        Aktualizacje
+                        <span data-i18n="nav.updates">Aktualizacje</span>
                         <span class="nav-badge hidden" id="updates-badge"
                             >0</span
                         >
                     </button>
                     <button id="nav-demographics" class="nav-item">
                         <span class="material-icons">assignment_ind</span>
-                        Metryczka
+                        <span data-i18n="nav.demographics">Metryczka</span>
                     </button>
                     <button id="nav-demo-creator" class="nav-item">
-                        <span class="material-icons">build</span> Kreator
+                        <span class="material-icons">build</span> <span data-i18n="nav.creator">Kreator</span>
                     </button>
                     <button id="nav-local-admin" class="nav-item hidden">
                         <span class="material-icons">manage_accounts</span>
-                        Konta Lokalne
+                        <span data-i18n="nav.localAdmin">Konta Lokalne</span>
                     </button>
 
                     <div class="spacer" style="flex: 1"></div>
 
                     <button id="nav-settings" class="nav-item">
-                        <span class="material-icons">settings</span> Ustawienia
+                        <span class="material-icons">settings</span> <span data-i18n="nav.settings">Ustawienia</span>
                     </button>
                     <button id="nav-whats-new" class="nav-item">
-                        <span class="material-icons">new_releases</span> Co
-                        nowego?
+                        <span class="material-icons">new_releases</span> <span data-i18n="nav.whatsNew">Co nowego?</span>
                     </button>
                     <button id="nav-about" class="nav-item">
-                        <span class="material-icons">info</span> O programie
+                        <span class="material-icons">info</span> <span data-i18n="nav.about">O programie</span>
                     </button>
                 </nav>
 
@@ -270,7 +293,7 @@
                     >
                         <label
                             class="switch"
-                            title="Auto-Sync"
+                            title="Auto-Sync" data-i18n-title="nav.autoSync"
                             style="margin-bottom: 4px"
                         >
                             <input type="checkbox" id="toggle-sync" />
@@ -290,11 +313,11 @@
                     <button
                         id="btn-change-local-password"
                         class="icon-btn hidden"
-                        title="Zmień hasło konta lokalnego"
+                        title="Zmień hasło konta lokalnego" data-i18n-title="nav.changePassword"
                     >
                         <span class="material-icons">key</span>
                     </button>
-                    <button id="btn-logout" class="icon-btn" title="Wyloguj">
+                    <button id="btn-logout" class="icon-btn" title="Wyloguj" data-i18n-title="nav.logout">
                         <span class="material-icons">logout</span>
                     </button>
                 </div>
@@ -307,8 +330,8 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">library_books</span>
                         <div>
-                            <h3>Biblioteka Testów</h3>
-                            <p class="page-header-sub" id="library-count">
+                            <h3 data-i18n="library.title">Biblioteka Testów</h3>
+                            <p class="page-header-sub" id="library-count" data-i18n="library.loadingLibrary">
                                 Ładowanie biblioteki…
                             </p>
                         </div>
@@ -316,18 +339,18 @@
 
                     <div class="toolbar">
                         <label class="field" style="flex: 1; min-width: 220px; max-width: 420px">
-                            <span class="field-label">Szukaj</span>
+                            <span class="field-label" data-i18n="library.search">Szukaj</span>
                             <input
                                 type="text"
                                 id="library-search"
-                                placeholder="Szukaj testu... (użyj @tag aby filtrować)"
+                                placeholder="Szukaj testu... (użyj @tag aby filtrować)" data-i18n-placeholder="library.searchPlaceholder"
                                 class="library-search-input"
                             />
                         </label>
 
                         <div class="training-mode-container">
-                            <span class="view-switcher-label">Tryb treningowy:</span>
-                            <label class="switch" title="Tryb treningowy">
+                            <span class="view-switcher-label" data-i18n="library.trainingMode">Tryb treningowy:</span>
+                            <label class="switch" title="Tryb treningowy" data-i18n-title="library.trainingModeTitle">
                                 <input
                                     type="checkbox"
                                     id="toggle-training-mode"
@@ -337,38 +360,38 @@
                             <span
                                 class="material-icons info-icon"
                                 id="training-info-icon"
-                                title="W trybie treningowym wyniki nie są zapisywane ani ocenianie"
+                                title="W trybie treningowym wyniki nie są zapisywane ani ocenianie" data-i18n-title="library.trainingModeInfo"
                                 >info</span
                             >
                         </div>
 
                         <div class="view-switcher">
-                            <span class="view-switcher-label">Widok:</span>
+                            <span class="view-switcher-label" data-i18n="library.view">Widok:</span>
                             <button
                                 id="view-grid"
                                 class="view-btn active"
-                                title="Siatka kart"
+                                title="Siatka kart" data-i18n-title="library.grid"
                             >
                                 <span class="material-icons">grid_view</span>
                             </button>
                             <button
                                 id="view-list"
                                 class="view-btn"
-                                title="Lista"
+                                title="Lista" data-i18n-title="library.list"
                             >
                                 <span class="material-icons">view_list</span>
                             </button>
                             <button
                                 id="view-table"
                                 class="view-btn"
-                                title="Tabela"
+                                title="Tabela" data-i18n-title="library.table"
                             >
                                 <span class="material-icons">table_rows</span>
                             </button>
                             <button
                                 id="view-compact"
                                 class="view-btn"
-                                title="Kompaktowe karty"
+                                title="Kompaktowe karty" data-i18n-title="library.compact"
                             >
                                 <span class="material-icons">view_comfy</span>
                             </button>
@@ -378,7 +401,7 @@
                     <div id="tests-grid" class="grid-container">
                         <!-- Placeholder startowy: pierwsza klatka nie może być pusta.
                              loadTestsList nadpisuje tę zawartość. -->
-                        <p class="boot-hint" id="library-boot-hint">
+                        <p class="boot-hint" id="library-boot-hint" data-i18n="library.loadingLibrary">
                             Ładowanie biblioteki testów…
                         </p>
                     </div>
@@ -389,8 +412,8 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">manage_accounts</span>
                         <div>
-                            <h3>Konta Lokalne</h3>
-                            <p class="page-header-sub">
+                            <h3 data-i18n="localAdmin.title">Konta Lokalne</h3>
+                            <p class="page-header-sub" data-i18n="localAdmin.subtitle">
                                 Widok dostępny tylko dla administratorów. Przeglądaj
                                 konta lokalne i resetuj ich hasła.
                             </p>
@@ -406,8 +429,8 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">history</span>
                         <div>
-                            <h3>Historia Wyników</h3>
-                            <p class="page-header-sub">
+                            <h3 data-i18n="history.title">Historia Wyników</h3>
+                            <p class="page-header-sub" data-i18n="history.subtitle">
                                 Przeglądaj, filtruj i eksportuj wyniki badań.
                             </p>
                         </div>
@@ -417,25 +440,25 @@
                         <button
                             id="btn-toggle-guest-view"
                             class="btn outline small hidden"
-                            title="Pokaż wyniki zapisane lokalnie w trybie Gościa"
+                            title="Pokaż wyniki zapisane lokalnie w trybie Gościa" data-i18n-title="history.showGuestResultsTitle"
                         >
                             <span class="material-icons">no_accounts</span>
-                            Pokaż wyniki Gościa
+                            <span data-i18n="history.showGuestResults">Pokaż wyniki Gościa</span>
                         </button>
                         <button
                             id="btn-toggle-cloud-view"
                             class="btn outline small hidden"
-                            title="Pokaż moje wyniki zapisane w chmurze"
+                            title="Pokaż moje wyniki zapisane w chmurze" data-i18n-title="history.showCloudResultsTitle"
                         >
                             <span class="material-icons">cloud_queue</span>
-                            Pokaż moje wyniki z bazy danych
+                            <span data-i18n="history.showCloudResults">Pokaż moje wyniki z bazy danych</span>
                         </button>
                         <button
                             id="btn-export-csv"
                             class="btn secondary small"
                         >
                             <span class="material-icons">download</span>
-                            Pobierz historię wyników w CSV
+                            <span data-i18n="history.exportCsv">Pobierz historię wyników w CSV</span>
                         </button>
                     </div>
 
@@ -455,7 +478,7 @@
                                 class="download-format-selector"
                                 style="margin-bottom: 0"
                             >
-                                <span>Format pobierania plików:</span>
+                                <span data-i18n="history.downloadFormat">Format pobierania plików:</span>
                                 <label
                                     style="
                                         cursor: pointer;
@@ -469,7 +492,7 @@
                                         name="dl-format"
                                         value="json"
                                     />
-                                    <span>JSON (Pełny)</span>
+                                    <span data-i18n="history.jsonFull">JSON (Pełny)</span>
                                 </label>
                                 <label
                                     style="
@@ -486,7 +509,7 @@
                                         value="csv"
                                         checked
                                     />
-                                    <span>CSV (Tabela)</span>
+                                    <span data-i18n="history.csvTable">CSV (Tabela)</span>
                                 </label>
                             </div>
                         </div>
@@ -506,7 +529,7 @@
                                     class="btn primary small"
                                 >
                                     <span class="material-icons">input</span>
-                                    Importuj wszystkie do lokalnej bazy
+                                    <span data-i18n="history.importAllToLocal">Importuj wszystkie do lokalnej bazy</span>
                                 </button>
                                 <button
                                     id="btn-cloud-download-all"
@@ -517,7 +540,7 @@
                                         <span class="material-icons"
                                             >download</span
                                         >
-                                        Pobierz wszystkie
+                                        <span data-i18n="history.downloadAll">Pobierz wszystkie</span>
                                     </span>
                                     <div
                                         class="btn-progress"
@@ -542,7 +565,7 @@
                                     <span class="material-icons"
                                         >move_to_inbox</span
                                     >
-                                    Importuj wszystkie wyniki Gościa
+                                    <span data-i18n="history.importAllGuest">Importuj wszystkie wyniki Gościa</span>
                                 </button>
                                 <button
                                     id="btn-guest-download-all"
@@ -553,7 +576,7 @@
                                         <span class="material-icons"
                                             >download</span
                                         >
-                                        Pobierz wszystkie
+                                        <span data-i18n="history.downloadAll">Pobierz wszystkie</span>
                                     </span>
                                     <div
                                         class="btn-progress"
@@ -564,10 +587,10 @@
                                     id="btn-guest-delete-selected"
                                     class="btn danger small hidden"
                                     style="min-width: 140px"
-                                    title="Usuń zaznaczone wyniki lokalnie"
+                                    title="Usuń zaznaczone wyniki lokalnie" data-i18n-title="history.deleteSelectedTitle"
                                 >
                                     <span class="material-icons">delete</span>
-                                    Usuń zaznaczone
+                                    <span data-i18n="history.deleteSelected">Usuń zaznaczone</span>
                                 </button>
                             </div>
 
@@ -589,7 +612,7 @@
                                         <span class="material-icons"
                                             >download</span
                                         >
-                                        Pobierz wszystkie wyniki
+                                        <span data-i18n="history.downloadAllResults">Pobierz wszystkie wyniki</span>
                                     </span>
                                     <div
                                         class="btn-progress"
@@ -600,10 +623,10 @@
                                     id="btn-local-delete-selected"
                                     class="btn danger small hidden"
                                     style="min-width: 140px"
-                                    title="Usuń zaznaczone wyniki lokalnie"
+                                    title="Usuń zaznaczone wyniki lokalnie" data-i18n-title="history.deleteSelectedTitle"
                                 >
                                     <span class="material-icons">delete</span>
-                                    Usuń zaznaczone
+                                    <span data-i18n="history.deleteSelected">Usuń zaznaczone</span>
                                 </button>
                             </div>
                         </div>
@@ -619,7 +642,7 @@
                             margin-bottom: 10px;
                         "
                     >
-                        <span style="font-size: 12px; color: var(--text-muted)"
+                        <span style="font-size: 12px; color: var(--text-muted)" data-i18n="history.activeFilters"
                             >Aktywne filtry:</span
                         >
                         <button
@@ -629,7 +652,7 @@
                             <span class="material-icons" style="font-size: 15px"
                                 >filter_alt_off</span
                             >
-                            Wyczyść filtry
+                            <span data-i18n="history.clearFilters">Wyczyść filtry</span>
                         </button>
                     </div>
 
@@ -647,11 +670,11 @@
                                         class="filterable-header"
                                         data-filter-column="date"
                                     >
-                                        <span>Data</span>
+                                        <span data-i18n="history.date">Data</span>
                                         <button
                                             class="filter-btn"
                                             data-filter-type="date"
-                                            title="Filtruj wg daty"
+                                            title="Filtruj wg daty" data-i18n-title="history.filterByDate"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
@@ -666,11 +689,11 @@
                                         class="filterable-header"
                                         data-filter-column="test"
                                     >
-                                        <span>Test</span>
+                                        <span data-i18n="history.test">Test</span>
                                         <button
                                             class="filter-btn"
                                             data-filter-type="test_id"
-                                            title="Filtruj wg testu"
+                                            title="Filtruj wg testu" data-i18n-title="history.filterByTest"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
@@ -685,11 +708,11 @@
                                         class="filterable-header"
                                         data-filter-column="subject"
                                     >
-                                        <span>ID Badanego</span>
+                                        <span data-i18n="history.subjectId">ID Badanego</span>
                                         <button
                                             class="filter-btn"
                                             data-filter-type="subject_id"
-                                            title="Filtruj wg badanego"
+                                            title="Filtruj wg badanego" data-i18n-title="history.filterBySubject"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
@@ -700,16 +723,16 @@
                                             >0</span
                                         >
                                     </th>
-                                    <th>Wynik</th>
+                                    <th data-i18n="history.result">Wynik</th>
                                     <th
                                         class="filterable-header"
                                         data-filter-column="status"
                                     >
-                                        <span>Status</span>
+                                        <span data-i18n="history.status">Status</span>
                                         <button
                                             class="filter-btn"
                                             data-filter-type="status"
-                                            title="Filtruj wg statusu"
+                                            title="Filtruj wg statusu" data-i18n-title="history.filterByStatus"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
@@ -720,7 +743,7 @@
                                             >0</span
                                         >
                                     </th>
-                                    <th>Akcje</th>
+                                    <th data-i18n="history.actions">Akcje</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -736,19 +759,19 @@
                         <div class="stats-header-title">
                             <span class="material-icons stats-header-icon">insights</span>
                             <div>
-                                <h3>Statystyka wyników</h3>
-                                <p class="stats-header-sub">
+                                <h3 data-i18n="statistics.title">Statystyka wyników</h3>
+                                <p class="stats-header-sub" data-i18n="statistics.subtitle">
                                     Porównuj wykonania i analizuj wyniki testów.
                                 </p>
                             </div>
                         </div>
-                        <div class="stats-segmented" role="group" aria-label="Tryb statystyk">
+                        <div class="stats-segmented" role="group" aria-label="Tryb statystyk" data-i18n-aria-label="statistics.modeAria">
                             <button
                                 type="button"
                                 class="stats-segmented-btn is-active"
                                 data-mode="personal"
                                 aria-pressed="true"
-                            >
+                             data-i18n="statistics.personal">
                                 Osobisty
                             </button>
                             <button
@@ -756,7 +779,7 @@
                                 class="stats-segmented-btn"
                                 data-mode="research"
                                 aria-pressed="false"
-                            >
+                             data-i18n="statistics.research">
                                 Badawczy
                             </button>
                         </div>
@@ -764,7 +787,7 @@
 
                     <div id="stats-hero" class="stats-hero hidden">
                         <div class="stats-hero-copy">
-                            <span class="stats-hero-eyebrow">Twoje postępy</span>
+                            <span class="stats-hero-eyebrow" data-i18n="statistics.yourProgress">Twoje postępy</span>
                             <h4 id="stats-hero-title"></h4>
                             <p id="stats-hero-text"></p>
                         </div>
@@ -772,14 +795,14 @@
                             id="stats-hero-cta"
                             class="btn primary stats-hero-cta"
                             type="button"
-                        >
+                         data-i18n="statistics.runAgain">
                             Wykonaj test ponownie
                         </button>
                     </div>
 
                     <div class="stats-controls">
                         <label class="stats-field">
-                            <span class="stats-field-label">Test</span>
+                            <span class="stats-field-label" data-i18n="statistics.test">Test</span>
                             <select id="stats-test"></select>
                         </label>
 
@@ -787,32 +810,32 @@
                             class="stats-field hidden"
                             id="stats-personal-subject-field"
                         >
-                            <span class="stats-field-label">Osoba</span>
+                            <span class="stats-field-label" data-i18n="statistics.person">Osoba</span>
                             <select id="stats-personal-subject"></select>
                         </label>
 
                         <div id="stats-research-scope" class="stats-scope hidden">
                             <label class="stats-field">
-                                <span class="stats-field-label">Zakres</span>
+                                <span class="stats-field-label" data-i18n="statistics.scope">Zakres</span>
                                 <select id="stats-scope">
-                                    <option value="all">Wszyscy</option>
-                                    <option value="subject">Po ID badanego</option>
-                                    <option value="participant">Kartoteka</option>
+                                    <option value="all" data-i18n="statistics.all">Wszyscy</option>
+                                    <option value="subject" data-i18n="statistics.bySubjectId">Po ID badanego</option>
+                                    <option value="participant" data-i18n="statistics.registry">Kartoteka</option>
                                 </select>
                             </label>
                             <label class="stats-field hidden" id="stats-subject-field">
-                                <span class="stats-field-label">ID badanego</span>
+                                <span class="stats-field-label" data-i18n="statistics.subjectId">ID badanego</span>
                                 <input
                                     id="stats-subject-input"
                                     type="text"
                                     list="stats-subject-datalist"
-                                    placeholder="Wpisz lub wybierz ID…"
+                                    placeholder="Wpisz lub wybierz ID…" data-i18n-placeholder="statistics.typeOrSelectId"
                                     autocomplete="off"
                                 />
                                 <datalist id="stats-subject-datalist"></datalist>
                             </label>
                             <label class="stats-field hidden" id="stats-participant-field">
-                                <span class="stats-field-label">Profil z kartoteki</span>
+                                <span class="stats-field-label" data-i18n="statistics.profileFromRegistry">Profil z kartoteki</span>
                                 <select id="stats-participant-select"></select>
                             </label>
                         </div>
@@ -823,7 +846,7 @@
                             type="button"
                         >
                             <span class="material-icons" style="font-size: 16px">tune</span>
-                            Metryki
+                            <span data-i18n="statistics.metrics">Metryki</span>
                         </button>
                     </div>
 
@@ -833,9 +856,9 @@
                         <div class="stats-section-header">
                             <h4>
                                 <span class="material-icons">tune</span>
-                                Metryki
+                                <span data-i18n="statistics.metrics">Metryki</span>
                             </h4>
-                            <p class="stats-section-sub">
+                            <p class="stats-section-sub" data-i18n="statistics.metricsSubtitle">
                                 Wybierz metryki widoczne w tabelach.
                             </p>
                         </div>
@@ -846,9 +869,9 @@
                         <div class="stats-section-header">
                             <h4>
                                 <span class="material-icons">list_alt</span>
-                                Wykonania
+                                <span data-i18n="statistics.runs">Wykonania</span>
                             </h4>
-                            <p class="stats-section-sub">
+                            <p class="stats-section-sub" data-i18n="statistics.runsSubtitle">
                                 Zaznacz dwa wykonania, aby je porównać.
                             </p>
                         </div>
@@ -856,9 +879,9 @@
                             <table id="stats-runs-table" class="stats-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 52px; text-align: center;">Wybierz</th>
-                                        <th>Data</th>
-                                        <th class="stats-num">Wynik</th>
+                                        <th style="width: 52px; text-align: center;" data-i18n="statistics.choose">Wybierz</th>
+                                        <th data-i18n="common.date">Data</th>
+                                        <th class="stats-num" data-i18n="common.result">Wynik</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -870,7 +893,7 @@
                         <div class="stats-section-header">
                             <h4>
                                 <span class="material-icons">compare_arrows</span>
-                                Porównanie
+                                <span data-i18n="statistics.compare">Porównanie</span>
                             </h4>
                             <p id="stats-compare-info" class="stats-section-sub"></p>
                         </div>
@@ -878,10 +901,10 @@
                             <table id="stats-compare-table" class="stats-table">
                                 <thead>
                                     <tr>
-                                        <th>Metryka</th>
-                                        <th class="stats-num">Wykonanie A</th>
-                                        <th class="stats-num">Wykonanie B</th>
-                                        <th class="stats-num">Różnica</th>
+                                        <th data-i18n="statistics.metric">Metryka</th>
+                                        <th class="stats-num" data-i18n="statistics.runA">Wykonanie A</th>
+                                        <th class="stats-num" data-i18n="statistics.runB">Wykonanie B</th>
+                                        <th class="stats-num" data-i18n="statistics.difference">Różnica</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -893,11 +916,11 @@
                         <div class="stats-section-header">
                             <h4>
                                 <span class="material-icons">trending_up</span>
-                                Trend
+                                <span data-i18n="statistics.trend">Trend</span>
                             </h4>
                             <div class="stats-trend-controls">
                                 <label class="stats-field stats-field-inline">
-                                    <span class="stats-field-label">Metryka</span>
+                                    <span class="stats-field-label" data-i18n="statistics.metric">Metryka</span>
                                     <select id="stats-trend-metric"></select>
                                 </label>
                                 <span id="stats-trend-info" class="stats-section-sub"></span>
@@ -910,7 +933,7 @@
                         <div class="stats-section-header">
                             <h4>
                                 <span class="material-icons">functions</span>
-                                Średnie wyniki
+                                <span data-i18n="statistics.averageResults">Średnie wyniki</span>
                             </h4>
                             <p id="stats-research-count" class="stats-count"></p>
                         </div>
@@ -918,10 +941,10 @@
                             <table id="stats-agg-table" class="stats-table">
                                 <thead>
                                     <tr>
-                                        <th>Metryka</th>
-                                        <th class="stats-num">Średnia</th>
-                                        <th class="stats-num">Min</th>
-                                        <th class="stats-num">Max</th>
+                                        <th data-i18n="statistics.metric">Metryka</th>
+                                        <th class="stats-num" data-i18n="statistics.average">Średnia</th>
+                                        <th class="stats-num" data-i18n="statistics.min">Min</th>
+                                        <th class="stats-num" data-i18n="statistics.max">Max</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -946,8 +969,8 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">system_update</span>
                         <div>
-                            <h3>Aktualizacje</h3>
-                            <p class="page-header-sub">
+                            <h3 data-i18n="updates.title">Aktualizacje</h3>
+                            <p class="page-header-sub" data-i18n="updates.subtitle">
                                 Aktualizuj program i zainstalowane testy.
                             </p>
                         </div>
@@ -958,11 +981,11 @@
                         <div class="panel-header">
                             <h4>
                                 <span class="material-icons">cloud_sync</span>
-                                Aktualizacja Programu Nous
+                                <span data-i18n="updates.appUpdateTitle">Aktualizacja Programu Nous</span>
                             </h4>
                         </div>
                         <p class="panel-sub">
-                            Obecna wersja:
+                            <span data-i18n="updates.currentVersion">Obecna wersja:</span>
                             <span
                                 id="app-current-version"
                                 style="color: var(--text-main); font-weight: 600"
@@ -972,7 +995,7 @@
                         <div
                             id="app-update-status"
                             style="font-size: 14px; margin-bottom: 15px"
-                        >
+                         data-i18n="updates.checkingShort">
                             Sprawdzanie aktualizacji...
                         </div>
 
@@ -991,7 +1014,7 @@
                                     color: var(--text-muted);
                                 "
                             >
-                                <span>Pobieranie...</span>
+                                <span data-i18n="updates.downloading">Pobieranie...</span>
                                 <span id="app-update-percent">0%</span>
                             </div>
                             <div
@@ -1026,14 +1049,14 @@
                                 class="btn secondary small"
                             >
                                 <span class="material-icons">refresh</span>
-                                Sprawdź ponownie
+                                <span data-i18n="updates.checkAgain">Sprawdź ponownie</span>
                             </button>
                             <button
                                 id="btn-download-app-update"
                                 class="btn primary hidden"
                             >
                                 <span class="material-icons">download</span>
-                                Pobierz Aktualizację
+                                <span data-i18n="updates.downloadUpdate">Pobierz Aktualizację</span>
                             </button>
                             <button
                                 id="btn-install-app-update"
@@ -1042,7 +1065,7 @@
                                 <span class="material-icons"
                                     >system_update_alt</span
                                 >
-                                Zainstaluj i Restartuj
+                                <span data-i18n="updates.installRestart">Zainstaluj i Restartuj</span>
                             </button>
                         </div>
                     </div>
@@ -1051,16 +1074,16 @@
                         <div class="panel-header">
                             <h4>
                                 <span class="material-icons">inventory_2</span>
-                                Stan Zainstalowanych Testów
+                                <span data-i18n="updates.installedTests">Stan Zainstalowanych Testów</span>
                             </h4>
                         </div>
                         <div class="toolbar" style="margin-bottom: 12px; padding: 8px 12px">
                             <label class="field" style="flex: 1; min-width: 200px; max-width: 320px">
-                                <span class="field-label">Szukaj</span>
+                                <span class="field-label" data-i18n="library.search">Szukaj</span>
                                 <input
                                     type="text"
                                     id="updates-search"
-                                    placeholder="Szukaj..."
+                                    placeholder="Szukaj..." data-i18n-placeholder="common.searchEllipsis"
                                     class="library-search-input"
                                     style="max-width: 100%"
                                 />
@@ -1070,11 +1093,11 @@
                             <table id="updates-table" class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Nazwa Testu</th>
-                                    <th>Wersja Lokalna</th>
-                                    <th>Wersja w Chmurze</th>
-                                    <th>Status</th>
-                                    <th>Akcja</th>
+                                    <th data-i18n="library.testName">Nazwa Testu</th>
+                                    <th data-i18n="updates.localVersion">Wersja Lokalna</th>
+                                    <th data-i18n="updates.cloudVersion">Wersja w Chmurze</th>
+                                    <th data-i18n="library.status">Status</th>
+                                    <th data-i18n="library.action">Akcja</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1090,8 +1113,8 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">assignment_ind</span>
                         <div>
-                            <h3>Metryczka</h3>
-                            <p class="page-header-sub">
+                            <h3 data-i18n="demographics.title">Metryczka</h3>
+                            <p class="page-header-sub" data-i18n="demographics.subtitle2">
                                 Dane uczestnika badania i kartoteka badanych.
                             </p>
                         </div>
@@ -1110,7 +1133,7 @@
                                     "
                                     >people</span
                                 >
-                                Kartoteka Badanych
+                                <span data-i18n="demographics.registryTitle">Kartoteka Badanych</span>
                             </h4>
                             <div class="participants-search-wrapper">
                                 <span
@@ -1124,14 +1147,14 @@
                                 <input
                                     type="text"
                                     id="participants-search"
-                                    placeholder="Szukaj badanego..."
+                                    placeholder="Szukaj badanego..." data-i18n-placeholder="demographics.searchPlaceholder"
                                     class="participants-search-input"
                                 />
                             </div>
                         </div>
                         <div id="participants-list" class="participants-list">
                             <!-- JS wstrzyknie tu karty badanych -->
-                            <p class="participants-empty">
+                            <p class="participants-empty" data-i18n-html="demographics.emptyRegistry">
                                 Brak zapisanych badanych. Wypełnij metryczkę i
                                 kliknij <strong>Zapisz do Kartoteki</strong>.
                             </p>
@@ -1142,17 +1165,17 @@
                         <div class="panel-header">
                             <h4>
                                 <span class="material-icons">edit_note</span>
-                                Dane Uczestnika Badania
+                                <span data-i18n="demographics.participantData">Dane Uczestnika Badania</span>
                             </h4>
                         </div>
-                        <p class="panel-sub" style="margin-bottom: 16px">
+                        <p class="panel-sub" style="margin-bottom: 16px" data-i18n="demographics.fillBefore">
                             Wypełnij te dane przed uruchomieniem testu.
                         </p>
 
                         <div class="form-group">
-                            <label>Wybierz Szablon Metryczki:</label>
+                            <label data-i18n="demographics.chooseTemplate">Wybierz Szablon Metryczki:</label>
                             <select id="demo-template-select">
-                                <option value="">-- Domyślna (Brak) --</option>
+                                <option value="" data-i18n="demographics.defaultTemplate">-- Domyślna (Brak) --</option>
                                 <!-- JS populate -->
                             </select>
                         </div>
@@ -1164,32 +1187,30 @@
                                     color: var(--text-muted);
                                     font-style: italic;
                                 "
-                            >
+                             data-i18n="demographics.chooseTemplateHint">
                                 Wybierz szablon, aby zobaczyć pola.
                             </p>
                         </div>
 
                         <div class="toolbar" style="margin-top: 16px; padding: 8px 12px; background: transparent; border: none">
                             <button id="btn-save-demo" class="btn primary">
-                                <span class="material-icons">save</span> Zapisz
-                                Dane Sesji
+                                <span class="material-icons">save</span> <span data-i18n="demographics.saveSession">Zapisz Dane Sesji</span>
                             </button>
                             <button
                                 id="btn-save-to-registry"
                                 class="btn secondary"
                             >
                                 <span class="material-icons">person_add</span>
-                                Zapisz do Kartoteki
+                                <span data-i18n="demographics.saveToRegistry">Zapisz do Kartoteki</span>
                             </button>
                             <button id="btn-clear-demo" class="btn outline">
                                 <span class="material-icons">clear</span>
-                                Wyczyść
+                                <span data-i18n="common.clear">Wyczyść</span>
                             </button>
                             <span
                                 id="demo-status"
                                 style="color: var(--success); display: none"
-                                >Zapisano!</span
-                            >
+                                 data-i18n="demographics.saved">Zapisano!</span>
                         </div>
                     </div>
                 </div>
@@ -1199,8 +1220,8 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">build</span>
                         <div>
-                            <h3>Kreator Metryczek</h3>
-                            <p class="page-header-sub">
+                            <h3 data-i18n="creator.titleFull">Kreator Metryczek</h3>
+                            <p class="page-header-sub" data-i18n="creator.subtitleFull">
                                 Zdefiniuj własne pola zbierane od uczestników.
                             </p>
                         </div>
@@ -1208,19 +1229,19 @@
 
                     <div class="form-container panel">
                         <div class="form-group">
-                            <label for="creator-template-name"
+                            <label for="creator-template-name" data-i18n="creator.templateName"
                                 >Nazwa Szablonu:</label
                             >
                             <input
                                 type="text"
                                 id="creator-template-name"
-                                placeholder="np. Badanie Kierowców 2026"
+                                placeholder="np. Badanie Kierowców 2026" data-i18n-placeholder="creator.templateNamePlaceholder"
                             />
                         </div>
 
                         <hr class="form-divider" />
 
-                        <h4 class="panel-sub" style="margin: 0 0 8px; color: var(--text-main); font-size: 15px; font-weight: 600">Pola Formularza</h4>
+                        <h4 class="panel-sub" style="margin: 0 0 8px; color: var(--text-main); font-size: 15px; font-weight: 600" data-i18n="creator.formFields">Pola Formularza</h4>
                         <div id="creator-fields-container">
                             <!-- Dynamiczna lista pól -->
                         </div>
@@ -1230,7 +1251,7 @@
                             class="btn secondary small"
                             style="margin-top: 12px"
                         >
-                            <span class="material-icons">add</span> Dodaj Pole
+                            <span class="material-icons">add</span> <span data-i18n="creator.addFieldBtn">Dodaj Pole</span>
                         </button>
 
                         <div
@@ -1244,8 +1265,7 @@
                                 <!-- Placeholder for delete template btn if editing logic added later -->
                             </div>
                             <button id="btn-save-template" class="btn primary">
-                                <span class="material-icons">save</span> Zapisz
-                                Szablon
+                                <span class="material-icons">save</span> <span data-i18n="creator.saveTemplateBtn">Zapisz Szablon</span>
                             </button>
                         </div>
                         <span
@@ -1256,8 +1276,7 @@
                                 color: #4caf50;
                                 display: none;
                             "
-                            >Zapisano Szablon!</span
-                        >
+                             data-i18n="creator.templateSavedStatus">Zapisano Szablon!</span>
                     </div>
 
                     <hr
@@ -1276,13 +1295,12 @@
                             margin-bottom: 15px;
                         "
                     >
-                        <h4 style="margin: 0">Dostępne Szablony</h4>
+                        <h4 style="margin: 0" data-i18n="creator.availableTemplates">Dostępne Szablony</h4>
                         <button
                             id="btn-import-template"
                             class="btn secondary small"
                         >
-                            <span class="material-icons">upload</span> Importuj
-                            z Pliku
+                            <span class="material-icons">upload</span> <span data-i18n="creator.importFromFile">Importuj z Pliku</span>
                         </button>
                     </div>
                     <div
@@ -1304,17 +1322,30 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">settings</span>
                         <div>
-                            <h3>Ustawienia</h3>
-                            <p class="page-header-sub">
+                            <h3 data-i18n="settings.title">Ustawienia</h3>
+                            <p class="page-header-sub" data-i18n="settings.subtitle">
                                 Dostosuj wygląd i zachowanie aplikacji.
                             </p>
                         </div>
                     </div>
 
                     <div class="form-container panel" style="max-width: 800px">
+                        <div class="settings-section">
+                            <h4 data-i18n="settings.interfaceLanguage">Język interfejsu</h4>
+                            <div class="form-group">
+                                <label data-i18n="settings.language">Język</label>
+                                <select id="language-select">
+                                    <option value="pl" data-i18n="common.polish">Polski</option>
+                                    <option value="en" data-i18n="common.english">Angielski</option>
+                                </select>
+                                <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px" data-i18n="settings.languageHint">
+                                    Zmiana języka jest zapisywana na tym urządzeniu.
+                                </p>
+                            </div>
+                        </div>
                         <!-- Sekcja Motywu -->
                         <div class="settings-section">
-                            <h4>Motyw Główny</h4>
+                            <h4 data-i18n="settings.mainTheme">Motyw Główny</h4>
                             <div class="form-group">
                                 <div class="theme-switcher">
                                     <label class="theme-option">
@@ -1328,7 +1359,7 @@
                                             <span class="material-icons"
                                                 >dark_mode</span
                                             >
-                                            Ciemny
+                                            <span data-i18n="settings.dark">Ciemny</span>
                                         </span>
                                     </label>
                                     <label class="theme-option">
@@ -1341,7 +1372,7 @@
                                             <span class="material-icons"
                                                 >light_mode</span
                                             >
-                                            Jasny
+                                            <span data-i18n="settings.light">Jasny</span>
                                         </span>
                                     </label>
                                     <label class="theme-option">
@@ -1354,7 +1385,7 @@
                                             <span class="material-icons"
                                                 >palette</span
                                             >
-                                            Własny
+                                            <span data-i18n="settings.custom">Własny</span>
                                         </span>
                                     </label>
                                 </div>
@@ -1373,8 +1404,7 @@
                                         "
                                         >info</span
                                     >
-                                    Zmiana motywu przywróci domyślne kolory dla
-                                    wybranego trybu.
+                                    <span data-i18n="settings.themeChangeHint">Zmiana motywu przywróci domyślne kolory dla wybranego trybu.</span>
                                 </p>
 
                                 <!-- Theme Management -->
@@ -1388,6 +1418,7 @@
                                             margin-bottom: 10px;
                                             display: block;
                                         "
+                                        data-i18n="settings.yourThemes"
                                         >Twoje Własne Motywy:</label
                                     >
                                     <div
@@ -1401,14 +1432,14 @@
                                             id="saved-themes-select"
                                             style="flex: 1; margin-bottom: 0"
                                         >
-                                            <option value="">
+                                            <option value="" data-i18n="settings.defaultCustom">
                                                 -- Domyślny Własny --
                                             </option>
                                         </select>
                                         <button
                                             id="btn-delete-theme"
                                             class="btn danger small"
-                                            title="Usuń wybrany motyw"
+                                            title="Usuń wybrany motyw" data-i18n-title="settings.deleteTheme"
                                         >
                                             <span class="material-icons"
                                                 >delete</span
@@ -1429,13 +1460,12 @@
                                                     font-size: 11px;
                                                     margin-bottom: 5px;
                                                 "
-                                                >Zapisz obecną konfigurację
-                                                jako:</label
+                                                 data-i18n="settings.saveCurrentAs">Zapisz obecną konfigurację jako:</label
                                             >
                                             <input
                                                 type="text"
                                                 id="new-theme-name"
-                                                placeholder="np. Mój Rubinowy"
+                                                placeholder="np. Mój Rubinowy" data-i18n-placeholder="settings.themeNamePlaceholder"
                                                 style="
                                                     margin-bottom: 0;
                                                     padding: 8px 12px;
@@ -1449,7 +1479,7 @@
                                             <span class="material-icons"
                                                 >save_as</span
                                             >
-                                            Zapisz motyw
+                                            <span data-i18n="settings.saveTheme">Zapisz motyw</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1468,9 +1498,9 @@
                             <div>
                                 <!-- Elementy Interaktywne -->
                                 <div class="settings-section">
-                                    <h4>Elementy Interaktywne</h4>
+                                    <h4 data-i18n="settings.interactiveElements">Elementy Interaktywne</h4>
                                     <div class="form-group">
-                                        <label>Kolor Główny (Przyciski):</label>
+                                        <label data-i18n="settings.primaryColorButtons">Kolor Główny (Przyciski):</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1484,7 +1514,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label
+                                        <label data-i18n="settings.primaryHoverLabel"
                                             >Kolor Hover (Najazd myszką):</label
                                         >
                                         <div class="color-picker-group">
@@ -1503,9 +1533,9 @@
 
                                 <!-- Ikony -->
                                 <div class="settings-section">
-                                    <h4>Ikony</h4>
+                                    <h4 data-i18n="settings.icons">Ikony</h4>
                                     <div class="form-group">
-                                        <label>Kolor Ikon:</label>
+                                        <label data-i18n="settings.iconColorLabel">Kolor Ikon:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1519,7 +1549,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>Kolor Aktywnej Ikony:</label>
+                                        <label data-i18n="settings.activeIconColorLabel">Kolor Aktywnej Ikony:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1539,9 +1569,9 @@
                             <div>
                                 <!-- Tekst -->
                                 <div class="settings-section">
-                                    <h4>Tekst</h4>
+                                    <h4 data-i18n="settings.text">Tekst</h4>
                                     <div class="form-group">
-                                        <label>Główny Kolor Tekstu:</label>
+                                        <label data-i18n="settings.mainTextLabel">Główny Kolor Tekstu:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1555,9 +1585,8 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label
-                                            >Drugorzędny Kolor Tekstu
-                                            (Muted):</label
+                                        <label data-i18n="settings.mutedTextLabel"
+                                            >Drugorzędny Kolor Tekstu (Muted):</label
                                         >
                                         <div class="color-picker-group">
                                             <input
@@ -1572,7 +1601,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label
+                                        <label data-i18n="settings.inactiveTabLabel"
                                             >Kolor Nieaktywnych Zakładek:</label
                                         >
                                         <div class="color-picker-group">
@@ -1588,7 +1617,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>Kolor Nazwy Testów:</label>
+                                        <label data-i18n="settings.testNameLabel">Kolor Nazwy Testów:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1602,7 +1631,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>Kolor Opisu Testów:</label>
+                                        <label data-i18n="settings.testDescLabel">Kolor Opisu Testów:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1616,7 +1645,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label
+                                        <label data-i18n="settings.buttonTextLabel"
                                             >Kolor Tekstu na Przyciskach:</label
                                         >
                                         <div class="color-picker-group">
@@ -1635,9 +1664,9 @@
 
                                 <!-- Tło i Obramowania -->
                                 <div class="settings-section">
-                                    <h4>Tło i Ramki</h4>
+                                    <h4 data-i18n="settings.backgroundAndBorders">Tło i Ramki</h4>
                                     <div class="form-group">
-                                        <label>Tło Aplikacji:</label>
+                                        <label data-i18n="settings.bgAppLabel">Tło Aplikacji:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1651,9 +1680,8 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label
-                                            >Tło Paska Bocznego
-                                            (Sidebar):</label
+                                        <label data-i18n="settings.bgSidebarLabel"
+                                            >Tło Paska Bocznego (Sidebar):</label
                                         >
                                         <div class="color-picker-group">
                                             <input
@@ -1668,7 +1696,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>Kolor Obramowań:</label>
+                                        <label data-i18n="settings.borderLabel">Kolor Obramowań:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1698,7 +1726,7 @@
 
                         <!-- Biblioteka Testów -->
                         <div class="settings-section">
-                            <h4>Biblioteka Testów</h4>
+                            <h4 data-i18n="settings.library">Biblioteka Testów</h4>
                             <div
                                 class="form-group"
                                 style="
@@ -1709,7 +1737,7 @@
                             >
                                 <label
                                     class="switch"
-                                    title="Pokaż testy lokalne"
+                                    title="Pokaż testy lokalne" data-i18n-title="settings.showLocalTestsTitle"
                                 >
                                     <input
                                         type="checkbox"
@@ -1717,7 +1745,7 @@
                                     />
                                     <span class="slider round"></span>
                                 </label>
-                                <span>Pokaż testy lokalne</span>
+                                <span data-i18n="settings.showLocalTests">Pokaż testy lokalne</span>
                             </div>
                             <p
                                 style="
@@ -1726,7 +1754,7 @@
                                     margin-top: 10px;
                                 "
                             >
-                                Obecna lokalizacja testów:<br />
+                                <span data-i18n="settings.currentLocation">Obecna lokalizacja testów:</span><br />
                                 <code
                                     id="local-tests-path"
                                     style="
@@ -1737,9 +1765,31 @@
                                         display: inline-block;
                                         margin-top: 5px;
                                     "
-                                    >Wczytywanie...</code
+                                     data-i18n="settings.loading">Wczytywanie...</code
                                 >
                             </p>
+                        </div>
+
+                        <div
+                            class="form-group"
+                            style="
+                                display: flex;
+                                align-items: center;
+                                gap: 15px;
+                                margin-top: 15px;
+                            "
+                        >
+                            <label
+                                class="switch"
+                                title="Automatycznie wczytaj ostatnio używaną metryczkę przy logowaniu" data-i18n-title="settings.autoLoadDemographicsTitle"
+                            >
+                                <input
+                                    type="checkbox"
+                                    id="auto-load-demographics-toggle"
+                                />
+                                <span class="slider round"></span>
+                            </label>
+                            <span data-i18n="settings.autoLoadDemographics">Automatycznie wczytaj ostatnio używaną metryczkę przy logowaniu</span>
                         </div>
 
                         <hr
@@ -1755,7 +1805,7 @@
                             class="settings-section"
                             id="download-settings-section"
                         >
-                            <h4>Pobieranie</h4>
+                            <h4 data-i18n="settings.download">Pobieranie</h4>
                             <div
                                 class="form-group"
                                 style="
@@ -1766,7 +1816,7 @@
                             >
                                 <label
                                     class="switch"
-                                    title="Ciche pobieranie do folderu"
+                                    title="Ciche pobieranie do folderu" data-i18n-title="settings.silentDownloadTitle"
                                 >
                                     <input
                                         type="checkbox"
@@ -1774,7 +1824,7 @@
                                     />
                                     <span class="slider round"></span>
                                 </label>
-                                <span>Ciche pobieranie do folderu</span>
+                                <span data-i18n="settings.silentDownload">Ciche pobieranie do folderu</span>
                             </div>
                             <p
                                 style="
@@ -1782,10 +1832,9 @@
                                     color: var(--text-muted);
                                     margin-top: 10px;
                                 "
-                            >
-                                Bez okna systemowego. Pliki ZIP i CSV
-                                zapisują się wprost do wybranego folderu.<br />
-                                Folder docelowy:<br />
+                             data-i18n="settings.silentDownloadHint">
+                                Bez okna systemowego. Pliki ZIP i CSV zapisują się wprost do wybranego folderu.<br />
+                                <span data-i18n="settings.targetFolder">Folder docelowy:</span><br />
                                 <code
                                     id="download-dir-path"
                                     style="
@@ -1796,14 +1845,14 @@
                                         display: inline-block;
                                         margin-top: 5px;
                                     "
-                                    >Wczytywanie...</code
+                                     data-i18n="settings.loading">Wczytywanie...</code
                                 >
                                 <button
                                     id="btn-pick-download-dir"
                                     class="btn outline small"
                                     style="margin-left: 8px"
                                 >
-                                    Wybierz folder
+                                    <span data-i18n="settings.selectFolder">Wybierz folder</span>
                                 </button>
                             </p>
                         </div>
@@ -1819,7 +1868,7 @@
 
                         <!-- Podgląd -->
                         <div class="settings-section">
-                            <h4>Podgląd Elementów</h4>
+                            <h4 data-i18n="settings.preview">Podgląd Elementów</h4>
                             <div class="settings-preview">
                                 <div
                                     style="
@@ -1830,13 +1879,13 @@
                                         margin-bottom: 20px;
                                     "
                                 >
-                                    <button class="btn primary">
+                                    <button class="btn primary" data-i18n="settings.primaryButton">
                                         Przycisk Główny
                                     </button>
-                                    <button class="btn secondary">
+                                    <button class="btn secondary" data-i18n="settings.secondaryButton">
                                         Drugorzędny
                                     </button>
-                                    <button class="btn outline">Obrys</button>
+                                    <button class="btn outline" data-i18n="settings.outlineButton">Obrys</button>
                                 </div>
                                 <div
                                     style="
@@ -1860,7 +1909,7 @@
                                                 font-size: 12px;
                                                 color: var(--text-muted);
                                             "
-                                        >
+                                         data-i18n="settings.normalIcon">
                                             Ikona Zwykła
                                         </p>
                                     </div>
@@ -1878,7 +1927,7 @@
                                                 font-size: 12px;
                                                 color: var(--text-main);
                                             "
-                                        >
+                                         data-i18n="settings.activeIcon">
                                             Ikona Aktywna
                                         </p>
                                     </div>
@@ -1888,7 +1937,7 @@
                                         margin-top: 15px;
                                         color: var(--text-main);
                                     "
-                                >
+                                 data-i18n="settings.sampleText">
                                     Przykładowy tekst główny.
                                 </p>
                                 <p
@@ -1896,9 +1945,8 @@
                                         color: var(--text-muted);
                                         font-size: 14px;
                                     "
-                                >
-                                    Przykładowy tekst drugorzędny (opisowy,
-                                    mniej ważny).
+                                 data-i18n="settings.sampleTextMuted">
+                                    Przykładowy tekst drugorzędny (opisowy, mniej ważny).
                                 </p>
                             </div>
                         </div>
@@ -1924,11 +1972,10 @@
                                 class="btn secondary"
                             >
                                 <span class="material-icons">refresh</span>
-                                Przywróć Domyślne dla Motywu
+                                <span data-i18n="settings.resetDefaults">Przywróć Domyślne dla Motywu</span>
                             </button>
                             <button id="btn-save-settings" class="btn primary">
-                                <span class="material-icons">save</span> Zapisz
-                                Ustawienia
+                                <span class="material-icons">save</span> <span data-i18n="settings.saveSettings">Zapisz Ustawienia</span>
                             </button>
                         </div>
 
@@ -1941,8 +1988,7 @@
                                 text-align: center;
                                 display: none;
                             "
-                            >Ustawienia zapisane!</span
-                        >
+                             data-i18n="settings.settingsSaved">Ustawienia zapisane!</span>
                     </div>
                 </div>
                 <!-- WIDOK 7: Co nowego? -->
@@ -1950,8 +1996,8 @@
                     <div class="page-header">
                         <span class="material-icons page-header-icon">new_releases</span>
                         <div>
-                            <h3>Co nowego w Nous?</h3>
-                            <p class="page-header-sub">
+                            <h3 data-i18n="whatsNew.title">Co nowego w Nous?</h3>
+                            <p class="page-header-sub" data-i18n="whatsNew.subtitle">
                                 Ostatnie zmiany i aktualizacje aplikacji.
                             </p>
                         </div>
@@ -1968,7 +2014,7 @@
                                 <button
                                     id="btn-prev-release"
                                     class="btn secondary small"
-                                    title="Poprzednia wersja"
+                                    title="Poprzednia wersja" data-i18n-title="whatsNew.previousVersion"
                                     disabled
                                 >
                                     <span class="material-icons"
@@ -1988,7 +2034,7 @@
                                 <button
                                     id="btn-next-release"
                                     class="btn secondary small"
-                                    title="Następna wersja"
+                                    title="Następna wersja" data-i18n-title="whatsNew.nextVersion"
                                     disabled
                                 >
                                     <span class="material-icons"
@@ -2001,14 +2047,14 @@
                                 class="btn secondary small"
                             >
                                 <span class="material-icons">refresh</span>
-                                Odśwież
+                                <span data-i18n="whatsNew.refresh">Odśwież</span>
                             </button>
                             <button
                                 id="btn-open-github"
                                 class="btn primary small"
                             >
                                 <span class="material-icons">open_in_new</span>
-                                Otwórz GitHub
+                                <span data-i18n="whatsNew.openGitHub">Otwórz GitHub</span>
                             </button>
                         </div>
                     </div>
@@ -2040,7 +2086,7 @@
                                     margin-top: 15px;
                                     color: var(--text-muted);
                                 "
-                            >
+                             data-i18n="whatsNew.loadingChanges">
                                 Ładowanie informacji o zmianach...
                             </p>
                         </div>
@@ -2058,7 +2104,7 @@
                             <span class="material-icons" style="font-size: 48px"
                                 >error</span
                             >
-                            <p style="margin-top: 15px">
+                            <p style="margin-top: 15px" data-i18n="whatsNew.loadChangesError">
                                 Nie udało się załadować informacji o zmianach.
                             </p>
                             <p
@@ -2066,9 +2112,8 @@
                                     font-size: 14px;
                                     color: var(--text-muted);
                                 "
-                            >
-                                Spróbuj ponownie później lub otwórz GitHub
-                                ręcznie.
+                             data-i18n="whatsNew.loadChangesHint">
+                                Spróbuj ponownie później lub otwórz GitHub ręcznie.
                             </p>
                         </div>
                     </div>
@@ -2091,7 +2136,7 @@
                                 font-size: 20px;
                             "
                             >key</span
-                        >Zmień hasło
+                        ><span data-i18n="login.changePassword">Zmień hasło</span>
                     </h3>
                     <button
                         id="btn-close-change-password"
@@ -2109,12 +2154,12 @@
                                 display: block;
                                 margin-bottom: 6px;
                             "
-                            >Stare hasło</label
+                             data-i18n="login.oldPassword">Stare hasło</label
                         >
                         <input
                             type="password"
                             id="cp-old-password"
-                            placeholder="Obecne hasło"
+                            placeholder="Obecne hasło" data-i18n-placeholder="login.currentPassword"
                             style="width: 100%; box-sizing: border-box"
                         />
                     </div>
@@ -2126,12 +2171,12 @@
                                 display: block;
                                 margin-bottom: 6px;
                             "
-                            >Nowe hasło</label
+                             data-i18n="login.newPassword">Nowe hasło</label
                         >
                         <input
                             type="password"
                             id="cp-new-password"
-                            placeholder="Min. 4 znaki"
+                            placeholder="Min. 4 znaki" data-i18n-placeholder="login.min4Chars"
                             style="width: 100%; box-sizing: border-box"
                         />
                     </div>
@@ -2143,12 +2188,12 @@
                                 display: block;
                                 margin-bottom: 6px;
                             "
-                            >Potwierdź nowe hasło</label
+                             data-i18n="login.confirmNewPassword">Potwierdź nowe hasło</label
                         >
                         <input
                             type="password"
                             id="cp-confirm-password"
-                            placeholder="Powtórz nowe hasło"
+                            placeholder="Powtórz nowe hasło" data-i18n-placeholder="login.repeatNewPassword"
                             style="width: 100%; box-sizing: border-box"
                         />
                     </div>
@@ -2171,10 +2216,10 @@
                         padding: 16px 24px;
                     "
                 >
-                    <button id="btn-cancel-change-password" class="btn outline">
+                    <button id="btn-cancel-change-password" class="btn outline" data-i18n="common.cancel">
                         Anuluj
                     </button>
-                    <button id="btn-submit-change-password" class="btn primary">
+                    <button id="btn-submit-change-password" class="btn primary" data-i18n="login.changePassword">
                         Zmień hasło
                     </button>
                 </div>
@@ -2185,11 +2230,11 @@
         <div id="results-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Badanie Zakończone</h3>
+                    <h3 data-i18n="results.completed">Badanie Zakończone</h3>
                     <button
                         id="btn-close-modal"
                         class="close-x"
-                        aria-label="Zamknij okno wyników"
+                        aria-label="Zamknij okno wyników" data-i18n-aria-label="results.closeTitle"
                     >
                         &times;
                     </button>
@@ -2202,7 +2247,7 @@
                         >
                             <!-- JS wstrzyknie tu kafelki wyników -->
                         </div>
-                        <p class="results-hint">
+                        <p class="results-hint" data-i18n-html="results.fullDataHint">
                             Pełne dane i wcześniejsze wyniki znajdziesz
                             w zakładce <strong>Historia Wyników</strong>.
                         </p>
@@ -2210,8 +2255,8 @@
                     <div class="status-info" id="modal-upload-info"></div>
                 </div>
                 <div class="modal-footer">
-                    <button id="btn-discard" class="btn danger">Odrzuć</button>
-                    <button id="btn-upload-cloud" class="btn primary" disabled>
+                    <button id="btn-discard" class="btn danger" data-i18n="results.discard">Odrzuć</button>
+                    <button id="btn-upload-cloud" class="btn primary" disabled data-i18n="results.upload">
                         Wyślij do Chmury
                     </button>
                 </div>
@@ -2222,7 +2267,7 @@
         <div id="about-modal" class="modal-overlay hidden">
             <div class="modal-content modal-content--sm modal-content--center">
                 <div class="modal-header">
-                    <h3>O platformie Nous</h3>
+                    <h3 data-i18n="about.platformTitle">O platformie Nous</h3>
                     <button id="btn-close-about" class="close-x">
                         &times;
                     </button>
@@ -2240,12 +2285,11 @@
                         "
                     />
                     <p><strong>Nous</strong></p>
-                    <p>
-                        Platforma do dystrybucji i przeprowadzania testów
-                        psychometrycznych.
+                    <p data-i18n="about.platformDescription">
+                        Platforma do dystrybucji i przeprowadzania testów psychometrycznych.
                     </p>
                     <hr class="form-divider" />
-                    <p style="font-size: 12px; color: var(--text-muted)">
+                    <p style="font-size: 12px; color: var(--text-muted)" data-i18n-html="about.credits">
                         Praca Inżynierska<br />
                         Autor: Bartosz Kauc<br />
                         Uczelnia: Uniwersytet Kazimierza Wielkiego<br />
@@ -2257,9 +2301,9 @@
                     style="justify-content: center; gap: 15px"
                 >
                     <button id="btn-about-project" class="btn secondary">
-                        <span class="material-icons">code</span> Strona projektu
+                        <span class="material-icons">code</span> <span data-i18n="about.projectSite">Strona projektu</span>
                     </button>
-                    <button id="btn-about-close-footer" class="btn primary">
+                    <button id="btn-about-close-footer" class="btn primary" data-i18n="about.close">
                         Zamknij
                     </button>
                 </div>
@@ -2274,7 +2318,7 @@
         >
             <div class="modal-content modal-content--sm modal-content--center">
                 <div class="modal-header">
-                    <h3 id="custom-dialog-title">Komunikat</h3>
+                    <h3 id="custom-dialog-title" data-i18n="dialog.messageTitle">Komunikat</h3>
                     <button id="btn-close-custom-dialog" class="close-x">
                         &times;
                     </button>
@@ -2284,7 +2328,7 @@
                         id="custom-dialog-icon"
                         style="margin-bottom: 15px"
                     ></div>
-                    <p id="custom-dialog-message">Treść komunikatu...</p>
+                    <p id="custom-dialog-message" data-i18n="dialog.message">Treść komunikatu...</p>
                 </div>
                 <div
                     class="modal-footer"
@@ -2304,7 +2348,7 @@
         >
             <div class="modal-content modal-content--md modal-content--center">
                 <div class="modal-header">
-                    <h3>Szyfrowanie End-to-End</h3>
+                    <h3 data-i18n="e2e.setupTitle">Szyfrowanie End-to-End</h3>
                 </div>
                 <div class="modal-body">
                     <span
@@ -2316,9 +2360,8 @@
                         "
                         >lock</span
                     >
-                    <p>
-                        Witaj! Wygląda na to, że logujesz się po raz pierwszy
-                        lub na nowym urządzeniu.
+                    <p data-i18n="e2e.setupWelcome">
+                        Witaj! Wygląda na to, że logujesz się po raz pierwszy lub na nowym urządzeniu.
                     </p>
                     <p
                         style="
@@ -2326,16 +2369,14 @@
                             color: var(--text-muted);
                             margin-bottom: 20px;
                         "
-                    >
-                        Ustaw 6-cyfrowy PIN Medyczny. Będzie on chronił Twój
-                        klucz szyfrujący w chmurze, zapewniając absolutną
-                        poufność wyników badań.
+                     data-i18n="e2e.setupDescription">
+                        Ustaw 6-cyfrowy PIN Medyczny. Będzie on chronił Twój klucz szyfrujący w chmurze, zapewniając absolutną poufność wyników badań.
                     </p>
                     <div class="form-group">
                         <input
                             type="password"
                             id="pin-setup-input"
-                            placeholder="Wpisz 6 cyfr"
+                            placeholder="Wpisz 6 cyfr" data-i18n-placeholder="e2e.enter6Digits"
                             maxlength="6"
                             style="
                                 text-align: center;
@@ -2358,7 +2399,7 @@
                     ></p>
                 </div>
                 <div class="modal-footer" style="justify-content: center">
-                    <button id="btn-save-pin" class="btn primary">
+                    <button id="btn-save-pin" class="btn primary" data-i18n="e2e.savePin">
                         Zapisz PIN i Utwórz Klucz
                     </button>
                 </div>
@@ -2373,7 +2414,7 @@
         >
             <div class="modal-content modal-content--sm modal-content--center">
                 <div class="modal-header">
-                    <h3>Odblokuj Bazę Wyników</h3>
+                    <h3 data-i18n="e2e.unlockTitle">Odblokuj Bazę Wyników</h3>
                 </div>
                 <div class="modal-body">
                     <span
@@ -2385,9 +2426,8 @@
                         "
                         >vpn_key</span
                     >
-                    <p>
-                        Podaj swój kod PIN, aby odszyfrować historię badań z
-                        chmury.
+                    <p data-i18n="e2e.unlockDescription">
+                        Podaj swój kod PIN, aby odszyfrować historię badań z chmury.
                     </p>
                     <div class="form-group">
                         <input
@@ -2424,17 +2464,17 @@
                             display: inline-block;
                             margin-top: 15px;
                         "
-                        >Zapomniałem PIN-u (Użyj kodu odzyskiwania)</a
+                         data-i18n="e2e.forgotPin">Zapomniałem PIN-u (Użyj kodu odzyskiwania)</a
                     >
                 </div>
                 <div
                     class="modal-footer"
                     style="justify-content: center; gap: 10px"
                 >
-                    <button id="btn-cancel-pin" class="btn outline hidden">
+                    <button id="btn-cancel-pin" class="btn outline hidden" data-i18n="common.cancel">
                         Anuluj
                     </button>
-                    <button id="btn-submit-pin" class="btn primary">
+                    <button id="btn-submit-pin" class="btn primary" data-i18n="e2e.unlock">
                         Odblokuj
                     </button>
                 </div>
@@ -2449,7 +2489,7 @@
         >
             <div class="modal-content modal-content--md modal-content--center">
                 <div class="modal-header">
-                    <h3>Odzyskiwanie Dostępu</h3>
+                    <h3 data-i18n="e2e.recoveryTitle">Odzyskiwanie Dostępu</h3>
                     <button id="btn-close-recovery-modal" class="close-x">
                         &times;
                     </button>
@@ -2464,7 +2504,7 @@
                         "
                         >health_and_safety</span
                     >
-                    <p>
+                    <p data-i18n="e2e.recoveryDescription">
                         Wklej swój 24-znakowy Kod Ratunkowy, aby zresetować PIN.
                     </p>
                     <div class="form-group">
@@ -2485,12 +2525,12 @@
                             "
                         />
                     </div>
-                    <p style="margin-top: 20px">Nowy 6-cyfrowy PIN:</p>
+                    <p style="margin-top: 20px" data-i18n="e2e.newPin">Nowy 6-cyfrowy PIN:</p>
                     <div class="form-group">
                         <input
                             type="password"
                             id="new-pin-input"
-                            placeholder="Wpisz 6 cyfr"
+                            placeholder="Wpisz 6 cyfr" data-i18n-placeholder="e2e.enter6Digits"
                             maxlength="6"
                             style="
                                 text-align: center;
@@ -2513,7 +2553,7 @@
                     ></p>
                 </div>
                 <div class="modal-footer" style="justify-content: center">
-                    <button id="btn-submit-recovery" class="btn primary">
+                    <button id="btn-submit-recovery" class="btn primary" data-i18n="e2e.recoverKey">
                         Odzyskaj Klucz
                     </button>
                 </div>
@@ -2528,12 +2568,11 @@
         >
             <div class="modal-content modal-content--center">
                 <div class="modal-header">
-                    <h3 style="color: #f44336">Zapisz Kod Odzyskiwania!</h3>
+                    <h3 style="color: #f44336" data-i18n="e2e.saveRecoveryTitle">Zapisz Kod Odzyskiwania!</h3>
                 </div>
                 <div class="modal-body">
-                    <p style="font-weight: bold; margin-bottom: 10px">
-                        To jest Twój jedyny ratunek w przypadku zapomnienia
-                        PIN-u.
+                    <p style="font-weight: bold; margin-bottom: 10px" data-i18n="e2e.recoveryWarning">
+                        To jest Twój jedyny ratunek w przypadku zapomnienia PIN-u.
                     </p>
                     <p
                         style="
@@ -2541,11 +2580,8 @@
                             color: var(--text-muted);
                             margin-bottom: 20px;
                         "
-                    >
-                        Skopiuj poniższy kod i przechowuj go w bardzo
-                        bezpiecznym miejscu (np. w menedżerze haseł). Jeśli
-                        zapomnisz PIN-u i zgubisz ten kod, bezpowrotnie stracisz
-                        dostęp do chmury wyników.
+                     data-i18n="e2e.recoveryInstructions">
+                        Skopiuj poniższy kod i przechowuj go w bardzo bezpiecznym miejscu (np. w menedżerze haseł). Jeśli zapomnisz PIN-u i zgubisz ten kod, bezpowrotnie stracisz dostęp do chmury wyników.
                     </p>
                     <div
                         style="
@@ -2570,7 +2606,7 @@
                     </div>
                 </div>
                 <div class="modal-footer" style="justify-content: center">
-                    <button id="btn-understood-recovery" class="btn primary">
+                    <button id="btn-understood-recovery" class="btn primary" data-i18n="e2e.recoveryUnderstood">
                         Skopiowałem i rozumiem
                     </button>
                 </div>

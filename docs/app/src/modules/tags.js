@@ -6,6 +6,7 @@ import {
   parseTagSearchQuery as parseQuery,
   matchesTagGroups as matchesGroups,
 } from "../catalog/tagsStore.js";
+import { t } from "../i18n/index.js";
 
 // Re-eksport czystej logiki — dotychczasowi importerzy (`library.js` via Tags.*,
 // `testCatalog.queryTests` przez wstrzyknięcie) działają bez zmian.
@@ -102,7 +103,7 @@ export function openTagMenu(testId, testName, anchorElement, onUpdate) {
   // Header
   const header = document.createElement("div");
   header.className = "tag-menu-header";
-  header.innerHTML = `<strong>Tagi: ${testName}</strong>`;
+  header.innerHTML = `<strong>${t("library.tagsTitle", { name: testName })}</strong>`;
   popup.appendChild(header);
 
   // Tags list
@@ -126,14 +127,14 @@ export function openTagMenu(testId, testName, anchorElement, onUpdate) {
 
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Dodaj tagi (po przecinku)...";
+  input.placeholder = t("library.addTagsPlaceholder");
   input.className = "tag-input";
   input.setAttribute("list", "tag-suggestions");
 
   const addBtn = document.createElement("button");
   addBtn.className = "btn primary small";
-  addBtn.textContent = "Dodaj";
-  addBtn.setAttribute("aria-label", "Dodaj wpisane tagi");
+  addBtn.textContent = t("library.addTag");
+  addBtn.setAttribute("aria-label", t("library.addTagsAria"));
 
   const performAdd = () => {
     const val = input.value.trim();
@@ -220,7 +221,7 @@ function renderTagList(container, testId, tags, onUpdate) {
   container.innerHTML = "";
   if (tags.length === 0) {
     container.innerHTML =
-      '<p style="color:#888; font-size:12px; margin: 10px 0;">Brak tagów.</p>';
+      `<p style="color:#888; font-size:12px; margin: 10px 0;">${t("library.noTags")}</p>`;
     return;
   }
 
@@ -235,7 +236,7 @@ function renderTagList(container, testId, tags, onUpdate) {
     const removeSpan = document.createElement("span");
     removeSpan.className = "tag-remove";
     removeSpan.textContent = " ✕";
-    removeSpan.setAttribute("aria-label", `Usuń tag ${tag}`);
+    removeSpan.setAttribute("aria-label", t("library.removeTagAria", { tag }));
     removeSpan.setAttribute("role", "button");
     removeSpan.onclick = (e) => {
       e.stopPropagation(); // Zapobiegaj zamykaniu menu

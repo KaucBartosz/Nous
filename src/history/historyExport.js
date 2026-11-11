@@ -9,6 +9,7 @@ import {
   downloadFile,
 } from "../results/resultExporter.js";
 import { filterResults, paginate } from "../results/historyQuery.js";
+import { t } from "../i18n/index.js";
 import {
   loadDownloadPrefs,
   isSilentDownload,
@@ -38,7 +39,7 @@ export function pageCsvItems(all, filters, page, pageSize) {
 export function exportHistoryToCSV({ all, filters, page, pageSize }) {
   const items = pageCsvItems(all, filters, page, pageSize);
   if (items.length === 0) return false;
-  return downloadResultsAsCSV(items, "historia_wynikow.csv");
+  return downloadResultsAsCSV(items, t("history.exportCsvFileName"));
 }
 
 /** Plik pojedynczego wyniku (format z radio dl-format, domyślnie json). */
@@ -47,13 +48,13 @@ export function singleResultFile(result, format = "json") {
   const stamp = new Date(result.timestamp).getTime();
   if (format === "csv") {
     return {
-      filename: `wynik_${test_id}_${stamp}.csv`,
+      filename: `result_${test_id}_${stamp}.csv`,
       content: toKeyValueCSV(resultRow(result, { deep: true })),
       mime: "text/csv;charset=utf-8;",
     };
   }
   return {
-    filename: `wynik_${test_id}_${stamp}.json`,
+    filename: `result_${test_id}_${stamp}.json`,
     content: JSON.stringify(result, null, 2),
     mime: "application/json",
   };
@@ -77,7 +78,7 @@ export async function archiveHistoryResults({ results, filename, format }) {
   if (!getPlatform().capabilities?.canBulkZip) {
     const csvName = `${filename.replace(/\.zip$/i, "")}.csv`;
     if (!downloadResultsAsCSV(results, csvName)) {
-      return { success: false, error: "brak wyników do zapisania" };
+      return { success: false, error: t("history.noResultsToSave") };
     }
     return { success: true, format: "csv" };
   }

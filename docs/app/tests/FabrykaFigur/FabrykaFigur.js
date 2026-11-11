@@ -3,11 +3,15 @@
  *****************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
+import { lang, t as tr } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
+
+localizePsychoJSDialogs(lang);
 
 // ================= SESSION INFO =================
 let expName = 'FabrykaFigur';
@@ -52,9 +56,9 @@ flowScheduler.add(durationRoutineEnd());
 flowScheduler.add(trialsRoutineBegin());
 flowScheduler.add(trialsRoutineEachFrame());
 flowScheduler.add(trialsRoutineEnd());
-flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
-dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
   expName: expName,
@@ -97,9 +101,9 @@ const ALL_COLORS = ['RED', 'BLU', 'GRE', 'YEL', 'BLA'];
 const BASE_SPEED = 0.25;
 
 const DIFFICULTY_CONFIG = {
-  easy: { label: 'Łatwy', shapes: 3, colors: 3, speedMult: 1.0 },
-  medium: { label: 'Średni', shapes: 4, colors: 4, speedMult: 1.2 },
-  hard: { label: 'Trudny', shapes: 5, colors: 5, speedMult: 1.35 },
+  easy: { label: tr('difficulty.easy'), shapes: 3, colors: 3, speedMult: 1.0 },
+  medium: { label: tr('difficulty.medium'), shapes: 4, colors: 4, speedMult: 1.2 },
+  hard: { label: tr('difficulty.hard'), shapes: 5, colors: 5, speedMult: 1.35 },
 };
 
 const DURATION_OPTIONS = [40, 180, 300];
@@ -295,7 +299,7 @@ function welcomeRoutineBegin() {
 
     welcomeText = new visual.TextStim({
       win: psychoJS.window,
-      text: 'Za chwilę na ekranie zobaczysz serię różnych figur. Za pomocą MYSZY, klikaj na te figury, których kształt i kolor odpowiada wzorcowi przedstawionemu u góry ekranu. Wzorzec, co jakiś czas będzie się zmieniał. Zawsze należy klikać na te figury, których kształt i kolor odpowiada aktualnemu wzorcowi. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
+      text: tr('instructions'),
       font: 'Arial',
       pos: [0, 0], height: 0.045, wrapWidth: 1.6,
       color: new util.Color('white'),
@@ -326,7 +330,7 @@ function welcomeRoutineEachFrame() {
     }
 
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     if (!continueRoutine) {
@@ -356,11 +360,7 @@ function difficultyRoutineBegin() {
 
     difficultyText = new visual.TextStim({
       win: psychoJS.window,
-      text: 'Wybierz poziom trudności:\n\n'
-        + '1 – Łatwy (3 figury, 3 kolory)\n'
-        + '2 – Średni (4 figury, 4 kolory, +20% prędkości)\n'
-        + '3 – Trudny (5 figur, 5 kolorów, +35% prędkości)\n\n'
-        + 'Naciśnij 1, 2 lub 3.',
+      text: tr('difficulty'),
       font: 'Arial',
       pos: [0, 0], height: 0.045, wrapWidth: 1.6,
       color: new util.Color('white'),
@@ -395,7 +395,7 @@ function difficultyRoutineEachFrame() {
     }
 
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     if (!continueRoutine) {
@@ -434,11 +434,7 @@ function durationRoutineBegin() {
 
     durationText = new visual.TextStim({
       win: psychoJS.window,
-      text: 'Wybierz czas trwania testu:\n\n'
-        + '1 – 40 sekund\n'
-        + '2 – 180 sekund\n'
-        + '3 – 300 sekund\n\n'
-        + 'Naciśnij 1, 2 lub 3.',
+      text: tr('duration'),
       font: 'Arial',
       pos: [0, 0], height: 0.045, wrapWidth: 1.6,
       color: new util.Color('white'),
@@ -473,7 +469,7 @@ function durationRoutineEachFrame() {
     }
 
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     if (!continueRoutine) {
@@ -588,7 +584,7 @@ function trialsRoutineBegin() {
     // Counter text
     correctCounter = new visual.TextStim({
       win: psychoJS.window,
-      text: 'Poprawne: 0',
+      text: tr('correct', { n: 0 }),
       pos: [0.6, 0.45],
       height: 0.035,
       color: new util.Color('white'),
@@ -823,7 +819,7 @@ function trialsRoutineEachFrame() {
 
     // ESC check
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     if (!continueRoutine) {
@@ -884,7 +880,7 @@ function _handleClick(clickPos, elapsed) {
       y: clickPos[1]
     });
 
-    correctCounter.setText('Poprawne: ' + target_presses);
+    correctCounter.setText(tr('correct', { n: target_presses }));
   }
 }
 
@@ -943,7 +939,7 @@ async function quitPsychoJS(message, isCompleted) {
       let accuracy = wszystkieKliki > 0 ? Math.round((poprawneTrafienia / wszystkieKliki) * 100) : 0;
       let detectionRate = obiektyDoKlikniecia > 0 ? Math.round((poprawneTrafienia / obiektyDoKlikniecia) * 100) : 0;
 
-      let diffLabel = chosenDifficulty ? DIFFICULTY_CONFIG[chosenDifficulty].label : 'nieznany';
+      let diffLabel = chosenDifficulty ? DIFFICULTY_CONFIG[chosenDifficulty].label : tr('difficulty.unknown');
 
       window.electronTest.sendResults({
         testId: expInfo['expName'] || 'FabrykaFigur',
@@ -959,7 +955,15 @@ async function quitPsychoJS(message, isCompleted) {
         poziom_trudnosci: diffLabel,
         czas_trwania: chosenDuration || 0,
 
-        score: `Poziom: ${diffLabel} | Czas: ${chosenDuration || 0}s | Poprawne: ${poprawneTrafienia} | Błędne: ${bledneTrafienia} | Pominięte: ${pominiete} | Obiektów: ${obiektyDoKlikniecia} | Skuteczność: ${accuracy}%`,
+        score: tr('score', {
+          level: diffLabel,
+          seconds: chosenDuration || 0,
+          correct: poprawneTrafienia,
+          wrong: bledneTrafienia,
+          missed: pominiete,
+          objects: obiektyDoKlikniecia,
+          accuracy: accuracy,
+        }),
 
         statystyki: {
           poprawne: poprawneTrafienia,
@@ -983,14 +987,3 @@ async function quitPsychoJS(message, isCompleted) {
   psychoJS.quit({ message: message, isCompleted: isCompleted });
   return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

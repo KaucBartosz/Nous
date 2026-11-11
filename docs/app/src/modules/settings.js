@@ -6,6 +6,7 @@ import {
   resolveDownloadDir,
 } from '../platform/downloadPrefs.js';
 import { Notify } from '../notify/notify.js';
+import { t, getLocale, setLocale, getSupportedLocales } from '../i18n/index.js';
 
 const SETTINGS_KEY = 'nous-app-settings';
 const CUSTOM_CACHE_KEY = 'nous-app-settings-custom-cache';
@@ -15,6 +16,7 @@ const SAVED_THEMES_KEY = 'nous-app-saved-themes';
 const DEFAULT_DARK_SETTINGS = {
     theme: 'dark',
     showLocalTests: false,
+    autoLoadDemographics: false,
     // Interactive Elements
     primaryColor: '#4f8cf2',
     primaryHover: '#6ea1f7',
@@ -40,6 +42,7 @@ const DEFAULT_DARK_SETTINGS = {
 const DEFAULT_LIGHT_SETTINGS = {
     theme: 'light',
     showLocalTests: false,
+    autoLoadDemographics: false,
     // Interactive Elements
     primaryColor: '#1d4ed8',
     primaryHover: '#1e40af',
@@ -288,7 +291,7 @@ function getSavedThemes() {
 function saveCustomTheme(name, settings) {
     const themes = getSavedThemes();
     const cleanName = sanitize(name.trim());
-    if (!cleanName) return { success: false, error: 'Nazwa nie może być pusta!' };
+    if (!cleanName) return { success: false, error: t('settings.themeNameEmpty') };
 
     // Update if exists or add new
     const existingIndex = themes.findIndex(t => t.name === cleanName);
@@ -347,6 +350,9 @@ export function initSettings() {
         showLocalTestsToggle: document.getElementById('show-local-tests-toggle'),
         localTestsPathStr: document.getElementById('local-tests-path'),
 
+        // Auto-load demographics
+        autoLoadDemographicsToggle: document.getElementById('auto-load-demographics-toggle'),
+
         // Icons
         iconColorPicker: document.getElementById('icon-color-picker'),
         iconColorValue: document.getElementById('icon-color-value'),
@@ -372,7 +378,10 @@ export function initSettings() {
         savedThemesSelect: document.getElementById('saved-themes-select'),
         newThemeNameInput: document.getElementById('new-theme-name'),
         btnSaveCustomTheme: document.getElementById('btn-save-custom-theme'),
-        btnDeleteTheme: document.getElementById('btn-delete-theme')
+        btnDeleteTheme: document.getElementById('btn-delete-theme'),
+
+        // Language
+        languageSelect: document.getElementById('language-select')
     };
 
     // Populate saved themes dropdown
@@ -381,7 +390,7 @@ export function initSettings() {
         const themes = getSavedThemes();
         const currentVal = elements.savedThemesSelect.value;
 
-        elements.savedThemesSelect.innerHTML = '<option value="">-- Domyślny Własny --</option>';
+        elements.savedThemesSelect.innerHTML = `<option value="">${t('settings.defaultCustom')}</option>`;
         themes.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.name;
@@ -409,6 +418,9 @@ export function initSettings() {
         if (elements.showLocalTestsToggle) {
             elements.showLocalTestsToggle.checked = settings.showLocalTests === true;
         }
+        if (elements.autoLoadDemographicsToggle) {
+            elements.autoLoadDemographicsToggle.checked = settings.autoLoadDemographics === true;
+        }
 
         elements.themeRadios.forEach(radio => {
             radio.checked = radio.value === settings.theme;
@@ -416,6 +428,40 @@ export function initSettings() {
     }
 
     updateFormValues(settings);
+
+    // --- Język interfejsu (wybór zapisywany lokalnie) ---
+    if (elements.languageSelect) {
+        if (!elements.languageSelect.options.length) {
+            getSupportedLocales().forEach((code) => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = t(code === 'pl' ? 'common.polish' : 'common.english');
+                elements.languageSelect.appendChild(opt);
+            });
+        }
+        elements.languageSelect.value = getLocale();
+        elements.languageSelect.addEventListener('change', (e) => {
+            setLocale(e.target.value);
+        });
+    }
+
+    // Przełącznik języka na ekranie logowania (dostępny przed zalogowaniem).
+    const loginLangButtons = document.querySelectorAll('[data-locale-choice]');
+    const syncLoginLangButtons = () => {
+        loginLangButtons.forEach((btn) => {
+            const active = btn.dataset.locale === getLocale();
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', String(active));
+        });
+    };
+    loginLangButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            setLocale(btn.dataset.locale);
+            if (elements.languageSelect) elements.languageSelect.value = getLocale();
+            syncLoginLangButtons();
+        });
+    });
+    syncLoginLangButtons();
 
     // Setup color picker listeners
     function setupColorPicker(picker, valueDisplay, settingKey) {
@@ -488,7 +534,7 @@ export function initSettings() {
             const name = elements.newThemeNameInput.value;
             if (!name) {
                 const { Dialog } = await import('./dialog.js');
-                await Dialog.alert("Podaj nazwę dla nowego motywu!", 'warning');
+                await Dialog.alert(t('settings.themeNameRequired'), 'warning');
                 return;
             }
 
@@ -499,7 +545,7 @@ export function initSettings() {
                 elements.savedThemesSelect.value = sanitize(name.trim());
 
                 const { Dialog } = await import('./dialog.js');
-                await Dialog.alert(`Motyw "${name}" został zapisany!`, 'success');
+                await Dialog.alert(t('settings.themeSaved', { name }), 'success');
             } else {
                 const { Dialog } = await import('./dialog.js');
                 await Dialog.alert(result.error, 'error');
@@ -514,7 +560,7 @@ export function initSettings() {
             if (!name) return;
 
             const { Dialog } = await import('./dialog.js');
-            const confirm = await Dialog.confirm(`Czy na pewno chcesz usunąć motyw "${name}"?`, 'warning');
+            const confirm = await Dialog.confirm(t('settings.deleteThemeConfirm', { name }), 'warning');
             if (confirm) {
                 deleteCustomTheme(name);
                 refreshThemesDropdown();
@@ -547,11 +593,11 @@ export function initSettings() {
             updateFormValues(defaults);
 
             // Show success message
-            elements.status.textContent = 'Przywrócono ustawienia domyślne!';
+            elements.status.textContent = t('settings.defaultsRestored');
             elements.status.style.display = 'block';
             setTimeout(() => {
                 elements.status.style.display = 'none';
-                elements.status.textContent = 'Ustawienia zapisane!';
+                elements.status.textContent = t('settings.settingsSaved');
             }, 3000);
         });
     }
@@ -561,14 +607,19 @@ export function initSettings() {
             currentSettings.showLocalTests = e.target.checked;
         });
     }
+    if (elements.autoLoadDemographicsToggle) {
+        elements.autoLoadDemographicsToggle.addEventListener('change', (e) => {
+            currentSettings.autoLoadDemographics = e.target.checked === true;
+        });
+    }
 
     // C1: ścieżka testów przez seam (na Web brak __scannedDir → 'Nieznana lokalizacja')
     if (elements.localTestsPathStr) {
         getPlatform().tests.getLocalVersions().then(localVersions => {
-            elements.localTestsPathStr.textContent = (localVersions && localVersions.__scannedDir) || 'Nieznana lokalizacja';
+            elements.localTestsPathStr.textContent = (localVersions && localVersions.__scannedDir) || t('settings.unknownLocation');
         }).catch(err => {
             console.error("Błąd pobierania ścieżki:", err);
-            elements.localTestsPathStr.textContent = 'Błąd pobierania ścieżki';
+            elements.localTestsPathStr.textContent = t('settings.pathLoadError');
         });
     }
 
@@ -594,17 +645,17 @@ export function initSettings() {
 
     async function refreshDownloadForm() {
         if (silentToggle) silentToggle.checked = dlPrefs.silent === true;
-        if (btnPickDir) btnPickDir.disabled = !dlPrefs.silent;
+        if (btnPickDir) btnPickDir.disabled = false;
         if (dirLabel) {
             if (!isDesktopDownloads) {
-                dirLabel.textContent = 'Niedostępne w przeglądarce';
+                dirLabel.textContent = t('settings.unavailableInBrowser');
                 return;
             }
             try {
                 const fallback = await getPlatform().files.getDownloadsDir();
-                dirLabel.textContent = resolveDownloadDir(dlPrefs, fallback) || 'Nieznany folder';
+                dirLabel.textContent = resolveDownloadDir(dlPrefs, fallback) || t('settings.unknownFolder');
             } catch (e) {
-                dirLabel.textContent = dlPrefs.dir || 'Domyślny folder pobierania';
+                dirLabel.textContent = dlPrefs.dir || t('settings.defaultDownloadFolder');
             }
         }
     }
@@ -630,7 +681,7 @@ export function initSettings() {
                 }
             } catch (e) {
                 console.error('Błąd wyboru folderu:', e);
-                Notify.error('Nie udało się wybrać folderu: ' + e.message);
+                Notify.error(t('settings.folderSelectError', { message: e.message }));
             }
         });
     }

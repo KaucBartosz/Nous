@@ -3,9 +3,13 @@
  ************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
+import { lang, t as tr } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
+
+localizePsychoJSDialogs(lang);
 //some handy aliases as in the psychopy scripts;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
@@ -57,10 +61,10 @@ flowScheduler.add(trialsLoopEnd);
 
 
 
-flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
 // quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
   expName: expName,
@@ -125,7 +129,7 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Za chwilę zobaczysz dwa samochody i dwie sygnalizacje świetlne. \nZa pomocą strzałek na klawiaturze wskaż ten z samochodów, przy którym sygnalizacja zmieni kolor na zielony. \nStaraj się reagować najszybciej jak potrafisz. \nAby rozpocząć zadanie, wciśnij SPACJĘ.',
+    text: tr('welcome'),
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,
@@ -324,7 +328,7 @@ function welcomeRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     // check if the Routine should terminate
@@ -641,7 +645,7 @@ function trialRoutineEachFrame() {
     }
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     // check if the Routine should terminate
@@ -785,7 +789,13 @@ async function quitPsychoJS(message, isCompleted) {
         czas_reakcji: sredniCzasReakcji,
 
         // Ujednolicony format score
-        score: `Poprawne: ${poprawneNacisniecia} | Błędne: ${bledneNacisniecia} | Łącznie: ${wszystkieNacisniecia} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
+        score: tr('score', {
+          correct: poprawneNacisniecia,
+          wrong: bledneNacisniecia,
+          total: wszystkieNacisniecia,
+          accuracy,
+          rt: sredniCzasReakcji,
+        }),
 
         statystyki: {
           sredni_czas_ms: sredniCzasReakcji,
@@ -814,14 +824,3 @@ async function quitPsychoJS(message, isCompleted) {
 
   return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

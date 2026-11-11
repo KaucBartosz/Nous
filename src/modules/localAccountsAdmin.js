@@ -5,6 +5,7 @@ import { getAllLocalAccounts } from './database.js';
 import { adminResetLocalPassword, getUserStatus } from './auth.js';
 import { Notify } from '../notify/notify.js';
 import { escapeHtml } from './utils.js';
+import { t, formatDate, formatDateTime } from '../i18n/index.js';
 
 /**
  * Ładuje i renderuje listę kont lokalnych w widoku admina.
@@ -15,17 +16,17 @@ export async function loadLocalAccountsAdmin() {
 
   // Guard — tylko ADMIN
   if (getUserStatus() !== 'ADMIN') {
-    container.innerHTML = '<p style="color: var(--danger);">Brak dostępu. Wymagany status ADMIN.</p>';
+    container.innerHTML = `<p style="color: var(--danger);">${escapeHtml(t('localAdmin.noAccess'))}</p>`;
     return;
   }
 
-  container.innerHTML = '<p style="color: var(--text-muted);">Ładowanie...</p>';
+  container.innerHTML = `<p style="color: var(--text-muted);">${escapeHtml(t('localAdmin.loading'))}</p>`;
 
   try {
     const accounts = await getAllLocalAccounts();
 
     if (accounts.length === 0) {
-      container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 32px 0;">Brak kont lokalnych na tym urządzeniu.</p>';
+      container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 32px 0;">${escapeHtml(t('localAdmin.empty'))}</p>`;
       return;
     }
 
@@ -44,9 +45,9 @@ export async function loadLocalAccountsAdmin() {
 
       const meta = document.createElement('span');
       meta.className = 'local-account-meta';
-      const created = account.createdAt ? new Date(account.createdAt).toLocaleDateString('pl-PL') : '—';
-      const lastLogin = account.lastLogin ? new Date(account.lastLogin).toLocaleString('pl-PL') : '—';
-      meta.textContent = `Utworzono: ${created} · Ostatnie logowanie: ${lastLogin}`;
+      const created = account.createdAt ? formatDate(account.createdAt) : '—';
+      const lastLogin = account.lastLogin ? formatDateTime(account.lastLogin) : '—';
+      meta.textContent = t('localAdmin.created', { created, lastLogin });
 
       info.appendChild(name);
       info.appendChild(meta);
@@ -56,7 +57,7 @@ export async function loadLocalAccountsAdmin() {
 
       const btnReset = document.createElement('button');
       btnReset.className = 'btn secondary small';
-      btnReset.innerHTML = '<span class="material-icons" style="font-size:15px; vertical-align:middle; margin-right:4px;">lock_reset</span>Resetuj hasło';
+      btnReset.innerHTML = `<span class="material-icons" style="font-size:15px; vertical-align:middle; margin-right:4px;">lock_reset</span>${escapeHtml(t('localAdmin.resetPassword'))}`;
       btnReset.addEventListener('click', () => handleAdminResetPassword(account.username));
 
       actions.appendChild(btnReset);
@@ -66,7 +67,7 @@ export async function loadLocalAccountsAdmin() {
     });
 
   } catch (e) {
-    container.innerHTML = `<p style="color: var(--danger);">Błąd ładowania kont: ${escapeHtml(e.message)}</p>`;
+    container.innerHTML = `<p style="color: var(--danger);">${escapeHtml(t('localAdmin.loadError', { message: e.message }))}</p>`;
   }
 }
 
@@ -77,33 +78,33 @@ export async function loadLocalAccountsAdmin() {
 async function handleAdminResetPassword(username) {
   // Krok 1: Potwierdź zamiar
   const confirmed = await Notify.confirm(
-    `Czy na pewno chcesz zresetować hasło dla konta "${username}"?\n\nUżytkownik zostanie powiadomiony o nowym haśle.`,
+    t('localAdmin.resetConfirm', { username }),
     'warning'
   );
   if (!confirmed) return;
 
   // Krok 2: Poproś o nowe hasło
   const newPassword = await Notify.prompt(
-    `Podaj nowe hasło dla konta "${username}" (min. 4, max. 30 znaków):`,
+    t('localAdmin.newPasswordPrompt', { username }),
     ''
   );
 
   if (!newPassword || !newPassword.trim()) return;
 
   if (newPassword.trim().length < 4) {
-    await Notify.error('Hasło musi mieć min. 4 znaki.');
+    await Notify.error(t('localAdmin.passwordTooShort'));
     return;
   }
   if (newPassword.trim().length > 30) {
-    await Notify.error('Hasło max. 30 znaków.');
+    await Notify.error(t('localAdmin.passwordTooLong'));
     return;
   }
 
   const result = await adminResetLocalPassword(username, newPassword.trim());
 
   if (result.ok) {
-    await Notify.success(`Hasło dla konta "${username}" zostało zresetowane.`);
+    await Notify.success(t('localAdmin.resetSuccess', { username }));
   } else {
-    await Notify.error(`Błąd: ${result.error}`);
+    await Notify.error(t('localAdmin.error', { message: result.error }));
   }
 }

@@ -9,6 +9,7 @@ import { loadTestsList, getTrainingMode, consumePendingTrainingRun } from "./lib
 import { escapeHtml } from "./utils.js";
 import { getPlatform } from "../platform/index.js";
 import { savePipeline } from "../results/resultPipeline.js";
+import { t } from "../i18n/index.js";
 
 let currentResultPackage = null;
 
@@ -17,7 +18,7 @@ let currentResultPackage = null;
  */
 function validateTestResults(raw) {
   if (!raw || typeof raw !== "object") {
-    throw new Error("Wyniki testu muszą być obiektem");
+    throw new Error(t("results.validationMustBeObject"));
   }
 
   // Data is stored raw; sanitization happens at render time via textContent/escapeHtml
@@ -34,7 +35,7 @@ export function initResultsHandler() {
       handleTestResults(validatedData);
     } catch (e) {
       console.error("Błąd walidacji wyników:", e);
-      Notify.error(`Błąd walidacji wyników testu: ${e.message}`);
+      Notify.error(t("results.validationError", { message: e.message }));
     }
   });
 
@@ -57,8 +58,10 @@ function handleTestResults(raw) {
   // 2. Determine Participant ID
   let participantId = "GUEST";
   if (currentDemo && currentDemo.participant_id) {
+    // Kartoteka Badanych nadpisuje ID Badanego nazwą profilu.
     participantId = currentDemo.participant_id;
-  } else if (raw.subjectId && raw.subjectId !== "participant") {
+  } else if (raw.subjectId) {
+    // Brak kartoteki: ID badanego pochodzi z pola "participant" testu.
     participantId = raw.subjectId;
   }
 
@@ -86,8 +89,8 @@ function handleTestResults(raw) {
   if (currentResultPackage.isTraining) {
     Notify.toast({
       id: "training-no-save",
-      titleHtml: "Tryb treningowy",
-      messageHtml: "Tryb treningowy włączony. Nie zapisano wyniku",
+      titleHtml: t("results.trainingModeTitle"),
+      messageHtml: t("results.trainingNoSave"),
       autoDismissMs: 5000,
     });
     loadTestsList();
@@ -98,7 +101,7 @@ function handleTestResults(raw) {
 }
 
 function openModal(data) {
-  elements.modalHeaderTitle.textContent = "Badanie Zakończone";
+  elements.modalHeaderTitle.textContent = t("results.completed");
   elements.normalResultsContent.classList.remove("hidden");
   elements.btnDiscard.classList.remove("hidden");
 
@@ -118,10 +121,10 @@ function renderExtendedResults(wyniki) {
 
   container.innerHTML = "";
   const fieldsToShow = [
-    { key: "ilosc_poprawnych_nacisniec", label: "Poprawne" },
-    { key: "ilosc_blednych_nacisniec", label: "Błędne" },
-    { key: "ogolna_ilosc_nacisniec", label: "Łącznie" },
-    { key: "sredni_czas_reakcji", label: "Śr. RT", unit: "ms" },
+    { key: "ilosc_poprawnych_nacisniec", label: t("results.correct") },
+    { key: "ilosc_blednych_nacisniec", label: t("results.incorrect") },
+    { key: "ogolna_ilosc_nacisniec", label: t("results.total") },
+    { key: "sredni_czas_reakcji", label: t("results.avgRt"), unit: "ms" },
   ];
 
   fieldsToShow.forEach((f) => {
@@ -138,7 +141,7 @@ function renderExtendedResults(wyniki) {
     if (wyniki[f.key] !== undefined && wyniki[f.key] !== null) {
       value.textContent = `${wyniki[f.key]}${f.unit ? " " + f.unit : ""}`;
     } else {
-      value.textContent = "Nie dotyczy";
+      value.textContent = t("results.notApplicable");
       value.style.fontSize = "14px"; // Mniejsza czcionka dla tekstu zastępczego
       value.style.opacity = "0.5";
     }
@@ -153,7 +156,7 @@ function renderExtendedResults(wyniki) {
 
 function updateSaveButtonState() {
   elements.btnUploadCloud.disabled = false;
-  elements.btnUploadCloud.textContent = "Zapisz i Zamknij";
+  elements.btnUploadCloud.textContent = t("results.saveAndClose");
   elements.modalUploadInfo.innerHTML = "";
 }
 
@@ -171,7 +174,7 @@ async function saveResultToSystem() {
 
   try {
     elements.btnUploadCloud.disabled = true;
-    elements.btnUploadCloud.textContent = "Zapisywanie...";
+    elements.btnUploadCloud.textContent = t("results.saving");
 
     const currentUserId = getResearcherUid();
 
@@ -184,7 +187,7 @@ async function saveResultToSystem() {
       onSyncError: (err) => console.error("Sync after save failed:", err),
     });
 
-    elements.btnUploadCloud.textContent = "Zapisano!";
+    elements.btnUploadCloud.textContent = t("results.savedButton");
     elements.modalOverlay.classList.add("hidden");
     loadTestsList();
 
@@ -192,15 +195,14 @@ async function saveResultToSystem() {
     if (csvDownloaded) {
       Notify.toast({
         id: "web-result-saved",
-        titleHtml: "Wynik zapisany",
-        messageHtml:
-          "Pobrano plik CSV. Wynik jest też widoczny w zakładce <strong>Historia Wyników</strong>.",
+        titleHtml: t("results.savedToastTitle"),
+        messageHtml: t("results.savedCsvHint"),
         autoDismissMs: 8000,
       });
     }
   } catch (e) {
-    await Notify.error("Błąd zapisu bazy: " + e.message);
-    elements.btnUploadCloud.textContent = "Błąd";
+    await Notify.error(t("results.saveDbError", { message: e.message }));
+    elements.btnUploadCloud.textContent = t("results.errorShort");
   } finally {
     elements.btnUploadCloud.disabled = false;
   }

@@ -9,6 +9,7 @@ import {
   loadCatalog,
 } from '../../src/catalog/testCatalog.js';
 import { toast, setNotifyAdapter, resetNotifyAdapter, syncCountMessage } from '../../src/notify/notify.js';
+import { setLocale } from '../../src/i18n/index.js';
 import { Notify, setNotifyModalAdapter, resetNotifyModalAdapter } from '../../src/notify/notify.js';
 
 const tagsFake = {
@@ -140,6 +141,7 @@ describe('testCatalog.loadCatalog', () => {
 
 describe('notify', () => {
   it('syncCountMessage: odmiana jak stary sync', () => {
+    setLocale('pl', { persist: false });
     expect(syncCountMessage(1)).toBe('Zsynchronizowano 1 wynik.');
     expect(syncCountMessage(3)).toBe('Zsynchronizowano 3 wyniki.');
     expect(syncCountMessage(7)).toBe('Zsynchronizowano 7 wyników.');

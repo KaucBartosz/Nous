@@ -3,9 +3,13 @@
  ********************/
 
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2025.1.1.js';
+import { lang, t as tr } from './i18n.js';
+import { localizePsychoJSDialogs } from './dialog-i18n.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
+
+localizePsychoJSDialogs(lang);
 //some handy aliases as in the psychopy scripts;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
@@ -60,10 +64,10 @@ flowScheduler.add(trialsLoopScheduler);
 flowScheduler.add(trialsLoopEnd);
 
 
-flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
 // quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
   expName: expName,
@@ -127,7 +131,7 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Za chwilę na ekranie pojawią się sygnalizacje świetlne. \nTwoim zadaniem jest, za pomocą MYSZY, kliknąć na tę z sygnalizacji, w której światło zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz.\n\nGdy sygnalizacje zgasną, umieść kursor myszki na małym czerwonym kwadracie na środku ekranu, aby rozpocząć kolejną rundę.\n\nAby rozpocząć zadanie, wciśnij SPACJĘ.',
+    text: tr('welcome'),
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,
@@ -143,7 +147,7 @@ async function experimentInit() {
   selectionText = new visual.TextStim({
     win: psychoJS.window,
     name: 'selectionText',
-    text: 'Wybierz ilość rund:\n\n1 - 10 rund\n2 - 30 rund\n3 - 60 rund\n\nNaciśnij 1, 2 lub 3.',
+    text: tr('selection'),
     font: 'Arial',
     pos: [0, 0], height: 0.05, color: new util.Color('white')
   });
@@ -311,7 +315,7 @@ function welcomeRoutineEachFrame() {
 
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
 
     // check if the Routine should terminate
@@ -405,7 +409,7 @@ function selectionRoutineEachFrame() {
       }
     }
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
     if (!continueRoutine) return Scheduler.Event.NEXT;
     continueRoutine = false;
@@ -680,7 +684,7 @@ function trialRoutineEachFrame() {
     }
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
-      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+      return quitPsychoJS(tr('quit.escapeCompleted'), false);
     }
 
     // check if the Routine should terminate
@@ -791,7 +795,12 @@ async function quitPsychoJS(message, isCompleted) {
         ogolna_ilosc_nacisniec: totalClicks,
         ilosc_obiektow_do_klikniecia: nTrials,
         sredni_czas_reakcji: avgRTms,
-        score: `Poprawne: ${correctCount} | Błędne: ${wrongCount} | Braki: ${noResponseCount} | Śr. RT: ${avgRTms} ms`,
+        score: tr('score', {
+          correct: correctCount,
+          wrong: wrongCount,
+          missing: noResponseCount,
+          rt: avgRTms,
+        }),
         statystyki: {
           sredni_czas_ms: avgRTms,
           poprawne_reakcje: correctCount,
@@ -810,14 +819,3 @@ async function quitPsychoJS(message, isCompleted) {
 
   return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

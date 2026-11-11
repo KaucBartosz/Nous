@@ -10,12 +10,16 @@ import {
   visual,
   hardware,
 } from "./lib/psychojs-2025.1.1.js";
+import { lang, t as tr } from "./i18n.js";
+import { localizePsychoJSDialogs } from "./dialog-i18n.js";
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
 const { Scheduler } = util;
 //some handy aliases as in the psychopy scripts;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
+
+localizePsychoJSDialogs(lang);
 
 // store info about the experiment session:
 let expName = "semafor"; // from the Builder filename that created this script
@@ -72,10 +76,10 @@ flowScheduler.add(n_trialsLoopBegin(n_trialsLoopScheduler));
 flowScheduler.add(n_trialsLoopScheduler);
 flowScheduler.add(n_trialsLoopEnd);
 
-flowScheduler.add(quitPsychoJS, "Thank you for your patience.", true);
+flowScheduler.add(quitPsychoJS, tr('quit.thanks'), true);
 
 // quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, "Thank you for your patience.", false);
+dialogCancelScheduler.add(quitPsychoJS, tr('quit.thanks'), false);
 
 psychoJS.start({
   expName: expName,
@@ -155,7 +159,7 @@ async function experimentInit() {
   welcomeText = new visual.TextStim({
     win: psychoJS.window,
     name: "welcomeText",
-    text: "Za chwilę zobaczysz planszę z lampkami. Twoim zadaniem będzie, za pomocą MYSZY, wskazać tę lampkę, która znajduje się na przecięciu prostych dwóch lampek zapalonych na zielono. Staraj się klikać najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.",
+    text: tr('welcome'),
     font: "Arial",
     units: undefined,
     pos: [0, 0],
@@ -330,7 +334,7 @@ async function experimentInit() {
   menuHint = new visual.TextStim({
     win: psychoJS.window,
     name: "menuHint",
-    text: "[ klawisze:  1  lub  2 ]",
+    text: tr('menu.hint'),
     font: "Arial",
     pos: [0, -0.28],
     height: 0.032,
@@ -345,7 +349,7 @@ async function experimentInit() {
   menuBtn1Text = new visual.TextStim({
     win: psychoJS.window,
     name: "menuBtn1Text",
-    text: "1.Test",
+    text: tr('menu.test'),
     font: "Arial",
     pos: [0, 0.06],
     height: 0.055,
@@ -360,7 +364,7 @@ async function experimentInit() {
   menuBtn2Text = new visual.TextStim({
     win: psychoJS.window,
     name: "menuBtn2Text",
-    text: "2.Prezentacja",
+    text: tr('menu.presentation'),
     font: "Arial",
     pos: [0, -0.1],
     height: 0.055,
@@ -375,7 +379,7 @@ async function experimentInit() {
   prezTitleText = new visual.TextStim({
     win: psychoJS.window,
     name: "prezTitle",
-    text: "\u2014 Prezentacja \u2014",
+    text: tr('prez.title'),
     font: "Arial",
     pos: [0, 0.44],
     height: 0.04,
@@ -459,7 +463,7 @@ async function experimentInit() {
   prezBackText = new visual.TextStim({
     win: psychoJS.window,
     name: "prezBackLabel",
-    text: "\u2190 Wr\u00f3\u0107 do menu",
+    text: tr('prez.back'),
     font: "Arial",
     pos: [0, -0.462],
     height: 0.031,
@@ -677,15 +681,15 @@ function menuRoutineEachFrame() {
       // ---- Tekst opisu fazy ----
       let infoMsg;
       if (at < 1.0) {
-        infoMsg = "Dwie lampki zapalają się na zielono...";
+        infoMsg = tr('prez.step1');
       } else if (at < 2.5) {
-        infoMsg = "Każda wyznacza linię przez całą siatkę...";
+        infoMsg = tr('prez.step2');
       } else if (at < 4.5) {
-        infoMsg = "Wskaż lampkę na przecięciu tych linii!";
+        infoMsg = tr('prez.step3');
       } else if (at < 5.9) {
-        infoMsg = "Kliknij myszką w to miejsce!";
+        infoMsg = tr('prez.step4');
       } else {
-        infoMsg = "\u2713  To jest prawidłowa odpowiedź!";
+        infoMsg = tr('prez.step5');
       }
       prezInfoText.setText(infoMsg);
 
@@ -737,7 +741,7 @@ function menuRoutineEachFrame() {
       psychoJS.experiment.experimentEnded ||
       psychoJS.eventManager.getKeys({ keyList: ["escape"] }).length > 0
     ) {
-      return quitPsychoJS("The [Escape] key was pressed. Goodbye!", true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     if (!continueRoutine) {
@@ -858,7 +862,7 @@ function welcomeRoutineEachFrame() {
       psychoJS.experiment.experimentEnded ||
       psychoJS.eventManager.getKeys({ keyList: ["escape"] }).length > 0
     ) {
-      return quitPsychoJS("The [Escape] key was pressed. Goodbye!", true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     // check if the Routine should terminate
@@ -1299,7 +1303,7 @@ function trialRoutineEachFrame() {
       psychoJS.experiment.experimentEnded ||
       psychoJS.eventManager.getKeys({ keyList: ["escape"] }).length > 0
     ) {
-      return quitPsychoJS("The [Escape] key was pressed. Goodbye!", true);
+      return quitPsychoJS(tr('quit.escapeCompleted'), true);
     }
 
     // check if the Routine should terminate
@@ -1433,7 +1437,14 @@ async function quitPsychoJS(message, isCompleted) {
         ogolna_ilosc_nacisniec: iloscKlikniecOgolem,
         ilosc_brakow_nacisniec: noAnserw, // tylko braki odpowiedzi
         sredni_czas_reakcji: sredniCzasReakcji,
-        score: `Kliknięć: ${iloscKlikniecOgolem} | Poprawne: ${poprawneTrafienia} | Błędne (w tym brak odp.): ${bledneTrafienia} | Brak odp.: ${noAnserw} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
+        score: tr('score', {
+          clicks: iloscKlikniecOgolem,
+          correct: poprawneTrafienia,
+          wrongWithMisses: bledneTrafienia,
+          misses: noAnserw,
+          accuracy: accuracy,
+          rt: sredniCzasReakcji,
+        }),
         statystyki: {
           poprawne: poprawneTrafienia,
           bledne_lacznie: bledneTrafienia,
@@ -1453,14 +1464,3 @@ async function quitPsychoJS(message, isCompleted) {
   psychoJS.quit({ message: message, isCompleted: isCompleted });
   return Scheduler.Event.QUIT;
 }
-
-
-// Nous: patch sendResults byuc dołączania wszystkich pól expInfo (participant, session, date ...)
-(function() {
-    if (typeof window.electronTest !== 'undefined' && window.electronTest.sendResults) {
-        var _orig = window.electronTest.sendResults;
-        window.electronTest.sendResults = function(data) {
-            return _orig(Object.assign({}, typeof expInfo !== 'undefined' ? expInfo : {}, data));
-        };
-    }
-})();

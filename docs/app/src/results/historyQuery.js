@@ -1,16 +1,18 @@
 // src/results/historyQuery.js — query-model historii (C3): czyste funkcje, zero DOM.
 // Jedyny właściciel logiki statusów / filtrów / paginacji.
 import { testIdOf, subjectIdOf } from "./resultPackage.js";
+import { t } from "../i18n/index.js";
 
 /** Jedyny resolver statusu w kodzie (były 3 kopie tego łańcucha). */
 export function resolveStatusLabel(r) {
   const sync_status = r.sync_status || r.syncStatus;
-  if (r.researcher_uid && r.researcher_uid.startsWith("LOCAL::")) return "Konto lokalne";
-  if (sync_status === "LOCAL") return "Konto lokalne";
-  if (r.researcher_uid === "GUEST") return "Tryb Gościa";
-  if (sync_status === "SYNCED") return "Zsynchronizowano";
-  if (sync_status === "PENDING") return "Oczekuje";
-  return "Lokalne";
+  if (r.researcher_uid && r.researcher_uid.startsWith("LOCAL::"))
+    return t("history.syncStatusLocal");
+  if (sync_status === "LOCAL") return t("history.syncStatusLocal");
+  if (r.researcher_uid === "GUEST") return t("history.guestMode");
+  if (sync_status === "SYNCED") return t("history.synced");
+  if (sync_status === "PENDING") return t("history.pending");
+  return t("history.local");
 }
 
 /** Klucz dnia `day:rok:miesiąc:dzień` (miesiąc 0-indeksowany, jak w filtrach). */

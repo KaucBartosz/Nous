@@ -7,6 +7,7 @@ import {
 import { getResearcherUid } from "./auth.js";
 import { Notify } from "../notify/notify.js";
 import { escapeHtml } from "./utils.js";
+import { t } from "../i18n/index.js";
 
 // Callback to fill the demographics form — set by demographics.js
 let _fillFormCallback = null;
@@ -51,8 +52,7 @@ export async function renderParticipantsList(filter = "") {
   container.innerHTML = "";
 
   if (filtered.length === 0) {
-    container.innerHTML =
-      '<p class="participants-empty">Brak zapisanych badanych. Wypełnij metryczkę i kliknij <strong>Zapisz do Kartoteki</strong>.</p>';
+    container.innerHTML = `<p class="participants-empty">${t("demographics.emptyRegistry")}</p>`;
     return;
   }
 
@@ -68,7 +68,7 @@ export async function renderParticipantsList(filter = "") {
 
   filtered.forEach((participant) => {
     const templateName =
-      templateNameMap[participant.templateId] || "Nieznany szablon";
+      templateNameMap[participant.templateId] || t("demographics.unknownTemplate");
 
     const card = document.createElement("div");
     card.className = "participant-card";
@@ -83,10 +83,10 @@ export async function renderParticipantsList(filter = "") {
                 </div>
             </div>
             <div class="participant-card-actions">
-                <button class="btn small primary btn-load-participant" title="Wczytaj dane do formularza">
-                    <span class="material-icons" style="font-size:15px; vertical-align:middle; margin-right:3px;">input</span>Wczytaj
+                <button class="btn small primary btn-load-participant" title="${escapeHtml(t("demographics.loadDataTitle"))}">
+                    <span class="material-icons" style="font-size:15px; vertical-align:middle; margin-right:3px;">input</span>${escapeHtml(t("demographics.load"))}
                 </button>
-                <button class="btn small danger icon-btn btn-delete-participant" title="Usuń z kartoteki" style="padding:4px 8px;">
+                <button class="btn small danger icon-btn btn-delete-participant" title="${escapeHtml(t("demographics.deleteFromRegistryTitle"))}" style="padding:4px 8px;">
                     <span class="material-icons" style="font-size:16px;">delete</span>
                 </button>
             </div>
@@ -127,17 +127,12 @@ function loadParticipantToForm(participant) {
  */
 export async function saveCurrentAsParticipant(demographicsData) {
   if (!demographicsData || !demographicsData.templateId) {
-    await Notify.warning(
-      "Wybierz szablon i wypełnij metryczkę przed zapisem do kartoteki.",
-    );
+    await Notify.warning(t("demographics.templateRequired"));
     return;
   }
 
   // Ask user for a display name
-  const displayName = await Notify.prompt(
-    "Podaj nazwę profilu badanego (np. imię i nazwisko lub kod):",
-    "",
-  );
+  const displayName = await Notify.prompt(t("demographics.namePrompt"), "");
 
   if (!displayName || !displayName.trim()) return; // User cancelled or empty
 
@@ -153,11 +148,13 @@ export async function saveCurrentAsParticipant(demographicsData) {
   try {
     await saveParticipant(participant, uid);
     await Notify.success(
-      `Profil "${displayName.trim()}" został zapisany do kartoteki.`,
+      t("demographics.savedToRegistry", { name: displayName.trim() }),
     );
     await renderParticipantsList();
   } catch (e) {
-    await Notify.error("Błąd zapisu do kartoteki: " + e.message);
+    await Notify.error(
+      t("demographics.saveRegistryError", { message: e.message }),
+    );
   }
 }
 
@@ -167,7 +164,9 @@ export async function saveCurrentAsParticipant(demographicsData) {
  */
 async function handleDeleteParticipant(participant) {
   const confirmed = await Notify.confirm(
-    `Czy na pewno chcesz usunąć profil "${participant.display_name}" z kartoteki?\n\nStare wyniki badań NIE zostaną usunięte.`,
+    t("demographics.deleteParticipantConfirm", {
+      name: participant.display_name,
+    }),
   );
   if (!confirmed) return;
 
@@ -175,6 +174,8 @@ async function handleDeleteParticipant(participant) {
     await deleteParticipant(participant.id);
     await renderParticipantsList();
   } catch (e) {
-    await Notify.error("Błąd usuwania: " + e.message);
+    await Notify.error(
+      t("demographics.deleteError", { message: e.message }),
+    );
   }
 }

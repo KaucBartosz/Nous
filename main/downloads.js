@@ -7,10 +7,14 @@ const ALLOWED_OWNER = "KaucBartosz";
 const CDN_DOMAIN = "objects.githubusercontent.com";
 const ALLOWED_REPO_DOMAINS = ["github.com", "raw.githubusercontent.com"];
 
-/** null = OK, inaczej komunikat BŁĄD (reguła kanału download-test, bez zmian). */
+/**
+ * Kody komunikatów: main nie zna języka interfejsu, więc renderer tłumaczy je
+ * przez słownik `testStatus.*` (patrz src/app.js). null = OK.
+ */
+/** null = OK, inaczej kod błędu (reguła kanału download-test, bez zmian). */
 function validateTestId(testId) {
   if (!/^[a-zA-Z0-9_-]+$/.test(testId || "")) {
-    return "BŁĄD: Nieprawidłowe ID testu!";
+    return "invalidTestId";
   }
   return null;
 }
@@ -23,7 +27,7 @@ function validateDownloadUrl(url) {
   try {
     const parsedUrl = new URL(url);
     if (parsedUrl.protocol !== "https:") {
-      return "BŁĄD: Tylko HTTPS!";
+      return "httpsOnly";
     }
     // URL normalizuje hostname do małych liter; toLowerCase dla pewności.
     const host = parsedUrl.hostname.toLowerCase();
@@ -33,13 +37,13 @@ function validateDownloadUrl(url) {
     } else if (ALLOWED_REPO_DOMAINS.some(domainAllowed)) {
       // Sprawdź, czy ścieżka zaczyna się od /KaucBartosz/
       if (!parsedUrl.pathname.startsWith(`/${ALLOWED_OWNER}/`)) {
-        return `BŁĄD: Dozwolone są wyłącznie repozytoria ${ALLOWED_OWNER}!`;
+        return { code: "ownerOnly", params: { owner: ALLOWED_OWNER } };
       }
     } else {
-      return "BŁĄD: Niedozwolona domena!";
+      return "forbiddenDomain";
     }
   } catch (e) {
-    return "BŁĄD: Nieprawidłowy URL!";
+    return "invalidUrl";
   }
   return null;
 }
@@ -65,10 +69,13 @@ function checkDownloadedSize({ fs, zipPath, limitBytes = MAX_ZIP_BYTES }) {
   try {
     const { size } = fs.statSync(zipPath);
     if (size > limitBytes) {
-      return `BŁĄD: Paczka przekracza limit ${Math.round(limitBytes / 1024 / 1024)} MB!`;
+      return {
+        code: "packageTooLarge",
+        params: { limit: Math.round(limitBytes / 1024 / 1024) },
+      };
     }
   } catch (e) {
-    return `Błąd odczytu paczki: ${e.message}`;
+    return { code: "zipReadError", params: { message: e.message } };
   }
   return null;
 }
@@ -129,16 +136,41 @@ function scanLocalVersions({ fs, path, testsDir }) {
 
     testFolders.forEach((testId) => {
       const testFolder = path.join(testsDir, testId);
-      const metaPath = path.join(testFolder, "meta.json");
+      const parentMetaPath = path.join(testFolder, "meta.json");
+      // Prefer meta.json next to the test files (in a subfolder) for translations;
+      // fall back to meta.json in the test folder (parent).
+      let metaPath = parentMetaPath;
+      let subMetaPath = null;
+      try {
+        const subDirs = fs.readdirSync(testFolder, { withFileTypes: true }).filter((d) => d.isDirectory());
+        for (const sub of subDirs) {
+          const candidate = path.join(testFolder, sub.name, "meta.json");
+          if (fs.existsSync(candidate)) { subMetaPath = candidate; break; }
+        }
+      } catch (e) {}
+      if (subMetaPath) metaPath = subMetaPath;
 
-      if (fs.existsSync(metaPath)) {
+      if (fs.existsSync(metaPath) || fs.existsSync(parentMetaPath)) {
         try {
-          const metaContent = fs.readFileSync(metaPath, "utf8");
-          const meta = JSON.parse(metaContent);
+          // Read parent meta for version/lastUpdated
+          let parentMeta = {};
+          if (fs.existsSync(parentMetaPath)) {
+            parentMeta = JSON.parse(fs.readFileSync(parentMetaPath, "utf8"));
+          }
+          // Read sub meta for translations (name/description)
+          let subMeta = {};
+          if (subMetaPath && fs.existsSync(subMetaPath)) {
+            subMeta = JSON.parse(fs.readFileSync(subMetaPath, "utf8"));
+          }
+          // Merge: sub meta overrides name/description, parent provides version
+          const meta = { ...parentMeta, ...subMeta };
           localVersions[testId] = {
-            version: meta.version,
+            version: meta.version ?? parentMeta.version ?? 0,
             name: meta.name || "",
-            description: meta.description || "",
+            name_en: meta.name_en || meta.name || "",
+            description: meta.description || meta.description_pl || "",
+            description_pl: meta.description_pl || meta.description || "",
+            description_en: meta.description_en || meta.description || "",
             isLocalDev: false,
           };
         } catch (e) {
@@ -200,22 +232,22 @@ function createDownloader({
 
   /**
    * Wejście do kolejki pobierania (tylko download — nigdy run).
-   * @returns {{ ok: true } | { ok: false, message }} — handler wysyła message lub potwierdzenie
+   * @returns {{ ok: true } | { ok: false, error }} — handler wysyła kod błędu lub potwierdzenie
    */
   function enqueueDownload(taskData, sender) {
     const { testId, url } = taskData;
 
     // --- SECURITY CHECK: RATE LIMITING ---
     if (activeDownloads.has(testId)) {
-      return { ok: false, message: "Zadanie dla tego testu jest już w kolejce!" };
+      return { ok: false, error: "queueBusy" };
     }
 
     // --- SECURITY CHECK: TEST ID VALIDATION ---
     const idError = validateTestId(testId);
-    if (idError) return { ok: false, message: idError };
+    if (idError) return { ok: false, error: idError };
 
     const urlError = validateDownloadUrl(url);
-    if (urlError) return { ok: false, message: urlError };
+    if (urlError) return { ok: false, error: urlError };
 
     // Add to queue
     activeDownloads.add(testId);
@@ -242,7 +274,13 @@ function createDownloader({
     let entryFile = findStartFile(testFolder);
 
     const zipPath = path.join(testFolder, "package.zip");
-    const metaPath = path.join(testFolder, "meta.json");
+    // Prefer meta.json next to the test files (in subfolder) for translations;
+    // fall back to meta.json in the test folder (parent).
+    let metaPath = path.join(testFolder, "meta.json");
+    if (entryFile) {
+      const subMeta = path.join(path.dirname(entryFile), "meta.json");
+      if (fs.existsSync(subMeta)) metaPath = subMeta;
+    }
 
     // --- KROK 1: SPRAWDZANIE CACHE ---
     // download-test nigdy nie uruchamia i nigdy nie dotyczy localDev —
@@ -258,7 +296,7 @@ function createDownloader({
 
     // --- KROK 2: CACHE-HIT — nic do roboty, koniec (bez uruchamiania) ---
     if (!needsDownload) {
-      sender.send("test-status", `Test (v${version}) jest gotowy.`);
+      sender.send("test-status", { code: "ready", params: { version } });
       finishTask();
       return;
     }
@@ -268,14 +306,14 @@ function createDownloader({
       fs.mkdirSync(testFolder, { recursive: true });
     }
 
-    sender.send("test-status", `Pobieranie paczki ZIP (v${version})...`);
+    sender.send("test-status", { code: "downloading", params: { version } });
 
     const file = fs.createWriteStream(zipPath);
 
     // Funkcja do obsługi przekierowań
     const downloadWithRedirect = (downloadUrl, maxRedirects = 5) => {
       if (maxRedirects <= 0) {
-        sender.send("test-status", "BŁĄD: Za dużo przekierowań!");
+        sender.send("test-status", { code: "tooManyRedirects" });
         fs.unlink(zipPath, () => {});
         finishTask();
         return;
@@ -302,7 +340,10 @@ function createDownloader({
           }
           // 404 itd. wyrzuci błąd
           if (response.statusCode !== 200) {
-            sender.send("test-status", `Błąd HTTP: ${response.statusCode}`);
+            sender.send("test-status", {
+              code: "httpError",
+              params: { status: response.statusCode },
+            });
             fs.unlink(zipPath, () => {});
             finishTask();
             return;
@@ -344,7 +385,7 @@ function createDownloader({
               }
 
               // --- KROK 4: ROZPAKOWYWANIE ---
-              sender.send("test-status", "Rozpakowywanie plików...");
+              sender.send("test-status", { code: "extracting" });
 
               try {
                 const zip = new AdmZip(zipPath);
@@ -362,8 +403,15 @@ function createDownloader({
                 // Aktualizacje woła bez nazwy i nie może jej wyzerować).
                 let prevMeta = {};
                 try {
-                  if (fs.existsSync(metaPath)) {
-                    prevMeta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+                  const parentMetaPath = path.join(testFolder, "meta.json");
+                  if (fs.existsSync(parentMetaPath)) {
+                    prevMeta = { ...prevMeta, ...JSON.parse(fs.readFileSync(parentMetaPath, "utf8")) };
+                  }
+                  if (entryFile) {
+                    const subMetaPath = path.join(path.dirname(entryFile), "meta.json");
+                    if (fs.existsSync(subMetaPath)) {
+                      prevMeta = { ...prevMeta, ...JSON.parse(fs.readFileSync(subMetaPath, "utf8")) };
+                    }
                   }
                 } catch (e) {
                   console.log("Błąd odczytu starej meta.json, nadpisuję.");
@@ -383,18 +431,21 @@ function createDownloader({
                 sender.send("test-installed", { test_id: testId, version: Number(version) });
 
                 if (!entryFile) {
-                  sender.send("test-status", "BŁĄD: Brak index.html!");
+                  sender.send("test-status", { code: "missingEntry" });
                   finishTask();
                   return;
                 }
 
                 // Czysty download: po instalacji tylko status, nigdy run.
-                sender.send("test-status", "Zainstalowano pomyślnie.");
+                sender.send("test-status", { code: "installed" });
 
                 finishTask();
               } catch (err) {
                 console.error("Błąd ZIP:", err);
-                sender.send("test-status", `Błąd ZIP: ${err.message}`);
+                sender.send("test-status", {
+                code: "zipError",
+                params: { message: err.message },
+              });
                 finishTask();
               }
             });
@@ -402,7 +453,10 @@ function createDownloader({
         })
         .on("error", (err) => {
           fs.unlink(zipPath, () => {});
-          sender.send("test-status", `Błąd sieci: ${err.message}`);
+          sender.send("test-status", {
+            code: "networkError",
+            params: { message: err.message },
+          });
           finishTask();
         });
     };
@@ -417,7 +471,10 @@ function createDownloader({
   function registerIpc(ipcMain) {
     ipcMain.on("download-test", (event, taskData) => {
       const res = enqueueDownload(taskData, event.sender);
-      event.sender.send("test-status", res.ok ? "Dodano do kolejki..." : res.message);
+      event.sender.send(
+        "test-status",
+        res.ok ? { code: "queued" } : { code: "error", error: res.error },
+      );
       if (res.ok) processDownloadQueue();
     });
 

@@ -1,4 +1,5 @@
 // src/modules/ui.js
+import { t } from "../i18n/index.js";
 
 // Lazy-loaded elements cache
 let _elements = null;
@@ -181,7 +182,24 @@ const VIEW_CONFIG = {
   },
 };
 
+// Aktywny widok — potrzebny do przerysowania treści po zmianie języka.
+let _currentView = null;
+let _currentCallbacks = {};
+
+/** Zwraca nazwę aktualnie wyświetlanego widoku (lub null). */
+export function getCurrentView() {
+  return _currentView;
+}
+
+/** Przerysowuje aktywny widok (np. po zmianie języka). */
+export function refreshCurrentView() {
+  if (_currentView) switchView(_currentView, _currentCallbacks);
+}
+
 export function switchView(viewName, callbacks = {}) {
+  _currentView = viewName;
+  _currentCallbacks = callbacks;
+
   // Hide all views and deactivate all nav items
   Object.values(VIEW_CONFIG).forEach((config) => {
     elements[config.view]?.classList.add("hidden");
@@ -214,8 +232,11 @@ export function updateAuthUI(userEmail, userStatus) {
   elements.loginScreen.classList.add("hidden");
   elements.dashboardScreen.classList.remove("hidden");
 
-  elements.userEmailDisplay.textContent = userEmail || "Gość";
-  elements.userStatusDisplay.textContent = userStatus;
+  elements.userEmailDisplay.textContent = userEmail || t("user.guest");
+  elements.userStatusDisplay.textContent = userStatus
+    ? t(`user.status.${userStatus}`)
+    : "";
+  elements.userStatusDisplay.dataset.status = userStatus || "";
 
   if (userStatus === "APPROVED")
     elements.userStatusDisplay.style.color = "#4caf50";
@@ -319,37 +340,26 @@ export async function populateLocalAccountSuggestions() {
 // Alias dla wygody / testów
 export const refreshLocalAccountSuggestions = populateLocalAccountSuggestions;
 
-export function showError(message) {
+export function showError(message, { shake = true } = {}) {
   elements.errorMsg.textContent = message;
 
   // Shake animation for online panel on error
   const panel = elements.loginOnlinePanel;
-  if (
-    panel &&
-    message &&
-    !message.includes("Logowanie") &&
-    !message.includes("Weryfikacja") &&
-    !message.includes("Tworzenie")
-  ) {
+  if (panel && message && shake) {
     panel.classList.remove("shake");
     void panel.offsetWidth; // force reflow
     panel.classList.add("shake");
   }
 }
 
-export function showErrorLocal(message) {
+export function showErrorLocal(message, { shake = true } = {}) {
   if (elements.errorMsgLocal) {
     elements.errorMsgLocal.textContent = message;
   }
 
   // Shake animation for local panel on error
   const panel = elements.loginLocalPanel;
-  if (
-    panel &&
-    message &&
-    !message.includes("Logowanie") &&
-    !message.includes("Tworzenie")
-  ) {
+  if (panel && message && shake) {
     panel.classList.remove("shake");
     void panel.offsetWidth; // force reflow
     panel.classList.add("shake");
