@@ -145,7 +145,7 @@ describe("main/downloads scan + delete", () => {
 
     const out = scanLocalVersions({ fs, path, testsDir: lib });
     expect(out.__scannedDir).toBe(lib);
-    expect(out.app1).toEqual({ version: 2, name: "A", description: "D", isLocalDev: false });
+    expect(out.app1).toEqual({ version: 2, name: "A", name_en: "A", description: "D", description_pl: "D", description_en: "D", isLocalDev: false });
     expect(out.app2).toEqual({ version: 0, isLocalDev: true });
     expect(out.app3).toEqual({ version: 0, isLocalDev: true });
     expect(out).not.toHaveProperty("plik.txt");

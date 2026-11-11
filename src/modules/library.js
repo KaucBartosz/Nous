@@ -20,7 +20,15 @@ import {
   bindSearchInput,
   bindCatalogProgress,
 } from "../catalog/catalogView.js";
-import { t, getLocale } from "../i18n/index.js";
+import { t, getLocale, onLocaleChange } from "../i18n/index.js";
+
+// Re-render library when language changes so translated names/descriptions update
+onLocaleChange(() => {
+  const grid = document.getElementById("tests-grid");
+  if (grid) {
+    loadTestsList();
+  }
+});
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
