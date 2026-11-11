@@ -20,7 +20,14 @@ import {
   bindSearchInput,
   bindCatalogProgress,
 } from "../catalog/catalogView.js";
-import { t } from "../i18n/index.js";
+import { t, getLocale, onLocaleChange } from "../i18n/index.js";
+
+// Re-render library when language changes so translated names/descriptions update
+onLocaleChange((locale) => {
+  console.log("[library] locale changed to", locale);
+  // Always reload tests list to update translated names/descriptions
+  loadTestsList();
+});
 
 /**
  * Zwraca klucze localStorage specyficzne dla aktualnego użytkownika.
@@ -149,6 +156,7 @@ function updateViewButtonStates() {
 }
 
 export async function loadTestsList(filterText = null, forceRefresh = false) {
+  console.log("[loadTestsList] called, cachedTests.length:", cachedTests.length, "isLoading:", isLoading);
   // Guard: jeśli już trwa ładowanie, zignoruj nowe wywołanie (zapobiega race condition i podwójnemu wyświetlaniu)
   if (isLoading) {
     console.log(
@@ -228,12 +236,18 @@ function showOfflinePanel(scannedPath) {
 // aktualizacje robi wyłącznie kanał download (zakładka Aktualizacje).
 function handleStart(t, status) {
   if (status.action === "download") {
+    const name = getLocale() === "en"
+      ? (t.name_en || t.name || "")
+      : (t.name || "");
+    const desc = getLocale() === "en"
+      ? (t.description_en || t.description || "")
+      : (t.description_pl || t.description || "");
     startDownloadProcess(
       t.download_url || t.downloadUrl,
       t.id,
       t.remote_ver,
-      t.name,
-      t.description,
+      name,
+      desc,
     );
   } else {
     startRunProcess(t.id, t.isLocalDev);
@@ -472,7 +486,10 @@ function renderTableView(tests) {
     // Name cell
     const nameCell = document.createElement("td");
     nameCell.style.fontWeight = "500";
-    nameCell.textContent = t.name || t("library.unnamed");
+    const testName = getLocale() === "en"
+      ? (t.name_en || t.name || "")
+      : (t.name || "");
+    nameCell.textContent = testName || t("library.unnamed");
 
     // Description cell
     const descCell = document.createElement("td");
@@ -481,7 +498,10 @@ function renderTableView(tests) {
     descCell.style.overflow = "hidden";
     descCell.style.textOverflow = "ellipsis";
     descCell.style.whiteSpace = "nowrap";
-    descCell.textContent = t.description || t("library.noDescription");
+    const desc = getLocale() === "en"
+      ? (t.description_en || t.description || "")
+      : (t.description_pl || t.description || "");
+    descCell.textContent = desc || t("library.noDescription");
 
     // Version cell
     const versionCell = document.createElement("td");

@@ -8,7 +8,7 @@ import { getPlatform } from '../platform/index.js';
 import { loadCatalog, countUpdates, selectUpdatesView } from '../catalog/testCatalog.js';
 import { setTestButtonState } from '../catalog/testCard.js';
 import { bindSearchInput, bindCatalogProgress, buildUpdateStatusCell, buildUpdateActionCell } from '../catalog/catalogView.js';
-import { t } from '../i18n/index.js';
+import { t, getLocale } from '../i18n/index.js';
 
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
 
@@ -91,7 +91,7 @@ export async function loadUpdatesData(filterText = '') {
             // Column 4: Status + Column 5: Actions
             row.appendChild(buildUpdateStatusCell(r));
             row.appendChild(buildUpdateActionCell(r, {
-                onDownload: (t) => forceUpdate(t.download_url || t.downloadUrl, t.id, t.remote_ver, t.name, t.description),
+                onDownload: (t) => forceUpdate(t.download_url || t.downloadUrl, t.id, t.remote_ver, (getLocale() === "en" ? (t.name_en || t.name) : t.name), (getLocale() === "en" ? (t.description_en || t.description) : (t.description_pl || t.description))),
                 onDelete: (testId) => deleteLocalTest(testId),
             }));
 

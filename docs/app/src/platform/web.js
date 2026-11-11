@@ -1,15 +1,58 @@
 // src/platform/web.js — adapter Web (przeglądarka, bez Electron)
 import { t } from "../i18n/index.js";
 
-function registryToVersions(registry) {
+/**
+ * URL meta.json obok testu. Rejestr podaje ścieżkę do index.html, a meta.json
+ * leży w tym samym folderze (np. tests/BystreOczko/meta.json).
+ */
+function metaUrlFor(entry) {
+  const webPath = entry.path || "";
+  if (webPath) {
+    if (/index\.html?$/i.test(webPath)) return webPath.replace(/index\.html?$/i, "meta.json");
+    return `${webPath.replace(/\/+$/, "")}/meta.json`;
+  }
+  return entry.id ? `tests/${entry.id}/meta.json` : "";
+}
+
+/** meta.json jest opcjonalny — brak pliku nie może wywalić katalogu. */
+async function fetchMeta(fetchFn, url) {
+  if (!url) return null;
+  try {
+    const res = await fetchFn(url);
+    if (!res.ok) return null;
+    const meta = await res.json();
+    return meta && typeof meta === "object" && !Array.isArray(meta) ? meta : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Rejestr (id/version/path) + meta.json każdego testu (nazwa i opis PL/EN).
+ * Pola z meta.json mają pierwszeństwo; rejestr zostaje fallbackiem dla testów
+ * bez meta.json (starsze paczki).
+ */
+async function registryToVersions(registry, fetchFn) {
+  const entries = registry || [];
+  const metas = await Promise.all(entries.map((entry) => fetchMeta(fetchFn, metaUrlFor(entry))));
   const out = {};
-  (registry || []).forEach((t) => {
-    out[t.id] = {
-      version: t.version || 1,
+  entries.forEach((entry, i) => {
+    const meta = metas[i] || {};
+    const name = meta.name || entry.name || "";
+    const nameEn = meta.name_en || meta.name || entry.name_en || entry.name || "";
+    const descriptionPl =
+      meta.description_pl || meta.description || entry.description_pl || entry.description || "";
+    const descriptionEn =
+      meta.description_en || meta.description || entry.description_en || entry.description || "";
+    out[entry.id] = {
+      version: entry.version || 1,
       isLocalDev: false,
-      name: t.name,
-      description: t.description,
-      webPath: t.path || "",
+      name,
+      name_en: nameEn,
+      description: descriptionPl,
+      description_pl: descriptionPl,
+      description_en: descriptionEn,
+      webPath: entry.path || "",
     };
   });
   return out;
@@ -23,7 +66,7 @@ export function createWebPlatform(deps = {}) {
     try {
       const res = await fetchFn("tests-registry.json");
       if (!res.ok) return {};
-      return registryToVersions(await res.json());
+      return await registryToVersions(await res.json(), fetchFn);
     } catch (e) {
       console.warn("WebPlatform: błąd tests-registry.json", e);
       return {};

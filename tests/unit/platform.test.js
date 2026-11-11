@@ -26,6 +26,48 @@ describe('platform seam (C1)', () => {
     expect(v.x.webPath).toBe('tests/x/index.html');
   });
 
+  it('WebPlatform: meta.json nadpisuje nazwę i opis z rejestru (PL/EN)', async () => {
+    const responses = {
+      'tests-registry.json': [{ id: 'x', version: 2, name: 'Registry X', description: 'registry desc', path: 'tests/x/index.html' }],
+      'tests/x/meta.json': { name: 'Meta X', name_en: 'Meta X EN', description_pl: 'Opis PL', description_en: 'Description EN' },
+    };
+    const fetchFn = vi.fn(async (url) => ({
+      ok: url in responses,
+      json: async () => responses[url],
+    }));
+    const p = createWebPlatform({ fetchFn, openFn: vi.fn() });
+    const v = await p.tests.getLocalVersions();
+    expect(v.x).toMatchObject({
+      name: 'Meta X',
+      name_en: 'Meta X EN',
+      description: 'Opis PL',
+      description_pl: 'Opis PL',
+      description_en: 'Description EN',
+      webPath: 'tests/x/index.html',
+    });
+    expect(fetchFn).toHaveBeenCalledWith('tests/x/meta.json');
+  });
+
+  it('WebPlatform: brak meta.json → fallback na pola z rejestru', async () => {
+    const fetchFn = vi.fn(async (url) => {
+      if (url === 'tests-registry.json') {
+        return {
+          ok: true,
+          json: async () => [{
+            id: 'x', version: 1, name: 'X', name_en: 'X EN',
+            description_pl: 'Opis', description_en: 'Desc', path: 'tests/x/index.html',
+          }],
+        };
+      }
+      return { ok: false, json: async () => null };
+    });
+    const p = createWebPlatform({ fetchFn, openFn: vi.fn() });
+    const v = await p.tests.getLocalVersions();
+    expect(v.x).toMatchObject({
+      name: 'X', name_en: 'X EN', description_pl: 'Opis', description_en: 'Desc',
+    });
+  });
+
   it('WebPlatform: zwraca {} przy błędzie fetch', async () => {
     const p = createWebPlatform({ fetchFn: async () => { throw new Error('net'); } });
     expect(await p.tests.getLocalVersions()).toEqual({});

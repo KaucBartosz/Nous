@@ -188,7 +188,8 @@ function resolveBbtpSource() {
 /**
  * Kopiuje pliki eksperymentu z BBTP do docs/app/tests. Test we Web to folder,
  * którego index.html importuje jeden plik eksperymentu; dokładamy jego moduły
- * i18n (i18n.js, dialog-i18n.js, strings.js), bo testy je importują.
+ * i18n (i18n.js, dialog-i18n.js, strings.js) oraz meta.json (nazwa/opis PL/EN),
+ * bo testy je importują / WebApp je czyta.
  * Zwraca liczbę skopiowanych plików.
  */
 function syncBbtpTests(bbtpDir, testsDest) {
@@ -203,7 +204,7 @@ function syncBbtpTests(bbtpDir, testsDest) {
     const entryScript = html.match(/<script[^>]+src="\.\/([^"/]+\.js)"[^>]*type="module"/);
     if (!entryScript) continue;
 
-    const files = [entryScript[1], "i18n.js", "dialog-i18n.js", "strings.js"];
+    const files = [entryScript[1], "i18n.js", "dialog-i18n.js", "strings.js", "meta.json"];
     for (const file of files) {
       const from = path.join(srcDir, file);
       if (!fs.existsSync(from)) continue;

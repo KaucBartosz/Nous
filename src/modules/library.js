@@ -486,7 +486,10 @@ function renderTableView(tests) {
     // Name cell
     const nameCell = document.createElement("td");
     nameCell.style.fontWeight = "500";
-    nameCell.textContent = t.name || t("library.unnamed");
+    const testName = getLocale() === "en"
+      ? (t.name_en || t.name || "")
+      : (t.name || "");
+    nameCell.textContent = testName || t("library.unnamed");
 
     // Description cell
     const descCell = document.createElement("td");

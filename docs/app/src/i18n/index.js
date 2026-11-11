@@ -129,6 +129,7 @@ export function isLocaleSupported(locale) {
 /** Subskrypcja zmiany języka. Zwraca funkcję odsłaniającą. */
 export function onLocaleChange(callback) {
   listeners.add(callback);
+  console.log("[i18n] onLocaleChange registered, total listeners:", listeners.size);
   return () => listeners.delete(callback);
 }
 
@@ -139,6 +140,7 @@ export function onLocaleChange(callback) {
 export function setLocale(locale, { persist = true } = {}) {
   if (!isLocaleSupported(locale)) locale = FALLBACK;
   currentLocale = locale;
+  console.log("[i18n] setLocale called, new locale:", currentLocale, "listeners:", listeners.size);
 
   if (typeof document !== "undefined") {
     document.documentElement.lang = locale;

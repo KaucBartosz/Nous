@@ -3,7 +3,7 @@
 // + maszyna stanów przycisku startu (progress/busy).
 // Czysty DOM: zero importów auth/Firestore — testowalny w happy-dom bez mocków.
 // Cztery renderery w `library.js` tylko układają te klocki w kontenerach.
-import { t as translate } from "../i18n/index.js";
+import { t as translate, getLocale } from "../i18n/index.js";
 
 /**
  * Deskryptor statusu testu (dane dla renderu, nie elementy).
@@ -128,10 +128,16 @@ export function cardParts(t, { iconSize = null, appIcon = false, tagBtn = null, 
   const status = getTestStatus(t);
 
   const titleEl = document.createElement("h4");
-  titleEl.textContent = t.name || translate("library.unnamed");
+  const name = getLocale() === "en"
+    ? (t.name_en || t.name || "")
+    : (t.name || "");
+  titleEl.textContent = name || translate("library.unnamed");
 
   const descEl = document.createElement("p");
-  descEl.textContent = t.description || translate("library.noDescription");
+  const desc = getLocale() === "en"
+    ? (t.description_en || t.description || "")
+    : (t.description_pl || t.description || "");
+  descEl.textContent = desc || translate("library.noDescription");
 
   const versionEl = document.createElement("span");
   versionEl.textContent = `v${t.version}`;

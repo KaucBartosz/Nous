@@ -6,13 +6,14 @@ Ten folder zawiera przeglądarkowe wersje testów psychologicznych zaimportowane
 
 ## 1. Jak testy działają w wersji przeglądarkowej (WebApp)
 
-W wersji webowej programu Nous testy są uruchamiane w osobnych kartach przeglądarki (`window.open(test.webPath, "_blank")`) na podstawie wpisów w `docs/app/tests-registry.json`.
+W wersji webowej programu Nous testy są uruchamiane w osobnych kartach przeglądarki (`window.open(test.webPath, "_blank")`) na podstawie wpisów w `docs/app/tests-registry.json` (id, wersja, ścieżka). **Nazwa i opis testu pochodzą z `meta.json`** w folderze testu — rejestr służy tylko jako fallback dla starszych paczek bez tego pliku.
 
 Każdy folder testu stanowi samodzielną aplikację opartą o silnik **PsychoJS** (przeglądarkowy port PsychoPy):
 
 ```
 docs/app/tests/<NazwaTestu>/
 ├── index.html                  # Główny punkt wejścia otwierany przez WebApp
+├── meta.json                   # Nazwa i opis testu: name, name_en, description_pl, description_en
 ├── <nazwaTestu>.js             # Logika testu (bodźce, reakcje, wyliczanie RT, sendResults)
 ├── <nazwaTestu>-legacy-...js   # Wersja dla starszych przeglądarek (opcjonalna)
 ├── lib/                        # Silnik PsychoJS (NIE USUWAĆ!)
@@ -89,6 +90,7 @@ node scripts/sync-bbtp.js "C:\Users\HARDPC\Desktop\BBTP"
 Skrypt automatycznie:
 - Kopiuje zaktualizowane foldery testów do `docs/app/tests/`, ignorując pliki robocze (`.py`, `.zip`, `.map`, foldery `out/`, `tests/` z testów automatycznych Playwright itp.),
 - Rejestruje nowe testy w [docs/app/tests-registry.json](file:///C:/Users/HARDPC/Desktop/Nous/docs/app/tests-registry.json),
+- Kopiuje `meta.json` testu (nazwa i opis PL/EN) — to on jest źródłem danych wyświetlanych w Bibliotece,
 - Uruchamia [inject-adapter.js](file:///C:/Users/HARDPC/Desktop/Nous/inject-adapter.js), wstrzykując `web-adapter.js` do `index.html` oraz doklejając patch `sendResults`.
 
 ### Krok 2: Przebudowa powłoki webowej
