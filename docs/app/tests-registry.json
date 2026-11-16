@@ -20,11 +20,11 @@
   {
     "id": "FabrykaFigur",
     "name": "FabrykaFigur",
-    "description": "Zaimportowano z repozytorium BBTP (FabrykaFigur)",
+    "description": "Test pamięci roboczej i kształtów.)",
     "version": 1,
     "path": "tests/FabrykaFigur/index.html",
-    "description_pl": "Zaimportowano z repozytorium BBTP (FabrykaFigur)",
-    "description_en": "Imported from BBTP repository (FabrykaFigur)",
+    "description_pl": "Test pamięci roboczej i kształtów.",
+    "description_en": "Working memory and shapes test.)",
     "name_en": "Shapes Factory"
   },
   {
@@ -39,12 +39,22 @@
   {
     "id": "GoNoGoBiegacze",
     "name": "GoNoGoBiegacze",
-    "description": "Zaimportowano z repozytorium BBTP (GoNoGoBiegacze)",
+    "description": "Specjalna wersja typowego testu Go/No-Go (GoNoGoBiegacze)",
     "version": 1,
     "path": "tests/GoNoGoBiegacze/index.html",
-    "description_pl": "Zaimportowano z repozytorium BBTP (GoNoGoBiegacze)",
-    "description_en": "Imported from BBTP repository (GoNoGoBiegacze)",
+    "description_pl": "Specjalna wersja typowego testu Go/No-Go (GoNoGoBiegacze)",
+    "description_en": "Special variant of Go/No-Go test on even and odd numbers. (GoNoGoBiegacze)",
     "name_en": "Go|NoGo - Runners"
+  },
+  {
+    "id": "GoNoGoRunners_Hindi",
+    "name": "GoNoGoRunners_Hindi",
+    "description": "Specjalna wersja typowego testu Go/No-Go w języku Hindi (GoNoGoRunners_Hindi)",
+    "version": 1,
+    "path": "tests/GoNoGoRunners_Hindi/index.html",
+    "description_pl": "Specjalna wersja typowego testu Go/No-Go w języku Hindi (GoNoGoRunners_Hindi)",
+    "description_en": "Special variant of Go/No-Go test on even and odd numbers in Hindi. (GoNoGoRunners_Hindi)",
+    "name_en": "Go/No-Go - Runners (Hindi)"
   },
   {
     "id": "NWstecz",
@@ -116,11 +126,11 @@
   {
     "id": "ZlapSygnal",
     "name": "ZlapSygnal",
-    "description": "Zaimportowano z repozytorium BBTP (ZlapSygnal)",
+    "description": "Test łapania sygnału.",
     "version": 1,
     "path": "tests/ZlapSygnal/index.html",
-    "description_pl": "Zaimportowano z repozytorium BBTP (ZlapSygnal)",
-    "description_en": "Imported from BBTP repository (ZlapSygnal)",
+    "description_pl": "Test łapania sygnału.",
+    "description_en": "Signal catching test.",
     "name_en": "Catch the Signal"
   }
 ]
