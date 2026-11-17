@@ -95,4 +95,42 @@ describe('sync module na Notify (bez DOM-modala)', () => {
       Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     }
   });
+
+  it('syncSingleResult bez klucza E2E: jeden komunikat i błąd z wiadomością noCloudKey', async () => {
+    const calls = [];
+    setNotifyModalAdapter({
+      alert: async (m, t) => { calls.push([m, t]); },
+      confirm: async () => false,
+      prompt: async () => null,
+      custom: async () => null,
+    });
+
+    vi.mocked(getCurrentUser).mockReturnValue({ uid: 'uid-1' });
+    vi.mocked(getUserStatus).mockReturnValue('APPROVED');
+    vi.mocked(hasCloudKey).mockReturnValue(false);
+
+    const record = {
+      id: 'r1',
+      researcher_uid: 'uid-1',
+      test_id: 't1',
+      subject_id: 's1',
+      sync_status: 'PENDING',
+      wyniki: { score: 5 },
+      demographics: { age: 30 },
+      timestamp: '2026-01-01T00:00:00.000Z',
+    };
+
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    try {
+      const { syncSingleResult } = await import('../../src/modules/sync.js');
+      // sync.js pokazuje jeden komunikat; history.js rozpoznaje zgłoszony błąd
+      // po treści (syncSingleResult gubi .code przy rethrow) i nie dodaje alertu.
+      await expect(syncSingleResult(record)).rejects.toThrow(t('sync.noCloudKey'));
+      expect(calls.length).toBe(1);
+      expect(calls[0][1]).toBe('error');
+      expect(calls[0][0]).toBe(t('sync.noCloudKey'));
+    } finally {
+      resetNotifyModalAdapter();
+    }
+  });
 });

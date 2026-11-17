@@ -9,6 +9,7 @@ import { fetchResearcherResults } from "../cloud/firebase.js";
 import { getCurrentUser, getUserStatus, getResearcherUid } from "./auth.js";
 import { elements } from "./ui.js";
 import { syncSingleResult } from "./sync.js";
+import { NO_CLOUD_KEY } from "../sync/syncEngine.js";
 import { Notify } from "../notify/notify.js";
 import { decryptCloudData, hasCloudKey } from "./cryptoService.js";
 import {
@@ -385,7 +386,11 @@ function renderHistoryPage() {
     onCheck: handleCheckboxChange,
     syncRecord: (r) => syncSingleResult(r),
     onSyncError: async (err) => {
-      await Notify.alert(t("history.sendError", { message: err.message }), "error");
+      // Brak klucza E2E jest już komunikowany przez sync.js (Notify.error).
+      // syncSingleResult rzuca nowy Error bez .code — rozpoznajemy też po treści.
+      if (err.code !== NO_CLOUD_KEY && err.message !== t("sync.noCloudKey")) {
+        await Notify.alert(t("history.sendError", { message: err.message }), "error");
+      }
       loadHistoryData();
     },
     onDownload: downloadSingle,
