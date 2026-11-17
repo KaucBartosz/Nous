@@ -53,6 +53,7 @@ vi.mock('../../src/i18n/index.js', () => ({
 const E2E_HTML = `
   <div id="pin-setup-modal" class="hidden">
     <input id="pin-setup-input" /><div id="pin-setup-error"></div>
+    <button id="btn-cancel-pin-setup">Anuluj</button>
     <button id="btn-save-pin">Zapisz PIN</button>
   </div>
   <div id="pin-enter-modal" class="hidden">
@@ -139,6 +140,28 @@ describe('E2E handlers — currentUser() seam', () => {
       expect.anything(),
       expect.anything(),
     );
+  });
+
+  it('Anuluj zamyka okno PIN i czyści dane', async () => {
+    const modal = document.getElementById('pin-enter-modal');
+    modal.classList.remove('hidden');
+    document.getElementById('pin-enter-input').value = PIN;
+    document.getElementById('pin-enter-error').textContent = 'błąd';
+
+    document.getElementById('btn-cancel-pin').click();
+
+    expect(modal.classList.contains('hidden')).toBe(true);
+    expect(document.getElementById('pin-enter-input').value).toBe('');
+    expect(document.getElementById('pin-enter-error').textContent).toBe('');
+  });
+
+  it('Escape zamyka otwarte okno PIN', async () => {
+    const modal = document.getElementById('pin-setup-modal');
+    modal.classList.remove('hidden');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(modal.classList.contains('hidden')).toBe(true);
   });
 
   it('currentUser() === null: handler nie wywołuje polityki', async () => {

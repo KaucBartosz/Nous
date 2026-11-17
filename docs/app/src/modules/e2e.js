@@ -32,6 +32,7 @@ function cloudVault() {
 }
 import { getPlatform } from '../platform/index.js';
 import { t } from '../i18n/index.js';
+import { showLoginChoice } from './ui.js';
 
 // Cached DOM elements (populated by initE2E)
 let _els = null;
@@ -48,6 +49,7 @@ function _getEls() {
         pinEnterInput: document.getElementById('pin-enter-input'),
         btnSubmitPin: document.getElementById('btn-submit-pin'),
         btnCancelPin: document.getElementById('btn-cancel-pin'),
+        btnCancelPinSetup: document.getElementById('btn-cancel-pin-setup'),
         linkForgotPin: document.getElementById('link-forgot-pin'),
         pinEnterError: document.getElementById('pin-enter-error'),
         pinRecoveryModal: document.getElementById('pin-recovery-modal'),
@@ -61,6 +63,30 @@ function _getEls() {
         btnUnderstoodRecovery: document.getElementById('btn-understood-recovery'),
     };
     return _els;
+}
+
+/** Zamyka okna E2E i wraca do wyboru konta (np. żeby zalogować się lokalnie). */
+function cancelE2E() {
+    const e = _getEls();
+    [e.pinEnterModal, e.pinSetupModal, e.pinRecoveryModal].forEach((modal) =>
+        modal?.classList.add('hidden'),
+    );
+    if (e.pinEnterInput) e.pinEnterInput.value = '';
+    if (e.pinSetupInput) e.pinSetupInput.value = '';
+    if (e.pinEnterError) e.pinEnterError.textContent = '';
+    if (e.pinSetupError) e.pinSetupError.textContent = '';
+    if (e.btnSubmitPin) {
+        e.btnSubmitPin.disabled = false;
+        e.btnSubmitPin.textContent = t('e2e.unlock');
+    }
+    if (e.btnSavePin) {
+        e.btnSavePin.disabled = false;
+        e.btnSavePin.textContent = t('e2e.savePin');
+    }
+    // Anulowanie nie kończy logowania — nie wołaj odroczonego onSuccess.
+    _onCloseCallback = null;
+    // Pokaż płytki wyboru, żeby użytkownik mógł wybrać konto lokalne/gościa.
+    showLoginChoice();
 }
 
 /**
@@ -176,10 +202,20 @@ export function initE2E() {
         }
     });
 
-    // Anulowanie musi realnie zamykać okno — wcześniej przycisk nic nie robił.
-    e.btnCancelPin?.addEventListener('click', () => {
-        e.pinEnterError.textContent = '';
-        e.pinEnterModal.classList.add('hidden');
+    e.btnCancelPin?.addEventListener('click', cancelE2E);
+    e.btnCancelPinSetup?.addEventListener('click', cancelE2E);
+
+    // Escape i kliknięcie tła zamykają okna PIN — bez konieczności zabijania appki.
+    document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape') return;
+        const open = [e.pinEnterModal, e.pinSetupModal, e.pinRecoveryModal]
+            .some((m) => m && !m.classList.contains('hidden'));
+        if (open) cancelE2E();
+    });
+    [e.pinEnterModal, e.pinSetupModal].forEach((modal) => {
+        modal?.addEventListener('mousedown', (ev) => {
+            if (ev.target === modal) cancelE2E();
+        });
     });
 
     e.linkForgotPin?.addEventListener('click', (ev) => {
