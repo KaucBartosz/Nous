@@ -8,6 +8,7 @@ import {
   packRecord,
   syncOneRecord,
   syncAll,
+  NO_CLOUD_KEY,
 } from "../../src/sync/syncEngine.js";
 
 // SyncEngine nie dotyka Firestore/DOM — tylko fejki.
@@ -32,6 +33,11 @@ const encCrypto = {
   }),
 };
 const plainCrypto = { hasKey: () => false, encrypt: vi.fn() };
+// Klucz jest, ale encrypt przepuszcza dane — do testów fallbacków pól rekordu.
+const passThroughCrypto = {
+  hasKey: () => true,
+  encrypt: async ({ data }) => ({ payload: data, iv: null }),
+};
 
 const memIo = () => {
   const store = { saved: [], marked: [] };
@@ -128,22 +134,35 @@ describe("syncEngine.packRecord (pakowanie E2E)", () => {
     expect(typeof doc.synced_at).toBe("string");
   });
 
-  it("bez klucza: dane jawne + hook onUnencrypted", async () => {
+  it("bez klucza: rzuca NO_CLOUD_KEY i wywołuje hook diagnostyczny", async () => {
     const onUnencrypted = vi.fn();
     const r = rec();
-    const doc = await packRecord(r, plainCrypto, { onUnencrypted });
-    expect(doc.data).toEqual({ score: 5 });
-    expect(doc.demographics).toEqual({ age: 30 });
-    expect(doc.is_encrypted).toBe(false);
-    expect(doc.iv).toBeNull();
-    expect(plainCrypto.encrypt).not.toHaveBeenCalled();
+    await expect(packRecord(r, plainCrypto, { onUnencrypted })).rejects.toMatchObject({
+      code: NO_CLOUD_KEY,
+    });
     expect(onUnencrypted).toHaveBeenCalledWith(r);
+    expect(plainCrypto.encrypt).not.toHaveBeenCalled();
+  });
+
+  it("SEC: bez klucza saveRemote nie zostaje wywołany", async () => {
+    const saveRemote = vi.fn(async () => ({ id: "remote-x" }));
+    const markSynced = vi.fn();
+    const io = {
+      packRecord: (r) => packRecord(r, plainCrypto),
+      saveRemote,
+      markSynced,
+    };
+    await expect(syncOneRecord(rec({ id: "a" }), io)).rejects.toMatchObject({
+      code: NO_CLOUD_KEY,
+    });
+    expect(saveRemote).not.toHaveBeenCalled();
+    expect(markSynced).not.toHaveBeenCalled();
   });
 
   it("test_id fallback do testId; wyniki fallback do data", async () => {
     const doc = await packRecord(
       rec({ test_id: undefined, testId: "legacy", wyniki: undefined, data: { x: 1 } }),
-      plainCrypto,
+      passThroughCrypto,
     );
     expect(doc.test_id).toBe("legacy");
     expect(doc.data).toEqual({ x: 1 });
