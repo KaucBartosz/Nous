@@ -1,4 +1,4 @@
-const { defineConfig } = require('vitest/config');
+const { defineConfig, configDefaults } = require('vitest/config');
 
 module.exports = defineConfig({
   test: {
@@ -6,6 +6,7 @@ module.exports = defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.js'],
     include: ['tests/**/*.test.js'],
+    exclude: [...configDefaults.exclude, 'tests/emulator/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
