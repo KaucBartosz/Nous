@@ -240,7 +240,17 @@ function createDownloader({
 
     const task = downloadQueue.shift();
     isDownloadingInProgress = true;
-    executeDownloadTask(task);
+
+    Promise.resolve()
+      .then(() => executeDownloadTask(task))
+      .catch((err) => {
+        console.error("[downloads] task failed:", err);
+        if (activeDownloads.has(task.testId)) {
+          activeDownloads.delete(task.testId);
+          isDownloadingInProgress = false;
+          processDownloadQueue();
+        }
+      });
   }
 
   /**

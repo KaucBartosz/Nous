@@ -251,3 +251,49 @@ describe("main/downloads enqueue", () => {
     expect(d.queueState().length).toBe(0);
   });
 });
+
+describe("main/downloads queue recovery", () => {
+  it("kolejka przetwarza kolejne zadanie po rzuceniu w fazie setupu", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-queue-"));
+    const secondFolder = path.join(dir, "tests_library", "second");
+    fs.mkdirSync(secondFolder, { recursive: true });
+    fs.writeFileSync(path.join(secondFolder, "meta.json"), JSON.stringify({ version: 2 }));
+    fs.writeFileSync(path.join(secondFolder, "index.html"), "x");
+
+    // Rzucenie w synchronicznej fazie executeDownloadTask (przed rejestracją callbacków).
+    const throwingFs = Object.create(fs);
+    throwingFs.mkdirSync = (target, options) => {
+      if (String(target).includes("broken")) throw new Error("boom");
+      return fs.mkdirSync(target, options);
+    };
+
+    const sent = [];
+    const sender = { send: (channel, payload) => sent.push({ channel, payload }) };
+    const d = createDownloader({
+      fs: throwingFs,
+      path,
+      https: {},
+      AdmZip: function () {},
+      getUserDataPath: () => dir,
+      findStartFile: (folder) =>
+        String(folder).includes("second") ? path.join(folder, "index.html") : null,
+    });
+    const url = "https://github.com/KaucBartosz/Nous/x.zip";
+
+    expect(d.enqueueDownload({ testId: "broken", url, version: 2 }, sender)).toEqual({ ok: true });
+    expect(d.enqueueDownload({ testId: "second", url, version: 2 }, sender)).toEqual({ ok: true });
+
+    d.processDownloadQueue();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Drugie zadanie podjęte mimo błędu pierwszego (cache-hit → "ready").
+    expect(sent).toContainEqual({
+      channel: "test-status",
+      payload: { code: "ready", params: { version: 2 } },
+    });
+    // queueState(): pierwszy testId usunięty, flaga zwolniona, kolejka pusta.
+    expect(d.queueState()).toEqual({ length: 0, busy: false, active: [] });
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
