@@ -21,6 +21,12 @@ describe('firestore.rules — guard polityki dostępu', () => {
     expect(rules).toMatch(/request\.auth\.uid\s*==\s*uid/);
   });
 
+  it('users/{uid} wymaga request.auth.uid == uid', () => {
+    const usersRule = rules.match(/match\s+\/users\/\{uid\}\s*\{([^}]*)\}/);
+    expect(usersRule).not.toBeNull();
+    expect(usersRule[1]).toMatch(/request\.auth\.uid\s*==\s*uid/);
+  });
+
   it('wyniki requiring researcher_uid dla kolekcji results', () => {
     expect(rules).toMatch(/match\s+\/results\/\{/);
     expect(rules).toMatch(/request\.auth\.uid\s*==\s*resource\.data\.researcher_uid/);
