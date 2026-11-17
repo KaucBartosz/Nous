@@ -70,3 +70,4 @@ playwright-report/
 *.traineddata
 test-results/
 graphify-out/
+/plans
