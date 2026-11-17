@@ -1,5 +1,5 @@
 // src/modules/e2e.js
-import { fetchUserKeys, saveUserKeys } from '../cloud/firebase.js';
+import { fetchUserKeys, saveUserKeys, currentUser } from '../cloud/firebase.js';
 import {
     hasCloudKey,
     setCloudKeyFromHex,
@@ -76,7 +76,7 @@ export function initE2E() {
             return;
         }
 
-        const user = auth.currentUser;
+        const user = currentUser();
         if (!user) return;
 
         try {
@@ -123,7 +123,7 @@ export function initE2E() {
             return;
         }
 
-        const user = auth.currentUser;
+        const user = currentUser();
         if (!user) return;
 
         try {
@@ -193,7 +193,7 @@ export function initE2E() {
             return;
         }
 
-        const user = auth.currentUser;
+        const user = currentUser();
         if (!user) return;
 
         try {
