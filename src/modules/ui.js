@@ -204,6 +204,7 @@ export function switchView(viewName, callbacks = {}) {
   Object.values(VIEW_CONFIG).forEach((config) => {
     elements[config.view]?.classList.add("hidden");
     elements[config.nav]?.classList.remove("active");
+    elements[config.nav]?.removeAttribute("aria-current");
   });
 
   // Show selected view and activate nav
@@ -211,6 +212,7 @@ export function switchView(viewName, callbacks = {}) {
   if (config) {
     elements[config.view]?.classList.remove("hidden");
     elements[config.nav]?.classList.add("active");
+    elements[config.nav]?.setAttribute("aria-current", "page");
 
     // Execute callback if provided
     const callbackFn = callbacks[config.callback];
@@ -272,10 +274,17 @@ export function updateAuthUI(userEmail, userStatus) {
 }
 
 export function showLoginScreen() {
-  elements.loginScreen.classList.remove("hidden");
-  elements.dashboardScreen.classList.add("hidden");
-  // Zawsze wróć do ekranu wyboru (online vs lokalne)
-  showLoginChoice();
+  const loginWasHidden = elements.loginScreen?.classList.contains("hidden");
+  const dashboardWasVisible =
+    !elements.dashboardScreen?.classList.contains("hidden");
+
+  elements.loginScreen?.classList.remove("hidden");
+  elements.dashboardScreen?.classList.add("hidden");
+
+  // Reset do wyboru tylko przy faktycznym powrocie z dashboardu lub przy
+  // pierwszym pokazaniu ekranu logowania. Późne onAuthStateChanged(null)
+  // nie może cofnąć panelu, który użytkownik właśnie otworzył.
+  if (loginWasHidden || dashboardWasVisible) showLoginChoice();
 }
 
 export function showLoginChoice() {

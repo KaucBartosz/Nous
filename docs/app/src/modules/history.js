@@ -48,7 +48,13 @@ import {
   refreshDownloadButtons,
   renderHistoryRows,
   renderPagination,
+  scoreTextOf,
 } from "../history/historyTable.js";
+import {
+  sortRows,
+  bindSortableHeaders,
+  syncSortIndicators,
+} from "./tableSort.js";
 import { getPlatform } from "../platform/index.js";
 
 // Jeden stan widoku (mutowany tylko przez orkiestrator + fabryki UI).
@@ -122,6 +128,22 @@ export function initHistoryView() {
 
   // Filtry: przyciski, zamykanie, czyszczenie (logika w historyFilters.js)
   filterUi.bind({ onClear: clearAllFilters });
+
+  // Sortowanie nagłówków tabeli
+  const table = document.getElementById("history-table");
+  bindSortableHeaders(
+    table,
+    () => state.sort,
+    (key, dir) => {
+      state.sort = { key, dir };
+      state.page = 1;
+      state.selectedIds.clear();
+      updateDownloadButtonState();
+      syncSortIndicators(table, state.sort);
+      renderHistoryPage();
+    },
+  );
+  syncSortIndicators(table, state.sort);
 }
 
 function clearAllFilters() {
@@ -327,9 +349,22 @@ function applyFilters() {
   renderHistoryPage();
 }
 
+function historySortValue(r, key) {
+  if (key === "date") return new Date(r.timestamp).getTime();
+  if (key === "test") return r.test_id || r.testId || "";
+  if (key === "subject") return r.subject_id || "";
+  if (key === "status") return r.sync_status || r.syncStatus || "";
+  if (key === "score") {
+    const raw = String(scoreTextOf(r)).replace(/[^\d.-]/g, "");
+    return raw ? Number(raw) : Number.MAX_SAFE_INTEGER;
+  }
+  return "";
+}
+
 function getFilteredResults() {
   // C3: czysty query-model (logika w results/historyQuery.js)
-  return filterResults(state.allResults, state.filters);
+  const filtered = filterResults(state.allResults, state.filters);
+  return sortRows(filtered, state.sort.key, state.sort.dir, historySortValue);
 }
 
 // (updateFilterBadges: ../history/historyFilters.js — wołane przez filterUi.refreshBadges())
@@ -356,6 +391,10 @@ function renderHistoryPage() {
     totalItems: filteredResults.length,
     onPage: (p) => {
       state.page = p;
+      // Zaznaczenia z poprzedniej strony są niewidoczne — nie mogą liczyć
+      // się w „pobierz/usuń N zaznaczonych".
+      state.selectedIds.clear();
+      updateDownloadButtonState();
       renderHistoryPage();
     },
   });

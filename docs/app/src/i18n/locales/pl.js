@@ -32,6 +32,8 @@ export const pl = {
     hide: "Ukryj",
     select: "Wybierz",
     clear: "Wyczyść",
+    skipToContent: "Przejdź do treści",
+    tableCaption: "Tabela danych",
     all: "Wszystkie",
     none: "Brak",
     version: "Wersja",
@@ -548,6 +550,8 @@ export const pl = {
     resetDefaults: "Przywróć Domyślne dla Motywu",
     saveSettings: "Zapisz Ustawienia",
     settingsSaved: "Ustawienia zapisane!",
+    settingsSaveError: "Nie udało się zapisać ustawień.",
+    unsavedChanges: "Masz niezapisane zmiany — zapisz ustawienia.",
     defaultsRestored: "Przywrócono ustawienia domyślne!",
     defaultCustom: "-- Domyślny Własny --",
     saveTheme: "Zapisz motyw",
@@ -835,6 +839,7 @@ export const pl = {
     errorShort: "Błąd",
     validationMustBeObject: "Wyniki testu muszą być obiektem",
     validationError: "Błąd walidacji wyników testu: {{message}}",
+    syncFailed: "Wynik zapisano lokalnie, ale synchronizacja nie udała się: {{message}}",
   },
 
   dialog: {

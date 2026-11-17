@@ -11,7 +11,7 @@ import { t, formatDate, formatDateTime } from '../i18n/index.js';
  * Ładuje i renderuje listę kont lokalnych w widoku admina.
  */
 export async function loadLocalAccountsAdmin() {
-  const container = document.getElementById('local-accounts-list');
+  const container = document.getElementById('local-admin-accounts-list');
   if (!container) return;
 
   // Guard — tylko ADMIN

@@ -17,8 +17,9 @@
     </head>
 
     <body>
+        <a href="#main-content" class="skip-link" data-i18n="common.skipToContent">Przejdź do treści</a>
         <!-- 1. EKRAN LOGOWANIA -->
-        <div id="login-screen" class="full-screen-center hidden" aria-hidden="true">
+        <div id="login-screen" class="full-screen-center" role="main" hidden aria-hidden="true">
             <div class="login-container">
                 <!-- Logo — zawsze widoczne; przełącznik języka dostępny przed logowaniem -->
                 <div class="login-logo-area">
@@ -60,14 +61,14 @@
                     <div class="choice-buttons">
                         <button id="btn-choose-online" class="choice-card">
                             <span class="material-icons choice-icon"
-                                >cloud</span
+                                 aria-hidden="true">cloud</span
                             >
                             <span class="choice-label" data-i18n="login.onlineAccount">Konto Online</span>
                             <span class="choice-desc" data-i18n="login.requiresInternet">Wymaga internetu</span>
                         </button>
                         <button id="btn-choose-local" class="choice-card">
                             <span class="material-icons choice-icon"
-                                >computer</span
+                                 aria-hidden="true">computer</span
                             >
                             <span class="choice-label" data-i18n="login.localAccounts">Konta Lokalne</span>
                             <span class="choice-desc" data-i18n="login.onlyOnThisDevice"
@@ -83,7 +84,7 @@
                         <span
                             class="material-icons"
                             style="font-size: 16px; vertical-align: middle"
-                            >arrow_back</span
+                             aria-hidden="true">arrow_back</span
                         >
                         <span data-i18n="login.back">Wróć</span>
                     </button>
@@ -96,7 +97,7 @@
                                 margin-right: 6px;
                                 color: var(--primary);
                             "
-                            >cloud</span
+                             aria-hidden="true">cloud</span
                         >
                         <span data-i18n="login.onlinePanelTitle">Konto Online</span>
                     </h2>
@@ -106,19 +107,21 @@
                         id="email"
                         placeholder="E-mail badacza"
                         data-i18n-placeholder="login.researcherEmail"
-                    />
+                    / aria-label="E-mail badacza">
                     <div class="password-container">
                         <input
                             type="password"
                             id="password"
                             placeholder="Hasło"
                             data-i18n-placeholder="login.password"
-                        />
+                        / aria-label="Hasło">
                         <button
                             id="btn-toggle-password"
                             class="toggle-password"
+                            aria-label="Pokaż hasło"
+                            aria-pressed="false"
                         >
-                            <span class="material-icons">visibility</span>
+                            <span class="material-icons" aria-hidden="true">visibility</span>
                         </button>
                     </div>
 
@@ -129,7 +132,7 @@
                         Załóż konto
                     </button>
 
-                    <p id="error-msg" class="error-text"></p>
+                    <p id="error-msg" class="error-text" role="alert" aria-live="assertive"></p>
                 </div>
 
                 <!-- Panel Lokalny (ukryty domyślnie) -->
@@ -138,7 +141,7 @@
                         <span
                             class="material-icons"
                             style="font-size: 16px; vertical-align: middle"
-                            >arrow_back</span
+                             aria-hidden="true">arrow_back</span
                         >
                         <span data-i18n="login.back">Wróć</span>
                     </button>
@@ -151,7 +154,7 @@
                                 margin-right: 6px;
                                 color: #64b5f6;
                             "
-                            >computer</span
+                             aria-hidden="true">computer</span
                         >
                         <span data-i18n="login.localPanelTitle">Konta Lokalne</span>
                     </h2>
@@ -163,7 +166,7 @@
                         data-i18n-placeholder="login.username"
                         list="local-accounts-list"
                         autocomplete="username"
-                    />
+                    / aria-label="Login">
                     <datalist id="local-accounts-list"></datalist>
                     <div class="password-container">
                         <input
@@ -172,12 +175,14 @@
                             placeholder="Hasło"
                             data-i18n-placeholder="login.password"
                             autocomplete="current-password"
-                        />
+                        / aria-label="Hasło">
                         <button
                             id="btn-toggle-local-password"
                             class="toggle-password"
+                            aria-label="Pokaż hasło"
+                            aria-pressed="false"
                         >
-                            <span class="material-icons">visibility</span>
+                            <span class="material-icons" aria-hidden="true">visibility</span>
                         </button>
                     </div>
 
@@ -201,12 +206,12 @@
                                 vertical-align: middle;
                                 margin-right: 4px;
                             "
-                            >person_outline</span
+                             aria-hidden="true">person_outline</span
                         >
                         <span data-i18n="login.offlineGuest">Tryb Gościa</span>
                     </button>
 
-                    <p id="error-msg-local" class="error-text"></p>
+                    <p id="error-msg-local" class="error-text" role="alert" aria-live="assertive"></p>
                 </div>
             </div>
         </div>
@@ -228,45 +233,45 @@
 
                 <nav>
                     <button id="nav-library" class="nav-item active">
-                        <span class="material-icons">library_books</span>
+                        <span class="material-icons" aria-hidden="true">library_books</span>
                         <span data-i18n="nav.library">Biblioteka Testów</span>
                     </button>
                     <button id="nav-history" class="nav-item">
-                        <span class="material-icons">history</span> <span data-i18n="nav.history">Historia Wyników</span>
+                        <span class="material-icons" aria-hidden="true">history</span> <span data-i18n="nav.history">Historia Wyników</span>
                     </button>
                     <button id="nav-statistics" class="nav-item">
-                        <span class="material-icons">bar_chart</span>
+                        <span class="material-icons" aria-hidden="true">bar_chart</span>
                         <span data-i18n="nav.statistics">Statystyka</span>
                     </button>
                     <button id="nav-updates" class="nav-item hidden" aria-hidden="true">
-                        <span class="material-icons">system_update</span>
+                        <span class="material-icons" aria-hidden="true">system_update</span>
                         <span data-i18n="nav.updates">Aktualizacje</span>
                         <span class="nav-badge hidden" id="updates-badge"
                             >0</span
                         >
                     </button>
                     <button id="nav-demographics" class="nav-item">
-                        <span class="material-icons">assignment_ind</span>
+                        <span class="material-icons" aria-hidden="true">assignment_ind</span>
                         <span data-i18n="nav.demographics">Metryczka</span>
                     </button>
                     <button id="nav-demo-creator" class="nav-item">
-                        <span class="material-icons">build</span> <span data-i18n="nav.creator">Kreator</span>
+                        <span class="material-icons" aria-hidden="true">build</span> <span data-i18n="nav.creator">Kreator</span>
                     </button>
                     <button id="nav-local-admin" class="nav-item hidden">
-                        <span class="material-icons">manage_accounts</span>
+                        <span class="material-icons" aria-hidden="true">manage_accounts</span>
                         <span data-i18n="nav.localAdmin">Konta Lokalne</span>
                     </button>
 
                     <div class="spacer" style="flex: 1"></div>
 
                     <button id="nav-settings" class="nav-item">
-                        <span class="material-icons">settings</span> <span data-i18n="nav.settings">Ustawienia</span>
+                        <span class="material-icons" aria-hidden="true">settings</span> <span data-i18n="nav.settings">Ustawienia</span>
                     </button>
                     <button id="nav-whats-new" class="nav-item">
-                        <span class="material-icons">new_releases</span> <span data-i18n="nav.whatsNew">Co nowego?</span>
+                        <span class="material-icons" aria-hidden="true">new_releases</span> <span data-i18n="nav.whatsNew">Co nowego?</span>
                     </button>
                     <button id="nav-about" class="nav-item">
-                        <span class="material-icons">info</span> <span data-i18n="nav.about">O programie</span>
+                        <span class="material-icons" aria-hidden="true">info</span> <span data-i18n="nav.about">O programie</span>
                     </button>
                 </nav>
 
@@ -293,7 +298,7 @@
 
                 <div class="user-profile">
                     <div class="avatar-circle">
-                        <span class="material-icons">person</span>
+                        <span class="material-icons" aria-hidden="true">person</span>
                     </div>
                     <div class="user-details">
                         <span id="user-email-display">user@example.com</span>
@@ -317,7 +322,7 @@
                             title="Auto-Sync" data-i18n-title="nav.autoSync"
                             style="margin-bottom: 4px"
                         >
-                            <input type="checkbox" id="toggle-sync" />
+                            <input type="checkbox" id="toggle-sync" / aria-label="Synchronizacja automatyczna">
                             <span class="slider round"></span>
                         </label>
                         <span
@@ -335,23 +340,24 @@
                         id="btn-change-local-password"
                         class="icon-btn hidden"
                         title="Zmień hasło konta lokalnego" data-i18n-title="nav.changePassword"
+                        aria-label="Zmień hasło konta lokalnego" data-i18n-aria-label="nav.changePassword"
                     >
-                        <span class="material-icons">key</span>
+                        <span class="material-icons" aria-hidden="true">key</span>
                     </button>
-                    <button id="btn-logout" class="icon-btn" title="Wyloguj" data-i18n-title="nav.logout">
-                        <span class="material-icons">logout</span>
+                    <button id="btn-logout" class="icon-btn" title="Wyloguj" data-i18n-title="nav.logout" aria-label="Wyloguj" data-i18n-aria-label="nav.logout">
+                        <span class="material-icons" aria-hidden="true">logout</span>
                     </button>
                 </div>
             </aside>
 
             <!-- Główna Treść -->
-            <main class="content-area">
+            <main id="main-content" class="content-area" tabindex="-1">
                 <!-- WIDOK 1: Biblioteka (Grid) -->
                 <div id="library-view">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">library_books</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">library_books</span>
                         <div>
-                            <h3 data-i18n="library.title">Biblioteka Testów</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="library.title">Biblioteka Testów</h3>
                             <p class="page-header-sub" id="library-count" data-i18n="library.loadingLibrary">
                                 Ładowanie biblioteki…
                             </p>
@@ -366,7 +372,7 @@
                                 id="library-search"
                                 placeholder="Szukaj testu... (użyj @tag aby filtrować)" data-i18n-placeholder="library.searchPlaceholder"
                                 class="library-search-input"
-                            />
+                            / aria-label="Szukaj testów">
                         </label>
 
                         <div class="training-mode-container">
@@ -375,14 +381,16 @@
                                 <input
                                     type="checkbox"
                                     id="toggle-training-mode"
-                                />
+                                / aria-label="Tryb treningowy">
                                 <span class="slider round"></span>
                             </label>
-                            <span
-                                class="material-icons info-icon"
+                            <button
+                                type="button"
+                                class="material-icons info-icon icon-button"
                                 id="training-info-icon"
+                                aria-label="Informacja o trybie treningowym" data-i18n-aria-label="library.trainingModeInfo"
                                 title="W trybie treningowym wyniki nie są zapisywane ani ocenianie" data-i18n-title="library.trainingModeInfo"
-                                >info</span
+                                >info</button
                             >
                         </div>
 
@@ -392,29 +400,37 @@
                                 id="view-grid"
                                 class="view-btn active"
                                 title="Siatka kart" data-i18n-title="library.grid"
+                                aria-label="Siatka kart" data-i18n-aria-label="library.grid"
+                                aria-pressed="true"
                             >
-                                <span class="material-icons">grid_view</span>
+                                <span class="material-icons" aria-hidden="true">grid_view</span>
                             </button>
                             <button
                                 id="view-list"
                                 class="view-btn"
                                 title="Lista" data-i18n-title="library.list"
+                                aria-label="Lista" data-i18n-aria-label="library.list"
+                                aria-pressed="false"
                             >
-                                <span class="material-icons">view_list</span>
+                                <span class="material-icons" aria-hidden="true">view_list</span>
                             </button>
                             <button
                                 id="view-table"
                                 class="view-btn"
                                 title="Tabela" data-i18n-title="library.table"
+                                aria-label="Tabela" data-i18n-aria-label="library.table"
+                                aria-pressed="false"
                             >
-                                <span class="material-icons">table_rows</span>
+                                <span class="material-icons" aria-hidden="true">table_rows</span>
                             </button>
                             <button
                                 id="view-compact"
                                 class="view-btn"
                                 title="Kompaktowe karty" data-i18n-title="library.compact"
+                                aria-label="Kompaktowe karty" data-i18n-aria-label="library.compact"
+                                aria-pressed="false"
                             >
-                                <span class="material-icons">view_comfy</span>
+                                <span class="material-icons" aria-hidden="true">view_comfy</span>
                             </button>
                         </div>
                     </div>
@@ -431,16 +447,16 @@
                 <!-- WIDOK: Konta Lokalne (tylko ADMIN) -->
                 <div id="local-admin-view" class="view-content hidden">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">manage_accounts</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">manage_accounts</span>
                         <div>
-                            <h3 data-i18n="localAdmin.title">Konta Lokalne</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="localAdmin.title">Konta Lokalne</h3>
                             <p class="page-header-sub" data-i18n="localAdmin.subtitle">
                                 Widok dostępny tylko dla administratorów. Przeglądaj
                                 konta lokalne i resetuj ich hasła.
                             </p>
                         </div>
                     </div>
-                    <div id="local-accounts-list" class="local-accounts-list">
+                    <div id="local-admin-accounts-list" class="local-accounts-list">
                         <!-- wypełniane dynamicznie przez localAccountsAdmin.js -->
                     </div>
                 </div>
@@ -448,9 +464,9 @@
                 <!-- WIDOK 2: Historia (Tabela) -->
                 <div id="history-view" class="hidden">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">history</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">history</span>
                         <div>
-                            <h3 data-i18n="history.title">Historia Wyników</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="history.title">Historia Wyników</h3>
                             <p class="page-header-sub" data-i18n="history.subtitle">
                                 Przeglądaj, filtruj i eksportuj wyniki badań.
                             </p>
@@ -463,7 +479,7 @@
                             class="btn outline small hidden"
                             title="Pokaż wyniki zapisane lokalnie w trybie Gościa" data-i18n-title="history.showGuestResultsTitle"
                         >
-                            <span class="material-icons">no_accounts</span>
+                            <span class="material-icons" aria-hidden="true">no_accounts</span>
                             <span data-i18n="history.showGuestResults">Pokaż wyniki Gościa</span>
                         </button>
                         <button
@@ -471,14 +487,14 @@
                             class="btn outline small hidden"
                             title="Pokaż moje wyniki zapisane w chmurze" data-i18n-title="history.showCloudResultsTitle"
                         >
-                            <span class="material-icons">cloud_queue</span>
+                            <span class="material-icons" aria-hidden="true">cloud_queue</span>
                             <span data-i18n="history.showCloudResults">Pokaż moje wyniki z bazy danych</span>
                         </button>
                         <button
                             id="btn-export-csv"
                             class="btn secondary small"
                         >
-                            <span class="material-icons">download</span>
+                            <span class="material-icons" aria-hidden="true">download</span>
                             <span data-i18n="history.exportCsv">Pobierz historię wyników w CSV</span>
                         </button>
                     </div>
@@ -549,7 +565,7 @@
                                     id="btn-cloud-import-all"
                                     class="btn primary small"
                                 >
-                                    <span class="material-icons">input</span>
+                                    <span class="material-icons" aria-hidden="true">input</span>
                                     <span data-i18n="history.importAllToLocal">Importuj wszystkie do lokalnej bazy</span>
                                 </button>
                                 <button
@@ -559,7 +575,7 @@
                                 >
                                     <span id="btn-cloud-download-text">
                                         <span class="material-icons"
-                                            >download</span
+                                             aria-hidden="true">download</span
                                         >
                                         <span data-i18n="history.downloadAll">Pobierz wszystkie</span>
                                     </span>
@@ -584,7 +600,7 @@
                                     class="btn primary small"
                                 >
                                     <span class="material-icons"
-                                        >move_to_inbox</span
+                                         aria-hidden="true">move_to_inbox</span
                                     >
                                     <span data-i18n="history.importAllGuest">Importuj wszystkie wyniki Gościa</span>
                                 </button>
@@ -595,7 +611,7 @@
                                 >
                                     <span id="btn-guest-download-text">
                                         <span class="material-icons"
-                                            >download</span
+                                             aria-hidden="true">download</span
                                         >
                                         <span data-i18n="history.downloadAll">Pobierz wszystkie</span>
                                     </span>
@@ -610,7 +626,7 @@
                                     style="min-width: 140px"
                                     title="Usuń zaznaczone wyniki lokalnie" data-i18n-title="history.deleteSelectedTitle"
                                 >
-                                    <span class="material-icons">delete</span>
+                                    <span class="material-icons" aria-hidden="true">delete</span>
                                     <span data-i18n="history.deleteSelected">Usuń zaznaczone</span>
                                 </button>
                             </div>
@@ -631,7 +647,7 @@
                                 >
                                     <span id="btn-local-download-text">
                                         <span class="material-icons"
-                                            >download</span
+                                             aria-hidden="true">download</span
                                         >
                                         <span data-i18n="history.downloadAllResults">Pobierz wszystkie wyniki</span>
                                     </span>
@@ -646,7 +662,7 @@
                                     style="min-width: 140px"
                                     title="Usuń zaznaczone wyniki lokalnie" data-i18n-title="history.deleteSelectedTitle"
                                 >
-                                    <span class="material-icons">delete</span>
+                                    <span class="material-icons" aria-hidden="true">delete</span>
                                     <span data-i18n="history.deleteSelected">Usuń zaznaczone</span>
                                 </button>
                             </div>
@@ -671,7 +687,7 @@
                             class="btn outline small"
                         >
                             <span class="material-icons" style="font-size: 15px"
-                                >filter_alt_off</span
+                                 aria-hidden="true">filter_alt_off</span
                             >
                             <span data-i18n="history.clearFilters">Wyczyść filtry</span>
                         </button>
@@ -679,27 +695,31 @@
 
                     <div class="table-container">
                         <table id="history-table" class="data-table">
+<caption class="sr-only" data-i18n="common.tableCaption">Tabela danych</caption>
                             <thead>
                                 <tr>
                                     <th style="width: 40px; text-align: center">
                                         <input
                                             type="checkbox"
                                             id="selectAllHistory"
+                                            aria-label="Zaznacz wszystkie wyniki na stronie"
                                         />
                                     </th>
                                     <th
                                         class="filterable-header"
                                         data-filter-column="date"
+                                        data-sort="date"
                                     >
                                         <span data-i18n="history.date">Data</span>
                                         <button
                                             class="filter-btn"
+                                            aria-expanded="false"
                                             data-filter-type="date"
                                             title="Filtruj wg daty" data-i18n-title="history.filterByDate"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
-                                                >filter_list</span
+                                                 aria-hidden="true">filter_list</span
                                             >
                                         </button>
                                         <span class="filter-badge hidden"
@@ -709,16 +729,18 @@
                                     <th
                                         class="filterable-header"
                                         data-filter-column="test"
+                                        data-sort="test"
                                     >
                                         <span data-i18n="history.test">Test</span>
                                         <button
                                             class="filter-btn"
+                                            aria-expanded="false"
                                             data-filter-type="test_id"
                                             title="Filtruj wg testu" data-i18n-title="history.filterByTest"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
-                                                >filter_list</span
+                                                 aria-hidden="true">filter_list</span
                                             >
                                         </button>
                                         <span class="filter-badge hidden"
@@ -728,36 +750,40 @@
                                     <th
                                         class="filterable-header"
                                         data-filter-column="subject"
+                                        data-sort="subject"
                                     >
                                         <span data-i18n="history.subjectId">ID Badanego</span>
                                         <button
                                             class="filter-btn"
+                                            aria-expanded="false"
                                             data-filter-type="subject_id"
                                             title="Filtruj wg badanego" data-i18n-title="history.filterBySubject"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
-                                                >filter_list</span
+                                                 aria-hidden="true">filter_list</span
                                             >
                                         </button>
                                         <span class="filter-badge hidden"
                                             >0</span
                                         >
                                     </th>
-                                    <th data-i18n="history.result">Wynik</th>
+                                    <th data-i18n="history.result" data-sort="score">Wynik</th>
                                     <th
                                         class="filterable-header"
                                         data-filter-column="status"
+                                        data-sort="status"
                                     >
                                         <span data-i18n="history.status">Status</span>
                                         <button
                                             class="filter-btn"
+                                            aria-expanded="false"
                                             data-filter-type="status"
                                             title="Filtruj wg statusu" data-i18n-title="history.filterByStatus"
                                         >
                                             <span
                                                 class="material-icons filter-icon"
-                                                >filter_list</span
+                                                 aria-hidden="true">filter_list</span
                                             >
                                         </button>
                                         <span class="filter-badge hidden"
@@ -778,9 +804,9 @@
                 <div id="statistics-view" class="hidden stats-view">
                     <div class="stats-header">
                         <div class="stats-header-title">
-                            <span class="material-icons stats-header-icon">insights</span>
+                            <span class="material-icons stats-header-icon" aria-hidden="true">insights</span>
                             <div>
-                                <h3 data-i18n="statistics.title">Statystyka wyników</h3>
+                                <h3 role="heading" aria-level="2" data-i18n="statistics.title">Statystyka wyników</h3>
                                 <p class="stats-header-sub" data-i18n="statistics.subtitle">
                                     Porównuj wykonania i analizuj wyniki testów.
                                 </p>
@@ -809,7 +835,7 @@
                     <div id="stats-hero" class="stats-hero hidden">
                         <div class="stats-hero-copy">
                             <span class="stats-hero-eyebrow" data-i18n="statistics.yourProgress">Twoje postępy</span>
-                            <h4 id="stats-hero-title"></h4>
+                            <h4 role="heading" aria-level="3" id="stats-hero-title"></h4>
                             <p id="stats-hero-text"></p>
                         </div>
                         <button
@@ -852,7 +878,7 @@
                                     list="stats-subject-datalist"
                                     placeholder="Wpisz lub wybierz ID…" data-i18n-placeholder="statistics.typeOrSelectId"
                                     autocomplete="off"
-                                />
+                                / aria-label="ID badanego">
                                 <datalist id="stats-subject-datalist"></datalist>
                             </label>
                             <label class="stats-field hidden" id="stats-participant-field">
@@ -865,8 +891,9 @@
                             id="stats-metrics-toggle"
                             class="btn outline small stats-metrics-toggle"
                             type="button"
+                            aria-expanded="false"
                         >
-                            <span class="material-icons" style="font-size: 16px">tune</span>
+                            <span class="material-icons" style="font-size: 16px" aria-hidden="true">tune</span>
                             <span data-i18n="statistics.metrics">Metryki</span>
                         </button>
                     </div>
@@ -875,8 +902,8 @@
 
                     <div id="stats-metrics-panel" class="hidden stats-section">
                         <div class="stats-section-header">
-                            <h4>
-                                <span class="material-icons">tune</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">tune</span>
                                 <span data-i18n="statistics.metrics">Metryki</span>
                             </h4>
                             <p class="stats-section-sub" data-i18n="statistics.metricsSubtitle">
@@ -888,8 +915,8 @@
 
                     <div id="stats-personal-runs" class="hidden stats-section">
                         <div class="stats-section-header">
-                            <h4>
-                                <span class="material-icons">list_alt</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">list_alt</span>
                                 <span data-i18n="statistics.runs">Wykonania</span>
                             </h4>
                             <p class="stats-section-sub" data-i18n="statistics.runsSubtitle">
@@ -898,11 +925,12 @@
                         </div>
                         <div class="table-container">
                             <table id="stats-runs-table" class="stats-table">
+<caption class="sr-only" data-i18n="common.tableCaption">Tabela danych</caption>
                                 <thead>
                                     <tr>
                                         <th style="width: 52px; text-align: center;" data-i18n="statistics.choose">Wybierz</th>
-                                        <th data-i18n="common.date">Data</th>
-                                        <th class="stats-num" data-i18n="common.result">Wynik</th>
+                                        <th data-i18n="common.date" data-sort="date">Data</th>
+                                        <th class="stats-num" data-i18n="common.result" data-sort="score">Wynik</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -912,14 +940,15 @@
 
                     <div id="stats-compare" class="hidden stats-section">
                         <div class="stats-section-header">
-                            <h4>
-                                <span class="material-icons">compare_arrows</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">compare_arrows</span>
                                 <span data-i18n="statistics.compare">Porównanie</span>
                             </h4>
                             <p id="stats-compare-info" class="stats-section-sub"></p>
                         </div>
                         <div class="table-container">
                             <table id="stats-compare-table" class="stats-table">
+<caption class="sr-only" data-i18n="common.tableCaption">Tabela danych</caption>
                                 <thead>
                                     <tr>
                                         <th data-i18n="statistics.metric">Metryka</th>
@@ -935,8 +964,8 @@
 
                     <div id="stats-trend" class="hidden stats-section">
                         <div class="stats-section-header">
-                            <h4>
-                                <span class="material-icons">trending_up</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">trending_up</span>
                                 <span data-i18n="statistics.trend">Trend</span>
                             </h4>
                             <div class="stats-trend-controls">
@@ -952,14 +981,15 @@
 
                     <div id="stats-research" class="hidden stats-section">
                         <div class="stats-section-header">
-                            <h4>
-                                <span class="material-icons">functions</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">functions</span>
                                 <span data-i18n="statistics.averageResults">Średnie wyniki</span>
                             </h4>
                             <p id="stats-research-count" class="stats-count"></p>
                         </div>
                         <div class="table-container">
                             <table id="stats-agg-table" class="stats-table">
+<caption class="sr-only" data-i18n="common.tableCaption">Tabela danych</caption>
                                 <thead>
                                     <tr>
                                         <th data-i18n="statistics.metric">Metryka</th>
@@ -974,8 +1004,8 @@
                     </div>
 
                     <div id="stats-empty" class="stats-empty hidden">
-                        <span class="material-icons stats-empty-icon">query_stats</span>
-                        <h4 id="stats-empty-title"></h4>
+                        <span class="material-icons stats-empty-icon" aria-hidden="true">query_stats</span>
+                        <h4 role="heading" aria-level="3" id="stats-empty-title"></h4>
                         <p id="stats-empty-text"></p>
                         <button
                             id="stats-empty-cta"
@@ -988,9 +1018,9 @@
                 <!-- WIDOK 3: Aktualizacje (Tabela) -->
                 <div id="updates-view" class="hidden">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">system_update</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">system_update</span>
                         <div>
-                            <h3 data-i18n="updates.title">Aktualizacje</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="updates.title">Aktualizacje</h3>
                             <p class="page-header-sub" data-i18n="updates.subtitle">
                                 Aktualizuj program i zainstalowane testy.
                             </p>
@@ -1000,8 +1030,8 @@
                     <!-- 3a. Sekcja Aktualizacji Programu -->
                     <div class="app-update-container panel">
                         <div class="panel-header">
-                            <h4>
-                                <span class="material-icons">cloud_sync</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">cloud_sync</span>
                                 <span data-i18n="updates.appUpdateTitle">Aktualizacja Programu Nous</span>
                             </h4>
                         </div>
@@ -1016,7 +1046,7 @@
                         <div
                             id="app-update-status"
                             style="font-size: 14px; margin-bottom: 15px"
-                         data-i18n="updates.checkingShort">
+                         data-i18n="updates.checkingShort" role="status" aria-live="polite">
                             Sprawdzanie aktualizacji...
                         </div>
 
@@ -1024,6 +1054,11 @@
                         <div
                             id="app-update-progress-container"
                             class="hidden"
+                            role="progressbar"
+                            aria-label="Postęp pobierania aktualizacji"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="0"
                             style="max-width: 320px; margin-bottom: 10px"
                         >
                             <div
@@ -1069,14 +1104,14 @@
                                 id="btn-check-app-update"
                                 class="btn secondary small"
                             >
-                                <span class="material-icons">refresh</span>
+                                <span class="material-icons" aria-hidden="true">refresh</span>
                                 <span data-i18n="updates.checkAgain">Sprawdź ponownie</span>
                             </button>
                             <button
                                 id="btn-download-app-update"
                                 class="btn primary hidden"
                             >
-                                <span class="material-icons">download</span>
+                                <span class="material-icons" aria-hidden="true">download</span>
                                 <span data-i18n="updates.downloadUpdate">Pobierz Aktualizację</span>
                             </button>
                             <button
@@ -1084,7 +1119,7 @@
                                 class="btn primary hidden"
                             >
                                 <span class="material-icons"
-                                    >system_update_alt</span
+                                     aria-hidden="true">system_update_alt</span
                                 >
                                 <span data-i18n="updates.installRestart">Zainstaluj i Restartuj</span>
                             </button>
@@ -1093,8 +1128,8 @@
 
                     <div class="panel" style="margin-top: 16px">
                         <div class="panel-header">
-                            <h4>
-                                <span class="material-icons">inventory_2</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">inventory_2</span>
                                 <span data-i18n="updates.installedTests">Stan Zainstalowanych Testów</span>
                             </h4>
                         </div>
@@ -1107,11 +1142,12 @@
                                     placeholder="Szukaj..." data-i18n-placeholder="common.searchEllipsis"
                                     class="library-search-input"
                                     style="max-width: 100%"
-                                />
+                                / aria-label="Szukaj aktualizacji">
                             </label>
                         </div>
                         <div class="table-container">
                             <table id="updates-table" class="data-table">
+<caption class="sr-only" data-i18n="common.tableCaption">Tabela danych</caption>
                             <thead>
                                 <tr>
                                     <th data-i18n="library.testName">Nazwa Testu</th>
@@ -1132,9 +1168,9 @@
                 <!-- WIDOK 4: Metryczka (Formularz) -->
                 <div id="demographics-view" class="hidden">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">assignment_ind</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">assignment_ind</span>
                         <div>
-                            <h3 data-i18n="demographics.title">Metryczka</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="demographics.title">Metryczka</h3>
                             <p class="page-header-sub" data-i18n="demographics.subtitle2">
                                 Dane uczestnika badania i kartoteka badanych.
                             </p>
@@ -1144,7 +1180,7 @@
                     <!-- Panel: Kartoteka Badanych -->
                     <div class="participants-panel">
                         <div class="participants-panel-header">
-                            <h4 class="participants-panel-title">
+                            <h4 role="heading" aria-level="3" class="participants-panel-title">
                                 <span
                                     class="material-icons"
                                     style="
@@ -1152,7 +1188,7 @@
                                         vertical-align: middle;
                                         margin-right: 6px;
                                     "
-                                    >people</span
+                                     aria-hidden="true">people</span
                                 >
                                 <span data-i18n="demographics.registryTitle">Kartoteka Badanych</span>
                             </h4>
@@ -1163,14 +1199,14 @@
                                         font-size: 16px;
                                         color: var(--text-muted);
                                     "
-                                    >search</span
+                                     aria-hidden="true">search</span
                                 >
                                 <input
                                     type="text"
                                     id="participants-search"
                                     placeholder="Szukaj badanego..." data-i18n-placeholder="demographics.searchPlaceholder"
                                     class="participants-search-input"
-                                />
+                                / aria-label="Szukaj uczestników">
                             </div>
                         </div>
                         <div id="participants-list" class="participants-list">
@@ -1184,8 +1220,8 @@
 
                     <div class="form-container panel" style="max-width: 800px; margin-top: 16px">
                         <div class="panel-header">
-                            <h4>
-                                <span class="material-icons">edit_note</span>
+                            <h4 role="heading" aria-level="3">
+                                <span class="material-icons" aria-hidden="true">edit_note</span>
                                 <span data-i18n="demographics.participantData">Dane Uczestnika Badania</span>
                             </h4>
                         </div>
@@ -1194,7 +1230,7 @@
                         </p>
 
                         <div class="form-group">
-                            <label data-i18n="demographics.chooseTemplate">Wybierz Szablon Metryczki:</label>
+                            <label data-i18n="demographics.chooseTemplate" for="demo-template-select">Wybierz Szablon Metryczki:</label>
                             <select id="demo-template-select">
                                 <option value="" data-i18n="demographics.defaultTemplate">-- Domyślna (Brak) --</option>
                                 <!-- JS populate -->
@@ -1215,23 +1251,23 @@
 
                         <div class="toolbar" style="margin-top: 16px; padding: 8px 12px; background: transparent; border: none">
                             <button id="btn-save-demo" class="btn primary">
-                                <span class="material-icons">save</span> <span data-i18n="demographics.saveSession">Zapisz Dane Sesji</span>
+                                <span class="material-icons" aria-hidden="true">save</span> <span data-i18n="demographics.saveSession">Zapisz Dane Sesji</span>
                             </button>
                             <button
                                 id="btn-save-to-registry"
                                 class="btn secondary"
                             >
-                                <span class="material-icons">person_add</span>
+                                <span class="material-icons" aria-hidden="true">person_add</span>
                                 <span data-i18n="demographics.saveToRegistry">Zapisz do Kartoteki</span>
                             </button>
                             <button id="btn-clear-demo" class="btn outline">
-                                <span class="material-icons">clear</span>
+                                <span class="material-icons" aria-hidden="true">clear</span>
                                 <span data-i18n="common.clear">Wyczyść</span>
                             </button>
                             <span
                                 id="demo-status"
                                 style="color: var(--success); display: none"
-                                 data-i18n="demographics.saved">Zapisano!</span>
+                                 data-i18n="demographics.saved" role="status" aria-live="polite">Zapisano!</span>
                         </div>
                     </div>
                 </div>
@@ -1239,9 +1275,9 @@
                 <!-- WIDOK 5: Kreator Metryczek (NOWY) -->
                 <div id="demo-creator-view" class="hidden">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">build</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">build</span>
                         <div>
-                            <h3 data-i18n="creator.titleFull">Kreator Metryczek</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="creator.titleFull">Kreator Metryczek</h3>
                             <p class="page-header-sub" data-i18n="creator.subtitleFull">
                                 Zdefiniuj własne pola zbierane od uczestników.
                             </p>
@@ -1257,12 +1293,12 @@
                                 type="text"
                                 id="creator-template-name"
                                 placeholder="np. Badanie Kierowców 2026" data-i18n-placeholder="creator.templateNamePlaceholder"
-                            />
+                            / aria-label="np. Badanie Kierowców 2026">
                         </div>
 
                         <hr class="form-divider" />
 
-                        <h4 class="panel-sub" style="margin: 0 0 8px; color: var(--text-main); font-size: 15px; font-weight: 600" data-i18n="creator.formFields">Pola Formularza</h4>
+                        <h4 role="heading" aria-level="3" class="panel-sub" style="margin: 0 0 8px; color: var(--text-main); font-size: 15px; font-weight: 600" data-i18n="creator.formFields">Pola Formularza</h4>
                         <div id="creator-fields-container">
                             <!-- Dynamiczna lista pól -->
                         </div>
@@ -1272,7 +1308,7 @@
                             class="btn secondary small"
                             style="margin-top: 12px"
                         >
-                            <span class="material-icons">add</span> <span data-i18n="creator.addFieldBtn">Dodaj Pole</span>
+                            <span class="material-icons" aria-hidden="true">add</span> <span data-i18n="creator.addFieldBtn">Dodaj Pole</span>
                         </button>
 
                         <div
@@ -1286,7 +1322,7 @@
                                 <!-- Placeholder for delete template btn if editing logic added later -->
                             </div>
                             <button id="btn-save-template" class="btn primary">
-                                <span class="material-icons">save</span> <span data-i18n="creator.saveTemplateBtn">Zapisz Szablon</span>
+                                <span class="material-icons" aria-hidden="true">save</span> <span data-i18n="creator.saveTemplateBtn">Zapisz Szablon</span>
                             </button>
                         </div>
                         <span
@@ -1297,7 +1333,7 @@
                                 color: #4caf50;
                                 display: none;
                             "
-                             data-i18n="creator.templateSavedStatus">Zapisano Szablon!</span>
+                             data-i18n="creator.templateSavedStatus" role="status" aria-live="polite">Zapisano Szablon!</span>
                     </div>
 
                     <hr
@@ -1316,12 +1352,12 @@
                             margin-bottom: 15px;
                         "
                     >
-                        <h4 style="margin: 0" data-i18n="creator.availableTemplates">Dostępne Szablony</h4>
+                        <h4 role="heading" aria-level="3" style="margin: 0" data-i18n="creator.availableTemplates">Dostępne Szablony</h4>
                         <button
                             id="btn-import-template"
                             class="btn secondary small"
                         >
-                            <span class="material-icons">upload</span> <span data-i18n="creator.importFromFile">Importuj z Pliku</span>
+                            <span class="material-icons" aria-hidden="true">upload</span> <span data-i18n="creator.importFromFile">Importuj z Pliku</span>
                         </button>
                     </div>
                     <div
@@ -1341,9 +1377,9 @@
                 <!-- WIDOK 6: Ustawienia -->
                 <div id="settings-view" class="hidden">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">settings</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">settings</span>
                         <div>
-                            <h3 data-i18n="settings.title">Ustawienia</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="settings.title">Ustawienia</h3>
                             <p class="page-header-sub" data-i18n="settings.subtitle">
                                 Dostosuj wygląd i zachowanie aplikacji.
                             </p>
@@ -1352,7 +1388,7 @@
 
                     <div class="form-container panel" style="max-width: 800px">
                         <div class="settings-section">
-                            <h4 data-i18n="settings.interfaceLanguage">Język interfejsu</h4>
+                            <h4 role="heading" aria-level="3" data-i18n="settings.interfaceLanguage">Język interfejsu</h4>
                             <div class="form-group">
                                 <label data-i18n="settings.language">Język</label>
                                 <select id="language-select">
@@ -1366,7 +1402,7 @@
                         </div>
                         <!-- Sekcja Motywu -->
                         <div class="settings-section">
-                            <h4 data-i18n="settings.mainTheme">Motyw Główny</h4>
+                            <h4 role="heading" aria-level="3" data-i18n="settings.mainTheme">Motyw Główny</h4>
                             <div class="form-group">
                                 <div class="theme-switcher">
                                     <label class="theme-option">
@@ -1378,7 +1414,7 @@
                                         />
                                         <span class="theme-label">
                                             <span class="material-icons"
-                                                >dark_mode</span
+                                                 aria-hidden="true">dark_mode</span
                                             >
                                             <span data-i18n="settings.dark">Ciemny</span>
                                         </span>
@@ -1391,7 +1427,7 @@
                                         />
                                         <span class="theme-label">
                                             <span class="material-icons"
-                                                >light_mode</span
+                                                 aria-hidden="true">light_mode</span
                                             >
                                             <span data-i18n="settings.light">Jasny</span>
                                         </span>
@@ -1404,7 +1440,7 @@
                                         />
                                         <span class="theme-label">
                                             <span class="material-icons"
-                                                >palette</span
+                                                 aria-hidden="true">palette</span
                                             >
                                             <span data-i18n="settings.custom">Własny</span>
                                         </span>
@@ -1423,7 +1459,7 @@
                                             font-size: 12px;
                                             vertical-align: text-top;
                                         "
-                                        >info</span
+                                         aria-hidden="true">info</span
                                     >
                                     <span data-i18n="settings.themeChangeHint">Zmiana motywu przywróci domyślne kolory dla wybranego trybu.</span>
                                 </p>
@@ -1463,7 +1499,7 @@
                                             title="Usuń wybrany motyw" data-i18n-title="settings.deleteTheme"
                                         >
                                             <span class="material-icons"
-                                                >delete</span
+                                                 aria-hidden="true">delete</span
                                             >
                                         </button>
                                     </div>
@@ -1491,14 +1527,14 @@
                                                     margin-bottom: 0;
                                                     padding: 8px 12px;
                                                 "
-                                            />
+                                            / aria-label="np. Mój Rubinowy">
                                         </div>
                                         <button
                                             id="btn-save-custom-theme"
                                             class="btn secondary small"
                                         >
                                             <span class="material-icons"
-                                                >save_as</span
+                                                 aria-hidden="true">save_as</span
                                             >
                                             <span data-i18n="settings.saveTheme">Zapisz motyw</span>
                                         </button>
@@ -1519,7 +1555,7 @@
                             <div>
                                 <!-- Elementy Interaktywne -->
                                 <div class="settings-section">
-                                    <h4 data-i18n="settings.interactiveElements">Elementy Interaktywne</h4>
+                                    <h4 role="heading" aria-level="3" data-i18n="settings.interactiveElements">Elementy Interaktywne</h4>
                                     <div class="form-group">
                                         <label data-i18n="settings.primaryColorButtons">Kolor Główny (Przyciski):</label>
                                         <div class="color-picker-group">
@@ -1554,7 +1590,7 @@
 
                                 <!-- Ikony -->
                                 <div class="settings-section">
-                                    <h4 data-i18n="settings.icons">Ikony</h4>
+                                    <h4 role="heading" aria-level="3" data-i18n="settings.icons">Ikony</h4>
                                     <div class="form-group">
                                         <label data-i18n="settings.iconColorLabel">Kolor Ikon:</label>
                                         <div class="color-picker-group">
@@ -1570,7 +1606,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label data-i18n="settings.activeIconColorLabel">Kolor Aktywnej Ikony:</label>
+                                        <label data-i18n="settings.activeIconColorLabel" for="icon-active-picker">Kolor Aktywnej Ikony:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1590,9 +1626,9 @@
                             <div>
                                 <!-- Tekst -->
                                 <div class="settings-section">
-                                    <h4 data-i18n="settings.text">Tekst</h4>
+                                    <h4 role="heading" aria-level="3" data-i18n="settings.text">Tekst</h4>
                                     <div class="form-group">
-                                        <label data-i18n="settings.mainTextLabel">Główny Kolor Tekstu:</label>
+                                        <label data-i18n="settings.mainTextLabel" for="text-main-picker">Główny Kolor Tekstu:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1652,7 +1688,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label data-i18n="settings.testDescLabel">Kolor Opisu Testów:</label>
+                                        <label data-i18n="settings.testDescLabel" for="text-test-description-picker">Kolor Opisu Testów:</label>
                                         <div class="color-picker-group">
                                             <input
                                                 type="color"
@@ -1685,7 +1721,7 @@
 
                                 <!-- Tło i Obramowania -->
                                 <div class="settings-section">
-                                    <h4 data-i18n="settings.backgroundAndBorders">Tło i Ramki</h4>
+                                    <h4 role="heading" aria-level="3" data-i18n="settings.backgroundAndBorders">Tło i Ramki</h4>
                                     <div class="form-group">
                                         <label data-i18n="settings.bgAppLabel">Tło Aplikacji:</label>
                                         <div class="color-picker-group">
@@ -1747,7 +1783,7 @@
 
                         <!-- Biblioteka Testów -->
                         <div class="settings-section">
-                            <h4 data-i18n="settings.library">Biblioteka Testów</h4>
+                            <h4 role="heading" aria-level="3" data-i18n="settings.library">Biblioteka Testów</h4>
                             <div
                                 class="form-group"
                                 style="
@@ -1763,7 +1799,7 @@
                                     <input
                                         type="checkbox"
                                         id="show-local-tests-toggle"
-                                    />
+                                    / aria-label="Pokaż testy lokalne">
                                     <span class="slider round"></span>
                                 </label>
                                 <span data-i18n="settings.showLocalTests">Pokaż testy lokalne</span>
@@ -1807,7 +1843,7 @@
                                 <input
                                     type="checkbox"
                                     id="auto-load-demographics-toggle"
-                                />
+                                / aria-label="Automatycznie wczytaj metryczkę">
                                 <span class="slider round"></span>
                             </label>
                             <span data-i18n="settings.autoLoadDemographics">Automatycznie wczytaj ostatnio używaną metryczkę przy logowaniu</span>
@@ -1826,7 +1862,7 @@
                             class="settings-section"
                             id="download-settings-section"
                         >
-                            <h4 data-i18n="settings.download">Pobieranie</h4>
+                            <h4 role="heading" aria-level="3" data-i18n="settings.download">Pobieranie</h4>
                             <div
                                 class="form-group"
                                 style="
@@ -1842,7 +1878,7 @@
                                     <input
                                         type="checkbox"
                                         id="silent-download-toggle"
-                                    />
+                                    / aria-label="Ciche pobieranie">
                                     <span class="slider round"></span>
                                 </label>
                                 <span data-i18n="settings.silentDownload">Ciche pobieranie do folderu</span>
@@ -1889,7 +1925,7 @@
 
                         <!-- Podgląd -->
                         <div class="settings-section">
-                            <h4 data-i18n="settings.preview">Podgląd Elementów</h4>
+                            <h4 role="heading" aria-level="3" data-i18n="settings.preview">Podgląd Elementów</h4>
                             <div class="settings-preview">
                                 <div
                                     style="
@@ -1923,7 +1959,7 @@
                                                 font-size: 32px;
                                                 color: var(--icon-color);
                                             "
-                                            >home</span
+                                             aria-hidden="true">home</span
                                         >
                                         <p
                                             style="
@@ -1941,7 +1977,7 @@
                                                 font-size: 32px;
                                                 color: var(--icon-active);
                                             "
-                                            >star</span
+                                             aria-hidden="true">star</span
                                         >
                                         <p
                                             style="
@@ -1992,11 +2028,11 @@
                                 id="btn-reset-settings"
                                 class="btn secondary"
                             >
-                                <span class="material-icons">refresh</span>
+                                <span class="material-icons" aria-hidden="true">refresh</span>
                                 <span data-i18n="settings.resetDefaults">Przywróć Domyślne dla Motywu</span>
                             </button>
                             <button id="btn-save-settings" class="btn primary">
-                                <span class="material-icons">save</span> <span data-i18n="settings.saveSettings">Zapisz Ustawienia</span>
+                                <span class="material-icons" aria-hidden="true">save</span> <span data-i18n="settings.saveSettings">Zapisz Ustawienia</span>
                             </button>
                         </div>
 
@@ -2009,15 +2045,15 @@
                                 text-align: center;
                                 display: none;
                             "
-                             data-i18n="settings.settingsSaved">Ustawienia zapisane!</span>
+                             data-i18n="settings.settingsSaved" role="status" aria-live="polite">Ustawienia zapisane!</span>
                     </div>
                 </div>
                 <!-- WIDOK 7: Co nowego? -->
                 <div id="whats-new-view" class="hidden">
                     <div class="page-header">
-                        <span class="material-icons page-header-icon">new_releases</span>
+                        <span class="material-icons page-header-icon" aria-hidden="true">new_releases</span>
                         <div>
-                            <h3 data-i18n="whatsNew.title">Co nowego w Nous?</h3>
+                            <h3 role="heading" aria-level="2" data-i18n="whatsNew.title">Co nowego w Nous?</h3>
                             <p class="page-header-sub" data-i18n="whatsNew.subtitle">
                                 Ostatnie zmiany i aktualizacje aplikacji.
                             </p>
@@ -2039,7 +2075,7 @@
                                     disabled
                                 >
                                     <span class="material-icons"
-                                        >chevron_left</span
+                                         aria-hidden="true">chevron_left</span
                                     >
                                 </button>
                                 <span
@@ -2059,7 +2095,7 @@
                                     disabled
                                 >
                                     <span class="material-icons"
-                                        >chevron_right</span
+                                         aria-hidden="true">chevron_right</span
                                     >
                                 </button>
                             </div>
@@ -2067,14 +2103,14 @@
                                 id="btn-refresh-whats-new"
                                 class="btn secondary small"
                             >
-                                <span class="material-icons">refresh</span>
+                                <span class="material-icons" aria-hidden="true">refresh</span>
                                 <span data-i18n="whatsNew.refresh">Odśwież</span>
                             </button>
                             <button
                                 id="btn-open-github"
                                 class="btn primary small"
                             >
-                                <span class="material-icons">open_in_new</span>
+                                <span class="material-icons" aria-hidden="true">open_in_new</span>
                                 <span data-i18n="whatsNew.openGitHub">Otwórz GitHub</span>
                             </button>
                         </div>
@@ -2092,7 +2128,7 @@
                                 text-align: center;
                                 padding: 40px;
                             "
-                        >
+                         role="status" aria-live="polite">
                             <span
                                 class="material-icons loading-spinner"
                                 style="
@@ -2100,7 +2136,7 @@
                                     color: var(--primary);
                                     display: inline-block;
                                 "
-                                >sync</span
+                                 aria-hidden="true">sync</span
                             >
                             <p
                                 style="
@@ -2121,9 +2157,9 @@
                                 padding: 40px;
                                 color: #ff5252;
                             "
-                        >
+                         role="alert" aria-live="assertive">
                             <span class="material-icons" style="font-size: 48px"
-                                >error</span
+                                 aria-hidden="true">error</span
                             >
                             <p style="margin-top: 15px" data-i18n="whatsNew.loadChangesError">
                                 Nie udało się załadować informacji o zmianach.
@@ -2145,10 +2181,10 @@
         <!-- 3. OKNA MODALNE -->
 
         <!-- MODAL: Zmiana hasła konta lokalnego -->
-        <div id="change-password-modal" class="modal-overlay hidden">
-            <div class="modal-content modal-content--sm">
+        <div id="change-password-modal" role="dialog" aria-modal="true" aria-labelledby="change-password-modal-title" class="modal-overlay hidden">
+            <div class="modal-content modal-content--sm" tabindex="-1">
                 <div class="modal-header">
-                    <h3>
+                    <h3 role="heading" aria-level="2" id="change-password-modal-title">
                         <span
                             class="material-icons"
                             style="
@@ -2156,12 +2192,13 @@
                                 margin-right: 8px;
                                 font-size: 20px;
                             "
-                            >key</span
+                             aria-hidden="true">key</span
                         ><span data-i18n="login.changePassword">Zmień hasło</span>
                     </h3>
                     <button
                         id="btn-close-change-password"
                         class="btn-icon-close"
+                        aria-label="Zamknij" data-i18n-aria-label="common.close"
                     >
                         &times;
                     </button>
@@ -2182,7 +2219,7 @@
                             id="cp-old-password"
                             placeholder="Obecne hasło" data-i18n-placeholder="login.currentPassword"
                             style="width: 100%; box-sizing: border-box"
-                        />
+                        / aria-label="Obecne hasło">
                     </div>
                     <div class="form-group" style="margin-bottom: 14px">
                         <label
@@ -2199,7 +2236,7 @@
                             id="cp-new-password"
                             placeholder="Min. 4 znaki" data-i18n-placeholder="login.min4Chars"
                             style="width: 100%; box-sizing: border-box"
-                        />
+                        / aria-label="Min. 4 znaki">
                     </div>
                     <div class="form-group" style="margin-bottom: 14px">
                         <label
@@ -2216,7 +2253,7 @@
                             id="cp-confirm-password"
                             placeholder="Powtórz nowe hasło" data-i18n-placeholder="login.repeatNewPassword"
                             style="width: 100%; box-sizing: border-box"
-                        />
+                        / aria-label="Powtórz nowe hasło">
                     </div>
                     <p
                         id="cp-error"
@@ -2226,7 +2263,7 @@
                             min-height: 18px;
                             margin: 0;
                         "
-                    ></p>
+                     role="alert" aria-live="assertive"></p>
                 </div>
                 <div
                     class="modal-footer"
@@ -2248,10 +2285,10 @@
         </div>
 
         <!-- Modal: Wyniki -->
-        <div id="results-modal" class="modal-overlay hidden">
-            <div class="modal-content">
+        <div id="results-modal" role="dialog" aria-modal="true" aria-labelledby="results-modal-title" class="modal-overlay hidden">
+            <div class="modal-content" tabindex="-1">
                 <div class="modal-header">
-                    <h3 data-i18n="results.completed">Badanie Zakończone</h3>
+                    <h3 role="heading" aria-level="2" data-i18n="results.completed" id="results-modal-title">Badanie Zakończone</h3>
                     <button
                         id="btn-close-modal"
                         class="close-x"
@@ -2273,7 +2310,7 @@
                             w zakładce <strong>Historia Wyników</strong>.
                         </p>
                     </div>
-                    <div class="status-info" id="modal-upload-info"></div>
+                    <div class="status-info" id="modal-upload-info" role="status" aria-live="polite"></div>
                 </div>
                 <div class="modal-footer">
                     <button id="btn-discard" class="btn danger" data-i18n="results.discard">Odrzuć</button>
@@ -2285,17 +2322,17 @@
         </div>
 
         <!-- Modal: O Programie -->
-        <div id="about-modal" class="modal-overlay hidden">
-            <div class="modal-content modal-content--sm modal-content--center">
+        <div id="about-modal" role="dialog" aria-modal="true" aria-labelledby="about-modal-title" class="modal-overlay hidden">
+            <div class="modal-content modal-content--sm modal-content--center" tabindex="-1">
                 <div class="modal-header">
-                    <h3 data-i18n="about.platformTitle">O platformie Nous</h3>
-                    <button id="btn-close-about" class="close-x">
+                    <h3 role="heading" aria-level="2" data-i18n="about.platformTitle" id="about-modal-title">O platformie Nous</h3>
+                    <button id="btn-close-about" class="close-x" aria-label="Zamknij" data-i18n-aria-label="common.close">
                         &times;
                     </button>
                 </div>
                 <div class="modal-body">
                     <img
-                        src="logo.png"
+                        src="logo.webp"
                         alt="Logo"
                         style="
                             width: 140px;
@@ -2322,7 +2359,7 @@
                     style="justify-content: center; gap: 15px"
                 >
                     <button id="btn-about-project" class="btn secondary">
-                        <span class="material-icons">code</span> <span data-i18n="about.projectSite">Strona projektu</span>
+                        <span class="material-icons" aria-hidden="true">code</span> <span data-i18n="about.projectSite">Strona projektu</span>
                     </button>
                     <button id="btn-about-close-footer" class="btn primary" data-i18n="about.close">
                         Zamknij
@@ -2333,14 +2370,14 @@
 
         <!-- Modal: Custom Dialog (Alert/Confirm) -->
         <div
-            id="custom-dialog-modal"
+            id="custom-dialog-modal" role="dialog" aria-modal="true" aria-labelledby="custom-dialog-title"
             class="modal-overlay hidden"
             style="z-index: 2000"
         >
-            <div class="modal-content modal-content--sm modal-content--center">
+            <div class="modal-content modal-content--sm modal-content--center" tabindex="-1">
                 <div class="modal-header">
-                    <h3 id="custom-dialog-title" data-i18n="dialog.messageTitle">Komunikat</h3>
-                    <button id="btn-close-custom-dialog" class="close-x">
+                    <h3 role="heading" aria-level="2" id="custom-dialog-title" data-i18n="dialog.messageTitle">Komunikat</h3>
+                    <button id="btn-close-custom-dialog" class="close-x" aria-label="Zamknij" data-i18n-aria-label="common.close">
                         &times;
                     </button>
                 </div>
@@ -2363,13 +2400,13 @@
 
         <!-- Modal: PIN Setup / E2E -->
         <div
-            id="pin-setup-modal"
+            id="pin-setup-modal" role="dialog" aria-modal="true" aria-labelledby="pin-setup-modal-title"
             class="modal-overlay hidden"
             style="z-index: 3000"
         >
-            <div class="modal-content modal-content--md modal-content--center">
+            <div class="modal-content modal-content--md modal-content--center" tabindex="-1">
                 <div class="modal-header">
-                    <h3 data-i18n="e2e.setupTitle">Szyfrowanie End-to-End</h3>
+                    <h3 role="heading" aria-level="2" data-i18n="e2e.setupTitle" id="pin-setup-modal-title">Szyfrowanie End-to-End</h3>
                 </div>
                 <div class="modal-body">
                     <span
@@ -2379,7 +2416,7 @@
                             color: #4caf50;
                             margin-bottom: 15px;
                         "
-                        >lock</span
+                         aria-hidden="true">lock</span
                     >
                     <p data-i18n="e2e.setupWelcome">
                         Witaj! Wygląda na to, że logujesz się po raz pierwszy lub na nowym urządzeniu.
@@ -2411,13 +2448,13 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        />
+                        / aria-label="Nowy PIN" inputmode="numeric" autocomplete="off">
                     </div>
                     <p
                         id="pin-setup-error"
                         class="error-text"
                         style="color: red; margin-top: 10px"
-                    ></p>
+                     role="alert" aria-live="assertive"></p>
                 </div>
                 <div class="modal-footer" style="justify-content: center">
                     <button id="btn-save-pin" class="btn primary" data-i18n="e2e.savePin">
@@ -2429,13 +2466,13 @@
 
         <!-- Modal: PIN Enter -->
         <div
-            id="pin-enter-modal"
+            id="pin-enter-modal" role="dialog" aria-modal="true" aria-labelledby="pin-enter-modal-title"
             class="modal-overlay hidden"
             style="z-index: 3000"
         >
-            <div class="modal-content modal-content--sm modal-content--center">
+            <div class="modal-content modal-content--sm modal-content--center" tabindex="-1">
                 <div class="modal-header">
-                    <h3 data-i18n="e2e.unlockTitle">Odblokuj Bazę Wyników</h3>
+                    <h3 role="heading" aria-level="2" data-i18n="e2e.unlockTitle" id="pin-enter-modal-title">Odblokuj Bazę Wyników</h3>
                 </div>
                 <div class="modal-body">
                     <span
@@ -2445,7 +2482,7 @@
                             color: #ff9800;
                             margin-bottom: 15px;
                         "
-                        >vpn_key</span
+                         aria-hidden="true">vpn_key</span
                     >
                     <p data-i18n="e2e.unlockDescription">
                         Podaj swój kod PIN, aby odszyfrować historię badań z chmury.
@@ -2468,24 +2505,29 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        />
+                        / aria-label="PIN" inputmode="numeric" autocomplete="off">
                     </div>
                     <p
                         id="pin-enter-error"
                         class="error-text"
                         style="color: red; margin-top: 10px"
-                    ></p>
-                    <a
-                        href="#"
+                     role="alert" aria-live="assertive"></p>
+                    <button
+                        type="button"
                         id="link-forgot-pin"
+                        class="link-button"
                         style="
                             font-size: 12px;
                             color: #2196f3;
                             text-decoration: none;
                             display: inline-block;
                             margin-top: 15px;
+                            background: none;
+                            border: none;
+                            cursor: pointer;
+                            font-family: inherit;
                         "
-                         data-i18n="e2e.forgotPin">Zapomniałem PIN-u (Użyj kodu odzyskiwania)</a
+                        data-i18n="e2e.forgotPin">Zapomniałem PIN-u (Użyj kodu odzyskiwania)</button
                     >
                 </div>
                 <div
@@ -2504,14 +2546,14 @@
 
         <!-- Modal: PIN Recovery -->
         <div
-            id="pin-recovery-modal"
+            id="pin-recovery-modal" role="dialog" aria-modal="true" aria-labelledby="pin-recovery-modal-title"
             class="modal-overlay hidden"
             style="z-index: 3000"
         >
-            <div class="modal-content modal-content--md modal-content--center">
+            <div class="modal-content modal-content--md modal-content--center" tabindex="-1">
                 <div class="modal-header">
-                    <h3 data-i18n="e2e.recoveryTitle">Odzyskiwanie Dostępu</h3>
-                    <button id="btn-close-recovery-modal" class="close-x">
+                    <h3 role="heading" aria-level="2" data-i18n="e2e.recoveryTitle" id="pin-recovery-modal-title">Odzyskiwanie Dostępu</h3>
+                    <button id="btn-close-recovery-modal" class="close-x" aria-label="Zamknij" data-i18n-aria-label="common.close">
                         &times;
                     </button>
                 </div>
@@ -2523,7 +2565,7 @@
                             color: #ff5252;
                             margin-bottom: 15px;
                         "
-                        >health_and_safety</span
+                         aria-hidden="true">health_and_safety</span
                     >
                     <p data-i18n="e2e.recoveryDescription">
                         Wklej swój 24-znakowy Kod Ratunkowy, aby zresetować PIN.
@@ -2544,7 +2586,7 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        />
+                        / aria-label="Kod odzyskiwania" inputmode="numeric" autocomplete="off">
                     </div>
                     <p style="margin-top: 20px" data-i18n="e2e.newPin">Nowy 6-cyfrowy PIN:</p>
                     <div class="form-group">
@@ -2565,13 +2607,13 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        />
+                        / aria-label="Nowy PIN" inputmode="numeric" autocomplete="off">
                     </div>
                     <p
                         id="pin-recovery-error"
                         class="error-text"
                         style="color: red; margin-top: 10px"
-                    ></p>
+                     role="alert" aria-live="assertive"></p>
                 </div>
                 <div class="modal-footer" style="justify-content: center">
                     <button id="btn-submit-recovery" class="btn primary" data-i18n="e2e.recoverKey">
@@ -2583,13 +2625,13 @@
 
         <!-- Modal: Recovery Key Display -->
         <div
-            id="recovery-key-modal"
+            id="recovery-key-modal" role="dialog" aria-modal="true" aria-labelledby="recovery-key-modal-title"
             class="modal-overlay hidden"
             style="z-index: 3100"
         >
-            <div class="modal-content modal-content--center">
+            <div class="modal-content modal-content--center" tabindex="-1">
                 <div class="modal-header">
-                    <h3 style="color: #f44336" data-i18n="e2e.saveRecoveryTitle">Zapisz Kod Odzyskiwania!</h3>
+                    <h3 role="heading" aria-level="2" style="color: #f44336" data-i18n="e2e.saveRecoveryTitle" id="recovery-key-modal-title">Zapisz Kod Odzyskiwania!</h3>
                 </div>
                 <div class="modal-body">
                     <p style="font-weight: bold; margin-bottom: 10px" data-i18n="e2e.recoveryWarning">

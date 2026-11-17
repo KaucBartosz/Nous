@@ -48,13 +48,13 @@ describe('firestore.rules — semantyka na emulatorze', () => {
     await testEnv.cleanup();
   });
 
-  it('nieuwierzytelniony nie czyta ani nie zapisuje chronionych kolekcji', async () => {
+  it('nieuwierzytelniony nie czyta danych użytkownika ani wyników', async () => {
     const db = testEnv.unauthenticatedContext().firestore();
 
     await assertFails(db.doc('user_keys/alice').get());
     await assertFails(db.doc('users/alice').get());
     await assertFails(db.doc('results/r1').get());
-    await assertFails(db.doc('tests/t1').get());
+    // Katalog testów jest jawnie publiczny (patrz osobny test poniżej).
 
     await assertFails(db.doc('user_keys/alice').set({ key: 'k' }));
     await assertFails(db.doc('users/alice').set({ status: 'PENDING' }));
@@ -89,6 +89,12 @@ describe('firestore.rules — semantyka na emulatorze', () => {
 
     await assertFails(alice.doc('users/alice').update({ status: 'ADMIN' }));
     await assertFails(alice.doc('users/alice').delete());
+  });
+
+  it('tests/{id}: katalog testów jest publicznie czytelny', async () => {
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await assertSucceeds(anon.collection('tests').get());
+    await assertSucceeds(anon.doc('tests/t1').get());
   });
 
   it('tests/{id}: zalogowany użytkownik czyta katalog', async () => {

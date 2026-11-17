@@ -1,5 +1,6 @@
 
 import { t } from "../i18n/index.js";
+import { openModalSession } from "./modalSession.js";
 
 export const Dialog = {
     overlay: null,
@@ -8,6 +9,7 @@ export const Dialog = {
     iconEl: null,
     footerEl: null,
     closeBtn: null,
+    session: null, // aktywna sesja modalna (focus/scroll/tło)
     resolvePromise: null, // Function to call when dialog is closed
 
     init() {
@@ -225,12 +227,19 @@ export const Dialog = {
     },
 
     show() {
-        this.overlay.classList.remove('hidden');
-        // Trap focus could be implemented here, but simple start with auto-focus on button is good.
+        // Dialog ma własny handler Escape w init() — nie dublujemy go.
+        this.session = openModalSession(this.overlay, {
+            onDismiss: () => this.close(false),
+            focusSelector: '#custom-dialog-footer button',
+            handleEscape: false,
+        });
     },
 
     close(result) {
-        this.overlay.classList.add('hidden');
+        this.session?.close();
+        this.session = null;
+        // close() może być wywołane bez show() — ukryj zawsze.
+        this.overlay?.classList.add('hidden');
         if (this.resolvePromise) {
             this.resolvePromise(result);
             this.resolvePromise = null;

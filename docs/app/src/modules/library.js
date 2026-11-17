@@ -21,6 +21,11 @@ import {
   bindCatalogProgress,
 } from "../catalog/catalogView.js";
 import { t, getLocale, onLocaleChange } from "../i18n/index.js";
+import {
+  sortRows,
+  bindSortableHeaders,
+  syncSortIndicators,
+} from "./tableSort.js";
 
 // Re-render library when language changes so translated names/descriptions update
 onLocaleChange((locale) => {
@@ -44,6 +49,8 @@ let cachedTests = [];
 let isSearchBound = false;
 let listenersRegistered = false; // Flaga zapobiegająca wielokrotnej rejestracji
 let currentViewMode = "grid"; // 'grid', 'list', 'table', 'compact'
+let tableSortState = { key: "name", dir: "asc" };
+let currentFilterText = "";
 let isTrainingMode = false;
 let isLoading = false; // Flaga zapobiegająca współbieżnym wywołaniom loadTestsList (race condition → duplikaty)
 
@@ -136,6 +143,13 @@ export function initViewSwitcher() {
     });
   }
 
+  // Ikona informacji o trybie treningowym — dostępna z klawiatury.
+  document
+    .getElementById("training-info-icon")
+    ?.addEventListener("click", () => {
+      Notify.info(t("library.trainingModeInfo"));
+    });
+
   // Migracja: usuń pozostałość po usuniętym trybie HPM (decyzja #6)
   try {
     localStorage.removeItem("hpmEnabled");
@@ -151,6 +165,7 @@ function updateViewButtonStates() {
   Object.entries(viewButtons).forEach(([mode, btn]) => {
     if (btn) {
       btn.classList.toggle("active", mode === currentViewMode);
+      btn.setAttribute("aria-pressed", String(mode === currentViewMode));
     }
   });
 }
@@ -255,6 +270,7 @@ function handleStart(t, status) {
 }
 
 function renderTests(testsSource, filterText) {
+  currentFilterText = filterText || "";
   elements.testsGrid.innerHTML = "";
 
   // Reset scroll, żeby przy zmianie widoku nie zostawać w połowie strony
@@ -270,7 +286,15 @@ function renderTests(testsSource, filterText) {
       '<span class="material-icons empty-state-icon">search_off</span>' +
       `<h4>${t("library.noResultsTitle")}</h4>` +
       `<p>${t("library.noResultsHint")}</p>` +
+      `<button id="btn-clear-library-search" class="btn outline">${t("common.clear")}</button>` +
       '</div>';
+    document
+      .getElementById("btn-clear-library-search")
+      ?.addEventListener("click", () => {
+        const input = document.getElementById("library-search");
+        if (input) input.value = "";
+        renderTests(cachedTests, "");
+      });
     return;
   }
 
@@ -376,8 +400,10 @@ function renderGridView(tests) {
     iconsDiv.append(parts.appIcon, parts.statusIcon, parts.tagBtn);
 
     parts.versionEl.className = "meta";
+    // Kolor ustawiamy w CSS (.test-card .meta → --text-muted),
+    // żeby działał motyw ciemny, jasny i własny użytkownika.
     parts.versionEl.style.cssText =
-      "color: #666; display: flex; align-items: center; gap: 8px;";
+      "display: flex; align-items: center; gap: 8px;";
     topDiv.append(iconsDiv, parts.versionEl);
 
     parts.titleEl.style.marginTop = "10px";
@@ -459,19 +485,39 @@ function renderTableView(tests) {
   const thead = document.createElement("thead");
   thead.innerHTML = `
         <tr>
-            <th>${t("library.testName")}</th>
-            <th>${t("library.description")}</th>
-            <th>${t("library.version")}</th>
-            <th>${t("library.status")}</th>
+            <th data-sort="name">${t("library.testName")}</th>
+            <th data-sort="description">${t("library.description")}</th>
+            <th data-sort="version">${t("library.version")}</th>
+            <th data-sort="status">${t("library.status")}</th>
             <th>${t("library.action")}</th>
         </tr>
     `;
   table.appendChild(thead);
+  bindSortableHeaders(
+    table,
+    () => tableSortState,
+    (key, dir) => {
+      tableSortState = { key, dir };
+      renderTests(cachedTests, currentFilterText);
+    },
+  );
+  syncSortIndicators(table, tableSortState);
 
   // Body
   const tbody = document.createElement("tbody");
 
-  tests.forEach((t) => {
+  const sortedTests = sortRows(tests, tableSortState.key, tableSortState.dir, (item, key) => {
+    if (key === "version") return item.version ?? 0;
+    if (key === "status") return item.status || "";
+    if (key === "description")
+      return getLocale() === "en"
+        ? item.description_en || item.description || ""
+        : item.description_pl || item.description || "";
+    return getLocale() === "en"
+      ? item.name_en || item.name || ""
+      : item.name || "";
+  });
+  sortedTests.forEach((t) => {
     const parts = cardParts(t, {
       iconSize: "18px",
       tagBtn: createTagBtn(t.id, t.name, {

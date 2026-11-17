@@ -26,6 +26,8 @@ export function createHistoryState() {
     lastCloudFetch: 0,
     /** Aktywne filtry + dane bieżącego widoku + strona. */
     filters: emptyHistoryFilters(),
+    /** Bieżące sortowanie tabeli (domyślnie data malejąco). */
+    sort: { key: "date", dir: "desc" },
     page: 1,
     allResults: [],
   };

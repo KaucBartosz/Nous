@@ -463,6 +463,19 @@ export function initSettings() {
     onLocaleChange(syncLocaleButtons);
     syncLocaleButtons();
 
+    // Jeden timer statusu — zapis i reset nie nadpisują już swoich komunikatów.
+    let statusTimer = null;
+    const flashStatus = (message) => {
+        if (!elements.status) return;
+        if (statusTimer) clearTimeout(statusTimer);
+        elements.status.textContent = message;
+        elements.status.style.display = 'block';
+        statusTimer = setTimeout(() => {
+            elements.status.style.display = 'none';
+            statusTimer = null;
+        }, 3000);
+    };
+
     // Setup color picker listeners
     function setupColorPicker(picker, valueDisplay, settingKey) {
         if (!picker) return;
@@ -480,6 +493,7 @@ export function initSettings() {
             }
 
             applySettings(currentSettings);
+            flashStatus(t('settings.unsavedChanges'));
         });
     }
 
@@ -575,12 +589,9 @@ export function initSettings() {
         elements.btnSave.addEventListener('click', () => {
             if (saveSettings(currentSettings)) {
                 applySettings(currentSettings);
-
-                // Show success message
-                elements.status.style.display = 'block';
-                setTimeout(() => {
-                    elements.status.style.display = 'none';
-                }, 3000);
+                flashStatus(t('settings.settingsSaved'));
+            } else {
+                Notify.error(t('settings.settingsSaveError'));
             }
         });
     }
@@ -592,13 +603,7 @@ export function initSettings() {
             const defaults = resetToDefaultsForTheme(currentTheme);
             updateFormValues(defaults);
 
-            // Show success message
-            elements.status.textContent = t('settings.defaultsRestored');
-            elements.status.style.display = 'block';
-            setTimeout(() => {
-                elements.status.style.display = 'none';
-                elements.status.textContent = t('settings.settingsSaved');
-            }, 3000);
+            flashStatus(t('settings.defaultsRestored'));
         });
     }
 

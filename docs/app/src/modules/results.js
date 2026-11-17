@@ -10,8 +10,16 @@ import { escapeHtml } from "./utils.js";
 import { getPlatform } from "../platform/index.js";
 import { savePipeline } from "../results/resultPipeline.js";
 import { t } from "../i18n/index.js";
+import { openModalSession } from "./modalSession.js";
 
 let currentResultPackage = null;
+let modalSession = null;
+
+function closeResults() {
+  modalSession?.close();
+  modalSession = null;
+  loadTestsList();
+}
 
 /**
  * Walidacja struktury danych wyników testu
@@ -39,14 +47,8 @@ export function initResultsHandler() {
     }
   });
 
-  elements.btnCloseModal.addEventListener("click", () => {
-    elements.modalOverlay.classList.add("hidden");
-    loadTestsList();
-  });
-  elements.btnDiscard.addEventListener("click", () => {
-    elements.modalOverlay.classList.add("hidden");
-    loadTestsList();
-  });
+  elements.btnCloseModal.addEventListener("click", closeResults);
+  elements.btnDiscard.addEventListener("click", closeResults);
 
   elements.btnUploadCloud.addEventListener("click", saveResultToSystem);
 }
@@ -109,7 +111,10 @@ function openModal(data) {
   renderExtendedResults(data.wyniki);
 
   updateSaveButtonState();
-  elements.modalOverlay.classList.remove("hidden");
+  modalSession = openModalSession(elements.modalOverlay, {
+    onDismiss: closeResults,
+    focusSelector: "#btn-discard",
+  });
 }
 
 /**
@@ -184,11 +189,18 @@ async function saveResultToSystem() {
       platformKind: getPlatform().kind,
       saveResult,
       syncNow,
-      onSyncError: (err) => console.error("Sync after save failed:", err),
+      onSyncError: (err) => {
+        console.error("Sync after save failed:", err);
+        // Bez tego użytkownik widzi „Zapisano!" i zakłada, że dane są w chmurze.
+        Notify.error(
+          t("results.syncFailed", { message: err?.message || String(err) }),
+        );
+      },
     });
 
     elements.btnUploadCloud.textContent = t("results.savedButton");
-    elements.modalOverlay.classList.add("hidden");
+    modalSession?.close();
+    modalSession = null;
     loadTestsList();
 
     // Web: CSV pobiera się w tle — bez komunikatu użytkownik nie wie, że ma plik.

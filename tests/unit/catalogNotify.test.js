@@ -176,13 +176,20 @@ describe('notify modal seam (A5)', () => {
       confirm: async (m, t) => { calls.push(['confirm', m, t]); return true; },
       prompt: async (m, d) => { calls.push(['prompt', m, d]); return 'x'; },
     });
+    // info/success są nieblokujące — idą do toastu, nie przez adapter modalny.
     await Notify.info('hello');
-    expect(calls).toEqual([['alert', 'hello', 'info']]);
+    expect(document.querySelector('.toast-notification').textContent).toContain('hello');
+    expect(calls).toEqual([]);
+    await Notify.success('done');
+    expect(document.querySelectorAll('.toast-notification')).toHaveLength(2);
+    // Błędy, pytania i prompt nadal wymagają okna.
     await Notify.error('boom');
-    expect(calls[1]).toEqual(['alert', 'boom', 'error']);
+    expect(calls[0]).toEqual(['alert', 'boom', 'error']);
     expect(await Notify.confirm('sure?')).toBe(true);
-    expect(calls[2]).toEqual(['confirm', 'sure?', 'question']);
+    expect(calls[1]).toEqual(['confirm', 'sure?', 'question']);
     expect(await Notify.prompt('imię', 'jan')).toBe('x');
+    expect(calls[2]).toEqual(['prompt', 'imię', 'jan']);
+    document.body.innerHTML = '';
     resetNotifyModalAdapter();
   });
 

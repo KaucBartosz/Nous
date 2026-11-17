@@ -59,6 +59,7 @@ import {
 } from "./platform/index.js";
 import { initLocalPasswordModal } from "./session/passwordModal.js";
 import { Notify } from "./notify/notify.js";
+import { openModalSession } from "./modules/modalSession.js";
 import { setCryptoWarningHandler } from "./db/cryptoPolicy.js";
 import { initI18n, onLocaleChange, getLocale } from "./i18n/index.js";
 
@@ -159,13 +160,45 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.btnBackOnline?.addEventListener("click", showLoginChoice);
   elements.btnBackLocal?.addEventListener("click", showLoginChoice);
 
+  // Panel logowania ma dwie akcje na tych samych polach. Enter w polu tekstowym
+  // wykonuje ostatnio wybraną akcję (klik albo fokus przycisku); domyślnie login.
+  // Dzięki temu po wybraniu rejestracji Enter nie próbuje już logować.
+  let onlineIntent = "login";
+  let localIntent = "login";
+
+  // Blokada przycisku na czas operacji — chroni przed podwójnym wysłaniem.
+  const withBusyButton = (btn, action) => {
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    try {
+      Promise.resolve(action()).finally(() => {
+        btn.disabled = false;
+      });
+    } catch (err) {
+      btn.disabled = false;
+      throw err;
+    }
+  };
+
   // --- Panel Online ---
-  elements.btnLogin.addEventListener("click", () =>
-    login(elements.emailInput.value, elements.passInput.value),
-  );
-  elements.btnRegister.addEventListener("click", () =>
-    register(elements.emailInput.value, elements.passInput.value),
-  );
+  elements.btnLogin.addEventListener("click", () => {
+    onlineIntent = "login";
+    withBusyButton(elements.btnLogin, () =>
+      login(elements.emailInput.value, elements.passInput.value),
+    );
+  });
+  elements.btnRegister.addEventListener("click", () => {
+    onlineIntent = "register";
+    withBusyButton(elements.btnRegister, () =>
+      register(elements.emailInput.value, elements.passInput.value),
+    );
+  });
+  elements.btnLogin.addEventListener("focus", () => {
+    onlineIntent = "login";
+  });
+  elements.btnRegister.addEventListener("focus", () => {
+    onlineIntent = "register";
+  });
   elements.btnTogglePassword.addEventListener("click", () => {
     const type =
       elements.passInput.getAttribute("type") === "password"
@@ -176,27 +209,44 @@ document.addEventListener("DOMContentLoaded", () => {
       type === "password" ? "visibility" : "visibility_off";
   });
   const handleEnterLogin = (e) => {
-    if (e.key === "Enter") {
-      login(elements.emailInput.value, elements.passInput.value);
-    }
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const isRegister = onlineIntent === "register";
+    const submit = isRegister ? register : login;
+    withBusyButton(
+      isRegister ? elements.btnRegister : elements.btnLogin,
+      () => submit(elements.emailInput.value, elements.passInput.value),
+    );
   };
   elements.emailInput.addEventListener("keydown", handleEnterLogin);
   elements.passInput.addEventListener("keydown", handleEnterLogin);
 
   // --- Panel Lokalny ---
   elements.btnLoginLocal?.addEventListener("click", () => {
-    loginLocal(
-      elements.localUsernameInput.value,
-      elements.localPassInput.value,
-      onLocalLoginSuccess,
+    localIntent = "login";
+    withBusyButton(elements.btnLoginLocal, () =>
+      loginLocal(
+        elements.localUsernameInput.value,
+        elements.localPassInput.value,
+        onLocalLoginSuccess,
+      ),
     );
   });
   elements.btnRegisterLocal?.addEventListener("click", () => {
-    registerLocal(
-      elements.localUsernameInput.value,
-      elements.localPassInput.value,
-      onLocalLoginSuccess,
+    localIntent = "register";
+    withBusyButton(elements.btnRegisterLocal, () =>
+      registerLocal(
+        elements.localUsernameInput.value,
+        elements.localPassInput.value,
+        onLocalLoginSuccess,
+      ),
     );
+  });
+  elements.btnLoginLocal?.addEventListener("focus", () => {
+    localIntent = "login";
+  });
+  elements.btnRegisterLocal?.addEventListener("focus", () => {
+    localIntent = "register";
   });
   elements.btnToggleLocalPassword?.addEventListener("click", () => {
     const type =
@@ -209,13 +259,19 @@ document.addEventListener("DOMContentLoaded", () => {
     ).textContent = type === "password" ? "visibility" : "visibility_off";
   });
   const handleEnterLocalLogin = (e) => {
-    if (e.key === "Enter") {
-      loginLocal(
-        elements.localUsernameInput.value,
-        elements.localPassInput.value,
-        onLocalLoginSuccess,
-      );
-    }
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const isRegister = localIntent === "register";
+    const submit = isRegister ? registerLocal : loginLocal;
+    withBusyButton(
+      isRegister ? elements.btnRegisterLocal : elements.btnLoginLocal,
+      () =>
+        submit(
+          elements.localUsernameInput.value,
+          elements.localPassInput.value,
+          onLocalLoginSuccess,
+        ),
+    );
   };
   elements.localUsernameInput?.addEventListener(
     "keydown",
@@ -248,19 +304,23 @@ document.addEventListener("DOMContentLoaded", () => {
     .addEventListener("click", exportHistoryToCSV);
 
   // 5. About Modal
+  let aboutSession = null;
+  const closeAbout = () => {
+    aboutSession?.close();
+    aboutSession = null;
+  };
   if (elements.navAbout)
-    elements.navAbout.addEventListener("click", () =>
-      elements.aboutModal.classList.remove("hidden"),
-    );
+    elements.navAbout.addEventListener("click", () => {
+      aboutSession = openModalSession(elements.aboutModal, {
+        onDismiss: closeAbout,
+        focusSelector: "#btn-close-about",
+      });
+    });
   if (elements.btnCloseAbout)
-    elements.btnCloseAbout.addEventListener("click", () =>
-      elements.aboutModal.classList.add("hidden"),
-    );
+    elements.btnCloseAbout.addEventListener("click", closeAbout);
 
   if (elements.btnAboutCloseFooter)
-    elements.btnAboutCloseFooter.addEventListener("click", () =>
-      elements.aboutModal.classList.add("hidden"),
-    );
+    elements.btnAboutCloseFooter.addEventListener("click", closeAbout);
 
   document.getElementById("btn-about-project").addEventListener("click", () => {
     const url = "https://kaucbartosz.github.io/Nous/";

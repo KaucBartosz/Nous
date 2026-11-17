@@ -57,11 +57,13 @@
             font-size: 14px;
         }
 
-        input:focus,
-        textarea:focus,
-        select:focus {
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible,
+        button:focus-visible {
             border-color: #4caf50;
-            outline: none;
+            outline: 2px solid #8bc34a;
+            outline-offset: 2px;
         }
 
         /* Wyróżnienie selecta na górze */
@@ -106,6 +108,15 @@
             background: #444;
         }
 
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+
         .status {
             margin-top: 15px;
             text-align: center;
@@ -124,6 +135,7 @@
 </head>
 
 <body>
+    <h1 class="sr-only">Panel administracyjny Nous</h1>
 
     <!-- LOGIN PANEL -->
     <div id="login-panel" class="card" style="text-align: center;">
@@ -131,25 +143,25 @@
         <p style="color:#aaa;">Zaloguj się kontem z uprawnieniami zapisu.</p>
 
         <div class="form-group">
-            <input type="email" id="login-email" placeholder="Email administratora">
+            <input type="email" id="login-email" placeholder="Email administratora" aria-label="Email administratora">
         </div>
         <div class="form-group">
-            <input type="password" id="login-pass" placeholder="Hasło">
+            <input type="password" id="login-pass" placeholder="Hasło" aria-label="Hasło">
         </div>
 
         <button id="btn-login">ZALOGUJ</button>
-        <div id="login-status" class="status"></div>
+        <div id="login-status" class="status" role="alert" aria-live="assertive"></div>
     </div>
 
     <!-- ADMIN PANEL (Hidden by default) -->
-    <div id="admin-panel" class="card" style="display: none;">
+    <div id="admin-panel" class="card" style="display: none;" role="main">
         <div
             style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #333; margin-bottom: 20px; padding-bottom: 10px;">
             <h2 style="border:none; margin:0;">Zarządzanie Testami</h2>
             <button id="btn-logout" class="btn-small" style="width:auto; margin:0; background:#333;">Wyloguj</button>
         </div>
 
-        <label>Wybierz test do edycji lub dodaj nowy:</label>
+        <label for="test-selector">Wybierz test do edycji lub dodaj nowy:</label>
         <select id="test-selector">
             <option value="NEW">--- Dodaj Nowy Test ---</option>
             <option disabled>Ładowanie listy...</option>
@@ -158,28 +170,28 @@
         <hr style="border: 0; border-top: 1px solid #333; margin-bottom: 20px;">
 
         <div class="form-group">
-            <label>ID Dokumentu (Folder testu):</label>
-            <input type="text" id="inp-id" placeholder="np. semafor (bez spacji!)">
+            <label for="inp-id">ID Dokumentu (Folder testu):</label>
+            <input type="text" id="inp-id" placeholder="np. semafor (bez spacji!)" aria-label="np. semafor (bez spacji!)">
         </div>
 
         <div class="form-group">
-            <label>Nazwa wyświetlana:</label>
-            <input type="text" id="inp-name" placeholder="np. Test Semafora">
+            <label for="inp-name">Nazwa wyświetlana:</label>
+            <input type="text" id="inp-name" placeholder="np. Test Semafora" aria-label="np. Test Semafora">
         </div>
 
         <div class="form-group">
-            <label>Opis:</label>
-            <textarea id="inp-desc" rows="3" placeholder="Krótki opis, instrukcja..."></textarea>
+            <label for="inp-desc">Opis:</label>
+            <textarea id="inp-desc" rows="3" placeholder="Krótki opis, instrukcja..." aria-label="Krótki opis, instrukcja..."></textarea>
         </div>
 
         <div class="form-group">
-            <label>Link do ZIP (GitHub Raw):</label>
+            <label for="inp-url">Link do ZIP (GitHub Raw):</label>
             <input type="text" id="inp-url" value="https://raw.githubusercontent.com/KaucBartosz/BBTP/refs/heads/main/test.zip"
-                placeholder="https://github.com/...">
+                placeholder="https://github.com/..." aria-label="https://github.com/...">
         </div>
 
         <div class="form-group">
-            <label>Wersja:</label>
+            <label for="inp-ver">Wersja:</label>
             <div class="row">
                 <input type="number" id="inp-ver" value="1">
                 <button class="btn-small" id="btn-bump" title="+1 Wersja">+1</button>
@@ -187,7 +199,7 @@
         </div>
 
         <button id="btn-save">ZAPISZ ZMIANY / DODAJ</button>
-        <div id="status" class="status"></div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
     </div>
 
     <script type="module">

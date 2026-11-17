@@ -63,6 +63,17 @@ function patch(html, from, to, label) {
   return html.replace(from, to);
 }
 
+/** Podmiana regexowa — dla fragmentów z dodanymi atrybutami (np. role/main). */
+function patchRe(html, re, to, label) {
+  if (!re.test(html)) {
+    throw new Error(
+      `build_web: nie znaleziono fragmentu "${label}" w index.html. ` +
+        `Zmienił się szkielet — zaktualizuj transformację w build_web.js.`,
+    );
+  }
+  return html.replace(re, to);
+}
+
 /**
  * Szkielet webowy:
  * - `data-platform="web"` — hak dla CSS/JS bez zaglądania w user-agent,
@@ -73,10 +84,10 @@ function patch(html, from, to, label) {
 function toWebShell(html) {
   let out = patch(html, '<html lang="pl">', '<html lang="pl" data-platform="web">', "html");
 
-  out = patch(
+  out = patchRe(
     out,
-    '<div id="login-screen" class="full-screen-center">',
-    '<div id="login-screen" class="full-screen-center hidden" aria-hidden="true">',
+    /<div id="login-screen"([^>]*)>/,
+    '<div id="login-screen"$1 hidden aria-hidden="true">',
     "login-screen",
   );
 

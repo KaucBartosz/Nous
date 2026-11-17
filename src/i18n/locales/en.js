@@ -32,6 +32,8 @@ export const en = {
     hide: "Hide",
     select: "Select",
     clear: "Clear",
+    skipToContent: "Skip to content",
+    tableCaption: "Data table",
     all: "All",
     none: "None",
     version: "Version",
@@ -547,6 +549,8 @@ export const en = {
     resetDefaults: "Restore Defaults for Theme",
     saveSettings: "Save Settings",
     settingsSaved: "Settings saved!",
+    settingsSaveError: "Could not save settings.",
+    unsavedChanges: "You have unsaved changes — save your settings.",
     defaultsRestored: "Default settings restored!",
     defaultCustom: "-- Default Custom --",
     saveTheme: "Save theme",
@@ -834,6 +838,7 @@ export const en = {
     errorShort: "Error",
     validationMustBeObject: "Test results must be an object",
     validationError: "Test result validation error: {{message}}",
+    syncFailed: "Result saved locally, but sync failed: {{message}}",
   },
 
   dialog: {

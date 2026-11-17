@@ -47,10 +47,10 @@ describe('firestore.rules — guard polityki dostępu', () => {
     expect(users).not.toMatch(/allow\s+read,\s+write:/);
   });
 
-  it('tests: odczyt dla zalogowanych, zapis tylko dla admina', () => {
+  it('tests: odczyt publiczny, zapis tylko dla admina', () => {
     const tests = block('tests\\/{testId}');
     expect(tests).not.toBeNull();
-    expect(tests).toMatch(/allow\s+read:\s+if\s+signedIn\(\)/);
+    expect(tests).toMatch(/allow\s+read:\s+if\s+true/);
     expect(tests).toMatch(/allow\s+write:\s+if\s+isAdmin\(\)/);
   });
 

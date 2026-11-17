@@ -11,6 +11,7 @@
     --text-test-description: #94a3b8;
     --text-test-name: #f0f0f0;
     --text-button: #ffffff;
+    --avatar-bg: #444444;
     --border: rgba(255, 255, 255, 0.1);
     --success: #10b981;
     --warning: #f59e0b;
@@ -40,7 +41,7 @@
 
     --page-title-size: 20px;
     --section-title-size: 15px;
-    --label-size: 11px;
+    --label-size: 12px;
 }
 
 /* Light Theme Variables */
@@ -57,6 +58,7 @@
     --text-test-description: #334155;
     --text-test-name: #000000;
     --text-button: #ffffff;
+    --avatar-bg: #cbd5e1;
     --border: #94a3b8;
     --success: #15803d;
     --warning: #a16207;
@@ -319,7 +321,7 @@ body {
 }
 
 .choice-desc {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-muted);
     text-align: center;
 }
@@ -678,13 +680,13 @@ input:focus {
 
 .nav-item.active,
 .nav-item:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--glass-bg);
     color: var(--text-main);
 }
 
 [data-theme="light"] .nav-item.active,
 [data-theme="light"] .nav-item:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--glass-bg);
     color: var(--primary);
 }
 
@@ -695,7 +697,7 @@ input:focus {
 
 .user-profile {
     padding: 15px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--glass-bg);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -704,7 +706,7 @@ input:focus {
 .avatar-circle {
     width: 36px;
     height: 36px;
-    background: #444;
+    background: var(--avatar-bg);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -725,7 +727,7 @@ input:focus {
 }
 
 .status-badge {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: bold;
     color: var(--warning);
 }
@@ -733,12 +735,12 @@ input:focus {
 .icon-btn {
     background: transparent;
     border: none;
-    color: #888;
+    color: var(--icon-color);
     cursor: pointer;
 }
 
 .icon-btn:hover {
-    color: white;
+    color: var(--text-main);
 }
 
 /* MAIN CONTENT */
@@ -808,7 +810,51 @@ header {
     font-variant-numeric: tabular-nums;
 }
 
+.icon-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--icon-color);
+    font-size: 20px;
+}
+
+.icon-button:hover {
+    color: var(--primary);
+}
+
+/* --- SORTOWANIE TABEL --- */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.sortable::after {
+    content: "↕";
+    opacity: 0.35;
+    margin-left: 6px;
+    font-size: 11px;
+}
+
+th.sortable.is-sorted::after {
+    opacity: 1;
+    color: var(--primary);
+}
+
+th.sortable[data-sort-dir="asc"]::after {
+    content: "▲";
+}
+
+th.sortable[data-sort-dir="desc"]::after {
+    content: "▼";
+}
+
 /* --- MODAL --- */
+/* Blokada przewijania treści, gdy otwarte jest okno modalne. */
+.modal-open .content-area {
+    overflow: hidden;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -2061,10 +2107,10 @@ input:checked + .slider:before {
     min-width: 18px;
     height: 18px;
     padding: 0 5px;
-    background: #f44336;
+    background: var(--danger);
     color: #fff;
     border-radius: 9px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
     margin-left: 6px;
@@ -2689,6 +2735,34 @@ html[data-platform="web"] #nav-updates {
 /* Prymitywy wydzielone z zakładki Statystyka. Klasy .stats-* */
 /* pozostają jako aliasy (reguły zgrupowane powyżej). */
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 8px;
+    z-index: 3000;
+    padding: 10px 16px;
+    background: var(--bg-sidebar);
+    color: var(--text-main);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+}
+
+.skip-link:focus {
+    left: 8px;
+}
+
 :focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
@@ -2701,6 +2775,26 @@ select:focus-visible,
 textarea:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
+}
+
+/* box-shadow znika w trybie wymuszonych kolorów — potrzebny prawdziwy outline. */
+@media (forced-colors: active) {
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 2px solid CanvasText;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .nav-item.active,
+    .choice-card,
+    .test-card {
+        border: 1px solid CanvasText;
+    }
 }
 
 /* ========================================================== */
@@ -3622,11 +3716,13 @@ textarea:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .stats-segmented-btn,
-    .stats-field select,
-    .stats-field input[type="text"],
-    .metric-chip {
-        transition: none;
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
 

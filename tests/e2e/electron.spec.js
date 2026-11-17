@@ -346,13 +346,12 @@ test.describe('Electron App - Local Account and Password Change (passwordModal +
     await expect(page.locator('#cp-error')).toContainText('Nowe hasła nie są zgodne');
     await expect(page.locator('#change-password-modal')).toBeVisible();
 
-    // 2. Matching passwords → success (Dialog) and modal closes
+    // 2. Matching passwords → nieblokujący toast zamiast okna „Sukces"
     await page.fill('#cp-new-password', newPassword);
     await page.fill('#cp-confirm-password', newPassword);
     await page.click('#btn-submit-change-password');
-    await expect(page.locator('#custom-dialog-modal')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#custom-dialog-title')).toContainText('Sukces');
-    await page.locator('#custom-dialog-modal button:has-text("OK")').click();
+    await expect(page.locator('.toast-notification').last())
+      .toContainText('Hasło zostało zmienione pomyślnie.', { timeout: 10000 });
     await expect(page.locator('#change-password-modal')).toBeHidden();
   });
 

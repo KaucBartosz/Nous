@@ -128,6 +128,9 @@ export function cardParts(t, { iconSize = null, appIcon = false, tagBtn = null, 
   const status = getTestStatus(t);
 
   const titleEl = document.createElement("h4");
+  // Staticzne h3 w widokach mają aria-level=2 — karta jest poziomem 3.
+  titleEl.setAttribute("role", "heading");
+  titleEl.setAttribute("aria-level", "3");
   const name = getLocale() === "en"
     ? (t.name_en || t.name || "")
     : (t.name || "");

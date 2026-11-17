@@ -176,7 +176,11 @@ export function initE2E() {
         }
     });
 
-    // btnCancelPin intentionally empty — kept for future use
+    // Anulowanie musi realnie zamykać okno — wcześniej przycisk nic nie robił.
+    e.btnCancelPin?.addEventListener('click', () => {
+        e.pinEnterError.textContent = '';
+        e.pinEnterModal.classList.add('hidden');
+    });
 
     e.linkForgotPin?.addEventListener('click', (ev) => {
         ev.preventDefault();

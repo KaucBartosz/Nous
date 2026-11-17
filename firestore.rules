@@ -29,7 +29,10 @@ service cloud.firestore {
     }
 
     match /tests/{testId} {
-      allow read: if signedIn();
+      // Katalog testów jest publiczny — każdy może zobaczyć listę dostępnych
+      // badań (również konta lokalne i goście bez Firebase). Zapis nadal
+      // wyłącznie dla ADMIN.
+      allow read: if true;
       allow write: if isAdmin();
     }
 

@@ -95,8 +95,48 @@ function dateButton() {
  */
 export function createFilterUi({ getResults, getFilters, applyFilters }) {
   let openDropdown = null;
+  let openButton = null;
+  // Partia zmian (select-all) mutuje zestawy po jednym checkboxie, ale ma
+  // odświeżyć widok tylko raz — po zamknięciu partii.
+  let batching = false;
+
+  function commitFilterChange() {
+    if (batching) return;
+    applyFilters();
+    api.refreshBadges();
+  }
+
+  /** Zaznacza/odznacza wszystkie opcje dropdownu przez natywne change. */
+  function setAllOptions(dropdown, checked) {
+    const checkboxes = Array.from(
+      dropdown.querySelectorAll('.filter-option input[type="checkbox"]'),
+    ).filter((cb) => !cb.disabled);
+
+    batching = true;
+    try {
+      checkboxes.forEach((cb) => {
+        if (cb.checked === checked) return;
+        cb.checked = checked;
+        cb.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    } finally {
+      batching = false;
+    }
+
+    commitFilterChange();
+    // Hierarchia dat maluje się od nowa, żeby rodzice odzwierciedlali dzieci.
+    if (dropdown.dataset.filterType === "date") {
+      close();
+      openFor("date", dateButton());
+    }
+  }
 
   function close() {
+    if (openButton) {
+      openButton.classList.remove("active");
+      openButton.setAttribute("aria-expanded", "false");
+      openButton = null;
+    }
     if (openDropdown) {
       openDropdown.remove();
       openDropdown = null;
@@ -137,8 +177,7 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
           } else {
             activeSet.delete(value);
           }
-          applyFilters();
-          api.refreshBadges();
+          commitFilterChange();
         });
         body.appendChild(opt);
       });
@@ -177,8 +216,8 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
         } else {
           allDaysForYear.forEach((k) => filters.date.delete(k));
         }
-        applyFilters();
-        reopen();
+        commitFilterChange();
+        if (!batching) reopen();
       });
       body.appendChild(yearDiv);
 
@@ -204,8 +243,8 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
           } else {
             allDaysForMonth.forEach((k) => filters.date.delete(k));
           }
-          applyFilters();
-          reopen();
+          commitFilterChange();
+          if (!batching) reopen();
         });
         body.appendChild(monthDiv);
 
@@ -230,8 +269,8 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
             } else {
               filters.date.delete(dayCb.value);
             }
-            applyFilters();
-            reopen();
+            commitFilterChange();
+            if (!batching) reopen();
           });
           body.appendChild(dayDiv);
         });
@@ -243,6 +282,8 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
     if (!btn) return;
     close();
     btn.classList.add("active");
+    btn.setAttribute("aria-expanded", "true");
+    openButton = btn;
 
     const dropdown = document.createElement("div");
     dropdown.className = "filter-dropdown";
@@ -278,27 +319,11 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
 
     dropdown
       .querySelector(".filter-select-all")
-      .addEventListener("click", () => {
-        const cbAll = dropdown.querySelectorAll(
-          '.filter-option input[type="checkbox"]',
-        );
-        cbAll.forEach((cb) => {
-          if (!cb.disabled) cb.checked = true;
-        });
-        applyFilters();
-      });
+      .addEventListener("click", () => setAllOptions(dropdown, true));
 
     dropdown
       .querySelector(".filter-deselect-all")
-      .addEventListener("click", () => {
-        const cbAll = dropdown.querySelectorAll(
-          '.filter-option input[type="checkbox"]',
-        );
-        cbAll.forEach((cb) => {
-          if (!cb.disabled) cb.checked = false;
-        });
-        applyFilters();
-      });
+      .addEventListener("click", () => setAllOptions(dropdown, false));
   }
 
   function refreshBadges() {
@@ -331,13 +356,11 @@ export function createFilterUi({ getResults, getFilters, applyFilters }) {
       }
     });
 
-    document.addEventListener(
-      "scroll",
-      () => {
-        close();
-      },
-      { capture: true },
-    );
+    // Dropdown nie zamyka się już przy dowolnym scrollu dokumentu — to
+    // przerywało wybór na dłuższych listach. Zamknięcie tylko na Escape.
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && openDropdown) close();
+    });
 
     const btnClear = document.getElementById("btn-clear-all-filters");
     if (btnClear) btnClear.addEventListener("click", onClear);

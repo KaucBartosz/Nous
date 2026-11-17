@@ -166,6 +166,7 @@ export function initAppUpdater() {
         const p = Math.round(progressObj.percent);
         if (progressPercent) progressPercent.textContent = `${p}%`;
         if (progressBar) progressBar.style.width = `${p}%`;
+        progressContainer?.setAttribute('aria-valuenow', String(p));
 
         setStatus(t('updates.downloadingPercent', { percent: p }), '#aaa');
     });

@@ -99,7 +99,7 @@ describe('createFilterUi', () => {
     expect(document.querySelector('.filter-dropdown')).toBeNull();
   });
 
-  it('select-all / deselect-all wołają apply bez mutacji zestawu', () => {
+  it('select-all / deselect-all mutują zestaw i odświeżają widok raz', () => {
     const btn = mountBtn('status', 'Status');
     const filters = emptyHistoryFilters();
     const applyFilters = vi.fn();
@@ -109,9 +109,38 @@ describe('createFilterUi', () => {
       applyFilters,
     });
     ui.openFor('status', btn);
+    const cb = document.querySelector('.filter-option input[type="checkbox"]');
+    const value = cb.value;
     document.querySelector('.filter-select-all').click();
+    expect(cb.checked).toBe(true);
+    expect(filters.status.has(value)).toBe(true);
     expect(applyFilters).toHaveBeenCalledTimes(1);
     document.querySelector('.filter-deselect-all').click();
+    expect(cb.checked).toBe(false);
+    expect(filters.status.has(value)).toBe(false);
+    expect(applyFilters).toHaveBeenCalledTimes(2);
+    ui.close();
+  });
+
+  it('select-all dla dat dodaje wszystkie dni, deselect-all czyści zestaw', () => {
+    const btn = mountBtn('date', 'Data');
+    const filters = emptyHistoryFilters();
+    const applyFilters = vi.fn();
+    const ui = createFilterUi({
+      getResults: () => [
+        r('1', 'stroop', 'P1', '2024-05-01T10:00:00.000Z'),
+        r('2', 'stroop', 'P2', '2024-05-02T10:00:00.000Z'),
+      ],
+      getFilters: () => filters,
+      applyFilters,
+    });
+    ui.openFor('date', btn);
+    document.querySelector('.filter-select-all').click();
+    expect(filters.date.has('day:2024:4:1')).toBe(true);
+    expect(filters.date.has('day:2024:4:2')).toBe(true);
+    expect(applyFilters).toHaveBeenCalledTimes(1);
+    document.querySelector('.filter-deselect-all').click();
+    expect(filters.date.size).toBe(0);
     expect(applyFilters).toHaveBeenCalledTimes(2);
     ui.close();
   });
@@ -133,6 +162,25 @@ describe('createFilterUi', () => {
     expect(filters.date.has('day:2024:4:1')).toBe(true);
     expect(applyFilters).toHaveBeenCalled();
     ui.close();
+  });
+
+  it('scroll dokumentu nie zamyka dropdownu; zamyka Escape', () => {
+    const btn = mountBtn('test_id', 'Test');
+    const ui = createFilterUi({
+      getResults: () => [],
+      getFilters: emptyHistoryFilters,
+      applyFilters: vi.fn(),
+    });
+    ui.bind({ onClear: vi.fn() });
+
+    btn.click();
+    expect(document.querySelector('.filter-dropdown')).not.toBeNull();
+
+    document.dispatchEvent(new Event('scroll'));
+    expect(document.querySelector('.filter-dropdown')).not.toBeNull();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.querySelector('.filter-dropdown')).toBeNull();
   });
 
   it('bind: klik przycisku otwiera, drugi zamyka; clear woła onClear', () => {

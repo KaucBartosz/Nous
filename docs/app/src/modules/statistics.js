@@ -22,6 +22,11 @@ import {
 } from "../statistics/statisticsTable.js";
 import { Notify } from "../notify/notify.js";
 import { t, localeTag } from "../i18n/index.js";
+import {
+  sortRows,
+  bindSortableHeaders,
+  syncSortIndicators,
+} from "./tableSort.js";
 
 const state = {
   allResults: [],
@@ -32,6 +37,7 @@ const state = {
   selectedOrder: [],
   selectedMetrics: new Set(),
   trendMetric: null,
+  sort: { key: "date", dir: "desc" },
   scope: "all",
   subjectId: null,
   participantKey: null,
@@ -566,7 +572,12 @@ function render() {
 
     const tbody = document.querySelector("#stats-runs-table tbody");
     if (tbody) {
-      renderRunsTable(tbody, runs, state.selectedRunIds, (id, checked) => {
+      const tableRuns = sortRows(runs, state.sort.key, state.sort.dir, (r, key) => {
+        if (key === "date") return new Date(r.timestamp).getTime();
+        const score = scoreOf(r);
+        return score === null ? Number.MAX_SAFE_INTEGER : score;
+      });
+      renderRunsTable(tbody, tableRuns, state.selectedRunIds, (id, checked) => {
         if (checked) {
           if (state.selectedOrder.length >= 2) {
             const oldest = state.selectedOrder.shift();
@@ -661,6 +672,18 @@ function render() {
 }
 
 export function initStatisticsView() {
+  const runsTable = el("stats-runs-table");
+  bindSortableHeaders(
+    runsTable,
+    () => state.sort,
+    (key, dir) => {
+      state.sort = { key, dir };
+      syncSortIndicators(runsTable, state.sort);
+      render();
+    },
+  );
+  syncSortIndicators(runsTable, state.sort);
+
   document.querySelectorAll(".stats-segmented-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const mode = btn.dataset.mode;

@@ -3,7 +3,11 @@
 // A5: seam modalny — Dialog jako domyślny adapter DOM, fake w testach.
 // Domena woła Notify.*, nigdy Dialog wprost.
 import { Dialog } from "../modules/dialog.js";
+import { escapeHtml } from "../modules/utils.js";
 import { t } from "../i18n/index.js";
+
+let nextToastId = 0;
+const nextId = (kind) => `notify-${kind}-${++nextToastId}`;
 
 let adapter = null; // null = prawdziwy DOM
 
@@ -48,6 +52,7 @@ export function toast({ id, titleHtml, messageHtml, actions = [], autoDismissMs 
   }
   el.id = id;
   el.className = "toast-notification";
+  el.setAttribute("role", "status");
   el.innerHTML =
     `<div class="toast-content">` +
     `<div class="toast-header"><h4 class="toast-title">${titleHtml}</h4>` +
@@ -113,8 +118,22 @@ export function resetNotifyModalAdapter() {
 export const Notify = {
   /** Kompatybilny router (stare wołania Dialog.alert(msg, type)). Nowy kod woli .info/.error/. */
   alert: (message, type = "info") => modals().alert(message, type),
-  info: (message) => modals().alert(message, "info"),
-  success: (message) => modals().alert(message, "success"),
+  // Zwykłe potwierdzenia nie blokują pracy — idą jako toast. Błędy i
+  // ostrzeżenia nadal wymagają świadomego potwierdzenia w oknie.
+  info: (message) =>
+    toast({
+      id: nextId("info"),
+      titleHtml: escapeHtml(t("dialog.info")),
+      messageHtml: escapeHtml(String(message)),
+      autoDismissMs: 4000,
+    }),
+  success: (message) =>
+    toast({
+      id: nextId("success"),
+      titleHtml: escapeHtml(t("dialog.success")),
+      messageHtml: escapeHtml(String(message)),
+      autoDismissMs: 4000,
+    }),
   warning: (message) => modals().alert(message, "warning"),
   error: (message) => modals().alert(message, "error"),
   confirm: (message, type = "question") => modals().confirm(message, type),
