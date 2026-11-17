@@ -62,3 +62,18 @@ Możesz zgłaszać problemy z działaniem aplikacji w zakładce [Issues](https:/
 ---
 
 &copy; 2026 Nous. Wszelkie prawa zastrzeżone.
+
+---
+
+## 🛠️ Development (dla contributorów)
+
+Poniższe komendy odtworzą środowisko deweloperskie i pozwolą zweryfikować zmiany przed wysłaniem PR.
+
+1. Wymagany **Node.js 24.x** — taką samą wersję używają workflow CI (`.github/workflows/release.yml`).
+2. `npm ci` — instalacja zależności z `package-lock.json`.
+3. `npm start` — uruchomienie aplikacji w Electronie.
+4. `npm run test:run` — **jednorazowy** suite jednostkowy. Użyj go zamiast `npm test`, który działa w trybie watch i nigdy się nie kończy w CI.
+5. `npm run test:e2e` — testy scenariuszowe (Playwright). Wymagają uruchomionego Electrona i konta Firebase, dlatego nie są częścią bramki CI.
+6. `npm run build:web` — generuje katalog `docs/app`. Źródłem prawdy jest `src/` i `web/`, a nie wygenerowany artefakt — nie edytuj `docs/app` ręcznie.
+7. `npm run dist -- --publish never` — suchy build instalatora bez publikacji wydania.
+8. Reguły Firestore znajdują się w `firestore.rules` i wymagają przeglądu przed każdym wdrożeniem.
