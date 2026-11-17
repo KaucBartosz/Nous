@@ -45,6 +45,7 @@ export function createCloudVault({ getDocFn, setDocFn, wrapFn, unwrapFn, randomH
     await setDocFn(uid, {
       encryptedMasterKey: wrapped.encryptedKey,
       iv: wrapped.iv,
+      salt,
       updatedAt: new Date().toISOString(),
     });
     return masterHex;
@@ -63,7 +64,8 @@ export function createCloudVault({ getDocFn, setDocFn, wrapFn, unwrapFn, randomH
       if (!meta || !meta.encryptedMasterKey) {
         throw new Error("Brak klucza w chmurze!");
       }
-      return unwrapFn(meta.encryptedMasterKey, meta.iv, pin, salt);
+      // Stare dokumenty nie mają pola salt — wtedy używamy fallbacku z e2e.js.
+      return unwrapFn(meta.encryptedMasterKey, meta.iv, pin, meta.salt || salt);
     },
     async fetchMeta(uid) {
       return getDocFn(uid);
