@@ -113,3 +113,30 @@ if (typeof global.btoa === "undefined") {
   global.btoa = (str) => Buffer.from(str, "binary").toString("base64");
   global.atob = (str) => Buffer.from(str, "base64").toString("binary");
 }
+
+// ==========================================================
+// localStorage Mock — udostępnienie storage jako globalu
+// ==========================================================
+if (typeof globalThis.localStorage === "undefined") {
+  if (globalThis.window && globalThis.window.localStorage) {
+    // happy-dom udostępnia localStorage na window — użyj go
+    globalThis.localStorage = globalThis.window.localStorage;
+  } else {
+    // Minimalna, synchroniczna implementacja w pamięci (Map)
+    const storage = new Map();
+    globalThis.localStorage = {
+      clear: () => storage.clear(),
+      getItem: (key) => (storage.has(key) ? storage.get(key) : null),
+      setItem: (key, value) => {
+        storage.set(key, String(value));
+      },
+      removeItem: (key) => {
+        storage.delete(key);
+      },
+      key: (index) => Array.from(storage.keys())[index] ?? null,
+      get length() {
+        return storage.size;
+      },
+    };
+  }
+}
