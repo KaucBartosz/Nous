@@ -1,7 +1,8 @@
-import { test, expect, _electron as electron } from '@playwright/test';
-import path from 'path';
-import os from 'os';
-import { readFile, rm, stat, readdir } from 'fs/promises';
+const { test, expect, _electron: electron } = require('@playwright/test');
+const path = require('path');
+const os = require('os');
+const { readFile, rm, stat, readdir } = require('fs/promises');
+const AdmZip = require('adm-zip');
 
 // ==========================================================
 // E2E tests for the Electron Desktop App (2-panel sign-in:
@@ -481,59 +482,181 @@ test.describe('Electron App - Bulk Export', () => {
 });
 
 test.describe('Electron App - History', () => {
-  test('history filters by test name and date range', async () => {
+  // Fixed, unique identities: other tests seed their own rows into the shared
+  // Electron profile, so filters keyed on these prefixes match only our rows.
+  const HISTORY_SEED = [
+    { id: 'e2e-hist-alpha-1', test_id: 'E2E-F-ALPHA', subject_id: 'E2E-S-1', timestamp: '2024-01-10T10:00:00.000Z' },
+    { id: 'e2e-hist-alpha-2', test_id: 'E2E-F-ALPHA', subject_id: 'E2E-S-2', timestamp: '2024-02-11T10:00:00.000Z' },
+    { id: 'e2e-hist-beta', test_id: 'E2E-F-BETA', subject_id: 'E2E-S-3', timestamp: '2024-03-12T10:00:00.000Z' },
+  ];
+
+  async function seedHistoryResults() {
+    await page.evaluate((rows) => new Promise((resolve, reject) => {
+      const open = indexedDB.open('NousDB');
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction('results', 'readwrite');
+        const store = tx.objectStore('results');
+        rows.forEach((r) => store.put({
+          ...r,
+          created_at: r.timestamp,
+          researcher_uid: 'GUEST',
+          wyniki: { score: 5 },
+          sync_status: 'LOCAL',
+        }));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      };
+      open.onerror = () => reject(open.error);
+    }), HISTORY_SEED);
+  }
+
+  async function openHistoryWithSeed() {
     await loginAsGuest();
+    await seedHistoryResults();
     await page.click('#nav-history');
     await expect(page.locator('#history-view')).toBeVisible();
-    // Verify filter buttons are present
-    await expect(page.locator('.filter-btn').first()).toBeVisible();
+    await expect(page.locator('#history-table tbody tr', { hasText: 'E2E-F-ALPHA' }).first())
+      .toBeVisible({ timeout: 15000 });
+  }
+
+  // Opens a column filter dropdown and checks one option by its value.
+  async function checkFilterOption(type, value) {
+    await page.click(`.filter-btn[data-filter-type="${type}"]`);
+    const dropdown = page.locator(`.filter-dropdown[data-filter-type="${type}"]`);
+    await expect(dropdown).toBeVisible();
+    await dropdown.locator(`.filter-option input[type="checkbox"][value="${value}"]`).check();
+  }
+
+  test('history filters by test name and date', async () => {
+    await openHistoryWithSeed();
+    const rows = page.locator('#history-table tbody tr');
+
+    // Two rows share E2E-F-ALPHA; the third (E2E-F-BETA) must be filtered out.
+    await checkFilterOption('test_id', 'E2E-F-ALPHA');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toContainText('E2E-F-ALPHA');
+    await expect(rows.nth(1)).toContainText('E2E-F-ALPHA');
+    await expect(page.locator('#history-table tbody')).not.toContainText('E2E-F-BETA');
+
+    // Narrowing by the date of one row leaves exactly that row (S1, 2024-01-10).
+    await checkFilterOption('date', 'day:2024:0:10');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('E2E-F-ALPHA');
+    await expect(rows.first()).toContainText('E2E-S-1');
+    await expect(page.locator('#history-table tbody')).not.toContainText('E2E-S-2');
   });
 
   test('history search by subject ID returns matching rows', async () => {
-    await loginAsGuest();
-    await page.click('#nav-history');
-    await expect(page.locator('#history-view')).toBeVisible();
-    // Verify history table renders
-    await expect(page.locator('#history-table')).toBeVisible();
+    await openHistoryWithSeed();
+
+    await checkFilterOption('subject_id', 'E2E-S-3');
+    const rows = page.locator('#history-table tbody tr');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('E2E-S-3');
+    await expect(rows.first()).toContainText('E2E-F-BETA');
+    await expect(page.locator('#history-table tbody')).not.toContainText('E2E-S-1');
+    await expect(page.locator('#history-table tbody')).not.toContainText('E2E-S-2');
   });
 
   test('history export ZIP includes all filtered results', async () => {
     await loginAsGuest();
+    await enableSilentDownloads();
+    await seedHistoryResults();
     await page.click('#nav-history');
     await expect(page.locator('#history-view')).toBeVisible();
-    // Verify export button is present
-    await expect(page.locator('#btn-export-csv')).toBeVisible();
+    await expect(page.locator('#history-table tbody tr', { hasText: 'E2E-F-ALPHA' }).first())
+      .toBeVisible({ timeout: 15000 });
+
+    await checkFilterOption('test_id', 'E2E-F-ALPHA');
+    const rows = page.locator('#history-table tbody tr');
+    await expect(rows).toHaveCount(2);
+
+    const downloadsDir = await electronApp.evaluate(({ app }) => app.getPath('downloads'))
+      .catch(() => path.join(os.homedir(), 'Downloads'));
+    const zipsBefore = new Set(
+      (await readdir(downloadsDir)).filter((f) => f.endsWith('.zip')),
+    );
+
+    await page.click('#btn-local-download-all');
+
+    let newZip = null;
+    await expect.poll(async () => {
+      const after = (await readdir(downloadsDir)).filter((f) => f.endsWith('.zip'));
+      newZip = after.find((f) => !zipsBefore.has(f) && f.startsWith('Wyniki_')) || null;
+      return newZip;
+    }, { timeout: 20000 }).not.toBeNull();
+
+    await expect(page.locator('#btn-local-download-all')).toBeEnabled({ timeout: 10000 });
+    const zip = new AdmZip(path.join(downloadsDir, newZip));
+    const names = zip.getEntries().filter((e) => !e.isDirectory).map((e) => e.entryName).sort();
+    // Both filtered ALPHA results are archived; the BETA result is not.
+    expect(names).toHaveLength(2);
+    expect(names.join(' ')).toContain('E2E-F-ALPHA');
+    expect(names.join(' ')).toContain('E2E-S-1');
+    expect(names.join(' ')).toContain('E2E-S-2');
+    expect(names.join(' ')).not.toContain('E2E-F-BETA');
+    await rm(path.join(downloadsDir, newZip), { force: true });
   });
 });
 
 test.describe('Electron App - Tags', () => {
-  test('can create and assign tag to result', async () => {
+  // In this app tags belong to tests in the library (tag button on each card)
+  // and are applied through the library's `@tag` search — history has no tag filter.
+  const TAG_NAME = 'e2e-tag-alpha';
+
+  async function openLibraryGrid() {
     await loginAsGuest();
-    await page.click('#nav-history');
-    await expect(page.locator('#history-view')).toBeVisible();
-    // Verify history view renders (tags may be in filter)
-    await expect(page.locator('#history-view')).toBeVisible();
+    await page.click('#nav-library');
+    await expect(page.locator('#library-view')).toBeVisible();
+    await page.click('#view-grid');
+    await page.waitForFunction(
+      () => document.getElementById('tests-grid')?.childElementCount > 0,
+      { timeout: 20000 },
+    );
+    await expect(page.locator('#start-test-GoNoGo')).toBeVisible();
+  }
+
+  async function tagGoNoGo() {
+    const card = page.locator('.test-card', { has: page.locator('#start-test-GoNoGo') });
+    await card.locator('.tag-btn').click();
+    const menu = page.locator('#active-tag-menu');
+    await expect(menu).toBeVisible();
+    await menu.locator('.tag-input').fill(TAG_NAME);
+    await menu.locator('.tag-input').press('Enter');
+    return menu;
+  }
+
+  test('can create and assign tag to test', async () => {
+    await openLibraryGrid();
+    const menu = await tagGoNoGo();
+    // The chip appears in the tag menu — the tag was really stored.
+    await expect(menu.locator('.tag-chip-edit')).toContainText(TAG_NAME);
   });
 
-  test('filtering history by tag works', async () => {
-    await loginAsGuest();
-    await page.click('#nav-history');
-    await expect(page.locator('#history-view')).toBeVisible();
-    // Verify history table renders
-    await expect(page.locator('#history-table')).toBeVisible();
+  test('library search filters tests by @tag', async () => {
+    await openLibraryGrid();
+    await tagGoNoGo();
+
+    await page.fill('#library-search', `@${TAG_NAME}`);
+    const cards = page.locator('#tests-grid .test-card');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText('GoNoGo');
   });
 });
 
 test.describe('Electron App - Admin', () => {
-  test('admin can view list of local accounts', async () => {
+  // No ADMIN account credential exists in this repo; these assert the
+  // observable guest-side behaviour instead of claiming admin capabilities.
+  test('admin view hidden for guest (view list)', async () => {
     await loginAsGuest();
-    // Admin view should be hidden for guest
+    await expect(page.locator('#user-email-display')).toContainText('Gość');
     await expect(page.locator('#local-admin-view')).toHaveClass(/hidden/);
   });
 
-  test('admin can delete a local account', async () => {
+  test('admin view hidden for guest (delete account)', async () => {
     await loginAsGuest();
-    // Admin view should be hidden for guest
+    await expect(page.locator('#user-email-display')).toContainText('Gość');
     await expect(page.locator('#local-admin-view')).toHaveClass(/hidden/);
   });
 });
