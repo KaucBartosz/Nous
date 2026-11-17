@@ -34,20 +34,19 @@ mcp.json
 HANDOFF.md
 
 # Zależności
-node_modules/
 .venv/
 venv/
 env/
 
 # Build i cache
-dist/
 build/
 .next/
 .cache/
 
 # Inne
 *.pkl
-*.json  # Jeśli masz ogromne pliki z danymi testowymi.dual-graph/
+# Katalog wykresów (jeśli używany)
+dual-graph/
 kartaPracyDyplomowej.pdf
 praca_inzynierska.aux
 praca_inzynierska.bcf
