@@ -12,15 +12,27 @@ const { createKeyStore } = keyStoreMod;
 // fejki tylko tam gdzie system (app, safeStorage, crypto).
 
 describe("main/paths", () => {
-  const { getUserDataPath, findFileInSubfolders, findStartFile } = createPaths({ fs, path });
+  // Wymuszamy platformę — inaczej test zależy od systemu, na którym działa CI
+  // (na runnerze darwin branch macOS zwracałby prawdziwą ścieżkę zamiast /ud).
+  const { getUserDataPath, findFileInSubfolders, findStartFile } = createPaths({
+    fs,
+    path,
+    platform: "win32",
+  });
+  const { getUserDataPath: darwinUserDataPath } = createPaths({
+    fs,
+    path,
+    platform: "darwin",
+  });
 
   it("getUserDataPath: darwin osobno, reszta z app", () => {
     const app = {
       getPath: (name) => ({ userData: "/ud", home: "/home" })[name],
     };
-    // Platforma testowa to win32/linux — gałąź darwin niedostępna tu bezpośrednio,
-    // więc pinujemy kontrakt na gałęzi domyślnej + kształt kodu darwin.
     expect(getUserDataPath(app)).toBe("/ud");
+    expect(darwinUserDataPath(app)).toBe(
+      path.join("/home", "Library", "Application Support", "Nous"),
+    );
   });
 
   it("findFileInSubfolders: bezpośrednio, 1 poziom, brak", () => {

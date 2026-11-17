@@ -1,14 +1,16 @@
 // main/paths.js — ścieżki procesu głównego (E1): userData per-OS + szukanie plików.
 // Czysty CommonJS, zero Electrona: app/fs/path wstrzyknięte (testy na temp-dirach).
 
-function createPaths({ fs, path }) {
+function createPaths({ fs, path, platform = process.platform }) {
   /**
    * Folder danych na wszystkich platformach (reguła z main.js, bez zmian).
    * macOS: ~/Library/Application Support/Nous; Linux/Windows: app.getPath('userData').
+   * Platforma jest wstrzykiwana, żeby obie gałęzie dało się przetestować
+   * niezależnie od systemu, na którym działa CI.
    */
   function getUserDataPath(app) {
     const userDataPath = app.getPath("userData");
-    if (process.platform === "darwin") {
+    if (platform === "darwin") {
       return path.join(app.getPath("home"), "Library", "Application Support", "Nous");
     }
     return userDataPath;

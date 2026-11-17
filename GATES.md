@@ -113,3 +113,12 @@ CHECK: npm run test:e2e
 EXPECT: 42 passed
 WYNIK: PASS — 42/42 (1.6m), w tym 2 testy na realnym koncie PENDING.
 Równolegle `npm run build:web`: PASS (docs/app odświeżony).
+
+## G18 — Release macOS: test getUserDataPath niezależny od platformy CI
+CHECK: npm run test:run
+EXPECT: Test Files
+WYNIK: PASS — 46 plików / 582 testów (22:34, 4.74s). createPaths przyjmuje
+wstrzykniętą platformę (domyślnie process.platform); test sprawdza obie gałęzie
+(win32 i darwin) niezależnie od systemu, na którym działa runner.
+Przyczyna failure na macOS: test pinował /ud, a process.platform === darwin
+zwracał prawdziwą ścieżkę ~/Library/Application Support/Nous.
