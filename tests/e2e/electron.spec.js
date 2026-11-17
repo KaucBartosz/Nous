@@ -79,6 +79,13 @@ test.beforeAll(async () => {
 
   await assertNoOnlineSession();
 
+  // E2E jest w pełni lokalny. Symulujemy offline przy każdej nawigacji, żeby
+  // loadCatalog() sięgał po wstrzyknięty cache zamiast realnego rejestru
+  // Firestore (który jest teraz publicznie czytelny i zwraca inne wersje).
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'onLine', { get: () => false });
+  });
+
   // Offline seed: bez internetu loadCatalog() wraca wcześnie (testCatalog.js:188-196)
   // i nie robi backfillu lokalnych testów, jeśli cache rejestru jest pusty.
   // Wstrzykujemy minimalny rejestr do localStorage — mergeLocalVersions
@@ -609,11 +616,7 @@ test.describe('Electron App - Tags', () => {
     await page.click('#nav-library');
     await expect(page.locator('#library-view')).toBeVisible();
     await page.click('#view-grid');
-    await page.waitForFunction(
-      () => document.getElementById('tests-grid')?.childElementCount > 0,
-      { timeout: 20000 },
-    );
-    await expect(page.locator('#start-test-GoNoGo')).toBeVisible();
+    await expect(page.locator('#start-test-GoNoGo')).toBeVisible({ timeout: 20000 });
   }
 
   async function tagGoNoGo() {
@@ -795,14 +798,11 @@ test.describe('Electron App - Library', () => {
     await loginAsGuest();
     await page.click('#nav-library');
     await expect(page.locator('#library-view')).toBeVisible();
-    await page.waitForFunction(
-      () => document.getElementById('tests-grid')?.childElementCount > 0,
-      { timeout: 20000 },
-    );
 
-    // GoNoGo test should be available
+    // Czekaj na konkretny przycisk, nie na „jakiekolwiek dziecko gridu" —
+    // początkowo wisi tam komunikat ładowania, co dawało flake w pełnym runie.
     const runBtn = page.locator('#start-test-GoNoGo');
-    await expect(runBtn).toBeVisible();
+    await expect(runBtn).toBeVisible({ timeout: 20000 });
     await expect(runBtn).toBeEnabled();
     await runBtn.click();
 

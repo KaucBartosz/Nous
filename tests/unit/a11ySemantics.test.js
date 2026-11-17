@@ -69,6 +69,14 @@ describe('semantyka UI (Etap B)', () => {
     }
   });
 
+  it('zawartość Co nowego jest wewnątrz swojego widoku', () => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const content = doc.getElementById('whats-new-content');
+    expect(content.closest('#whats-new-view')).not.toBeNull();
+    expect(content.closest('.whats-new-container')).not.toBeNull();
+    expect(doc.querySelector('.whats-new-container').closest('#whats-new-view')).not.toBeNull();
+  });
+
   it('panel admina ma nagłówek h1 i focusowalne pola', () => {
     expect(adminHtml).toContain('<h1 class="sr-only">');
     expect(adminHtml).not.toContain('outline: none');
