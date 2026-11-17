@@ -1,10 +1,9 @@
 name: "Synchronizuj z BBTP i Opublikuj WebApp"
 
 on:
-  schedule:
-    # Codziennie o północy UTC
-    - cron: "0 0 * * *"
-  # Pozwala na ręczne wywołanie skryptu z poziomu panelu Actions -> Run workflow
+  # Tylko ręczne uruchomienie (Actions -> Synchronizuj z BBTP i Opublikuj WebApp -> Run workflow).
+  # Harmonogram dzienny został usunięty — testy BBTP nie zmieniają się tak często,
+  # a codzienny commit bota bez zmian treści był tylko szumem w historii.
   workflow_dispatch:
 
 jobs:

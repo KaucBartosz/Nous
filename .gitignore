@@ -45,6 +45,9 @@ build/
 
 # Inne
 *.pkl
+# Logi lokalnego emulatora Firebase
+firestore-debug.log
+firebase-debug.log
 # Katalog wykresów (jeśli używany)
 dual-graph/
 kartaPracyDyplomowej.pdf
