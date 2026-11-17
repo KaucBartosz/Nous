@@ -81,16 +81,29 @@ function checkDownloadedSize({ fs, zipPath, limitBytes = MAX_ZIP_BYTES }) {
 }
 
 /**
- * ZipSlip: każdy wpis po join musi zostać w folderze docelowym (rzuca jak wcześniej).
+ * ZipSlip: każdy wpis musi zostać w folderze docelowym (rzuca jak wcześniej).
+ * Kontrola segmentowa (nie prefiks tekstowy): `../A-evil/x.js` przy folderze
+ * `.../A` dawniej przechodziło przez startsWith — teraz odpada.
  * @param {Array<{entryName: string}>} zipEntries
  */
 function assertZipSafe(zipEntries, path, testFolder) {
+  const root = path.resolve(testFolder);
   for (const entry of zipEntries) {
     const entryName = entry.entryName;
-    const targetPath = path.join(testFolder, entryName);
+    // Segment `..` po normalizacji (ZIP używa '/', Windows '\') — odrzuć.
+    const hasTraversalSegment = path
+      .normalize(entryName)
+      .split(/[\\/]/)
+      .includes("..");
+    const rel = path.relative(root, path.resolve(root, entryName));
 
-    // Check if extracted path is still within the target folder
-    if (!targetPath.startsWith(testFolder)) {
+    if (
+      path.isAbsolute(entryName) ||
+      hasTraversalSegment ||
+      rel === ".." ||
+      rel.startsWith(".." + path.sep) ||
+      path.isAbsolute(rel)
+    ) {
       throw new Error(
         `Malicious ZIP detected! File "${entryName}" attempts to traverse out of target directory.`,
       );

@@ -98,6 +98,31 @@ describe("main/downloads zipSlip", () => {
   });
 });
 
+describe("assertZipSafe", () => {
+  const folder = path.join("ud", "tests_library", "A");
+  const entry = (name) => [{ entryName: name }];
+
+  it("odrzuca ../A-evil/x.js (prefiks tekstowy współdzielony z folderem ...A)", () => {
+    expect(() => assertZipSafe(entry("../A-evil/x.js"), path, folder)).toThrow();
+  });
+
+  it("odrzuca ../../escape.js", () => {
+    expect(() => assertZipSafe(entry("../../escape.js"), path, folder)).toThrow();
+  });
+
+  it("odrzuca bezwzględną ścieżkę /etc/passwd", () => {
+    expect(() => assertZipSafe(entry("/etc/passwd"), path, folder)).toThrow();
+  });
+
+  it("przepuszcza subdir/valid.js", () => {
+    expect(() => assertZipSafe(entry("subdir/valid.js"), path, folder)).not.toThrow();
+  });
+
+  it("przepuszcza ./valid.js", () => {
+    expect(() => assertZipSafe(entry("./valid.js"), path, folder)).not.toThrow();
+  });
+});
+
 describe("main/downloads cache (KROK 1)", () => {
   const setup = (meta) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-dl-"));
