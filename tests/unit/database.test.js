@@ -234,6 +234,110 @@ describe("Database Module", () => {
   });
 
   // ==========================================================
+  // getResultKeys Tests
+  // ==========================================================
+  describe("getResultKeys", () => {
+    it("zwraca tylko jawne metadane kluczy", async () => {
+      const { saveResult, getResultKeys } =
+        await import("../../src/modules/database.js");
+
+      await saveResult(
+        {
+          id: "r1",
+          test_id: "test-1",
+          subject_id: "subj-1",
+          timestamp: "2024-01-01T00:00:00.000Z",
+        },
+        "user-1",
+      );
+
+      const keys = await getResultKeys();
+      expect(keys).toEqual([
+        {
+          id: "r1",
+          firestore_id: undefined,
+          test_id: "test-1",
+          subject_id: "subj-1",
+          timestamp: "2024-01-01T00:00:00.000Z",
+          researcher_uid: "user-1",
+        },
+      ]);
+    });
+
+    it("normalizuje legacy camelCase do jawnych kluczy", async () => {
+      const { getResultKeys } =
+        await import("../../src/modules/database.js");
+
+      mockDB._stores.results.set("legacy-1", {
+        id: "legacy-1",
+        timestamp: "2024-01-02T00:00:00.000Z",
+        firestoreId: "fs-legacy",
+        testId: "test-legacy",
+        subjectId: "subj-legacy",
+        researcher_uid: "user-1",
+      });
+
+      const keys = await getResultKeys();
+      expect(keys[0]).toMatchObject({
+        firestore_id: "fs-legacy",
+        test_id: "test-legacy",
+        subject_id: "subj-legacy",
+      });
+    });
+
+    it("nie woła deszyfracji i zwraca pola zgodne z getAllResults()", async () => {
+      window.electronAPI.getEncryptionKey.mockResolvedValue("0".repeat(64));
+      const { ensureCrypto } = await import("../../src/db/cryptoPolicy.js");
+      expect(await ensureCrypto()).toBe(true);
+
+      const { getResultKeys, getAllResults } =
+        await import("../../src/modules/database.js");
+      const { decryptData } =
+        await import("../../src/modules/cryptoService.js");
+
+      mockDB._stores.results.set("r-enc", {
+        id: "r-enc",
+        timestamp: "2024-01-03T00:00:00.000Z",
+        is_encrypted: true,
+        encrypted_payload:
+          "encrypted_" +
+          JSON.stringify({
+            test_id: "test-enc",
+            subject_id: "subj-enc",
+            wyniki: { score: 42 },
+          }),
+        iv: "iv",
+        firestore_id: "fs-enc",
+        test_id: "test-enc",
+        subject_id: "subj-enc",
+        researcher_uid: "user-1",
+      });
+
+      const full = await getAllResults();
+      expect(decryptData).toHaveBeenCalled();
+      decryptData.mockClear();
+
+      const keys = await getResultKeys();
+      expect(decryptData).not.toHaveBeenCalled();
+      expect(keys).toHaveLength(1);
+      expect(keys[0]).toEqual({
+        id: "r-enc",
+        firestore_id: "fs-enc",
+        test_id: "test-enc",
+        subject_id: "subj-enc",
+        timestamp: "2024-01-03T00:00:00.000Z",
+        researcher_uid: "user-1",
+      });
+      expect(full[0]).toMatchObject({
+        firestore_id: keys[0].firestore_id,
+        test_id: keys[0].test_id,
+        subject_id: keys[0].subject_id,
+        timestamp: keys[0].timestamp,
+      });
+    });
+  });
+
+  // ==========================================================
   // getPendingResults Tests
   // ==========================================================
   describe("getPendingResults", () => {

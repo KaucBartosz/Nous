@@ -146,6 +146,31 @@ export async function getAllResults() {
   }
 }
 
+/**
+ * Czyta tylko jawne metadane kluczy — bez deszyfracji żadnego rekordu.
+ * Pola pokrywają potrzeby buildLocalKeys i checkResultExists.
+ */
+export async function getResultKeys() {
+  try {
+    const db = await initDB();
+    const records = await db.getAllFromIndex("results", "timestamp");
+    return records.map((raw) => {
+      const r = normalizeRecord(raw);
+      return {
+        id: r.id,
+        firestore_id: r.firestore_id,
+        test_id: r.test_id,
+        subject_id: r.subject_id,
+        timestamp: r.timestamp,
+        researcher_uid: r.researcher_uid,
+      };
+    });
+  } catch (error) {
+    console.error("Error getting result keys:", error);
+    throw new Error(t("db.resultsFetchError", { message: error.message }));
+  }
+}
+
 export async function getPendingResults(userId) {
   try {
     const db = await initDB();

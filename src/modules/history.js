@@ -1,5 +1,6 @@
 import {
   getAllResults,
+  getResultKeys,
   claimGuestResult,
   checkResultExists,
   saveResult,
@@ -490,7 +491,7 @@ async function renderCloudResultsTable(results) {
   }
 
   // C3: klucze już-zaimportowanych w results/cloudResults.js
-  const localResults = await getAllResults();
+  const localResults = await getResultKeys();
   const localKeys = buildLocalKeys(localResults);
 
   results.forEach((data) => {
@@ -607,7 +608,7 @@ async function handleImportAll() {
 
   try {
     // C3: klucze + mapowanie w results/cloudResults.js, zapis równoległy
-    const localResults = await getAllResults();
+    const localResults = await getResultKeys();
     const localKeys = buildLocalKeys(localResults);
 
     const toImport = state.cloudResults.filter(
