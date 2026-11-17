@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { webcrypto } from 'node:crypto';
 import { generateSalt, hashPassword, verifyPassword } from '../../src/session/passwordHash.js';
 import {
   createSession,
@@ -22,6 +23,17 @@ import {
 } from '../../src/session/e2ePolicy.js';
 
 describe('passwordHash (przeniesione 1:1 z auth)', () => {
+  // Realny Web Crypto — setup.js daje XOR-mock bez subtle.deriveBits, więc
+  // PBKDF2 musi tu działać na node:crypto.webcrypto (wzorzec z planu 016).
+  // Stub jest lokalny dla tego bloku; pozostałe describe'y nie są ruszane.
+  beforeAll(() => {
+    vi.stubGlobal('window', { crypto: webcrypto });
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('generateSalt: 32 znaki hex', () => {
     const s = generateSalt();
     expect(s).toMatch(/^[0-9a-f]{32}$/);

@@ -1,4 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { webcrypto } from 'node:crypto';
+
+// hashPassword używa Crypto API bezpośrednio; setup.js daje XOR-mock bez
+// deriveBits, więc dla realnego PBKDF2 podmieniamy crypto na node:crypto.webcrypto.
+beforeAll(() => {
+  vi.stubGlobal('crypto', webcrypto);
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 // Mock modułów zależnych
 vi.mock('../../src/modules/ui.js', () => ({
@@ -21,6 +32,7 @@ vi.mock('../../src/modules/database.js', () => ({
   getLocalAccount: vi.fn(),
   createLocalAccount: vi.fn(),
   updateLocalAccountLastLogin: vi.fn(),
+  updateLocalAccountHash: vi.fn(),
 }));
 
 // Firebase mock — auth.currentUser = null (konta lokalne nie używają Firebase)
@@ -52,7 +64,7 @@ vi.mock('https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js', () =>
 }));
 
 describe('Auth Module — Konta Lokalne', () => {
-  let getLocalAccount, createLocalAccount, updateLocalAccountLastLogin;
+  let getLocalAccount, createLocalAccount, updateLocalAccountLastLogin, updateLocalAccountHash;
   let updateAuthUI, showErrorLocal, enforceSyncPolicy;
   let loginLocal, registerLocal, logoutLocal, loginGuest;
   let getResearcherUid, getUserStatus, getSession, getCurrentLocalUser;
@@ -67,6 +79,9 @@ describe('Auth Module — Konta Lokalne', () => {
     getLocalAccount = dbMock.getLocalAccount;
     createLocalAccount = dbMock.createLocalAccount;
     updateLocalAccountLastLogin = dbMock.updateLocalAccountLastLogin;
+    updateLocalAccountHash = dbMock.updateLocalAccountHash;
+    updateLocalAccountHash.mockReset();
+    updateLocalAccountHash.mockResolvedValue(undefined);
 
     const uiMock = await import('../../src/modules/ui.js');
     updateAuthUI = uiMock.updateAuthUI;
@@ -196,6 +211,52 @@ describe('Auth Module — Konta Lokalne', () => {
       expect(onSuccess).toHaveBeenCalled();
       expect(getUserStatus()).toBe('LOCAL');
       expect(getCurrentLocalUser()).toBe('Jan');
+    });
+
+    it('rehashuje stare konto v1 po udanym logowaniu', async () => {
+      const salt = 'aabbccdd00112233aabbccdd00112233';
+      const encoder = new TextEncoder();
+      const digest = await crypto.subtle.digest('SHA-256', encoder.encode(salt + 'stare'));
+      const sha256 = Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // Konto sprzed planu 013: brak pola hashVersion, hash SHA-256 (v1).
+      getLocalAccount.mockResolvedValue({ username: 'Jan', salt, passwordHash: sha256 });
+      updateLocalAccountLastLogin.mockResolvedValue(undefined);
+      updateLocalAccountHash.mockResolvedValue(undefined);
+
+      const onSuccess = vi.fn();
+      await loginLocal('Jan', 'stare', onSuccess);
+
+      expect(onSuccess).toHaveBeenCalled();
+      expect(updateLocalAccountHash).toHaveBeenCalledTimes(1);
+      const [username, newHash, newSalt, version] = updateLocalAccountHash.mock.calls[0];
+      expect(username).toBe('Jan');
+      expect(version).toBe(2);
+      expect(newSalt).toMatch(/^[0-9a-f]{32}$/);
+      expect(newSalt).not.toBe(salt);
+      expect(newHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(newHash).not.toBe(sha256);
+    });
+
+    it('rehash nie blokuje logowania gdy zapis nowego hasha zawiedzie', async () => {
+      const salt = 'aabbccdd00112233aabbccdd00112233';
+      const encoder = new TextEncoder();
+      const digest = await crypto.subtle.digest('SHA-256', encoder.encode(salt + 'stare'));
+      const sha256 = Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      getLocalAccount.mockResolvedValue({ username: 'Jan', salt, passwordHash: sha256, hashVersion: 1 });
+      updateLocalAccountLastLogin.mockResolvedValue(undefined);
+      updateLocalAccountHash.mockRejectedValue(new Error('db failure'));
+
+      const onSuccess = vi.fn();
+      await loginLocal('Jan', 'stare', onSuccess);
+
+      expect(onSuccess).toHaveBeenCalled();
+      expect(getUserStatus()).toBe('LOCAL');
     });
   });
 
