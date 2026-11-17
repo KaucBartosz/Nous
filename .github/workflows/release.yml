@@ -41,6 +41,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Unit tests (gate)
+        run: npm run test:run
+
       # --- WAŻNE: Używamy 'runner.os' w warunkach 'if' ---
       # Dzięki temu kroki budowania NIE zostaną pominięte, jeśli GitHub zmieni wersję
       # obrazu pod etykietą 'macos-latest' lub 'windows-latest'.
