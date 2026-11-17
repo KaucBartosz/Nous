@@ -13,6 +13,7 @@ import {
   packRecord,
   syncOneRecord,
   syncAll,
+  NO_CLOUD_KEY,
 } from "../sync/syncEngine.js";
 import { t } from "../i18n/index.js";
 
@@ -108,10 +109,15 @@ const cloudCrypto = {
   encrypt: (payload) => encryptCloudData(payload),
 };
 const firestoreIo = {
+  // Fail-closed: bez klucza E2E packRecord rzuca NO_CLOUD_KEY przed saveRemote.
+  // Rekordy PENDING zostają lokalnie — żadne dane nie opuszczają urządzenia.
   packRecord: (record) =>
     packRecord(record, cloudCrypto, {
-      onUnencrypted: () =>
-        console.warn("Wysyłanie nieszyfrowanych danych! Brak klucza chmurowego."),
+      onUnencrypted: () => {
+        const error = new Error(t("sync.noCloudKey"));
+        error.code = NO_CLOUD_KEY;
+        throw error;
+      },
     }),
   saveRemote: saveRemoteResult,
   markSynced: (localId, remoteId) => markAsSynced(localId, remoteId),
@@ -154,6 +160,10 @@ export async function syncNow() {
     });
     for (const f of result.failed) {
       console.error(`Failed to sync record ${f.id}:`, f.error);
+    }
+    // Fail-closed: brak klucza E2E — blokujący komunikat, dane zostały lokalnie.
+    if (result.failed.some((f) => f.error?.code === NO_CLOUD_KEY)) {
+      Notify.error(t("sync.noCloudKey"));
     }
     if (result.halted) {
       updateSyncUI(false, 0);
@@ -217,6 +227,10 @@ export async function syncSingleResult(record) {
     return { success: true };
   } catch (e) {
     console.error(`Failed to manually sync record ${record.id}:`, e);
+    if (e.code === NO_CLOUD_KEY) {
+      Notify.error(t("sync.noCloudKey"));
+      throw new Error(t("sync.noCloudKey"));
+    }
     if (e.code === "permission-denied") {
       throw new Error(t("sync.permissionDeniedShort"));
     }

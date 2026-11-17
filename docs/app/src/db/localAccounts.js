@@ -14,7 +14,7 @@ export async function getLocalAccount(username) {
   }
 }
 
-export async function createLocalAccount(username, passwordHash, salt) {
+export async function createLocalAccount(username, passwordHash, salt, hashVersion = 2) {
   try {
     const db = await initDB();
     const now = new Date().toISOString();
@@ -22,11 +22,29 @@ export async function createLocalAccount(username, passwordHash, salt) {
       username,
       passwordHash,
       salt,
+      hashVersion,
       createdAt: now,
       lastLogin: now,
     });
   } catch (error) {
     console.error("Error creating local account:", error);
+    throw new Error(t("db.accountCreateError", { message: error.message }));
+  }
+}
+
+export async function updateLocalAccountHash(username, passwordHash, salt, hashVersion) {
+  try {
+    const db = await initDB();
+    const account = await db.get("localAccounts", username);
+    if (account) {
+      account.passwordHash = passwordHash;
+      account.salt = salt;
+      account.hashVersion = hashVersion;
+      // createdAt (i reszta rekordu) zostaje nienaruszone.
+      await db.put("localAccounts", account);
+    }
+  } catch (error) {
+    console.error("Error updating local account hash:", error);
     throw new Error(t("db.accountCreateError", { message: error.message }));
   }
 }

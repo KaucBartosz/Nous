@@ -9,6 +9,9 @@ import { isLocalSessionKind } from "../session/session.js";
 /** Prefix researcher_uid dla kont lokalnych (reguła z sync.js, była w 3 kopiach). */
 export const LOCAL_PREFIX = "LOCAL::";
 
+/** Kod błędu fail-closed: brak klucza E2E — dane nie mogą być wysłane. */
+export const NO_CLOUD_KEY = "NO_CLOUD_KEY";
+
 /**
  * Rekord konta lokalnego — nigdy nie leci do chmury (ani nie jest liczony).
  * Jedno źródło zamiast 3 rozproszonych if-ów (syncNow + internal + manual).
@@ -55,38 +58,35 @@ export function manualSyncBlockReason(record, { status, online, user } = {}) {
 
 /**
  * Pakowanie rekordu do dokumentu Firestore (treść syncSingleResultInternal).
- * Szyfrowanie E2E gdy klucz dostępny; bez klucza dane jawne + hook (adapter loguje warn).
+ * Fail-closed: bez klucza E2E rzucamy błąd zamiast wysyłać dane jawne.
+ * Hook onUnencrypted pozostaje diagnostyczny (próba wysyłki bez klucza).
  * @param {object} record — rekord lokalny (wyniki/data, demographics, ...)
  * @param {object} crypto — { hasKey(): bool, encrypt({data, demographics}): {payload, iv} }
  * @param {object} hooks — { onUnencrypted(record) }
  */
 export async function packRecord(record, crypto, hooks = {}) {
-  let finalData = record.wyniki || record.data;
-  let finalDemographics = record.demographics;
-  let isEncrypted = false;
-  let iv = null;
-
-  if (crypto.hasKey()) {
-    const encrypted = await crypto.encrypt({
-      data: finalData,
-      demographics: finalDemographics,
-    });
-    finalData = encrypted.payload;
-    finalDemographics = null; // wrażliwe dane schowane w szyfrogramie
-    iv = encrypted.iv;
-    isEncrypted = true;
-  } else if (hooks.onUnencrypted) {
-    hooks.onUnencrypted(record);
+  if (!crypto.hasKey()) {
+    if (hooks.onUnencrypted) hooks.onUnencrypted(record);
+    const error = new Error(
+      "Cloud sync blocked: no E2E key available. Unlock your PIN or use the recovery code. No data was sent.",
+    );
+    error.code = NO_CLOUD_KEY;
+    throw error;
   }
+
+  const encrypted = await crypto.encrypt({
+    data: record.wyniki || record.data,
+    demographics: record.demographics,
+  });
 
   return {
     researcher_uid: record.researcher_uid,
     test_id: record.test_id || record.testId,
     subject_id: record.subject_id,
-    demographics: finalDemographics,
-    data: finalData,
-    iv,
-    is_encrypted: isEncrypted,
+    demographics: null, // wrażliwe dane schowane w szyfrogramie
+    data: encrypted.payload,
+    iv: encrypted.iv,
+    is_encrypted: true,
     timestamp: record.timestamp,
     synced_at: new Date().toISOString(),
   };

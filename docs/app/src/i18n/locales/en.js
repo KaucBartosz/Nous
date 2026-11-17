@@ -894,6 +894,8 @@ export const en = {
     foreignRecord: "You cannot send a result that belongs to another user.",
     permissionDeniedShort:
       "Permission Denied. Check that your status is Approved.",
+    noCloudKey:
+      "Sync blocked: no E2E encryption key available. No data was sent and remains local (PENDING). Unlock your PIN or use the recovery code to enable synchronization.",
     offlineDataError:
       "Error loading data from the cloud (probably no internet):",
     saveCacheError: "Cannot save registry cache:",

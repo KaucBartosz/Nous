@@ -13,8 +13,8 @@ import { t } from "../i18n/index.js";
 import {
   loadDownloadPrefs,
   isSilentDownload,
-} from "../platform/downloadPrefs.js";
-import { getPlatform } from "../platform/index.js";
+  getPlatform,
+} from "../platform/index.js";
 
 /** CSV macierzowy z listy wyników (pusta lista → ""). */
 export function csvOfResults(results) {

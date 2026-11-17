@@ -1,5 +1,5 @@
 // src/modules/e2e.js
-import { fetchUserKeys, saveUserKeys } from '../cloud/firebase.js';
+import { fetchUserKeys, saveUserKeys, currentUser } from '../cloud/firebase.js';
 import {
     hasCloudKey,
     setCloudKeyFromHex,
@@ -11,6 +11,7 @@ import {
 } from './cryptoService.js';
 import {
     isValidPin,
+    generateSaltHex,
     saltForUid,
     setupNewMaster,
     unlockWithPin,
@@ -76,7 +77,7 @@ export function initE2E() {
             return;
         }
 
-        const user = auth.currentUser;
+        const user = currentUser();
         if (!user) return;
 
         try {
@@ -85,7 +86,7 @@ export function initE2E() {
 
             // C4: orkiestracja w session/e2ePolicy.js, tu tylko UI + persist
             const newMasterKey = await setupNewMaster(
-                { uid: user.uid, pin, salt: saltForUid(user.uid) },
+                { uid: user.uid, pin, salt: generateSaltHex() },
                 cloudVault(),
                 { setRamKey: setCloudKeyFromHex },
             );
@@ -123,7 +124,7 @@ export function initE2E() {
             return;
         }
 
-        const user = auth.currentUser;
+        const user = currentUser();
         if (!user) return;
 
         try {
@@ -134,11 +135,28 @@ export function initE2E() {
             e.btnSubmitPin.textContent = t('e2e.decrypting');
 
             // C4: unwrap w policy; brak klucza w chmurze rzuca jak wcześniej
+            const vault = cloudVault();
+            const meta = await vault.fetchMeta(user.uid);
             const decryptedMasterKeyHex = await unlockWithPin(
-                { uid: user.uid, pin, salt: saltForUid(user.uid) },
-                cloudVault(),
+                { uid: user.uid, pin, salt: meta?.salt || saltForUid(user.uid) },
+                vault,
                 { setRamKey: setCloudKeyFromHex },
             );
+
+            // Migracja starych dokumentów (bez salt) — po udanym unlocku.
+            // Błąd zapisu nie może zablokować odblokowania.
+            if (!meta?.salt) {
+                try {
+                    await vault.rotateMaster({
+                        uid: user.uid,
+                        master: decryptedMasterKeyHex,
+                        pin,
+                        salt: generateSaltHex(),
+                    });
+                } catch (migrationErr) {
+                    console.error("E2E salt migration failed:", migrationErr);
+                }
+            }
 
             await getPlatform().keys.setE2EKey(decryptedMasterKeyHex);
 
@@ -193,7 +211,7 @@ export function initE2E() {
             return;
         }
 
-        const user = auth.currentUser;
+        const user = currentUser();
         if (!user) return;
 
         try {
@@ -206,7 +224,7 @@ export function initE2E() {
 
             // C4: rotacja w policy
             await recoverWithCode(
-                { uid: user.uid, cleanCode: unformattedCode, newPin, salt: saltForUid(user.uid) },
+                { uid: user.uid, cleanCode: unformattedCode, newPin, salt: generateSaltHex() },
                 cloudVault(),
                 { setRamKey: setCloudKeyFromHex },
             );

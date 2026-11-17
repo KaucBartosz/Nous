@@ -900,6 +900,8 @@ export const pl = {
       "Nie możesz wysłać wyniku należącego do innego użytkownika.",
     permissionDeniedShort:
       "Brak uprawnień (Permission Denied). Sprawdź status Approved.",
+    noCloudKey:
+      "Synchronizacja zablokowana: brak klucza szyfrowania E2E. Dane nie zostały wysłane i pozostają lokalnie (PENDING). Odblokuj PIN lub użyj kodu odzyskiwania, aby włączyć synchronizację.",
     offlineDataError: "Błąd ładowania danych z chmury (prawdopodobnie brak Internetu):",
     saveCacheError: "Nie można zapisać cache rejestru:",
     parseCacheError: "Błąd parsowania cache lokalnego:",

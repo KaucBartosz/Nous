@@ -1,10 +1,10 @@
 // src/modules/settings.js
-import { getPlatform } from '../platform/index.js';
 import {
+  getPlatform,
   loadDownloadPrefs,
   saveDownloadPrefs,
   resolveDownloadDir,
-} from '../platform/downloadPrefs.js';
+} from '../platform/index.js';
 import { Notify } from '../notify/notify.js';
 import { t, getLocale, setLocale, getSupportedLocales, onLocaleChange } from '../i18n/index.js';
 

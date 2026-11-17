@@ -7,6 +7,7 @@ import {
   matchesTagGroups as matchesGroups,
 } from "../catalog/tagsStore.js";
 import { t } from "../i18n/index.js";
+import { escapeHtml } from "./utils.js";
 
 // Re-eksport czystej logiki — dotychczasowi importerzy (`library.js` via Tags.*,
 // `testCatalog.queryTests` przez wstrzyknięcie) działają bez zmian.
@@ -103,7 +104,7 @@ export function openTagMenu(testId, testName, anchorElement, onUpdate) {
   // Header
   const header = document.createElement("div");
   header.className = "tag-menu-header";
-  header.innerHTML = `<strong>${t("library.tagsTitle", { name: testName })}</strong>`;
+  header.innerHTML = `<strong>${t("library.tagsTitle", { name: escapeHtml(testName) })}</strong>`;
   popup.appendChild(header);
 
   // Tags list

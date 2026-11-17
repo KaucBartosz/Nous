@@ -22,8 +22,15 @@ import {
   getLocalAccount,
   createLocalAccount,
   updateLocalAccountLastLogin,
+  updateLocalAccountHash,
 } from "./database.js";
-import { generateSalt, hashPassword } from "../session/passwordHash.js";
+import {
+  generateSalt,
+  hashPassword,
+  verifyPassword,
+  needsRehash,
+  HASH_VERSION,
+} from "../session/passwordHash.js";
 import { createSession, canUploadResult, isCloudSyncAllowed } from "../session/session.js";
 import { getPlatform } from "../platform/index.js";
 import { t } from "../i18n/index.js";
@@ -185,10 +192,30 @@ export async function loginLocal(username, password, onLoginSuccess) {
       return;
     }
 
-    const hash = await hashPassword(account.salt, password);
-    if (hash !== account.passwordHash) {
+    // Konta sprzed planu 013 nie mają pola hashVersion — to v1 (SHA-256).
+    const version = account.hashVersion ?? 1;
+    const valid = await verifyPassword(
+      account.salt,
+      password,
+      account.passwordHash,
+      version,
+    );
+    if (!valid) {
       showErrorLocal(t("login.invalidPassword"));
       return;
+    }
+
+    // Migracja hasha przy logowaniu: błąd nie może zablokować logowania.
+    if (needsRehash(version)) {
+      try {
+        const newSalt = generateSalt();
+        const newHash = await hashPassword(newSalt, password);
+        await updateLocalAccountHash(username, newHash, newSalt, HASH_VERSION);
+        console.info("[auth] local password hash migrated to v2");
+      } catch (error) {
+        // Bez hasła i bez hasha w logu — tylko fakt nieudanej migracji.
+        console.warn("[auth] local password rehash failed:", error);
+      }
     }
 
     // Sukces
@@ -247,7 +274,7 @@ export async function registerLocal(username, password, onLoginSuccess) {
 
     const salt = generateSalt();
     const passwordHash = await hashPassword(salt, password);
-    await createLocalAccount(trimmedUsername, passwordHash, salt);
+    await createLocalAccount(trimmedUsername, passwordHash, salt, HASH_VERSION);
 
     // Auto-login na nowo utworzone konto
     showErrorLocal(t("login.accountCreatedLoggingIn"), { shake: false });
@@ -294,14 +321,20 @@ export async function changeLocalPassword(oldPassword, newPassword) {
     const account = await getLocalAccount(_currentLocalUsername);
     if (!account) return { ok: false, error: t("login.accountNotExist") };
 
-    const oldHash = await hashPassword(account.salt, oldPassword);
-    if (oldHash !== account.passwordHash) {
+    const version = account.hashVersion ?? 1;
+    const oldValid = await verifyPassword(
+      account.salt,
+      oldPassword,
+      account.passwordHash,
+      version,
+    );
+    if (!oldValid) {
       return { ok: false, error: t("login.oldPasswordIncorrect") };
     }
 
     const newSalt = generateSalt();
     const newHash = await hashPassword(newSalt, newPassword);
-    await createLocalAccount(_currentLocalUsername, newHash, newSalt);
+    await createLocalAccount(_currentLocalUsername, newHash, newSalt, HASH_VERSION);
     return { ok: true };
   } catch (e) {
     console.error("changeLocalPassword error:", e);
@@ -339,7 +372,7 @@ export async function adminResetLocalPassword(targetUsername, newPassword) {
     }
     const newSalt = generateSalt();
     const newHash = await hashPassword(newSalt, newPassword);
-    await createLocalAccount(targetUsername.trim(), newHash, newSalt);
+    await createLocalAccount(targetUsername.trim(), newHash, newSalt, HASH_VERSION);
     return { ok: true };
   } catch (e) {
     console.error("adminResetLocalPassword error:", e);

@@ -3,7 +3,7 @@
  * Logic for handling Application Updates (Nous Launcher itself)
  */
 
-import { updateUpdatesBadge } from './utils.js';
+import { updateUpdatesBadge, escapeHtml } from './utils.js';
 import { getPlatform } from '../platform/index.js';
 import { toast } from '../notify/notify.js';
 import { t } from '../i18n/index.js';
@@ -123,7 +123,7 @@ export function initAppUpdater() {
             id: "update-toast",
             titleHtml: t('updates.available'),
             messageHtml: t('updates.updateAvailable', {
-                version: newVersion,
+                version: escapeHtml(newVersion),
                 manual: platform.isMac ? t('updates.macManualNote') : '',
             }),
             actions: [

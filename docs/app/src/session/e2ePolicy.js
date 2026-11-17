@@ -4,7 +4,16 @@ export function isValidPin(pin) {
   return !!pin && pin.length === 6 && /^\d+$/.test(pin);
 }
 
-/** Sól KDF z uid (rdzeń dawnego getUserSalt — bez zależności od auth). */
+/** Świeża losowa sól KDF: 16 bajtów = 32 znaki hex. */
+export function generateSaltHex() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Sól KDF z uid (rdzeń dawnego getUserSalt — bez zależności od auth).
+ * @deprecated Wyłącznie fallback dla starych dokumentów user_keys bez pola salt.
+ */
 export function saltForUid(uid) {
   return Array.from(uid)
     .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))

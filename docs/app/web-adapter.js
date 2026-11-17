@@ -137,7 +137,7 @@
         console.log("Nous WebAdapter: przechwycono wynik testu", data);
         var testId = data.testId || data.test_id || "test";
         // Wzorzec zgodny z i18n `webAdapter.filename` (Result_/Wynik_ + id + czas).
-        var filename = t.filenamePrefix + testId + "_" + Date.now() + ".csv";
+        var filename = texts().filenamePrefix + testId + "_" + Date.now() + ".csv";
         downloadCsv(filename, buildCsv(data));
         closeSoon(2000);
       } catch (e) {
