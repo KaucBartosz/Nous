@@ -1,46 +1,70 @@
 const { test, expect, _electron: electron } = require('@playwright/test');
 const path = require('path');
 const os = require('os');
-const { readFile, rm, stat, readdir } = require('fs/promises');
+const { readFile, rm, stat, readdir, mkdtemp, cp, mkdir } = require('fs/promises');
+const { rmSync } = require('fs');
 const AdmZip = require('adm-zip');
 
 // ==========================================================
-// E2E tests for the Electron Desktop App (2-panel sign-in:
-// method choice -> online / local sub-panel)
+// E2E tests for the Electron Desktop App.
+// TYLKO konta lokalne i GUEST — żadnej sesji Firebase, żadnego PIN/E2E.
 // ==========================================================
 
 let electronApp;
 let page;
+let userDataDir;
 
-// Uses the app's own sign-out (clears the cached E2E key + Firebase session).
-// The page reloads, so callers after this must re-locate everything.
-async function signOutPersistedSession() {
-  const restoredSel = '#dashboard-screen:not(.hidden), #pin-enter-modal:not(.hidden), #pin-setup-modal:not(.hidden)';
-  await page.waitForSelector(restoredSel, { timeout: 10000 }).catch(() => {});
-
-  // DOM state only — Playwright actionability reports these overlays hidden.
+// Suite działa TYLKO na kontach lokalnych/GUEST. Czysty profil (--user-data-dir)
+// gwarantuje brak sesji Firebase i brak klucza E2E w safeStorage, więc modal
+// "Odblokuj Bazę Wyników" nie może się pojawić. Helper tylko to weryfikuje.
+async function assertNoOnlineSession() {
   const pin = await page.$('#pin-enter-modal:not(.hidden), #pin-setup-modal:not(.hidden)');
   if (pin) {
-    // An approved account without the cached key: the forgot-PIN link closes the modal.
-    await page.click('#link-forgot-pin');
-    await page.waitForFunction(
-      () => !document.querySelector('#pin-enter-modal:not(.hidden), #pin-setup-modal:not(.hidden)'),
-      undefined,
-      { timeout: 10000 },
-    );
+    throw new Error('PIN modal visible — E2E profile is not isolated from a persisted Firebase session');
   }
-  if (await page.$('#dashboard-screen:not(.hidden)')) {
-    await page.click('#btn-logout');
-  }
-  await page.reload();
-  await page.waitForLoadState('domcontentloaded');
   await expect(page.locator('#login-choice-panel')).toBeVisible({ timeout: 10000 });
 }
 
+//_testy BBTP z prawdziwego katalogu obok repo → tests_library w czystym profilu.
+// Bez tego (przy braku internetu) biblioteka jest pusta i testy GoNoGo/tagów
+// nie mają czego uruchomić — cache jest lokalny, nie z Firebase.
+const BBTP_DIR = path.join(path.dirname(process.cwd()), 'BBTP');
+
+async function seedTestsLibrary(profileDir) {
+  const dest = path.join(profileDir, 'tests_library');
+  await mkdir(dest, { recursive: true });
+  const entries = await readdir(BBTP_DIR, { withFileTypes: true });
+  let count = 0;
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    const src = path.join(BBTP_DIR, entry.name);
+    // Test musi mieć plik startowy (index.html) — pomijamy katalogi pomocnicze.
+    const files = await readdir(src).catch(() => []);
+    if (!files.includes('index.html')) continue;
+    await cp(src, path.join(dest, entry.name), { recursive: true });
+    count++;
+  }
+  if (count === 0) {
+    throw new Error(`No BBTP tests found in ${BBTP_DIR} — E2E needs a local test library`);
+  }
+  return count;
+}
+
+let seededTestIds = [];
+
 test.beforeAll(async () => {
-  // Launch the Electron app
+  // Czysty profil na cały run — brak zapisanej sesji Firebase i klucza E2E.
+  userDataDir = await mkdtemp(path.join(os.tmpdir(), 'nous-e2e-'));
+  await seedTestsLibrary(userDataDir);
+  seededTestIds = (await readdir(path.join(userDataDir, 'tests_library'), { withFileTypes: true }))
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
+
   electronApp = await electron.launch({
-    args: [path.join(process.cwd(), 'main.js')],
+    args: [
+      `--user-data-dir=${userDataDir}`,
+      path.join(process.cwd(), 'main.js'),
+    ],
     env: {
       ...process.env,
       NODE_ENV: 'test',
@@ -53,11 +77,18 @@ test.beforeAll(async () => {
   // Wait for the page to load
   await page.waitForLoadState('domcontentloaded');
 
-  // Firebase persists the last online session in the Electron profile. A
-  // leftover session re-logs in on every reload and, e.g. for an APPROVED
-  // account, pops the vault PIN modal over the sign-in screen and blocks
-  // clicks — so it is signed out here.
-  await signOutPersistedSession();
+  await assertNoOnlineSession();
+
+  // Offline seed: bez internetu loadCatalog() wraca wcześnie (testCatalog.js:188-196)
+  // i nie robi backfillu lokalnych testów, jeśli cache rejestru jest pusty.
+  // Wstrzykujemy minimalny rejestr do localStorage — mergeLocalVersions
+  // i tak nadpisze nazwy/versje danymi z tests_library (backfill).
+  await page.evaluate((ids) => {
+    localStorage.setItem(
+      'cached_tests_metadata',
+      JSON.stringify(ids.map((id) => ({ id, name: id, description: '', test_id: id }))),
+    );
+  }, seededTestIds);
 
   // Text assertions are in Polish — force the PL locale (i18n persists the
   // choice in localStorage; otherwise the result depends on the host language).
@@ -73,8 +104,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  // Close the app after the tests
   await electronApp.close();
+  if (userDataDir) rmSync(userDataDir, { recursive: true, force: true });
 });
 
 // --- Helpers: every test sets up its own initial state ---
@@ -82,25 +113,10 @@ test.afterAll(async () => {
 async function gotoLoginChoice() {
   await page.reload();
   await page.waitForLoadState('domcontentloaded');
-
-  // A persisted online session restores the dashboard/PIN modal asynchronously
-  // after reload; it may even re-arm after being closed, so actionability is
-  // never trusted. Poll DOM state: on dashboard/PIN, sign out and reload.
-  const restoredSel = '#dashboard-screen:not(.hidden), #pin-enter-modal:not(.hidden), #pin-setup-modal:not(.hidden)';
-  const coveringOpts = { timeout: 1500 };
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const state = await page.waitForSelector(restoredSel, coveringOpts)
-      .then((h) => (h ? h.getAttribute('id') : ''), () => '');
-    if (!state) break;
-    await signOutPersistedSession();
-  }
-
-  await expect(page.locator('#login-choice-panel')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator(restoredSel)).toHaveCount(0);
+  await assertNoOnlineSession();
 }
 
-// A PENDING online sign-in stays in the Firebase cache, so the next reload
-// re-enters the dashboard. Every test signs out first to get the sign-in screen.
+// Lokalna sesja może zostać z poprzedniego testu w tym samym profilu.
 async function logoutIfSignedIn() {
   const dashboard = page.locator('#dashboard-screen:not(.hidden)');
   const choice = page.locator('#login-choice-panel:not(.hidden)');
