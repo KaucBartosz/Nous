@@ -143,26 +143,6 @@ async function loginLocalAccount(username, password) {
   await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
 }
 
-// Test online account: PENDING, so sign-in goes straight to the dashboard —
-// no E2E vault and no PIN prompt. If this changes (account approved), the test
-// fails on the visible PIN modal instead of unlocking it.
-const ONLINE_EMAIL = 'playwright@test.pl';
-const ONLINE_PASSWORD = '123456';
-
-async function loginOnlineAccount(email, password) {
-  await gotoLoginChoice();
-  await logoutIfSignedIn();
-  await page.click('#btn-choose-online');
-  await expect(page.locator('#login-online-panel')).toBeVisible();
-  await page.fill('#email', email);
-  await page.fill('#password', password);
-  await page.click('#btn-login');
-
-  await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 25000 });
-  await expect(page.locator('#pin-setup-modal')).toBeHidden();
-  await expect(page.locator('#pin-enter-modal')).toBeHidden();
-}
-
 // Enables "Silent download" in Settings (without it the native OS dialog
 // blocks export tests). Idempotent across runs.
 async function enableSilentDownloads() {
@@ -278,20 +258,6 @@ test.describe('Electron App - Authentication', () => {
     await page.click('#btn-back-online');
     await expect(page.locator('#login-choice-panel')).toBeVisible();
     await expect(plBtn).toHaveAttribute('aria-pressed', 'true');
-  });
-});
-
-test.describe('Electron App - Online Account', () => {
-
-  // Test account is PENDING (no E2E vault → no PIN). No PIN key exists in the
-  // cloud, so the setup modal cannot be completed from the test.
-  test.skip('signs in (PENDING) and lands on the dashboard without a PIN', async () => {
-    await loginOnlineAccount(ONLINE_EMAIL, ONLINE_PASSWORD);
-
-    await expect(page.locator('#user-email-display')).toContainText(ONLINE_EMAIL);
-    await expect(page.locator('#pin-setup-modal')).toBeHidden();
-    await expect(page.locator('#pin-enter-modal')).toBeHidden();
-    await expect(page.locator('#library-view')).toBeVisible();
   });
 });
 
