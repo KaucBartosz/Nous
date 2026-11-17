@@ -37,10 +37,9 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.1",
     "electron-log": "^5.4.3",
-    "electron-updater": "^6.1.7",
-    "firebase": "^12.8.0"
+    "electron-updater": "^6.1.7"
   },
   "build": {
     "appId": "com.student.nous",
