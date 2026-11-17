@@ -194,22 +194,6 @@ test.describe('Electron App - Authentication', () => {
     await expect(page.locator('#btn-choose-local')).toBeVisible();
   });
 
-  test('online sign-in panel opens from the tile', async () => {
-    await gotoLoginChoice();
-    await page.click('#btn-choose-online');
-
-    // Online panel fields and buttons
-    await expect(page.locator('#login-online-panel')).toBeVisible();
-    await expect(page.locator('#email')).toBeVisible();
-    await expect(page.locator('#password')).toBeVisible();
-    await expect(page.locator('#btn-login')).toBeVisible();
-    await expect(page.locator('#btn-register')).toBeVisible();
-
-    // Back to choice
-    await page.click('#btn-back-online');
-    await expect(page.locator('#login-choice-panel')).toBeVisible();
-  });
-
   test('local sign-in panel opens from the tile', async () => {
     await gotoLoginChoice();
     await page.click('#btn-choose-local');
@@ -227,7 +211,7 @@ test.describe('Electron App - Authentication', () => {
     await expect(page.locator('#login-choice-panel')).toBeVisible();
   });
 
-  test('language switch works on the choice and the sign-in panels', async () => {
+  test('language switch works on the choice and local sign-in panels', async () => {
     await gotoLoginChoice();
 
     const plBtn = page.locator('#login-screen [data-locale-choice][data-locale="pl"]');
@@ -246,17 +230,17 @@ test.describe('Electron App - Authentication', () => {
     await expect(enBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
-    // The toggle stays on both sub-panels
-    await page.click('#btn-choose-online');
-    await expect(page.locator('#login-online-panel')).toBeVisible();
+    // The toggle also works on the local sub-panel (online panel is not tested:
+    // it needs a real Firebase account, which this suite intentionally avoids).
+    await page.click('#btn-choose-local');
+    await expect(page.locator('#login-local-panel')).toBeVisible();
     await expect(enBtn).toBeVisible();
 
-    // Switch back to PL from the sign-in panel
     await plBtn.click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'pl');
     await expect(plBtn).toHaveAttribute('aria-pressed', 'true');
 
-    await page.click('#btn-back-online');
+    await page.click('#btn-back-local');
     await expect(page.locator('#login-choice-panel')).toBeVisible();
     await expect(plBtn).toHaveAttribute('aria-pressed', 'true');
   });
