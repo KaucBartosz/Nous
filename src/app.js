@@ -51,9 +51,12 @@ import { initSettings } from "./modules/settings.js";
 import { initAppUpdater } from "./modules/appUpdater.js";
 import { initWhatsNew, loadWhatsNewView } from "./modules/whatsNew.js";
 import { renderParticipantsList } from "./modules/participants.js";
-import { getPlatform } from "./platform/index.js";
-import { isTestStatusError } from "./platform/electron.js";
-import { shellPolicyFor, applyShellPolicy } from "./platform/shell.js";
+import {
+  getPlatform,
+  isTestStatusError,
+  shellPolicyFor,
+  applyShellPolicy,
+} from "./platform/index.js";
 import { initLocalPasswordModal } from "./session/passwordModal.js";
 import { Notify } from "./notify/notify.js";
 import { setCryptoWarningHandler } from "./db/cryptoPolicy.js";
