@@ -164,6 +164,18 @@ describe('E2E handlers — currentUser() seam', () => {
     expect(modal.classList.contains('hidden')).toBe(true);
   });
 
+  it('Anuluj wywołuje handler czyszczenia sesji online', async () => {
+    const { setE2ECancelHandler } = await import('../../src/modules/e2e.js');
+    const handler = vi.fn();
+    setE2ECancelHandler(handler);
+    document.getElementById('pin-enter-modal').classList.remove('hidden');
+
+    document.getElementById('btn-cancel-pin').click();
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    setE2ECancelHandler(null);
+  });
+
   it('currentUser() === null: handler nie wywołuje polityki', async () => {
     currentUser.mockReturnValue(null);
     document.getElementById('pin-setup-input').value = PIN;

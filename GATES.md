@@ -60,3 +60,56 @@ TESTY REGUŁ (emulator, JDK 21 + JAVA_HOME): PASS — 13/13.
   (jest w package-lock) — doinstalowany ręcznie z tarballa npm; `npm ci`
   zainstaluje go normalnie.
 Wymagane wdrożenie: `firebase deploy --only firestore:rules` (CLI niezalogowany).
+
+## G10 — Poprawki logowania Online (3, 4, 5, 6-UI, 8, 10): testy jednostkowe
+CHECK: npm run test:run
+EXPECT: Test Files
+WYNIK: PASS — 46 plików / 582 testów (21:45, 4.37s). Początkowo 6 failed w nowych
+testach online: callback onAuthStateChanged rejestruje się asynchronicznie
+(dynamiczny import Firebase) — dodano vi.waitFor w beforeEach.
+
+## G11 — Poprawki logowania Online: build Web (docs/app)
+CHECK: npm run build:web
+EXPECT: Gotowe
+WYNIK: PASS — docs/app 75.70 MB, 64 pliki testów zsynchronizowane z BBTP.
+
+## G12 — Panel admina (#7): statyczna bramka uprawnień
+CHECK: node tests/checks/admin-panel-guard.js
+EXPECT: ADMIN_GUARD_OK
+WYNIK: PASS — ADMIN_GUARD_OK (getDoc/status ADMIN/guard zapisu/signOut;
+brak zapisu statusów użytkowników).
+
+## G13 — Testy online-flow na koncie PENDING (#9): E2E
+CHECK: npm run test:e2e
+EXPECT: passed
+WYNIK: PASS — 42/42 (1.4m), w tym 2 testy online na prawdziwym koncie PENDING.
+Dane logowania zapisane lokalnie w tests/e2e/online-account.local.json
+(gitignore'owany; alternatywa: zmienne NOUS_ONLINE_EMAIL/PASSWORD).
+Testy online: badge "Oczekujący", brak suwaka sync, ponowne logowanie
+po wylogowaniu. Pelna bramka domknieta.
+
+## G14 — Usunięcie niepotrzebnego komunikatu PENDING z dashboardu
+CHECK: npm run test:run
+EXPECT: Test Files
+WYNIK: PASS — 46 plików / 581 testów (22:01, 5.20s). Usunięto jeden test UI
+banera; reszta bez zmian.
+
+## G15 — Usunięcie komunikatu PENDING: E2E
+CHECK: npm run test:e2e
+EXPECT: 42 passed
+WYNIK: PASS — 42/42 (1.4m). Pierwsze podejście 41/42: flake w
+Guest Mode "can log out" (test przechodzi w pojedynkę). Ponownie 42/42.
+Test online sprawdza badge i brak suwaka sync — bez banera.
+
+## G16 — Wariant A: bramka rejestracji (wyścig signUp / saveUserDoc)
+CHECK: npm run test:run
+EXPECT: Test Files
+WYNIK: PASS — 46 plików / 582 testów (22:17, 6.24s). Nowy test sprawdza
+kolejność wywołań: getDoc po setDoc, oraz brak komunikatu accountMissing.
+saveUserDoc przyjmuje options i wołany jest z { merge: true }.
+
+## G17 — Wariant A: E2E i build Web
+CHECK: npm run test:e2e
+EXPECT: 42 passed
+WYNIK: PASS — 42/42 (1.6m), w tym 2 testy na realnym koncie PENDING.
+Równolegle `npm run build:web`: PASS (docs/app odświeżony).

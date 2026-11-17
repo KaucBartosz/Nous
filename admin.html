@@ -204,7 +204,7 @@
 
     <script type="module">
         import { db, auth } from './src/firebaseConfig.js';
-        import { doc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+        import { doc, getDoc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
         import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
         // UI refs - Login
@@ -228,20 +228,41 @@
 
         let allTestsCache = {};
         let currentUser = null;
+        let isAdmin = false;
 
         // --- AUTH LOGIC ---
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                loginPanel.style.display = 'none';
-                adminPanel.style.display = 'block';
-                loadTestsList();
-            } else {
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
                 currentUser = null;
+                isAdmin = false;
                 loginPanel.style.display = 'block';
                 adminPanel.style.display = 'none';
+                return;
             }
+
+            currentUser = user;
+            // Reguły Firestore przyznają zapis do /tests wyłącznie statusowi
+            // ADMIN — sprawdźmy to samo po stronie UI, zanim pokażemy panel.
+            try {
+                const snap = await getDoc(doc(db, "users", user.uid));
+                isAdmin = snap.exists() && snap.data().status === "ADMIN";
+            } catch (e) {
+                console.error(e);
+                isAdmin = false;
+            }
+
+            if (!isAdmin) {
+                loginStatus.innerText = "Brak uprawnień: wymagany status ADMIN.";
+                loginStatus.className = "status error";
+                await signOut(auth);
+                return;
+            }
+
+            loginStatus.innerText = "";
+            loginPanel.style.display = 'none';
+            adminPanel.style.display = 'block';
+            loadTestsList();
         });
 
         btnLogin.addEventListener('click', async () => {
@@ -332,7 +353,7 @@
 
         // 4. Zapis
         btnSave.addEventListener('click', async () => {
-            if (!currentUser) return;
+            if (!currentUser || !isAdmin) return;
 
             const id = inpId.value.trim();
             if (!id) {

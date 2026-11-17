@@ -48,10 +48,32 @@ describe('sync module na Notify (bez DOM-modala)', () => {
       expect(getAutoSyncState()).toBe(false);
       expect(calls.length).toBe(1);
       expect(calls[0][1]).toBe('error');
-      expect(calls[0][0]).toContain('zatwierdzonych użytkowników');
+      expect(calls[0][0]).toContain('APPROVED');
     } finally {
       resetNotifyModalAdapter();
     }
+  });
+
+  it('syncNow z statusem PENDING: brak odczytu i zapisu zdalnego', async () => {
+    vi.mocked(getCurrentUser).mockReturnValue({ uid: 'uid-1' });
+    vi.mocked(getUserStatus).mockReturnValue('PENDING');
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+
+    const { syncNow } = await import('../../src/modules/sync.js');
+    await syncNow();
+
+    expect(getPendingResults).not.toHaveBeenCalled();
+    expect(saveRemoteResult).not.toHaveBeenCalled();
+  });
+
+  it('syncSingleResult z statusem PENDING: odrzucenie bez próby wysyłki', async () => {
+    vi.mocked(getUserStatus).mockReturnValue('PENDING');
+
+    const { syncSingleResult } = await import('../../src/modules/sync.js');
+    await expect(
+      syncSingleResult({ id: 'r1', researcher_uid: 'uid-1' }),
+    ).rejects.toThrow(t('sync.approvedOnly'));
+    expect(saveRemoteResult).not.toHaveBeenCalled();
   });
 
   it('syncNow bez klucza E2E: Notify.error i brak zapisu zdalnego', async () => {

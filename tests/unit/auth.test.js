@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { webcrypto } from 'node:crypto';
+import { t } from '../../src/i18n/index.js';
+
+const fb = vi.hoisted(() => ({
+  authCb: { current: null },
+  getDoc: vi.fn(),
+  setDoc: vi.fn(),
+  signIn: vi.fn(),
+  signUp: vi.fn(),
+  signOut: vi.fn(),
+}));
 
 // hashPassword używa Crypto API bezpośrednio; setup.js daje XOR-mock bez
 // deriveBits, więc dla realnego PBKDF2 podmieniamy crypto na node:crypto.webcrypto.
@@ -15,6 +25,7 @@ afterAll(() => {
 vi.mock('../../src/modules/ui.js', () => ({
   updateAuthUI: vi.fn(),
   showLoginScreen: vi.fn(),
+  showLoginOnlinePanel: vi.fn(),
   showError: vi.fn(),
   showErrorLocal: vi.fn(),
   showLoginChoice: vi.fn(),
@@ -40,7 +51,8 @@ vi.mock('../../src/firebaseConfig.js', () => ({
   auth: {
     currentUser: null,
     onAuthStateChanged: vi.fn((cb) => {
-      cb(null); // brak zalogowanego użytkownika Firebase
+      fb.authCb.current = cb;
+      cb(null); // domyślnie brak użytkownika — testy lokalne nie dotykają chmury
       return vi.fn(); // unsubscribe
     }),
   },
@@ -49,16 +61,16 @@ vi.mock('../../src/firebaseConfig.js', () => ({
 
 // Mock firebase-auth
 vi.mock('https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js', () => ({
-  signInWithEmailAndPassword: vi.fn(),
-  createUserWithEmailAndPassword: vi.fn(),
-  signOut: vi.fn(),
+  signInWithEmailAndPassword: fb.signIn,
+  createUserWithEmailAndPassword: fb.signUp,
+  signOut: fb.signOut,
 }));
 
 // Mock firebase-firestore
 vi.mock('https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js', () => ({
-  doc: vi.fn(),
-  setDoc: vi.fn(),
-  getDoc: vi.fn(),
+  doc: vi.fn((db, col, id) => ({ col, id })),
+  setDoc: fb.setDoc,
+  getDoc: fb.getDoc,
   collection: vi.fn(),
   addDoc: vi.fn(),
 }));
@@ -435,5 +447,160 @@ describe('Auth Module — Konta Lokalne', () => {
       const calls = showErrorLocal.mock.calls.map(c => c[0]);
       expect(calls.some(msg => msg.includes('Zbyt szybko'))).toBe(true);
     });
+  });
+});
+
+describe('Auth Module — Konto Online (PENDING / APPROVED / ERROR)', () => {
+  const docSnapshot = (data) => ({ exists: () => true, data: () => data });
+  let auth, ui, sync, e2e;
+  let initAuth, register, cancelOnlineLogin, getUserStatus;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    fb.authCb.current = null;
+    fb.getDoc.mockReset();
+    fb.setDoc.mockReset();
+    fb.signIn.mockReset();
+    fb.signUp.mockReset();
+    fb.signOut.mockReset();
+
+    auth = await import('../../src/modules/auth.js');
+    ui = await import('../../src/modules/ui.js');
+    sync = await import('../../src/modules/sync.js');
+    e2e = await import('../../src/modules/e2e.js');
+    ({ initAuth, register, cancelOnlineLogin, getUserStatus } = auth);
+
+    initAuth(vi.fn());
+    // firebase.js ładuje SDK dynamicznie — callback onAuthStateChanged
+    // pojawia się dopiero po rozwiązaniu load().
+    await vi.waitFor(() => expect(fb.authCb.current).toBeTypeOf('function'));
+  });
+
+  it('PENDING: startuje aplikację bez verifyE2E', async () => {
+    fb.getDoc.mockResolvedValue(docSnapshot({ status: 'PENDING' }));
+
+    fb.authCb.current({ uid: 'u-1', email: 'pending@example.com' });
+
+    await vi.waitFor(() =>
+      expect(ui.updateAuthUI).toHaveBeenCalledWith('pending@example.com', 'PENDING'),
+    );
+    expect(sync.enforceSyncPolicy).toHaveBeenCalledWith('PENDING');
+    expect(e2e.verifyE2E).not.toHaveBeenCalled();
+    expect(getUserStatus()).toBe('PENDING');
+  });
+
+  it('APPROVED: przechodzi przez verifyE2E przed startem', async () => {
+    fb.getDoc.mockResolvedValue(docSnapshot({ status: 'APPROVED' }));
+
+    fb.authCb.current({ uid: 'u-2', email: 'approved@example.com' });
+
+    await vi.waitFor(() => expect(e2e.verifyE2E).toHaveBeenCalledTimes(1));
+    expect(ui.updateAuthUI).toHaveBeenCalledWith('approved@example.com', 'APPROVED');
+    expect(getUserStatus()).toBe('APPROVED');
+  });
+
+  it('brak dokumentu użytkownika: powrót do panelu online bez startu aplikacji', async () => {
+    fb.getDoc.mockResolvedValue({ exists: () => false, data: () => null });
+
+    fb.authCb.current({ uid: 'u-3', email: 'missing@example.com' });
+
+    await vi.waitFor(() => expect(ui.showError).toHaveBeenCalledWith(t('login.accountMissing')));
+    expect(ui.showLoginScreen).toHaveBeenCalled();
+    expect(ui.showLoginOnlinePanel).toHaveBeenCalled();
+    expect(ui.updateAuthUI).not.toHaveBeenCalled();
+    expect(getUserStatus()).toBe('ERROR');
+  });
+
+  it('błąd pobrania dokumentu: komunikat accountFetchError z przyczyną', async () => {
+    fb.getDoc.mockRejectedValue(new Error('offline'));
+
+    fb.authCb.current({ uid: 'u-4', email: 'x@example.com' });
+
+    await vi.waitFor(() =>
+      expect(ui.showError).toHaveBeenCalledWith(
+        expect.stringContaining('offline'),
+      ),
+    );
+    expect(ui.updateAuthUI).not.toHaveBeenCalled();
+  });
+
+  it('status ERROR z dokumentu blokuje start aplikacji', async () => {
+    fb.getDoc.mockResolvedValue(docSnapshot({ status: 'ERROR' }));
+
+    fb.authCb.current({ uid: 'u-5', email: 'err@example.com' });
+
+    await vi.waitFor(() => expect(ui.showError).toHaveBeenCalled());
+    expect(ui.updateAuthUI).not.toHaveBeenCalled();
+    expect(getUserStatus()).toBe('ERROR');
+  });
+
+  it('rejestracja: dokument PENDING i komunikat o oczekiwaniu na akceptację', async () => {
+    fb.signUp.mockResolvedValue({ user: { uid: 'u-6', email: 'new@example.com' } });
+    fb.setDoc.mockResolvedValue(undefined);
+
+    await register('new@example.com', 'pass123');
+
+    expect(fb.setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ col: 'users', id: 'u-6' }),
+      expect.objectContaining({ status: 'PENDING' }),
+      { merge: true },
+    );
+    expect(ui.showError).toHaveBeenCalledWith(t('login.accountCreatedPending'), {
+      shake: false,
+    });
+  });
+
+  it('rejestracja: observer nie czyta dokumentu przed jego zapisem (bramka)', async () => {
+    let saved = false;
+    fb.setDoc.mockImplementation(async () => {
+      saved = true;
+    });
+    fb.getDoc.mockImplementation(async () =>
+      saved
+        ? docSnapshot({ status: 'PENDING' })
+        : { exists: () => false, data: () => null },
+    );
+    fb.signUp.mockImplementation(async () => {
+      // Firebase odpala observera w trakcie signUp — przed zapisem dokumentu.
+      fb.authCb.current({ uid: 'u-8', email: 'gate@example.com' });
+      return { user: { uid: 'u-8', email: 'gate@example.com' } };
+    });
+
+    await register('gate@example.com', 'pass123');
+
+    await vi.waitFor(() =>
+      expect(ui.updateAuthUI).toHaveBeenCalledWith('gate@example.com', 'PENDING'),
+    );
+    expect(ui.showError).not.toHaveBeenCalledWith(t('login.accountMissing'));
+    expect(getUserStatus()).toBe('PENDING');
+
+    // Dowód, że bramka zadziałała: odczyt dokumentu nastąpił dopiero po zapisie.
+    // Bez bramki observer czytałby go w trakcie signUp (przed setDoc).
+    expect(fb.getDoc.mock.invocationCallOrder[0]).toBeGreaterThan(
+      fb.setDoc.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('anulowanie PIN czyści status i wylogowuje sesję Firebase', async () => {
+    fb.getDoc.mockResolvedValue(docSnapshot({ status: 'APPROVED' }));
+    fb.authCb.current({ uid: 'u-7', email: 'a@example.com' });
+    await vi.waitFor(() => expect(getUserStatus()).toBe('APPROVED'));
+
+    await cancelOnlineLogin();
+
+    expect(getUserStatus()).toBe('UNKNOWN');
+    expect(fb.signOut).toHaveBeenCalled();
+  });
+
+  it('rate limit online nie blokuje natychmiastowego logowania lokalnego', async () => {
+    const db = await import('../../src/modules/database.js');
+    db.getLocalAccount.mockResolvedValue(undefined);
+
+    await auth.login('a@b.pl', 'pass');
+    await auth.loginLocal('Jan', 'pass', vi.fn());
+
+    const msgs = ui.showErrorLocal.mock.calls.map((c) => c[0]);
+    expect(msgs.some((msg) => msg.includes('Zbyt szybko'))).toBe(false);
   });
 });

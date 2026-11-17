@@ -37,6 +37,14 @@ import { showLoginChoice } from './ui.js';
 // Cached DOM elements (populated by initE2E)
 let _els = null;
 let _onCloseCallback = null;
+// app.js rejestruje czyszczenie sesji online — e2e.js nie importuje auth.js
+// (auth.js importuje verifyE2E), więc nie ma cyklu importów.
+let _onCancelHandler = null;
+
+/** Rejestruje akcję wykonywaną po anulowaniu modalu PIN (czyści sesję online). */
+export function setE2ECancelHandler(handler) {
+    _onCancelHandler = handler;
+}
 
 function _getEls() {
     if (_els) return _els;
@@ -83,8 +91,20 @@ function cancelE2E() {
         e.btnSavePin.disabled = false;
         e.btnSavePin.textContent = t('e2e.savePin');
     }
-    // Anulowanie nie kończy logowania — nie wołaj odroczonego onSuccess.
+    // Anulowanie nie woła odroczonego onSuccess (aplikacja nie startuje).
     _onCloseCallback = null;
+    // Sesja Firebase zostaje wyczyszczona przez app.js — inaczej status w auth
+    // zostawał APPROVED przy widocznym ekranie logowania i kolejne signIn
+    // nie wywoływało onAuthStateChanged (użytkownik już był zalogowany).
+    if (_onCancelHandler) {
+        try {
+            Promise.resolve(_onCancelHandler()).catch((err) =>
+                console.warn('[e2e] cancel handler failed:', err),
+            );
+        } catch (err) {
+            console.warn('[e2e] cancel handler failed:', err);
+        }
+    }
     // Pokaż płytki wyboru, żeby użytkownik mógł wybrać konto lokalne/gościa.
     showLoginChoice();
 }

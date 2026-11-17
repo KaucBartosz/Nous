@@ -137,6 +137,9 @@ export const en = {
     creatingAccount: "Creating account...",
     verifying: "Verifying...",
     accountCreated: "Account created!",
+    accountCreatedPending: "Account created. Awaiting administrator approval.",
+    accountMissing:
+      "Online account not found. Please contact the administrator.",
     accountCreatedLoggingIn: "Account created. Logging in...",
     invalidCredentials: "Invalid email or password",
     tooManyRequests:
@@ -887,7 +890,7 @@ export const en = {
     syncError: "Synchronization error",
     noConnection: "No internet connection",
     approvedOnly:
-      "Sync mode is available only to approved users. To become one, contact the Administrator (Bartosz Kauc)",
+      "Sync is available only to users with APPROVED status. Check your status in the profile and contact the administrator if your account is still pending approval.",
     permissionDenied:
       "Synchronization error: Permission denied. Check that your status is 'APPROVED' and that the database rules are correct.",
     localSessionBlock:

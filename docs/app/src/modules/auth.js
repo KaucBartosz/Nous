@@ -13,6 +13,7 @@ import {
 import {
   updateAuthUI,
   showLoginScreen,
+  showLoginOnlinePanel,
   showError,
   showErrorLocal,
 } from "./ui.js";
@@ -43,39 +44,113 @@ let _currentUserStatus = "UNKNOWN";
 /** Login aktualnie zalogowanego lokalnego użytkownika (null jeśli brak). */
 let _currentLocalUsername = null;
 
-/** Rate limiting — timestamp ostatniej próby logowania (online + local). */
-let _lastAttemptTime = 0;
+/** Rate limiting — osobne znaczniki dla online i lokalnego (nie blokują się). */
+let _lastOnlineAttemptTime = 0;
+let _lastLocalAttemptTime = 0;
 const RATE_LIMIT_MS = 1000;
+
+// Statusy, z którymi możemy uruchomić aplikację. Wszystkie inne (ERROR,
+// UNKNOWN, brak dokumentu, nieznana wartość z bazy) kończą logowanie błędem —
+// zamiast pokazywać dashboard z badge'em "Błąd".
+const VALID_ONLINE_STATUSES = ["APPROVED", "PENDING", "ADMIN"];
+
+// Krótki retry łagodzi wyścig z rejestracji: createUserWithEmailAndPassword
+// loguje użytkownika zanim saveUserDoc zdąży zapisać dokument PENDING.
+const USERDOC_ATTEMPTS = 3;
+const USERDOC_RETRY_MS = 200;
+
+// ─── Bramka rejestracji ──────────────────────────────────────────────────────
+// signUp() loguje użytkownika, zanim saveUserDoc() zapisze status PENDING.
+// Observer auth nie może czytać dokumentu w tej szczelinie czasowej.
+let _registrationGate = null;
+
+function beginRegistrationGate() {
+  let resolve;
+  const promise = new Promise((r) => {
+    resolve = r;
+  });
+  _registrationGate = { promise, resolve };
+}
+
+function endRegistrationGate() {
+  const gate = _registrationGate;
+  _registrationGate = null;
+  gate?.resolve();
+}
 
 // ─── Rate Limiter ────────────────────────────────────────────────────────────
 
 /**
- * Sprawdza rate limit i aktualizuje timestamp.
+ * Sprawdza rate limit i aktualizuje timestamp dla danego kanału.
  * @param {'online'|'local'} channel - Który panel wyświetla błąd
  * @returns {boolean} true = można kontynuować, false = zablokowane
  */
 function checkRateLimit(channel) {
   const now = Date.now();
-  if (now - _lastAttemptTime < RATE_LIMIT_MS) {
+  const isLocal = channel === "local";
+  const last = isLocal ? _lastLocalAttemptTime : _lastOnlineAttemptTime;
+  if (now - last < RATE_LIMIT_MS) {
     const msg = t("login.tooFast");
-    if (channel === "local") {
-      showErrorLocal(msg);
-    } else {
-      showError(msg);
-    }
+    if (isLocal) showErrorLocal(msg);
+    else showError(msg);
     return false;
   }
-  _lastAttemptTime = now;
+  if (isLocal) _lastLocalAttemptTime = now;
+  else _lastOnlineAttemptTime = now;
   return true;
 }
 
 // ─── Firebase Auth ───────────────────────────────────────────────────────────
 
+/** Pobiera dokument użytkownika z krótkim retry (bez głośnego logowania). */
+async function fetchUserDocWithRetry(uid) {
+  let lastError = null;
+  for (let attempt = 0; attempt < USERDOC_ATTEMPTS; attempt += 1) {
+    try {
+      const doc = await fetchUserDoc(uid);
+      if (doc) return doc;
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < USERDOC_ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, USERDOC_RETRY_MS));
+    }
+  }
+  if (lastError) throw lastError;
+  return null;
+}
+
+/** Wróć do panelu online z czytelnym komunikatem i wyczyść status sesji. */
+function abortOnlineLogin(message) {
+  _currentUserStatus = "ERROR";
+  _currentLocalUsername = null;
+  showLoginScreen();
+  showLoginOnlinePanel();
+  showError(message);
+}
+
 export function initAuth(onLoginSuccess) {
   onAuthStateChanged(async (user) => {
     if (user) {
-      const userData = await fetchUserDoc(user.uid);
-      const status = userData ? userData.status : "ERROR";
+      // Rejestracja w toku — odczekaj na zapis dokumentu użytkownika.
+      if (_registrationGate) await _registrationGate.promise;
+
+      let userData;
+      try {
+        userData = await fetchUserDocWithRetry(user.uid);
+      } catch (error) {
+        console.error("[auth] Nie udało się pobrać konta online:", error);
+        abortOnlineLogin(t("sync.accountFetchError", { message: error.message }));
+        return;
+      }
+
+      const status = userData?.status;
+      if (!userData || !VALID_ONLINE_STATUSES.includes(status)) {
+        console.error("[auth] Brak lub nieprawidłowy dokument konta online:", user.uid, status);
+        abortOnlineLogin(t("login.accountMissing"));
+        return;
+      }
+
       _currentUserStatus = status;
       _currentLocalUsername = null;
 
@@ -88,6 +163,7 @@ export function initAuth(onLoginSuccess) {
       if (status === "APPROVED" || status === "ADMIN") {
         verifyE2E(user, executeAppStart);
       } else {
+        // PENDING nie ma klucza E2E — dostaje dashboard z banerem oczekiwania.
         executeAppStart();
       }
     } else {
@@ -132,15 +208,20 @@ export async function register(email, password) {
     return;
   }
 
+  beginRegistrationGate();
   try {
     showError(t("login.creatingAccount"), { shake: false });
     const userCred = await signUp(email, password);
-    await saveUserDoc(userCred.user.uid, {
-      email: userCred.user.email,
-      status: "PENDING",
-      createdAt: new Date().toISOString(),
-    });
-    showError(t("login.accountCreated"), { shake: false });
+    await saveUserDoc(
+      userCred.user.uid,
+      {
+        email: userCred.user.email,
+        status: "PENDING",
+        createdAt: new Date().toISOString(),
+      },
+      { merge: true },
+    );
+    showError(t("login.accountCreatedPending"), { shake: false });
   } catch (error) {
     console.error("Registration error:", error);
     if (error.code === "auth/email-already-in-use") {
@@ -150,6 +231,9 @@ export async function register(email, password) {
     } else {
       showError(t("login.registrationError", { message: error.message }));
     }
+  } finally {
+    // Nawet przy błędzie observer nie może zostać zablokowany bramką.
+    endRegistrationGate();
   }
 }
 
@@ -161,6 +245,17 @@ export async function logout() {
   await getPlatform().keys.clearE2EKey();
   await signOutRemote();
   location.reload();
+}
+
+/**
+ * Anulowanie modalu E2E: czyści status PRZED wylogowaniem, żeby późniejsze
+ * onAuthStateChanged(null) nie widziało już APPROVED i nie próbowało
+ * uruchamiać aplikacji z nieaktualnym stanem.
+ */
+export async function cancelOnlineLogin() {
+  _currentUserStatus = "UNKNOWN";
+  _currentLocalUsername = null;
+  await signOutRemote();
 }
 
 // ─── Konta Lokalne ───────────────────────────────────────────────────────────

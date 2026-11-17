@@ -188,6 +188,26 @@ describe("UI Module", () => {
       ).toBe(false);
     });
 
+    it("ukrywa sync toggle dla PENDING (nie może włączyć synchronizacji)", async () => {
+      const { updateAuthUI } = await import("../../src/modules/ui.js");
+      updateAuthUI("pending@example.com", "PENDING");
+      expect(
+        document
+          .getElementById("sync-toggle-container")
+          .classList.contains("hidden"),
+      ).toBe(true);
+    });
+
+    it("ukrywa sync toggle dla ADMIN (polityka: sync tylko dla APPROVED)", async () => {
+      const { updateAuthUI } = await import("../../src/modules/ui.js");
+      updateAuthUI("admin@example.com", "ADMIN");
+      expect(
+        document
+          .getElementById("sync-toggle-container")
+          .classList.contains("hidden"),
+      ).toBe(true);
+    });
+
     it("pokazuje nav-local-admin tylko dla ADMIN", async () => {
       const { updateAuthUI } = await import("../../src/modules/ui.js");
       updateAuthUI("admin@example.com", "ADMIN");

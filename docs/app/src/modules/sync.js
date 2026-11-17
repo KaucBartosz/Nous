@@ -101,6 +101,7 @@ const SYNC_SKIP_LOG = {
   offline: "Sync skipped: Offline.",
   "no-user": "Sync skipped: No user logged in.",
   "in-progress": "Sync skipped: Already in progress.",
+  "not-approved": "Sync skipped: only APPROVED accounts may sync.",
 };
 
 // Prawdziwe I/O wstrzykiwane do SyncEngine (Firestore + klucz chmurowy E2E).
@@ -124,11 +125,19 @@ const firestoreIo = {
 };
 
 export async function syncNow() {
+  // Polityka statusu nie może zależeć od tego, czy enforceSyncPolicy zdążyło
+  // wyłączyć autoSync — sprawdzamy ją bezpośrednio przy każdym wywołaniu.
+  const status = getUserStatus();
+  if (!isCloudSyncAllowed(status)) {
+    console.log(SYNC_SKIP_LOG["not-approved"]);
+    return;
+  }
+
   // D: guardy w SyncEngine (ta sama kolejność, te same logi)
   const user = getCurrentUser();
   const reason = syncBlockReason({
     autoSyncEnabled: isAutoSyncEnabled,
-    status: getUserStatus(),
+    status,
     online: navigator.onLine,
     user,
     syncing: isSyncing,
@@ -212,10 +221,15 @@ const MANUAL_BLOCK_KEY = {
 };
 
 export async function syncSingleResult(record) {
+  const status = getUserStatus();
+  if (!isCloudSyncAllowed(status)) {
+    throw new Error(t("sync.approvedOnly"));
+  }
+
   // D: guardy w SyncEngine (ta sama kolejność, te same komunikaty)
   const user = getCurrentUser();
   const reason = manualSyncBlockReason(record, {
-    status: getUserStatus(),
+    status,
     online: navigator.onLine,
     user,
   });

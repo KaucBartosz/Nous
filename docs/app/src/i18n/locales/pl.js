@@ -137,6 +137,9 @@ export const pl = {
     creatingAccount: "Tworzenie konta...",
     verifying: "Weryfikacja...",
     accountCreated: "Konto utworzone!",
+    accountCreatedPending: "Konto utworzone. Czeka na zatwierdzenie przez administratora.",
+    accountMissing:
+      "Nie znaleziono konta online. Skontaktuj się z administratorem.",
     accountCreatedLoggingIn: "Konto utworzone. Logowanie...",
     invalidCredentials: "Nieprawidłowy e-mail lub hasło",
     tooManyRequests: "Zbyt wiele prób logowania. Spróbuj ponownie później.",
@@ -892,7 +895,7 @@ export const pl = {
     syncError: "Błąd synchronizacji",
     noConnection: "Brak połączenia z Internetem",
     approvedOnly:
-      "Tryb Sync jest dostępny tylko dla zatwierdzonych użytkowników. Aby nim zostać skontaktuj się z Administratorem (Bartosz Kauc)",
+      "Synchronizacja jest dostępna wyłącznie dla użytkowników ze statusem APPROVED. Sprawdź status w profilu i skontaktuj się z administratorem, jeśli konto oczekuje na akceptację.",
     permissionDenied:
       "Błąd synchronizacji: Brak uprawnień. Sprawdź czy Twój status to 'APPROVED' i czy reguły bazy danych są poprawne.",
     localSessionBlock:

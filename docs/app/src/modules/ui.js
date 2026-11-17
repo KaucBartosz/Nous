@@ -248,11 +248,12 @@ export function updateAuthUI(userEmail, userStatus) {
     elements.userStatusDisplay.style.color = "#64b5f6";
   else elements.userStatusDisplay.style.color = "#aaa";
 
-  // Hide sync if Guest or Local (no cloud sync for local accounts)
-  if (userStatus === "GUEST" || userStatus === "LOCAL") {
-    elements.syncToggleContainer?.classList.add("hidden");
-  } else {
+  // Auto-sync jest wyłącznie dla APPROVED (session.isCloudSyncAllowed).
+  // PENDING i ADMIN widzą suwak, którego i tak nie mogą włączyć — ukrywamy go.
+  if (userStatus === "APPROVED") {
     elements.syncToggleContainer?.classList.remove("hidden");
+  } else {
+    elements.syncToggleContainer?.classList.add("hidden");
   }
 
   // Pokaż zakładkę "Konta Lokalne" tylko dla ADMIN

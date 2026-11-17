@@ -71,3 +71,6 @@ playwright-report/
 test-results/
 graphify-out/
 /plans
+
+# Dane konta PENDING do testow E2E (lokalne, nie commitowac)
+tests/e2e/online-account.local.json

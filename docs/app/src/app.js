@@ -18,8 +18,9 @@ import {
   logoutLocal,
   getUserStatus,
   changeLocalPassword,
+  cancelOnlineLogin,
 } from "./modules/auth.js";
-import { initE2E } from "./modules/e2e.js";
+import { initE2E, setE2ECancelHandler } from "./modules/e2e.js";
 import { loadLocalAccountsAdmin } from "./modules/localAccountsAdmin.js";
 import { loadTestsList, initViewSwitcher } from "./modules/library.js";
 
@@ -107,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     // Wersja DESKTOP
     initE2E();
+    setE2ECancelHandler(() => cancelOnlineLogin());
     initAuth(() => {
       onAppStart();
     });

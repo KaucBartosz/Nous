@@ -77,9 +77,9 @@ export async function fetchUserDoc(uid) {
   return snap.exists() ? snap.data() : null;
 }
 
-export async function saveUserDoc(uid, payload) {
+export async function saveUserDoc(uid, payload, options = {}) {
   const fb = await load();
-  await fb.setDoc(fb.doc(fb.db, "users", uid), payload);
+  await fb.setDoc(fb.doc(fb.db, "users", uid), payload, options);
 }
 
 // ─── Katalog testów ──────────────────────────────────────────────────────────
