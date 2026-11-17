@@ -170,15 +170,17 @@ function buildWeb() {
   if (synced) {
     console.log(`   Testy: zsynchronizowano ${synced} plików z ${bbtp}`);
   } else {
-    console.log("   Testy: bez zmian (nie znaleziono katalogu BBTP).");
+    console.warn(
+      "   ⚠ UWAGA: BBTP_DIR nie jest ustawiony (ani katalog BBTP obok repo) — " +
+        "testy BBTP NIE zostały zsynchronizowane z docs/app.",
+    );
   }
 }
 
-/** Katalog BBTP z testami: zmienna BBTP_DIR, lokalna ścieżka lub sąsiad repo. */
+/** Katalog BBTP z testami: zmienna BBTP_DIR lub sąsiad repo. */
 function resolveBbtpSource() {
   const candidates = [
     process.env.BBTP_DIR,
-    "C:\\Users\\HARDPC\\Desktop\\BBTP",
     path.join(ROOT, "..", "BBTP"),
     path.join(ROOT, "BBTP"),
   ].filter(Boolean);
