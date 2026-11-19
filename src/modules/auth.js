@@ -32,8 +32,14 @@ import {
   needsRehash,
   HASH_VERSION,
 } from "../session/passwordHash.js";
-import { createSession, canUploadResult, isCloudSyncAllowed } from "../session/session.js";
+import {
+  createSession,
+  canUploadResult,
+  isCloudSyncAllowed,
+  endSession,
+} from "../session/session.js";
 import { getPlatform } from "../platform/index.js";
+import { clearCloudKey } from "./cryptoService.js";
 import { t } from "../i18n/index.js";
 
 // ─── Prywatny stan modułu ────────────────────────────────────────────────────
@@ -120,10 +126,28 @@ async function fetchUserDocWithRetry(uid) {
   return null;
 }
 
+/** Jedyna definicja końca sesji w rendererze — polityka mieszka w session/. */
+const clearSessionKeys = () =>
+  endSession({
+    clearInMemoryKey: clearCloudKey,
+    clearStoredKey: () => getPlatform().keys.clearE2EKey(),
+  });
+
 /** Wróć do panelu online z czytelnym komunikatem i wyczyść status sesji. */
-function abortOnlineLogin(message) {
+async function abortOnlineLogin(message) {
   _currentUserStatus = "ERROR";
   _currentLocalUsername = null;
+  await clearSessionKeys();
+  // Panel możemy pokazać dopiero po wylogowaniu — jeśli signOut nie dojdzie
+  // do skutku, Firebase nadal widzi użytkownika i ponowny signIn tymi samymi
+  // danymi nie wywoła onAuthStateChanged (powrót do znanego zatoru).
+  try {
+    await signOutRemote();
+  } catch (e) {
+    console.error("[auth] Nie udało się wylogować po odrzuceniu konta:", e);
+    location.reload();
+    return;
+  }
   showLoginScreen();
   showLoginOnlinePanel();
   showError(message);
@@ -140,14 +164,14 @@ export function initAuth(onLoginSuccess) {
         userData = await fetchUserDocWithRetry(user.uid);
       } catch (error) {
         console.error("[auth] Nie udało się pobrać konta online:", error);
-        abortOnlineLogin(t("sync.accountFetchError", { message: error.message }));
+        await abortOnlineLogin(t("sync.accountFetchError", { message: error.message }));
         return;
       }
 
       const status = userData?.status;
       if (!userData || !VALID_ONLINE_STATUSES.includes(status)) {
         console.error("[auth] Brak lub nieprawidłowy dokument konta online:", user.uid, status);
-        abortOnlineLogin(t("login.accountMissing"));
+        await abortOnlineLogin(t("login.accountMissing"));
         return;
       }
 
@@ -161,12 +185,17 @@ export function initAuth(onLoginSuccess) {
       };
 
       if (status === "APPROVED" || status === "ADMIN") {
-        verifyE2E(user, executeAppStart);
+        verifyE2E(
+          user,
+          executeAppStart,
+          () => abortOnlineLogin(t("e2e.keyDbError")),
+        );
       } else {
         // PENDING nie ma klucza E2E — dostaje dashboard z banerem oczekiwania.
         executeAppStart();
       }
     } else {
+      await clearSessionKeys();
       // Sprawdź czy jest aktywna sesja lokalna
       if (_currentUserStatus === "LOCAL") {
         // Lokalny użytkownik zalogowany — nie pokazuj ekranu logowania
@@ -241,8 +270,7 @@ export async function register(email, password) {
  * Wylogowanie z konta Firebase.
  */
 export async function logout() {
-  // C1: czyszczenie klucza przez seam (Web/Fake: noop)
-  await getPlatform().keys.clearE2EKey();
+  await clearSessionKeys();
   await signOutRemote();
   location.reload();
 }
@@ -255,6 +283,7 @@ export async function logout() {
 export async function cancelOnlineLogin() {
   _currentUserStatus = "UNKNOWN";
   _currentLocalUsername = null;
+  await clearSessionKeys();
   await signOutRemote();
 }
 

@@ -48,7 +48,7 @@ import {
   refreshDownloadButtons,
   renderHistoryRows,
   renderPagination,
-  scoreTextOf,
+  historySortValue,
 } from "../history/historyTable.js";
 import {
   sortRows,
@@ -347,18 +347,6 @@ function applyFilters() {
   if (selectAll) selectAll.checked = false;
   updateDownloadButtonState();
   renderHistoryPage();
-}
-
-function historySortValue(r, key) {
-  if (key === "date") return new Date(r.timestamp).getTime();
-  if (key === "test") return r.test_id || r.testId || "";
-  if (key === "subject") return r.subject_id || "";
-  if (key === "status") return r.sync_status || r.syncStatus || "";
-  if (key === "score") {
-    const raw = String(scoreTextOf(r)).replace(/[^\d.-]/g, "");
-    return raw ? Number(raw) : Number.MAX_SAFE_INTEGER;
-  }
-  return "";
 }
 
 function getFilteredResults() {

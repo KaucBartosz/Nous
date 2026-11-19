@@ -107,18 +107,19 @@
                         id="email"
                         placeholder="E-mail badacza"
                         data-i18n-placeholder="login.researcherEmail"
-                    / aria-label="E-mail badacza">
+                    aria-label="E-mail badacza" data-i18n-aria-label="login.researcherEmail">
                     <div class="password-container">
                         <input
                             type="password"
                             id="password"
                             placeholder="Hasło"
                             data-i18n-placeholder="login.password"
-                        / aria-label="Hasło">
+                        aria-label="Hasło" data-i18n-aria-label="login.password">
                         <button
                             id="btn-toggle-password"
                             class="toggle-password"
                             aria-label="Pokaż hasło"
+                            data-i18n-aria-label="aria.showPassword"
                             aria-pressed="false"
                         >
                             <span class="material-icons" aria-hidden="true">visibility</span>
@@ -166,7 +167,7 @@
                         data-i18n-placeholder="login.username"
                         list="local-accounts-list"
                         autocomplete="username"
-                    / aria-label="Login">
+                    aria-label="Login" data-i18n-aria-label="login.username">
                     <datalist id="local-accounts-list"></datalist>
                     <div class="password-container">
                         <input
@@ -175,11 +176,12 @@
                             placeholder="Hasło"
                             data-i18n-placeholder="login.password"
                             autocomplete="current-password"
-                        / aria-label="Hasło">
+                        aria-label="Hasło" data-i18n-aria-label="login.password">
                         <button
                             id="btn-toggle-local-password"
                             class="toggle-password"
                             aria-label="Pokaż hasło"
+                            data-i18n-aria-label="aria.showPassword"
                             aria-pressed="false"
                         >
                             <span class="material-icons" aria-hidden="true">visibility</span>
@@ -322,7 +324,7 @@
                             title="Auto-Sync" data-i18n-title="nav.autoSync"
                             style="margin-bottom: 4px"
                         >
-                            <input type="checkbox" id="toggle-sync" / aria-label="Synchronizacja automatyczna">
+                            <input type="checkbox" id="toggle-sync" aria-label="Synchronizacja automatyczna" data-i18n-aria-label="aria.autoSync">
                             <span class="slider round"></span>
                         </label>
                         <span
@@ -372,7 +374,7 @@
                                 id="library-search"
                                 placeholder="Szukaj testu... (użyj @tag aby filtrować)" data-i18n-placeholder="library.searchPlaceholder"
                                 class="library-search-input"
-                            / aria-label="Szukaj testów">
+                            aria-label="Szukaj testów" data-i18n-aria-label="aria.searchTests">
                         </label>
 
                         <div class="training-mode-container">
@@ -381,7 +383,7 @@
                                 <input
                                     type="checkbox"
                                     id="toggle-training-mode"
-                                / aria-label="Tryb treningowy">
+                                aria-label="Tryb treningowy" data-i18n-aria-label="library.trainingModeTitle">
                                 <span class="slider round"></span>
                             </label>
                             <button
@@ -703,6 +705,7 @@
                                             type="checkbox"
                                             id="selectAllHistory"
                                             aria-label="Zaznacz wszystkie wyniki na stronie"
+                                            data-i18n-aria-label="aria.selectAllResults"
                                         />
                                     </th>
                                     <th
@@ -878,7 +881,7 @@
                                     list="stats-subject-datalist"
                                     placeholder="Wpisz lub wybierz ID…" data-i18n-placeholder="statistics.typeOrSelectId"
                                     autocomplete="off"
-                                / aria-label="ID badanego">
+                                aria-label="ID badanego" data-i18n-aria-label="statistics.subjectId">
                                 <datalist id="stats-subject-datalist"></datalist>
                             </label>
                             <label class="stats-field hidden" id="stats-participant-field">
@@ -1056,6 +1059,7 @@
                             class="hidden"
                             role="progressbar"
                             aria-label="Postęp pobierania aktualizacji"
+                            data-i18n-aria-label="aria.updateProgress"
                             aria-valuemin="0"
                             aria-valuemax="100"
                             aria-valuenow="0"
@@ -1142,7 +1146,7 @@
                                     placeholder="Szukaj..." data-i18n-placeholder="common.searchEllipsis"
                                     class="library-search-input"
                                     style="max-width: 100%"
-                                / aria-label="Szukaj aktualizacji">
+                                aria-label="Szukaj aktualizacji" data-i18n-aria-label="aria.searchUpdates">
                             </label>
                         </div>
                         <div class="table-container">
@@ -1206,7 +1210,7 @@
                                     id="participants-search"
                                     placeholder="Szukaj badanego..." data-i18n-placeholder="demographics.searchPlaceholder"
                                     class="participants-search-input"
-                                / aria-label="Szukaj uczestników">
+                                aria-label="Szukaj uczestników" data-i18n-aria-label="aria.searchParticipants">
                             </div>
                         </div>
                         <div id="participants-list" class="participants-list">
@@ -1293,7 +1297,7 @@
                                 type="text"
                                 id="creator-template-name"
                                 placeholder="np. Badanie Kierowców 2026" data-i18n-placeholder="creator.templateNamePlaceholder"
-                            / aria-label="np. Badanie Kierowców 2026">
+                            aria-label="np. Badanie Kierowców 2026" data-i18n-aria-label="aria.templateNameExample">
                         </div>
 
                         <hr class="form-divider" />
@@ -1527,7 +1531,7 @@
                                                     margin-bottom: 0;
                                                     padding: 8px 12px;
                                                 "
-                                            / aria-label="np. Mój Rubinowy">
+                                            aria-label="np. Mój Rubinowy" data-i18n-aria-label="aria.participantNameExample">
                                         </div>
                                         <button
                                             id="btn-save-custom-theme"
@@ -1799,7 +1803,7 @@
                                     <input
                                         type="checkbox"
                                         id="show-local-tests-toggle"
-                                    / aria-label="Pokaż testy lokalne">
+                                    aria-label="Pokaż testy lokalne" data-i18n-aria-label="settings.showLocalTests">
                                     <span class="slider round"></span>
                                 </label>
                                 <span data-i18n="settings.showLocalTests">Pokaż testy lokalne</span>
@@ -1843,7 +1847,7 @@
                                 <input
                                     type="checkbox"
                                     id="auto-load-demographics-toggle"
-                                / aria-label="Automatycznie wczytaj metryczkę">
+                                aria-label="Automatycznie wczytaj metryczkę" data-i18n-aria-label="aria.autoLoadDemographics">
                                 <span class="slider round"></span>
                             </label>
                             <span data-i18n="settings.autoLoadDemographics">Automatycznie wczytaj ostatnio używaną metryczkę przy logowaniu</span>
@@ -1878,7 +1882,7 @@
                                     <input
                                         type="checkbox"
                                         id="silent-download-toggle"
-                                    / aria-label="Ciche pobieranie">
+                                    aria-label="Ciche pobieranie" data-i18n-aria-label="aria.silentDownload">
                                     <span class="slider round"></span>
                                 </label>
                                 <span data-i18n="settings.silentDownload">Ciche pobieranie do folderu</span>
@@ -2218,7 +2222,7 @@
                             id="cp-old-password"
                             placeholder="Obecne hasło" data-i18n-placeholder="login.currentPassword"
                             style="width: 100%; box-sizing: border-box"
-                        / aria-label="Obecne hasło">
+                        aria-label="Obecne hasło" data-i18n-aria-label="login.currentPassword">
                     </div>
                     <div class="form-group" style="margin-bottom: 14px">
                         <label
@@ -2235,7 +2239,7 @@
                             id="cp-new-password"
                             placeholder="Min. 4 znaki" data-i18n-placeholder="login.min4Chars"
                             style="width: 100%; box-sizing: border-box"
-                        / aria-label="Min. 4 znaki">
+                        aria-label="Min. 4 znaki" data-i18n-aria-label="login.min4Chars">
                     </div>
                     <div class="form-group" style="margin-bottom: 14px">
                         <label
@@ -2252,7 +2256,7 @@
                             id="cp-confirm-password"
                             placeholder="Powtórz nowe hasło" data-i18n-placeholder="login.repeatNewPassword"
                             style="width: 100%; box-sizing: border-box"
-                        / aria-label="Powtórz nowe hasło">
+                        aria-label="Powtórz nowe hasło" data-i18n-aria-label="login.repeatNewPassword">
                     </div>
                     <p
                         id="cp-error"
@@ -2447,7 +2451,7 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        / aria-label="Nowy PIN" inputmode="numeric" autocomplete="off">
+                        aria-label="Nowy PIN" data-i18n-aria-label="aria.newPin" inputmode="numeric" autocomplete="off">
                     </div>
                     <p
                         id="pin-setup-error"
@@ -2507,7 +2511,7 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        / aria-label="PIN" inputmode="numeric" autocomplete="off">
+                        aria-label="PIN" data-i18n-aria-label="aria.pin" inputmode="numeric" autocomplete="off">
                     </div>
                     <p
                         id="pin-enter-error"
@@ -2588,7 +2592,7 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        / aria-label="Kod odzyskiwania" inputmode="numeric" autocomplete="off">
+                        aria-label="Kod odzyskiwania" data-i18n-aria-label="aria.recoveryCode" inputmode="numeric" autocomplete="off">
                     </div>
                     <p style="margin-top: 20px" data-i18n="e2e.newPin">Nowy 6-cyfrowy PIN:</p>
                     <div class="form-group">
@@ -2609,7 +2613,7 @@
                                 padding: 10px;
                                 border-radius: 4px;
                             "
-                        / aria-label="Nowy PIN" inputmode="numeric" autocomplete="off">
+                        aria-label="Nowy PIN" data-i18n-aria-label="aria.newPin" inputmode="numeric" autocomplete="off">
                     </div>
                     <p
                         id="pin-recovery-error"

@@ -7,13 +7,19 @@ export function sortRows(rows, key, dir, valueOf) {
   return [...rows].sort((a, b) => {
     const av = valueOf(a, key);
     const bv = valueOf(b, key);
+    // Brak wartości jest zawsze na końcu — niezależnie od kierunku sortowania.
+    // Dzięki temu "brak wyniku" nie wypływa na górę przy malejąco.
+    const aMissing = av === null || av === undefined || av === "";
+    const bMissing = bv === null || bv === undefined || bv === "";
+    if (aMissing || bMissing) {
+      if (aMissing === bMissing) return 0;
+      return aMissing ? 1 : -1;
+    }
     const an = Number(av);
     const bn = Number(bv);
-    const numeric =
-      av !== "" && av !== null && bv !== "" && bv !== null &&
-      !Number.isNaN(an) && !Number.isNaN(bn);
+    const numeric = !Number.isNaN(an) && !Number.isNaN(bn);
     if (numeric && an !== bn) return (an - bn) * sign;
-    return String(av ?? "").localeCompare(String(bv ?? ""), localeTag()) * sign;
+    return String(av).localeCompare(String(bv), localeTag()) * sign;
   });
 }
 

@@ -21,6 +21,7 @@ vi.mock('../../src/session/e2ePolicy.js', async (importOriginal) => {
     setupNewMaster: vi.fn(async () => 'a'.repeat(64)),
     unlockWithPin: vi.fn(async () => 'b'.repeat(64)),
     recoverWithCode: vi.fn(async () => 'c'.repeat(64)),
+    describeRemoteKey: vi.fn(async () => 'missing'),
   };
 });
 
@@ -174,6 +175,19 @@ describe('E2E handlers — currentUser() seam', () => {
 
     expect(handler).toHaveBeenCalledTimes(1);
     setE2ECancelHandler(null);
+  });
+
+  it('verifyE2E: błąd odczytu user_keys nie uruchamia aplikacji', async () => {
+    const policy = await import('../../src/session/e2ePolicy.js');
+    policy.describeRemoteKey.mockResolvedValue('error');
+    const { verifyE2E } = await import('../../src/modules/e2e.js');
+    const onSuccess = vi.fn();
+    const onFailure = vi.fn();
+
+    await verifyE2E({ uid: FAKE_UID }, onSuccess, onFailure);
+
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
   it('currentUser() === null: handler nie wywołuje polityki', async () => {

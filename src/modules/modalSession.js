@@ -59,6 +59,7 @@ export function openModalSession(overlay, { onDismiss, focusSelector, handleEsca
     };
 
     overlay.classList.remove("hidden");
+    let focusTimer = null;
 
     if (typeof document !== "undefined") {
         openCount += 1;
@@ -66,7 +67,8 @@ export function openModalSession(overlay, { onDismiss, focusSelector, handleEsca
         overlay.addEventListener("keydown", onKeyDown);
         overlay.addEventListener("mousedown", onMouseDown);
         if (handleEscape) document.addEventListener("keydown", onEscape);
-        setTimeout(() => {
+        focusTimer = setTimeout(() => {
+            focusTimer = null;
             const target =
                 (focusSelector && overlay.querySelector(focusSelector)) ||
                 focusableIn(overlay)[0];
@@ -79,6 +81,10 @@ export function openModalSession(overlay, { onDismiss, focusSelector, handleEsca
         close() {
             if (closed) return;
             closed = true;
+            if (focusTimer !== null) {
+                clearTimeout(focusTimer);
+                focusTimer = null;
+            }
             overlay.classList.add("hidden");
             if (typeof document !== "undefined") {
                 overlay.removeEventListener("keydown", onKeyDown);

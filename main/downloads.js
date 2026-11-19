@@ -331,14 +331,20 @@ function createDownloader({
 
     sender.send("test-status", { code: "downloading", params: { version } });
 
-    const file = fs.createWriteStream(zipPath);
+    let file = null;
+
+    /** Wszystkie wyjścia błędem zamykają strumień i usuwają częściowy plik. */
+    const abortDownload = (status) => {
+      sender.send("test-status", status);
+      if (file) file.destroy();
+      fs.unlink(zipPath, () => {});
+      finishTask();
+    };
 
     // Funkcja do obsługi przekierowań
     const downloadWithRedirect = (downloadUrl, maxRedirects = 5) => {
       if (maxRedirects <= 0) {
-        sender.send("test-status", { code: "tooManyRedirects" });
-        fs.unlink(zipPath, () => {});
-        finishTask();
+        abortDownload({ code: "tooManyRedirects" });
         return;
       }
 
@@ -351,9 +357,7 @@ function createDownloader({
               // SEC: allowlista obowiązuje też cele redirectów (nie tylko URL startowy)
               const redirectError = validateRedirectTarget(redirectUrl);
               if (redirectError) {
-                sender.send("test-status", redirectError);
-                fs.unlink(zipPath, () => {});
-                finishTask();
+                abortDownload(redirectError);
                 return;
               }
               console.log(`Przekierowanie: ${response.statusCode} -> ${redirectUrl}`);
@@ -363,14 +367,17 @@ function createDownloader({
           }
           // 404 itd. wyrzuci błąd
           if (response.statusCode !== 200) {
-            sender.send("test-status", {
+            abortDownload({
               code: "httpError",
               params: { status: response.statusCode },
             });
-            fs.unlink(zipPath, () => {});
-            finishTask();
             return;
           }
+
+          // Strumień otwieramy dopiero po potwierdzeniu 200 — przy redirectach
+          // i błędach HTTP nie ma już otwartego deskryptora do posprzątania.
+          file = fs.createWriteStream(zipPath);
+          file.on("drain", () => response.resume());
 
           const totalBytes = parseInt(response.headers["content-length"], 10);
           let receivedBytes = 0;
@@ -378,7 +385,7 @@ function createDownloader({
 
           response.on("data", (chunk) => {
             receivedBytes += chunk.length;
-            file.write(chunk);
+            if (!file.write(chunk)) response.pause();
 
             if (totalBytes) {
               const percent = Math.round((receivedBytes / totalBytes) * 100);
@@ -401,9 +408,7 @@ function createDownloader({
               // SEC: strażnik RAM przed new AdmZip (zatruty rejestr → OOM)
               const sizeError = checkDownloadedSize({ fs, zipPath });
               if (sizeError) {
-                sender.send("test-status", sizeError);
-                fs.unlink(zipPath, () => {});
-                finishTask();
+                abortDownload(sizeError);
                 return;
               }
 
@@ -475,12 +480,10 @@ function createDownloader({
           });
         })
         .on("error", (err) => {
-          fs.unlink(zipPath, () => {});
-          sender.send("test-status", {
+          abortDownload({
             code: "networkError",
             params: { message: err.message },
           });
-          finishTask();
         });
     };
 
@@ -494,10 +497,13 @@ function createDownloader({
   function registerIpc(ipcMain) {
     ipcMain.on("download-test", (event, taskData) => {
       const res = enqueueDownload(taskData, event.sender);
-      event.sender.send(
-        "test-status",
-        res.ok ? { code: "queued" } : { code: "error", error: res.error },
-      );
+      // enqueueDownload zwraca kod jako string albo pełny { code, params }.
+      const status = res.ok
+        ? { code: "queued" }
+        : typeof res.error === "string"
+          ? { code: res.error }
+          : res.error;
+      event.sender.send("test-status", status);
       if (res.ok) processDownloadQueue();
     });
 

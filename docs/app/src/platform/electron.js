@@ -2,17 +2,28 @@
 import { t } from "../i18n/index.js";
 
 /**
+ * Kody błędów, które w słowniku żyją pod `testStatus.error.*` (błędy runnera).
+ * Main wysyła zawsze płaski `{ code, params? }` — ten zestaw wybiera tylko
+ * lokalizację klucza, nie zmienia samego protokołu.
+ */
+const ERROR_SUBCODES = new Set([
+  "invalidTestId",
+  "runConfig",
+  "testNotDownloaded",
+  "signingKeyUnavailable",
+  "fileSave",
+]);
+
+/**
  * Tłumaczy zdarzenia `test-status` z main. Main nie zna języka interfejsu,
- * więc wysyła kody ({ code, params?, error? }); starsze stringi przechodzą bez zmian.
+ * więc wysyła kody ({ code, params? }); starsze stringi przechodzą bez zmian.
  */
 export function formatTestStatus(message) {
   if (!message || typeof message !== "object" || !message.code) return message;
-  const key = message.code === "error" ? "testStatus.error" : `testStatus.${message.code}`;
-  const params = { ...(message.params || {}) };
-  if (message.error) {
-    params.error = t(`testStatus.error.${message.error}`);
-  }
-  return t(key, params);
+  const key = ERROR_SUBCODES.has(message.code)
+    ? `testStatus.error.${message.code}`
+    : `testStatus.${message.code}`;
+  return t(key, message.params);
 }
 
 /** Nagłówki CSV dla main (main nie zna języka interfejsu). */
@@ -30,8 +41,8 @@ function csvLabels() {
 }
 
 const ERROR_CODES = new Set([
-  "error",
-  "invalidTestId",
+  "error", // starsze komunikaty z main
+  ...ERROR_SUBCODES,
   "httpsOnly",
   "ownerOnly",
   "forbiddenDomain",

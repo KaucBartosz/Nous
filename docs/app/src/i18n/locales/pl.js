@@ -1054,6 +1054,7 @@ export const pl = {
     starting: "Uruchamianie...",
     anotherTestRunning: "Inny test w toku. Uruchomienie wstrzymane.",
     resultSaved: "Wynik zapisany pomyślnie.",
+    queueBusy: "Zadanie dla tego testu jest już w kolejce!",
     tooManyRedirects: "BŁĄD: Za dużo przekierowań!",
     httpError: "Błąd HTTP: {{status}}",
     zipError: "Błąd ZIP: {{message}}",
@@ -1086,6 +1087,24 @@ export const pl = {
     resultPrefix: "Wynik - ",
     filename: "Wynik_{{testId}}_{{timestamp}}",
     captured: "Nous WebAdapter: przechwycono wynik testu",
+  },
+
+  // Tylko etykiety aria, które nie mają odpowiednika w istniejących przestrzeniach.
+  aria: {
+    showPassword: "Pokaż hasło",
+    autoSync: "Synchronizacja automatyczna",
+    searchTests: "Szukaj testów",
+    selectAllResults: "Zaznacz wszystkie wyniki na stronie",
+    updateProgress: "Postęp pobierania aktualizacji",
+    searchUpdates: "Szukaj aktualizacji",
+    searchParticipants: "Szukaj uczestników",
+    templateNameExample: "np. Badanie Kierowców 2026",
+    participantNameExample: "np. Mój Rubinowy",
+    autoLoadDemographics: "Automatycznie wczytaj metryczkę",
+    silentDownload: "Ciche pobieranie",
+    newPin: "Nowy PIN",
+    pin: "PIN",
+    recoveryCode: "Kod odzyskiwania",
   },
 
   web: {

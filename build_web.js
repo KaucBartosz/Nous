@@ -6,6 +6,7 @@
 // poprawek w docs/app (to był główny powód rozjazdu wersji).
 const fs = require("fs");
 const path = require("path");
+const { resolveBuildLibrary } = require("./tools/tests-library.js");
 
 const ROOT = __dirname;
 const DEST = path.join(ROOT, "docs", "app");
@@ -165,7 +166,7 @@ function buildWeb() {
   //    Kopiujemy tylko pliki eksperymentu — index.html i lib zostają w docs/app,
   //    bo wersja webowa ma własny index.html z web-adapter.js. Potem wstrzykujemy
   //    test-lang.js (język testu w Web: wybór Nous z localStorage).
-  const bbtp = resolveBbtpSource();
+  const bbtp = resolveBuildLibrary();
   const testsDest = path.join(DEST, "tests");
   fs.mkdirSync(testsDest, { recursive: true });
   const synced = bbtp ? syncBbtpTests(bbtp, testsDest) : 0;
@@ -186,16 +187,6 @@ function buildWeb() {
         "testy BBTP NIE zostały zsynchronizowane z docs/app.",
     );
   }
-}
-
-/** Katalog BBTP z testami: zmienna BBTP_DIR lub sąsiad repo. */
-function resolveBbtpSource() {
-  const candidates = [
-    process.env.BBTP_DIR,
-    path.join(ROOT, "..", "BBTP"),
-    path.join(ROOT, "BBTP"),
-  ].filter(Boolean);
-  return candidates.find((dir) => fs.existsSync(path.join(dir, "NWstecz", "nwstecz.js"))) || null;
 }
 
 /**

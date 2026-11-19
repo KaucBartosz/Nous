@@ -1048,6 +1048,7 @@ export const en = {
     starting: "Starting...",
     anotherTestRunning: "Another test is running. Launch paused.",
     resultSaved: "Result saved successfully.",
+    queueBusy: "A download for this test is already queued!",
     tooManyRedirects: "ERROR: Too many redirects!",
     httpError: "HTTP error: {{status}}",
     zipError: "ZIP error: {{message}}",
@@ -1080,6 +1081,24 @@ export const en = {
     resultPrefix: "Result - ",
     filename: "Result_{{testId}}_{{timestamp}}",
     captured: "Nous WebAdapter: captured test result",
+  },
+
+  // Tylko etykiety aria, które nie mają odpowiednika w istniejących przestrzeniach.
+  aria: {
+    showPassword: "Show password",
+    autoSync: "Automatic sync",
+    searchTests: "Search tests",
+    selectAllResults: "Select all results on this page",
+    updateProgress: "Update download progress",
+    searchUpdates: "Search updates",
+    searchParticipants: "Search participants",
+    templateNameExample: "e.g. Driver Study 2026",
+    participantNameExample: "e.g. My Ruby",
+    autoLoadDemographics: "Automatically load demographics",
+    silentDownload: "Silent download",
+    newPin: "New PIN",
+    pin: "PIN",
+    recoveryCode: "Recovery code",
   },
 
   web: {

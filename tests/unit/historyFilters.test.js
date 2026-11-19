@@ -166,9 +166,10 @@ describe('createFilterUi', () => {
 
   it('scroll dokumentu nie zamyka dropdownu; zamyka Escape', () => {
     const btn = mountBtn('test_id', 'Test');
+    const filters = emptyHistoryFilters();
     const ui = createFilterUi({
       getResults: () => [],
-      getFilters: emptyHistoryFilters,
+      getFilters: () => filters,
       applyFilters: vi.fn(),
     });
     ui.bind({ onClear: vi.fn() });
@@ -190,9 +191,10 @@ describe('createFilterUi', () => {
       <button id="btn-clear-all-filters">Wyczyść</button>`;
     const btn = document.querySelector('.filter-btn');
     const onClear = vi.fn();
+    const filters = emptyHistoryFilters();
     const ui = createFilterUi({
       getResults: () => [],
-      getFilters: emptyHistoryFilters,
+      getFilters: () => filters,
       applyFilters: vi.fn(),
     });
     ui.bind({ onClear });

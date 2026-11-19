@@ -7,6 +7,7 @@ import {
   canUploadResult,
   isCloudSyncAllowed,
   storageKeySuffix,
+  endSession,
 } from '../../src/session/session.js';
 import {
   createMemoryVault,
@@ -167,5 +168,17 @@ describe('e2ePolicy', () => {
     expect(await describeRemoteKey('u', async () => ({ encryptedMasterKey: 'x' }))).toBe('present');
     expect(await describeRemoteKey('u', async () => null)).toBe('missing');
     expect(await describeRemoteKey('u', async () => { throw new Error('net'); })).toBe('error');
+  });
+
+  it('endSession: czyści RAM i magazyn; błąd magazynu nie blokuje wylogowania', async () => {
+    const clearInMemoryKey = vi.fn();
+    const clearStoredKey = vi.fn(async () => {});
+    await endSession({ clearInMemoryKey, clearStoredKey });
+    expect(clearInMemoryKey).toHaveBeenCalledTimes(1);
+    expect(clearStoredKey).toHaveBeenCalledTimes(1);
+
+    const failing = vi.fn(async () => { throw new Error('disk'); });
+    await expect(endSession({ clearInMemoryKey, clearStoredKey: failing })).resolves.toBeUndefined();
+    expect(clearInMemoryKey).toHaveBeenCalledTimes(2);
   });
 });

@@ -25,19 +25,20 @@ async function assertNoOnlineSession() {
   await expect(page.locator('#login-choice-panel')).toBeVisible({ timeout: 10000 });
 }
 
-//_testy BBTP z prawdziwego katalogu obok repo → tests_library w czystym profilu.
-// Bez tego (przy braku internetu) biblioteka jest pusta i testy GoNoGo/tagów
-// nie mają czego uruchomić — cache jest lokalny, nie z Firebase.
-const BBTP_DIR = path.join(path.dirname(process.cwd()), 'BBTP');
+// Testy do biblioteki: domyślnie hermetyczny fixture w repo. Reguła wyboru
+// mieszka w jednym miejscu razem z buildem webowym.
+const { resolveE2eLibrary } = require('../../tools/tests-library.js');
+const FIXTURE_DIR = path.join(__dirname, '..', 'fixtures', 'tests-library');
+const TESTS_SOURCE = resolveE2eLibrary(FIXTURE_DIR);
 
 async function seedTestsLibrary(profileDir) {
   const dest = path.join(profileDir, 'tests_library');
   await mkdir(dest, { recursive: true });
-  const entries = await readdir(BBTP_DIR, { withFileTypes: true });
+  const entries = await readdir(TESTS_SOURCE, { withFileTypes: true });
   let count = 0;
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
-    const src = path.join(BBTP_DIR, entry.name);
+    const src = path.join(TESTS_SOURCE, entry.name);
     // Test musi mieć plik startowy (index.html) — pomijamy katalogi pomocnicze.
     const files = await readdir(src).catch(() => []);
     if (!files.includes('index.html')) continue;
@@ -45,7 +46,7 @@ async function seedTestsLibrary(profileDir) {
     count++;
   }
   if (count === 0) {
-    throw new Error(`No BBTP tests found in ${BBTP_DIR} — E2E needs a local test library`);
+    throw new Error(`No test fixtures found in ${TESTS_SOURCE} — E2E needs at least one test with index.html`);
   }
   return count;
 }
@@ -141,6 +142,10 @@ async function loginAsGuest() {
   await expect(page.locator('#login-local-panel')).toBeVisible();
   await page.click('#btn-guest');
   await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
+  // Stabilny stan sesji gościa — bez tego kolejne testy mogą klikać w
+  // przyciski dashboardu przed zakończeniem przeładowania UI po logowaniu.
+  // Testy settings zmieniają język na EN, więc nie zakładamy tu "Gość".
+  await expect(page.locator('#user-email-display')).not.toHaveText('');
 }
 
 // Local account registration (unique username) + auto-login to the dashboard.
@@ -215,6 +220,22 @@ test.describe('Electron App - Authentication', () => {
     // Both choice tiles
     await expect(page.locator('#btn-choose-online')).toBeVisible();
     await expect(page.locator('#btn-choose-local')).toBeVisible();
+  });
+
+  test('online sign-in panel opens from the tile', async () => {
+    await gotoLoginChoice();
+    await page.click('#btn-choose-online');
+
+    // Online panel fields and buttons — bez konta Firebase (tylko DOM).
+    await expect(page.locator('#login-online-panel')).toBeVisible();
+    await expect(page.locator('#email')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
+    await expect(page.locator('#btn-login')).toBeVisible();
+    await expect(page.locator('#btn-register')).toBeVisible();
+
+    // Back to choice
+    await page.click('#btn-back-online');
+    await expect(page.locator('#login-choice-panel')).toBeVisible();
   });
 
   test('local sign-in panel opens from the tile', async () => {
@@ -295,13 +316,14 @@ test.describe('Electron App - Guest Mode', () => {
 
   test('can log out', async () => {
     await loginAsGuest();
+    await expect(page.locator('#dashboard-screen')).toBeVisible();
 
     // Click log out
     await page.click('#btn-logout');
 
     // Check that we are back on the sign-in choice screen
-    await expect(page.locator('#login-screen')).toBeVisible();
-    await expect(page.locator('#login-choice-panel')).toBeVisible();
+    await expect(page.locator('#login-screen:not(.hidden)')).toBeVisible();
+    await expect(page.locator('#login-choice-panel:not(.hidden)')).toBeVisible();
   });
 });
 
@@ -313,6 +335,7 @@ test.describe('Electron App - Guest Views (CatalogView)', () => {
     // loadTestsList is async (Firestore EFI backfill) — wait for content
     await page.waitForFunction(
       () => document.getElementById('tests-grid')?.childElementCount > 0,
+      undefined,
       { timeout: 20000 },
     );
   });
@@ -739,12 +762,13 @@ test.describe('Electron App - Psychological Tests', () => {
     await expect(page.locator('#tests-grid')).toBeVisible();
   });
 
-  test('test runs a simple test (GoNoGo) as guest and saves result', async () => {
+  test('runner window opens for GoNoGo as guest', async () => {
     await loginAsGuest();
     await page.click('#nav-library');
     await expect(page.locator('#library-view')).toBeVisible();
     await page.waitForFunction(
       () => document.getElementById('tests-grid')?.childElementCount > 0,
+      undefined,
       { timeout: 20000 },
     );
 
@@ -759,7 +783,7 @@ test.describe('Electron App - Psychological Tests', () => {
     expect(windows.length).toBeGreaterThanOrEqual(1);
   });
 
-  test('test result appears in history view after completion', async () => {
+  test('history view renders the results table', async () => {
     await loginAsGuest();
     await page.click('#nav-history');
     await expect(page.locator('#history-view')).toBeVisible();
@@ -776,6 +800,7 @@ test.describe('Electron App - Library', () => {
     await expect(page.locator('#tests-grid')).toBeVisible();
     await page.waitForFunction(
       () => document.getElementById('tests-grid')?.childElementCount > 0,
+      undefined,
       { timeout: 20000 },
     );
   });
@@ -790,6 +815,7 @@ test.describe('Electron App - Library', () => {
     await expect(page.locator('#tests-grid')).toBeVisible();
     await page.waitForFunction(
       () => document.getElementById('tests-grid')?.childElementCount > 0,
+      undefined,
       { timeout: 20000 },
     );
   });

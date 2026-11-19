@@ -19,6 +19,14 @@ describe('sortRows', () => {
       .toEqual([10, 2, 1]);
   });
 
+  it('brak wartości jest zawsze na końcu, w obie strony', () => {
+    const withMissing = [...rows, { name: 'z', version: null }];
+    expect(sortRows(withMissing, 'version', 'asc', (r, k) => r[k]).map((r) => r.version))
+      .toEqual([1, 2, 10, null]);
+    expect(sortRows(withMissing, 'version', 'desc', (r, k) => r[k]).map((r) => r.version))
+      .toEqual([10, 2, 1, null]);
+  });
+
   it('sortuje tekst i nie mutuje tablicy wejściowej', () => {
     expect(sortRows(rows, 'name', 'asc', (r, k) => r[k]).map((r) => r.name))
       .toEqual(['a', 'b', 'c']);

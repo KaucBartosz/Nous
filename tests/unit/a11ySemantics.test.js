@@ -7,10 +7,32 @@ const adminHtml = readFileSync(resolve(process.cwd(), 'admin.html'), 'utf8');
 
 describe('semantyka UI (Etap B)', () => {
   it('wszystkie okna modalne mają rolę dialogu i etykietę', () => {
-    const overlays = html.match(/class="modal-overlay[^"]*"[^>]*>/g) || [];
-    expect(overlays.length).toBe(8);
-    const dialogs = html.match(/role="dialog" aria-modal="true" aria-labelledby="/g) || [];
-    expect(dialogs.length).toBe(8);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const overlays = [...doc.querySelectorAll('.modal-overlay')];
+    expect(overlays.length).toBeGreaterThan(0);
+    for (const overlay of overlays) {
+      const id = overlay.id || 'modal-overlay';
+      expect(overlay.getAttribute('role'), id).toBe('dialog');
+      expect(overlay.getAttribute('aria-modal'), id).toBe('true');
+      const labelId = overlay.getAttribute('aria-labelledby');
+      expect(labelId, id).toBeTruthy();
+      expect(doc.getElementById(labelId), `${id} -> ${labelId}`).toBeTruthy();
+    }
+  });
+
+  it('aria-label w szkieletcie ma klucz i18n, który istnieje w obu językach', async () => {
+    const { setLocale, t } = await import('../../src/i18n/index.js');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const labels = [...doc.querySelectorAll('[data-i18n-aria-label]')];
+    expect(labels.length).toBeGreaterThan(0);
+    for (const locale of ['pl', 'en']) {
+      setLocale(locale, { persist: false });
+      for (const el of labels) {
+        const key = el.getAttribute('data-i18n-aria-label');
+        expect(t(key), `${locale}: ${key}`).not.toBe(key);
+      }
+    }
+    setLocale('pl', { persist: false });
   });
 
   it('ikony Material Icons są ukryte przed czytnikiem', () => {
@@ -44,15 +66,26 @@ describe('semantyka UI (Etap B)', () => {
   });
 
   it('nagłówki tabel i sortowanie mają semantykę', () => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
     for (const id of ['history-table', 'stats-runs-table', 'updates-table']) {
-      expect(html, id).toContain(`<table id="${id}"`);
+      expect(doc.getElementById(id), id).toBeTruthy();
     }
-    expect((html.match(/<caption class="sr-only"/g) || []).length).toBe(5);
-    // 5 nagłówków historii + 2 statystyk; 4 nagłówki biblioteki są w JS.
-    expect((html.match(/data-sort="/g) || []).length).toBeGreaterThanOrEqual(7);
+    // Każda tabela ma opis dla czytnika — liczba wynika z DOM, nie ze stałej.
+    const tables = [...doc.querySelectorAll('table')];
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of tables) {
+      expect(table.querySelector('caption.sr-only'), table.id).toBeTruthy();
+    }
+    // Nagłówek sortowalny musi mieć klucz i etykietę; liczba może rosnąć.
+    const sortHeaders = [...doc.querySelectorAll('th[data-sort]')];
+    expect(sortHeaders.length).toBeGreaterThan(0);
+    for (const th of sortHeaders) {
+      expect(th.dataset.sort).toBeTruthy();
+      expect(th.textContent.trim() || th.getAttribute('data-i18n'), th.outerHTML).toBeTruthy();
+    }
     expect(readFileSync(resolve(process.cwd(), 'src/modules/library.js'), 'utf8'))
       .toContain('data-sort="name"');
-    expect(html).toContain('id="selectAllHistory"');
+    expect(doc.getElementById('selectAllHistory')).toBeTruthy();
   });
 
   it('pasek postępu aktualizacji ma wartości', () => {

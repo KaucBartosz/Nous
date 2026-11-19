@@ -3,13 +3,35 @@
 // Czyste reguły (score/patient/empty/labels) osobno od DOM; orkiestrator
 // (modules/history.js) dostarcza stan i callbacki domenowe (claim/sync).
 import { t, localeTag } from "../i18n/index.js";
+import { testIdOf, subjectIdOf } from "../results/resultPackage.js";
+import { resolveStatusLabel } from "../results/historyQuery.js";
+
+/** Liczbowy wynik lub null. Jedyna reguła obecności wyniku (0 jest wynikiem). */
+export function scoreValueOf(r) {
+  const resultData = r.wyniki || r.data || {};
+  const raw = resultData.czas_reakcji ?? resultData.score;
+  if (raw === null || raw === undefined || raw === "") return null;
+  const value = Number(String(raw).replace(/[^\d.-]/g, ""));
+  return Number.isNaN(value) ? null : value;
+}
 
 /** Tekst wyniku w wierszu (czas_reakcji → score → JSON). */
 export function scoreTextOf(r) {
-  const resultData = r.wyniki || r.data || {};
-  return resultData.czas_reakcji
-    ? `${resultData.czas_reakcji} ms`
-    : resultData.score || "JSON";
+  const score = scoreValueOf(r);
+  if (score === null) return "JSON";
+  return r.wyniki?.czas_reakcji ?? r.data?.czas_reakcji
+    ? `${score} ms`
+    : score;
+}
+
+/** Wartość sortowania wiersza historii — ta sama reguła co filtr i wiersz. */
+export function historySortValue(r, key) {
+  if (key === "date") return new Date(r.timestamp).getTime();
+  if (key === "test") return testIdOf(r);
+  if (key === "subject") return subjectIdOf(r);
+  if (key === "status") return resolveStatusLabel(r);
+  if (key === "score") return scoreValueOf(r);
+  return "";
 }
 
 /** Identyfikator badanego w wierszu (4 źródła jak wcześniej). */

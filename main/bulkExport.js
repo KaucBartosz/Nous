@@ -92,6 +92,11 @@ function buildBulkCsv(res, labels = DEFAULT_LABELS) {
  * - destDir ustawiony ("Ciche pobieranie"): zapis wprost, bez okna.
  * dialog/AdmZip/path/folder-downloads wstrzyknięte (wzorzec jak main/templates.js).
  */
+/** Segment nazwy wpisu ZIP — bez separatorów ścieżki i bez "..". */
+function safeEntryPart(value) {
+  return String(value || "unknown").replace(/[^a-z0-9_-]/gi, "_").slice(0, 80);
+}
+
 function createBulkExport({ dialog, AdmZip, path, getDownloadsDir }) {
   async function downloadBulkZip(
     getMainWindow,
@@ -102,8 +107,8 @@ function createBulkExport({ dialog, AdmZip, path, getDownloadsDir }) {
 
       results.forEach((res) => {
         const dateStr = new Date(res.timestamp || res.synced_at).toISOString().replace(/[:.]/g, '-');
-        const testId = res.test_id || res.testId || 'unknown';
-        const subjectId = res.subject_id || 'unknown';
+        const testId = safeEntryPart(res.test_id || res.testId);
+        const subjectId = safeEntryPart(res.subject_id);
         // Nazwy plików w archiwum są neutralne językowo (to dane, nie UI).
         const baseName = `Result_${testId}_${subjectId}_${dateStr}`;
 

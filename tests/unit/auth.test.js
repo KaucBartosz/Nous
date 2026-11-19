@@ -9,6 +9,8 @@ const fb = vi.hoisted(() => ({
   signIn: vi.fn(),
   signUp: vi.fn(),
   signOut: vi.fn(),
+  clearE2EKey: vi.fn(),
+  clearCloudKey: vi.fn(),
 }));
 
 // hashPassword używa Crypto API bezpośrednio; setup.js daje XOR-mock bez
@@ -20,6 +22,14 @@ beforeAll(() => {
 afterAll(() => {
   vi.unstubAllGlobals();
 });
+
+// Seam platformy i kryptografii — klucz E2E musi być czyszczony przy końcu sesji.
+vi.mock('../../src/platform/index.js', () => ({
+  getPlatform: () => ({ keys: { clearE2EKey: fb.clearE2EKey } }),
+}));
+vi.mock('../../src/modules/cryptoService.js', () => ({
+  clearCloudKey: fb.clearCloudKey,
+}));
 
 // Mock modułów zależnych
 vi.mock('../../src/modules/ui.js', () => ({
@@ -36,7 +46,8 @@ vi.mock('../../src/modules/sync.js', () => ({
 }));
 
 vi.mock('../../src/modules/e2e.js', () => ({
-  verifyE2E: vi.fn((user, cb) => cb && cb()),
+  // Trzeci argument to kanał błędu — test fail-closed podstawia własną implementację.
+  verifyE2E: vi.fn((user, ok, fail) => ok && ok()),
 }));
 
 vi.mock('../../src/modules/database.js', () => ({
@@ -510,6 +521,7 @@ describe('Auth Module — Konto Online (PENDING / APPROVED / ERROR)', () => {
     expect(ui.showLoginOnlinePanel).toHaveBeenCalled();
     expect(ui.updateAuthUI).not.toHaveBeenCalled();
     expect(getUserStatus()).toBe('ERROR');
+    await vi.waitFor(() => expect(fb.signOut).toHaveBeenCalled());
   });
 
   it('błąd pobrania dokumentu: komunikat accountFetchError z przyczyną', async () => {
@@ -523,6 +535,7 @@ describe('Auth Module — Konto Online (PENDING / APPROVED / ERROR)', () => {
       ),
     );
     expect(ui.updateAuthUI).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(fb.signOut).toHaveBeenCalled());
   });
 
   it('status ERROR z dokumentu blokuje start aplikacji', async () => {
@@ -533,6 +546,37 @@ describe('Auth Module — Konto Online (PENDING / APPROVED / ERROR)', () => {
     await vi.waitFor(() => expect(ui.showError).toHaveBeenCalled());
     expect(ui.updateAuthUI).not.toHaveBeenCalled();
     expect(getUserStatus()).toBe('ERROR');
+    await vi.waitFor(() => expect(fb.signOut).toHaveBeenCalled());
+  });
+
+  it('błąd klucza E2E (onFailure): brak startu, wylogowanie i czyszczenie kluczy', async () => {
+    const e2emod = await import('../../src/modules/e2e.js');
+    e2emod.verifyE2E.mockImplementation((user, ok, fail) => fail());
+    fb.getDoc.mockResolvedValue(docSnapshot({ status: 'APPROVED' }));
+
+    fb.authCb.current({ uid: 'u-9', email: 'locked@example.com' });
+
+    await vi.waitFor(() => expect(ui.showError).toHaveBeenCalled());
+    expect(fb.signOut).toHaveBeenCalled();
+    expect(fb.clearE2EKey).toHaveBeenCalled();
+    expect(fb.clearCloudKey).toHaveBeenCalled();
+    expect(ui.updateAuthUI).not.toHaveBeenCalled();
+    e2emod.verifyE2E.mockImplementation((user, ok) => ok && ok());
+  });
+
+  it('koniec sesji Firebase czyści klucz E2E z RAM i z magazynu', async () => {
+    fb.authCb.current(null);
+
+    await vi.waitFor(() => expect(fb.clearCloudKey).toHaveBeenCalled());
+    expect(fb.clearE2EKey).toHaveBeenCalled();
+  });
+
+  it('cancelOnlineLogin czyści klucz E2E przed wylogowaniem', async () => {
+    await cancelOnlineLogin();
+
+    expect(fb.clearCloudKey).toHaveBeenCalled();
+    expect(fb.clearE2EKey).toHaveBeenCalled();
+    expect(fb.signOut).toHaveBeenCalled();
   });
 
   it('rejestracja: dokument PENDING i komunikat o oczekiwaniu na akceptację', async () => {

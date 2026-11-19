@@ -126,12 +126,12 @@ function createTestRunner({
 
     // --- SECURITY CHECK: TEST ID VALIDATION (jak delete-test) ---
     if (!/^[a-zA-Z0-9_-]+$/.test(testId || "")) {
-      sender.send("test-status", { code: "error", error: "invalidTestId" });
+      sender.send("test-status", { code: "invalidTestId" });
       return;
     }
 
     if (!getTestsLibraryDir || !findStartFile) {
-      sender.send("test-status", { code: "error", error: "runConfig" });
+      sender.send("test-status", { code: "runConfig" });
       return;
     }
 
@@ -139,7 +139,7 @@ function createTestRunner({
     const entryFile = findStartFile(testFolder);
 
     if (!entryFile) {
-      sender.send("test-status", { code: "error", error: "testNotDownloaded" });
+      sender.send("test-status", { code: "testNotDownloaded" });
       return;
     }
 
@@ -167,10 +167,7 @@ function createTestRunner({
     const masterKey = getMasterKey();
     if (!masterKey) {
       console.error("Could not get master key for HMAC!");
-      event.sender.send("test-status", {
-        code: "error",
-        error: "signingKeyUnavailable",
-      });
+      event.sender.send("test-status", { code: "signingKeyUnavailable" });
       return;
     }
 
@@ -202,7 +199,7 @@ function createTestRunner({
             event.sender.send("test-status", { code: "resultSaved" });
           } catch (writeErr) {
             console.error("Save error:", writeErr);
-            event.sender.send("test-status", { code: "error", error: "fileSave" });
+            event.sender.send("test-status", { code: "fileSave" });
           }
         }
       })

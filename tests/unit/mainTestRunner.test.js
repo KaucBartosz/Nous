@@ -213,7 +213,7 @@ describe("main/testRunner", () => {
     const sends = [];
     r.onSaveLocalResult({ sender: { send: (ch, msg) => sends.push([ch, msg]) } }, { wyniki: {} });
     expect(sends).toEqual([
-      ["test-status", { code: "error", error: "signingKeyUnavailable" }],
+      ["test-status", { code: "signingKeyUnavailable" }],
     ]);
     expect(dialog.showSaveDialog).not.toHaveBeenCalled();
   });
@@ -253,7 +253,7 @@ describe("main/testRunner run-test (uruchomienie z dysku, nigdy download)", () =
     const { r, FakeBW, sends, sender } = runHarness({ entryFile: null });
     r.onRunTest({ sender }, { testId: "t1" });
     expect(sends).toEqual([
-      ["test-status", { code: "error", error: "testNotDownloaded" }],
+      ["test-status", { code: "testNotDownloaded" }],
     ]);
     expect(FakeBW).not.toHaveBeenCalled();
   });
@@ -262,7 +262,7 @@ describe("main/testRunner run-test (uruchomienie z dysku, nigdy download)", () =
     const { r, FakeBW, sends, sender } = runHarness();
     r.onRunTest({ sender }, { testId: "../evil" });
     expect(sends).toEqual([
-      ["test-status", { code: "error", error: "invalidTestId" }],
+      ["test-status", { code: "invalidTestId" }],
     ]);
     expect(FakeBW).not.toHaveBeenCalled();
   });

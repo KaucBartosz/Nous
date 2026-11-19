@@ -73,6 +73,18 @@ describe('platform seam (C1)', () => {
     expect(await p.tests.getLocalVersions()).toEqual({});
   });
 
+  it('getPlatform: bez electronAPI wybiera WebPlatform (gałąź web seamu)', () => {
+    const saved = global.window.electronAPI;
+    delete global.window.electronAPI;
+    resetPlatform();
+    try {
+      expect(getPlatform().kind).toBe('web');
+    } finally {
+      global.window.electronAPI = saved;
+      resetPlatform();
+    }
+  });
+
   it('getPlatform: daje się podmienić w testach (seam działa)', async () => {
     const fake = createFakePlatform({ versions: {} });
     setPlatform(fake);
@@ -96,5 +108,24 @@ describe('platform seam (C1)', () => {
     expect(web.capabilities).toMatchObject({
       canDownload: false, canDelete: false, canRunLocalDev: false,
     });
+  });
+});
+
+describe('test-status: jeden płaski protokół kodów', () => {
+  it('każdy kod błędu tłumaczy się na komunikat, nigdy na nazwę klucza', async () => {
+    const { formatTestStatus, isTestStatusError } = await import('../../src/platform/electron.js');
+    const { t } = await import('../../src/i18n/index.js');
+    const codes = [
+      'queueBusy', 'httpsOnly', 'forbiddenDomain', 'invalidUrl', 'ownerOnly',
+      'invalidTestId', 'runConfig', 'testNotDownloaded', 'signingKeyUnavailable', 'fileSave',
+    ];
+    for (const code of codes) {
+      const msg = formatTestStatus({ code, params: { owner: 'X' } });
+      expect(msg, code).not.toContain('testStatus.');
+      expect(msg, code).not.toBe(code);
+      expect(isTestStatusError({ code }), code).toBe(true);
+    }
+    expect(formatTestStatus({ code: 'ownerOnly', params: { owner: 'X' } }))
+      .toBe(t('testStatus.ownerOnly', { owner: 'X' }));
   });
 });

@@ -91,6 +91,17 @@ describe('firestore.rules — semantyka na emulatorze', () => {
     await assertFails(alice.doc('users/alice').delete());
   });
 
+  it('users/{uid}: zapis do dokumentu innego użytkownika failuje', async () => {
+    await seed((db) => db.doc('users/bob').set({ status: 'PENDING' }));
+    const alice = signedInDb('alice');
+
+    // isOwner(uid) na create to jedyna bariera przed przejęciem cudzego konta.
+    await assertFails(alice.doc('users/bob').set({ status: 'PENDING' }));
+    await assertFails(alice.doc('users/bob').set({ status: 'ADMIN' }));
+    await assertFails(alice.doc('users/bob').update({ status: 'ADMIN' }));
+    await assertFails(alice.doc('users/bob').delete());
+  });
+
   it('tests/{id}: katalog testów jest publicznie czytelny', async () => {
     const anon = testEnv.unauthenticatedContext().firestore();
     await assertSucceeds(anon.collection('tests').get());

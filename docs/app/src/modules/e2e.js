@@ -18,7 +18,7 @@ import {
     recoverWithCode,
     describeRemoteKey,
 } from '../session/e2ePolicy.js';
-import { createCloudVault, createLocalVault } from '../session/keyVault.js';
+import { createCloudVault } from '../session/keyVault.js';
 
 /** Vault chmury nad prawdziwym Firestore (zależności jawne, polityka w session/). */
 function cloudVault() {
@@ -311,7 +311,7 @@ export function initE2E() {
 /**
  * Stan zdalnego klucza (C4: decyzja w session/e2ePolicy.js, tu tylko modale).
  */
-export async function verifyE2E(user, onSuccess) {
+export async function verifyE2E(user, onSuccess, onFailure) {
     if (hasCloudKey()) {
         if (onSuccess) onSuccess();
         return;
@@ -321,8 +321,6 @@ export async function verifyE2E(user, onSuccess) {
         if (onSuccess) onSuccess();
         return;
     }
-
-    _onCloseCallback = onSuccess;
 
     try {
         // C1: odczyt klucza przez seam (Web zwraca null → spada do modali PIN, jak wcześniej)
@@ -341,12 +339,13 @@ export async function verifyE2E(user, onSuccess) {
     const remoteState = await describeRemoteKey(user.uid, (uid) => cloudVault().fetchMeta(uid));
     if (remoteState === "error") {
         console.error("Failed to check user_keys");
-        import('./dialog.js').then(({ Dialog }) => {
-            Dialog.alert(t('e2e.keyDbError'), 'error');
-        });
-        if (onSuccess) onSuccess();
+        // Fail-closed: start aplikacji bez klucza E2E kończy się błędami sync
+        // i szyfrowanej historii. Wywołujący wyświetla komunikat i czyści sesję.
+        // Nie zostawiamy tu _onCloseCallback — żaden modal nie został otwarty.
+        await onFailure();
         return;
     }
+    _onCloseCallback = onSuccess;
     if (remoteState === "present") {
         e.pinEnterInput.value = "";
         e.pinEnterError.textContent = "";

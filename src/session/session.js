@@ -33,6 +33,20 @@ export function canUploadResult(kind) {
   return kind === "APPROVED" || kind === "ADMIN";
 }
 
+/**
+ * Zakończenie sesji — jedyne miejsce definiujące, co znaczy „wyczyść sesję":
+ * klucz E2E znika z RAM i z magazynu platformy. Zależności są wstrzyknięte,
+ * żeby warstwa session nie importowała modułów rendererowych.
+ */
+export async function endSession({ clearInMemoryKey, clearStoredKey }) {
+  clearInMemoryKey();
+  try {
+    await clearStoredKey();
+  } catch (e) {
+    console.error("[session] Nie udało się wyczyścić klucza E2E:", e);
+  }
+}
+
 /** Auto-synchronizacja chmury (reguła z sync.enforceSyncPolicy: tylko APPROVED). */
 export function isCloudSyncAllowed(kind) {
   return kind === "APPROVED";

@@ -37,6 +37,17 @@ describe('openModalSession', () => {
     expect(document.activeElement).toBe(before);
   });
 
+  it('zamknięcie w tej samej kolejce nie kradnie focusu po close()', async () => {
+    const { before, overlay } = mount();
+    before.focus();
+
+    const session = openModalSession(overlay);
+    session.close();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(document.activeElement).toBe(before);
+  });
+
   it('Escape i kliknięcie tła wywołują onDismiss', () => {
     const { overlay } = mount();
     const onDismiss = vi.fn();

@@ -142,6 +142,18 @@ describe("bulkExport ipc (C6)", () => {
     expect(typeof handlers["download-bulk-zip"]).toBe("function");
   });
 
+  it("nazwy wpisów ZIP nie zawierają separatorów ścieżki z danych wyniku", async () => {
+    const zip = fakeZip();
+    const { downloadBulkZip } = createBulkExport(deps(zip));
+    const evil = { ...basic, test_id: "../evil", subject_id: "a/b/../../c" };
+    await downloadBulkZip(getMainWindow, payload("csv", { results: [evil] }));
+
+    const names = Object.keys(zip.files).filter((n) => n.endsWith(".csv"));
+    expect(names).toHaveLength(1);
+    expect(names[0]).not.toContain("/");
+    expect(names[0]).not.toContain("..");
+  });
+
   it("domyślnie (destDir null): natywne okno, default w Downloads", async () => {
     const zip = fakeZip();
     const dialog = { showSaveDialog: vi.fn(async () => ({ filePath: "D:/Moj/paczka.zip" })) };

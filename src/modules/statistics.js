@@ -572,10 +572,12 @@ function render() {
 
     const tbody = document.querySelector("#stats-runs-table tbody");
     if (tbody) {
+      // scoreOf spłaszcza cały wynik — liczymy raz na wiersz, nie przy każdym
+      // porównaniu sortowania (O(n log n) dotąd wywołań).
+      const scoreByRun = new Map(runs.map((r) => [r, scoreOf(r)]));
       const tableRuns = sortRows(runs, state.sort.key, state.sort.dir, (r, key) => {
         if (key === "date") return new Date(r.timestamp).getTime();
-        const score = scoreOf(r);
-        return score === null ? Number.MAX_SAFE_INTEGER : score;
+        return scoreByRun.get(r);
       });
       renderRunsTable(tbody, tableRuns, state.selectedRunIds, (id, checked) => {
         if (checked) {

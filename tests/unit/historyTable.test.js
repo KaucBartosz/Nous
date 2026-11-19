@@ -7,6 +7,8 @@ import {
   refreshDownloadButtons,
   renderHistoryRows,
   renderPagination,
+  historySortValue,
+  scoreValueOf,
 } from '../../src/history/historyTable.js';
 
 const r = (over = {}) => ({
@@ -25,6 +27,23 @@ describe('czyste reguły tabeli', () => {
     expect(scoreTextOf(r({ wyniki: { score: 7 } }))).toBe(7);
     expect(scoreTextOf(r({ wyniki: {} }))).toBe('JSON');
     expect(scoreTextOf(r({ wyniki: null, data: { score: 9 } }))).toBe(9);
+  });
+
+  it('scoreValueOf: zero jest wynikiem, brak wyniku to null', () => {
+    expect(scoreValueOf({ wyniki: { score: 0 } })).toBe(0);
+    expect(scoreValueOf({ wyniki: { czas_reakcji: 0 } })).toBe(0);
+    expect(scoreValueOf({ wyniki: {} })).toBeNull();
+    expect(scoreTextOf({ wyniki: { score: 0 } })).toBe(0);
+    expect(scoreTextOf({ wyniki: {} })).toBe('JSON');
+  });
+
+  it('historySortValue: sort używa tych samych akcesorów co filtr i wiersz', () => {
+    const nested = { id: 'n1', timestamp: '2024-05-01', wyniki: { subjectId: 'W-7' }, sync_status: 'SYNCED' };
+    expect(historySortValue(nested, 'subject')).toBe('W-7');
+    expect(historySortValue(nested, 'test')).toBe('Nieznany');
+    expect(historySortValue(r(), 'test')).toBe('stroop');
+    expect(historySortValue(r(), 'subject')).toBe('P1');
+    expect(historySortValue(r(), 'status')).toBeTruthy();
   });
 
   it('patientIdOf: 4 źródła jak stary wiersz', () => {

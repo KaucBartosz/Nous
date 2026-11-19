@@ -18,6 +18,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:rules": "firebase emulators:exec --only firestore --project nous-rules-test \"vitest run --config vitest.emulator.config.js\"",
+    "verify": "npm run test:run && node tests/checks/admin-panel-guard.js && npm run test:rules",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

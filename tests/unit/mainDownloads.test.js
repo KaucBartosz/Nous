@@ -252,6 +252,46 @@ describe("main/downloads enqueue", () => {
   });
 });
 
+describe("main/downloads czyszczenie strumienia", () => {
+  it("przekierowanie do niedozwolonego hosta nie otwiera pliku ZIP", async () => {
+    const sent = [];
+    const snd = { send: (channel, payload) => sent.push({ channel, payload }) };
+    const fakeFs = Object.create(fs);
+    let opened = 0;
+    fakeFs.createWriteStream = () => {
+      opened += 1;
+      throw new Error("strumień nie powinien być otwarty przed odpowiedzią 200");
+    };
+    fakeFs.existsSync = () => true;
+    fakeFs.unlink = (_p, cb) => cb && cb();
+    const fakeHttps = {
+      get: (_url, cb) => {
+        cb({ statusCode: 302, headers: { location: "https://evil.com/x.zip" } });
+        return { on: () => {} };
+      },
+    };
+    const d = createDownloader({
+      fs: fakeFs,
+      path,
+      https: fakeHttps,
+      AdmZip: function () {},
+      getUserDataPath: () => "/ud",
+      findStartFile: () => null,
+      openTestWindow: () => {},
+      isTestRunning: () => false,
+    });
+
+    expect(d.enqueueDownload({ testId: "t1", url: "https://github.com/KaucBartosz/Nous/x.zip" }, snd))
+      .toEqual({ ok: true });
+    d.processDownloadQueue();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(opened).toBe(0);
+    expect(sent.some((s) => s.payload === "forbiddenDomain" || s.payload?.code === "forbiddenDomain")).toBe(true);
+    expect(d.queueState()).toEqual({ length: 0, busy: false, active: [] });
+  });
+});
+
 describe("main/downloads queue recovery", () => {
   it("kolejka przetwarza kolejne zadanie po rzuceniu w fazie setupu", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nous-queue-"));
