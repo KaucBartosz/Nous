@@ -35,7 +35,7 @@ layout: default
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                     </svg>
-                    <span id="download-text-btn" data-i18n="hero.loading">Ładowanie instalatora...</span>
+                    <span id="download-text-btn" data-i18n="hero.download">Pobierz Nous</span>
                 </a>
                 <a href="{{ '/app/' | relative_url }}" target="_blank"
                     class="inline-flex items-center gap-3 bg-white border border-gray-200 text-slate-900 font-semibold py-4 px-10 rounded-full text-[17px] shadow-xl shadow-blue-900/5 hover:bg-gray-50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
@@ -47,7 +47,10 @@ layout: default
                     <span data-i18n="hero.try">Przetestuj</span>
                 </a>
             </div>
-            <span id="detected-os" class="text-slate-500 text-sm"></span>
+            <div class="flex flex-col items-center gap-1">
+                <span id="detected-os" class="text-slate-500 text-sm"></span>
+                <span id="latest-version" class="text-slate-500 text-sm"></span>
+            </div>
         </div>
         <div class="mt-4">
             <a href="#download"
@@ -354,12 +357,10 @@ layout: default
 
     function renderDynamicStrings() {
         const detectedOs = document.getElementById('detected-os');
-        const txtHero = document.getElementById('download-text-btn');
+        const latestVersion = document.getElementById('latest-version');
+        // Etykieta przycisku jest statyczna (data-i18n) — zmiana języka jej nie dotyka.
         if (detectedOs && lastOs) detectedOs.textContent = st('download.detected', { os: lastOs });
-        if (txtHero) {
-            if (lastRelease) txtHero.innerHTML = st('download.heroBtn', { version: lastRelease });
-            else txtHero.textContent = st('download.heroFallback');
-        }
+        if (latestVersion) latestVersion.textContent = lastRelease ? st('hero.latestVersion', { version: lastRelease }) : '';
     }
 
     async function setupDownloadLinks() {
@@ -405,10 +406,10 @@ layout: default
         }
     }
 
-    if (window.siteI18n) window.siteI18n.onLocaleChange(renderDynamicStrings);
-
-    // Inicjalizacja
+    // Inicjalizacja — rejestracja po DOMContentLoaded, bo site-i18n.js
+    // (defer) definitions są dostępne dopiero po sparsowaniu dokumentu.
     document.addEventListener("DOMContentLoaded", () => {
+        if (window.siteI18n) window.siteI18n.onLocaleChange(renderDynamicStrings);
         setupDownloadLinks();
     });
 </script>
