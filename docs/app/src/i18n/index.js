@@ -182,12 +182,10 @@ export function detectLocale() {
 /** Inicjalizacja na starcie aplikacji (sync, najwcześniej jak możliwe). */
 export function initI18n() {
   const locale = detectLocale();
-  currentLocale = isLocaleSupported(locale) ? locale : FALLBACK;
-  if (typeof document !== "undefined") {
-    document.documentElement.lang = currentLocale;
-    applyI18n(document);
-  }
-  return currentLocale;
+  // W Web okno testu czyta język z localStorage (web/test-lang.js).
+  // Wykryty język musi więc zostać zapisany — inaczej test uruchomiony
+  // z angielskiej przeglądarki wystartowałby po polsku.
+  return setLocale(locale, { persist: true });
 }
 
 /**

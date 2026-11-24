@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { pl } from '../../src/i18n/locales/pl.js';
 import { en } from '../../src/i18n/locales/en.js';
+import { detectLocale, getLocale, initI18n } from '../../src/i18n/index.js';
 
 function flatten(obj, prefix = '') {
   let keys = [];
@@ -29,5 +30,34 @@ describe('i18n key parity', () => {
     console.log('missing in pl:', missingInPl);
     expect(missingInEn).toHaveLength(0);
     expect(missingInPl).toHaveLength(0);
+  });
+});
+
+describe('i18n bootstrap — język testów w Web', () => {
+  it('zapisuje wykryty angielski, żeby okno testu dostało en', () => {
+    localStorage.clear();
+    vi.stubGlobal('navigator', { language: 'en-US' });
+
+    expect(detectLocale()).toBe('en');
+    initI18n();
+
+    expect(getLocale()).toBe('en');
+    expect(localStorage.getItem('nous-language')).toBe('en');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('zapisany polski ma pierwszeństwo przed angielską przeglądarką', () => {
+    localStorage.setItem('nous-language', 'pl');
+    vi.stubGlobal('navigator', { language: 'en-US' });
+
+    expect(detectLocale()).toBe('pl');
+    initI18n();
+
+    expect(getLocale()).toBe('pl');
+    expect(localStorage.getItem('nous-language')).toBe('pl');
+
+    vi.unstubAllGlobals();
+    localStorage.clear();
   });
 });
