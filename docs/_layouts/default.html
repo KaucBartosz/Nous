@@ -86,7 +86,9 @@
         }
     </style>
     <script src="{{ '/assets/js/stars.js' | relative_url }}" defer></script>
-    <script src="{{ '/assets/js/site-i18n.js' | relative_url }}" defer></script>
+    <!-- ?v= z czasem buildu: GitHub Pages trzyma JS w cache przez 10 min,
+         więc bez tego stary słownik pokazywałby klucze zamiast tłumaczeń. -->
+    <script src="{{ '/assets/js/site-i18n.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
 </head>
 <body class="bg-transparent text-slate-800 font-sans antialiased overflow-x-hidden transition-colors duration-500">
     <canvas id="star-canvas"></canvas>
