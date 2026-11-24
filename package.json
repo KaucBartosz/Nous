@@ -2,6 +2,7 @@
   "name": "nous",
   "version": "1.5.2",
   "description": "Nous Launcher application",
+  "homepage": "https://kaucbartosz.github.io/Nous/",
   "main": "main.js",
   "repository": {
     "type": "git",

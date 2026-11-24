@@ -2,6 +2,8 @@
 
 Witaj w repozytorium dystrybucyjnym aplikacji **Nous**.
 
+🌐 **Strona projektu:** [https://kaucbartosz.github.io/Nous/](https://kaucbartosz.github.io/Nous/)
+
 ## 📥 Pobierz najnowszą wersję
 
 Kliknij poniżej, aby przejść do sekcji pobierania i wybrać wersję dla swojego systemu:
